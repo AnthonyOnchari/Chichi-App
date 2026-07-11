@@ -556,7 +556,8 @@
 
 <script>
 var app = {
-    SHEET_URL: "https://script.google.com/macros/s/AKfycbx94QFTY8yslrY7-xVvnMJlNm8dUAJLIBNdqzTfXJyawVUMaOofo_s6behYZMA7C5_r7g/exec",
+    SHEET_URL: "https://script.google.com/macros/s/AKfycbzNsyYVNlrEue6lqYg6IohUnlexuVLiAUGJea0VlL6imGvP0Y3ctANdyAZYYnxEXAontA/exec",
+    USE_CLOUD: true, // Set to true to use Google Sheets backend
     currentUser: null,
     selectedUser: null,
     allUsers: [],
@@ -604,6 +605,34 @@ var app = {
             return;
         }
 
+        var self = this;
+
+        // Try cloud first
+        if (this.USE_CLOUD) {
+            fetch(this.SHEET_URL + '?action=userLogin&email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password))
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (res.success && res.user) {
+                        self.currentUser = res.user;
+                        localStorage.setItem('gfk_current_user', JSON.stringify(res.user));
+                        self.toast('Logged in!', 'success');
+                        setTimeout(function() { self.showApp(); }, 500);
+                    } else {
+                        self.toast('Invalid credentials', 'error');
+                    }
+                })
+                .catch(function(e) {
+                    console.error('Cloud login error:', e);
+                    self.toast('Connection error - trying local', 'error');
+                    // Fallback to local
+                    self.loginLocal(email, password);
+                });
+        } else {
+            this.loginLocal(email, password);
+        }
+    },
+
+    loginLocal: function(email, password) {
         var users = JSON.parse(localStorage.getItem('gfk_users') || '[]');
         var user = null;
 
@@ -643,21 +672,56 @@ var app = {
             return;
         }
 
-        var users = JSON.parse(localStorage.getItem('gfk_users') || '[]');
-
-        for (var i = 0; i < users.length; i++) {
-            if (users[i].email === email) {
-                this.toast('Email already exists', 'error');
-                return;
-            }
-        }
-
+        var self = this;
         var newUser = {
             name: name,
             email: email,
             password: password,
             followers: 0
         };
+
+        // Try cloud first
+        if (this.USE_CLOUD) {
+            fetch(this.SHEET_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'userSignup',
+                    name: name,
+                    email: email,
+                    password: password
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (res.success) {
+                    self.currentUser = newUser;
+                    localStorage.setItem('gfk_current_user', JSON.stringify(newUser));
+                    self.toast('Account created!', 'success');
+                    setTimeout(function() { self.showApp(); }, 500);
+                } else {
+                    self.toast(res.error || 'Signup failed', 'error');
+                }
+            })
+            .catch(function(e) {
+                console.error('Cloud signup error:', e);
+                self.toast('Connection error - using local storage', 'error');
+                // Fallback to local
+                self.signupLocal(newUser);
+            });
+        } else {
+            this.signupLocal(newUser);
+        }
+    },
+
+    signupLocal: function(newUser) {
+        var users = JSON.parse(localStorage.getItem('gfk_users') || '[]');
+
+        for (var i = 0; i < users.length; i++) {
+            if (users[i].email === newUser.email) {
+                this.toast('Email already exists', 'error');
+                return;
+            }
+        }
 
         users.push(newUser);
         localStorage.setItem('gfk_users', JSON.stringify(users));
@@ -680,8 +744,39 @@ var app = {
     },
 
     loadUsers: function() {
+        var self = this;
+
+        // Try cloud first
+        if (this.USE_CLOUD) {
+            fetch(this.SHEET_URL + '?action=getAllUsers')
+                .then(function(r) { return r.json(); })
+                .then(function(users) {
+                    console.log('Cloud: Loaded ' + users.length + ' total users');
+                    self.allUsers = [];
+
+                    for (var i = 0; i < users.length; i++) {
+                        console.log('User: ' + users[i].name + ' (' + users[i].email + ')');
+                        if (users[i].email !== self.currentUser.email) {
+                            self.allUsers.push(users[i]);
+                        }
+                    }
+
+                    console.log('Filtered ' + self.allUsers.length + ' other users');
+                    self.renderUserList();
+                })
+                .catch(function(e) {
+                    console.error('Cloud load error:', e);
+                    console.log('Falling back to local storage');
+                    self.loadUsersLocal();
+                });
+        } else {
+            this.loadUsersLocal();
+        }
+    },
+
+    loadUsersLocal: function() {
         var users = JSON.parse(localStorage.getItem('gfk_users') || '[]');
-        console.log('Loaded ' + users.length + ' total users');
+        console.log('Local: Loaded ' + users.length + ' total users');
         
         this.allUsers = [];
 
