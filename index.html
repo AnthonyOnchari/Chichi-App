@@ -550,22 +550,20 @@
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0;
+            bottom: 60px;
             display: none !important;
             flex-direction: column;
-            height: 100%;
-            width: 100%;
             background: var(--light);
             z-index: 100;
+            overflow: hidden;
         }
 
         #chatView.active {
             display: flex !important;
             flex-direction: column;
-            height: 100%;
-            width: 100%;
             background: var(--light);
             z-index: 100;
+            overflow: hidden;
         }
 
         .chat-header {
@@ -577,6 +575,7 @@
             align-items: center;
             gap: 12px;
             flex-shrink: 0;
+            min-height: 50px;
         }
 
         .chat-back-btn {
@@ -595,6 +594,7 @@
             flex-direction: column;
             gap: 8px;
             background: var(--light);
+            min-height: 100px;
         }
 
         .message-bubble {
@@ -622,7 +622,9 @@
             border-top: 1px solid var(--border);
             display: flex;
             gap: 8px;
+            align-items: center;
             flex-shrink: 0;
+            min-height: 60px;
         }
 
         .chat-input input {
@@ -631,6 +633,8 @@
             border-radius: 20px;
             padding: 10px 12px;
             font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            height: 40px;
         }
 
         .chat-input button {
@@ -638,10 +642,12 @@
             color: white;
             border: none;
             border-radius: 20px;
-            padding: 10px 16px;
+            padding: 10px 20px;
             cursor: pointer;
             font-weight: 600;
             font-size: 0.85rem;
+            height: 40px;
+            flex-shrink: 0;
         }
 
         /* CREATE POST */
@@ -956,15 +962,15 @@
         </div>
 
         <!-- CHAT -->
-        <div id="chatView">
+        <div id="chatView" style="display: flex; flex-direction: column; position: absolute; top: 0; left: 0; right: 0; bottom: 60px; z-index: 100; background: var(--light);">
             <div class="chat-header">
                 <button class="chat-back-btn" onclick="app.backToMessages()">←</button>
                 <span id="chatUserName">Chat</span>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
-            <div class="chat-input">
-                <input type="text" id="chatInput" placeholder="Type message...">
-                <button onclick="app.sendMessage()">Send</button>
+            <div class="chat-input" style="display: flex; gap: 8px; padding: 12px 16px; background: white; border-top: 1px solid var(--border); align-items: center; flex-shrink: 0;">
+                <input type="text" id="chatInput" placeholder="Type message..." style="flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 10px 12px; font-family: 'Inter', sans-serif; font-size: 0.9rem; height: 40px;">
+                <button onclick="app.sendMessage()" style="background: var(--primary); color: white; border: none; border-radius: 20px; padding: 10px 20px; cursor: pointer; font-weight: 600; font-size: 0.85rem; height: 40px; flex-shrink: 0;">Send</button>
             </div>
         </div>
     </div>
@@ -1455,7 +1461,6 @@ var app = {
         
         // Hide all views
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('chatView').classList.remove('active');
         
         // Set chat data
         this.currentChat = { uid: uid, name: name };
@@ -1463,19 +1468,36 @@ var app = {
         document.getElementById('chatMessages').innerHTML = '';
         document.getElementById('chatInput').value = '';
         
-        // Show chat view
-        document.getElementById('chatView').classList.add('active');
+        // Show chat view with proper styling
+        var chatView = document.getElementById('chatView');
+        chatView.style.display = 'flex';
+        chatView.style.flexDirection = 'column';
+        chatView.style.position = 'absolute';
+        chatView.style.top = '0';
+        chatView.style.left = '0';
+        chatView.style.right = '0';
+        chatView.style.bottom = '60px';
+        chatView.style.zIndex = '100';
+        chatView.style.background = 'var(--light)';
+        chatView.classList.add('active');
         
         // Load messages
         var self = this;
         setTimeout(() => {
             self.loadChatMessages();
-        }, 50);
+            // Scroll to bottom
+            var messagesDiv = document.getElementById('chatMessages');
+            if (messagesDiv) {
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        }, 100);
     },
 
     backToMessages: function() {
         this.currentChat = null;
-        document.getElementById('chatView').classList.remove('active');
+        var chatView = document.getElementById('chatView');
+        chatView.style.display = 'none';
+        chatView.classList.remove('active');
         this.switchView('messages');
     },
 
@@ -1526,11 +1548,15 @@ var app = {
             return;
         }
         
-        var text = document.getElementById('chatInput').value.trim();
+        var input = document.getElementById('chatInput');
+        var text = input.value.trim();
+        
         if (!text) {
+            console.log('Empty message');
             return;
         }
 
+        console.log('Sending message:', text);
         var self = this;
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
         
@@ -1539,11 +1565,18 @@ var app = {
             text: text,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         }).then(() => {
-            console.log('Message sent');
-            document.getElementById('chatInput').value = '';
+            console.log('✅ Message sent successfully');
+            input.value = '';
+            // Scroll to bottom
+            var messagesDiv = document.getElementById('chatMessages');
+            if (messagesDiv) {
+                setTimeout(() => {
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }, 100);
+            }
         }).catch(err => {
-            console.error('Send error:', err);
-            self.toast('Failed to send', 'error');
+            console.error('❌ Send error:', err);
+            self.toast('Failed to send: ' + err.message, 'error');
         });
     },
 
