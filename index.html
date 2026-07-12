@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jssha@3.2.0/dist/sha1.js"></script>
     <style>
         * {
             margin: 0;
@@ -2111,174 +2112,49 @@ var app = {
     },
 
     validateTOTP: function(code, secret) {
-        // TOTP implementation using built-in crypto
+        // TOTP implementation using jsSHA
         var now = Math.floor(Date.now() / 1000);
         var timeWindow = 1; // Allow 1 time step before/after
         
         for (var i = -timeWindow; i <= timeWindow; i++) {
             var counter = Math.floor((now + (i * 30)) / 30);
+            var totp = this.generateTOTPCode(secret, counter);
             
-            // Decode base32 secret
-            var key = this.base32Decode(secret);
-            
-            // Generate HMAC-SHA1
-            var hmac = this.generateHMAC(key, counter);
-            
-            // Extract 6-digit code from HMAC
-            var offset = hmac[hmac.length - 1] & 0x0f;
-            var totp = ((hmac[offset] & 0x7f) << 24 | (hmac[offset + 1] & 0xff) << 16 | (hmac[offset + 2] & 0xff) << 8 | (hmac[offset + 3] & 0xff)) % 1000000;
-            var totpStr = ('000000' + totp).slice(-6);
-            
-            if (totpStr === code) {
+            if (totp === code) {
                 return true;
             }
         }
         return false;
     },
 
-    generateHMAC: function(key, counter) {
-        // Simple HMAC-SHA1 using ArrayBuffer and TextEncoder
-        // This is a simplified TOTP validator that works without external crypto library
+    generateTOTPCode: function(secret, counter) {
+        // Decode base32 secret
+        var keyBytes = this.base32Decode(secret);
         
         // Convert counter to 8-byte big-endian
-        var counterArray = new Uint8Array(8);
+        var counterBytes = new Uint8Array(8);
         for (var i = 7; i >= 0; i--) {
-            counterArray[i] = counter & 0xff;
+            counterBytes[i] = counter & 0xff;
             counter >>= 8;
         }
         
-        // For browsers with crypto.subtle support, use it
-        if (window.crypto && window.crypto.subtle) {
-            return this.hmacSHA1Async(key, counterArray);
-        } else {
-            // Fallback for older browsers - use a simplified HMAC
-            return this.simpleHMAC(key, counterArray);
-        }
-    },
-
-    hmacSHA1Async: function(key, message) {
-        // This will be handled synchronously using a workaround
-        // Since we need synchronous results, we'll use the simple fallback
-        return this.simpleHMAC(key, message);
-    },
-
-    simpleHMAC: function(key, message) {
-        // Simplified HMAC-SHA1 implementation for TOTP
-        // This uses a pseudo-hash suitable for TOTP validation
-        var keyArray = new Uint8Array(key);
-        var msgArray = new Uint8Array(message);
+        // Calculate HMAC-SHA1
+        var hmac = new jsSHA("SHA-1", "UINT8ARRAY");
+        hmac.setHMACKey(keyBytes, "UINT8ARRAY");
+        hmac.update(counterBytes);
+        var hmacResult = hmac.getHMAC("UINT8ARRAY");
         
-        // Pad key to 64 bytes
-        var paddedKey = new Uint8Array(64);
-        for (var i = 0; i < keyArray.length && i < 64; i++) {
-            paddedKey[i] = keyArray[i];
-        }
+        // Extract offset and generate code
+        var offset = hmacResult[hmacResult.length - 1] & 0x0f;
+        var code = (
+            ((hmacResult[offset] & 0x7f) << 24) |
+            ((hmacResult[offset + 1] & 0xff) << 16) |
+            ((hmacResult[offset + 2] & 0xff) << 8) |
+            (hmacResult[offset + 3] & 0xff)
+        );
         
-        // XOR key with opad and ipad
-        var opad = new Uint8Array(64);
-        var ipad = new Uint8Array(64);
-        
-        for (var i = 0; i < 64; i++) {
-            opad[i] = paddedKey[i] ^ 0x5c;
-            ipad[i] = paddedKey[i] ^ 0x36;
-        }
-        
-        // Calculate inner hash
-        var innerData = new Uint8Array(ipad.length + msgArray.length);
-        innerData.set(ipad, 0);
-        innerData.set(msgArray, ipad.length);
-        
-        var innerHash = this.sha1(innerData);
-        
-        // Calculate outer hash
-        var outerData = new Uint8Array(opad.length + innerHash.length);
-        outerData.set(opad, 0);
-        outerData.set(innerHash, opad.length);
-        
-        return this.sha1(outerData);
-    },
-
-    sha1: function(data) {
-        // Simplified SHA1 for TOTP - returns 20-byte array
-        // This is a working SHA1 implementation suitable for TOTP
-        var msg = new Uint8Array(data);
-        
-        // SHA1 constants
-        var K = [0x5A827999, 0x6ED9EBA1, 0x8F1BBCDC, 0xCA62C1D6];
-        
-        // Initialize hash values
-        var H = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0];
-        
-        // Preprocessing
-        var msgLen = msg.length * 8;
-        var msg2 = new Uint8Array(Math.ceil((msg.length + 9) / 64) * 64);
-        msg2.set(msg, 0);
-        msg2[msg.length] = 0x80;
-        
-        // Append length
-        for (var i = 0; i < 8; i++) {
-            msg2[msg2.length - 8 + i] = (msgLen >>> (56 - i * 8)) & 0xff;
-        }
-        
-        // Process message in 512-bit chunks
-        for (var i = 0; i < msg2.length; i += 64) {
-            var W = new Uint32Array(80);
-            
-            for (var j = 0; j < 16; j++) {
-                W[j] = (msg2[i + j * 4] << 24) | (msg2[i + j * 4 + 1] << 16) | (msg2[i + j * 4 + 2] << 8) | msg2[i + j * 4 + 3];
-            }
-            
-            for (var j = 16; j < 80; j++) {
-                W[j] = this.rol((W[j - 3] ^ W[j - 8] ^ W[j - 14] ^ W[j - 16]), 1);
-            }
-            
-            var A = H[0], B = H[1], C = H[2], D = H[3], E = H[4];
-            
-            for (var j = 0; j < 80; j++) {
-                var f, k;
-                if (j < 20) {
-                    f = (B & C) | ((~B) & D);
-                    k = K[0];
-                } else if (j < 40) {
-                    f = B ^ C ^ D;
-                    k = K[1];
-                } else if (j < 60) {
-                    f = (B & C) | (B & D) | (C & D);
-                    k = K[2];
-                } else {
-                    f = B ^ C ^ D;
-                    k = K[3];
-                }
-                
-                var temp = (this.rol(A, 5) + f + E + k + W[j]) >>> 0;
-                E = D;
-                D = C;
-                C = this.rol(B, 30);
-                B = A;
-                A = temp;
-            }
-            
-            H[0] = (H[0] + A) >>> 0;
-            H[1] = (H[1] + B) >>> 0;
-            H[2] = (H[2] + C) >>> 0;
-            H[3] = (H[3] + D) >>> 0;
-            H[4] = (H[4] + E) >>> 0;
-        }
-        
-        // Produce the final hash value
-        var result = new Uint8Array(20);
-        for (var i = 0; i < 5; i++) {
-            result[i * 4] = (H[i] >>> 24) & 0xff;
-            result[i * 4 + 1] = (H[i] >>> 16) & 0xff;
-            result[i * 4 + 2] = (H[i] >>> 8) & 0xff;
-            result[i * 4 + 3] = H[i] & 0xff;
-        }
-        
-        return result;
-    },
-
-    rol: function(n, b) {
-        return ((n << b) | (n >>> (32 - b))) >>> 0;
+        code = (code % 1000000);
+        return ('000000' + code).slice(-6);
     },
 
     base32Decode: function(str) {
