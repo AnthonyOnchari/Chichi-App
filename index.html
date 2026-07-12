@@ -1963,9 +1963,21 @@ var app = {
         e.preventDefault();
         var email = document.getElementById('adminLoginEmail').value;
         var pass = document.getElementById('adminLoginPassword').value;
+        var self = this;
+        
         auth.signInWithEmailAndPassword(email, pass).then(() => {
-            this.closeAdminModal();
-            this.toast('Admin logged in!', 'success');
+            self.toast('Admin logged in!', 'success');
+            
+            // Close modals
+            document.getElementById('adminModal').classList.remove('active');
+            document.getElementById('adminLoginEmail').value = '';
+            document.getElementById('adminLoginPassword').value = '';
+            
+            // Load profile and show app
+            setTimeout(() => {
+                self.loadProfile();
+                self.showApp();
+            }, 500);
         }).catch(err => this.toast(err.message, 'error'));
     },
 
@@ -2087,14 +2099,18 @@ var app = {
 
     createAdminAccountWithMaster: function() {
         var self = this;
-        if (!this.adminPendingSignup) return;
+        if (!this.adminPendingSignup) {
+            this.toast('Error: No pending signup data', 'error');
+            return;
+        }
         
         var name = this.adminPendingSignup.name;
         var email = this.adminPendingSignup.email;
         var password = this.adminPendingSignup.password;
         
-        auth.createUserWithEmailAndPassword(email, password).then(r => {
-            db.ref('users/' + r.user.uid).set({
+        auth.createUserWithEmailAndPassword(email, password).then(userCredential => {
+            // Create user profile in database
+            db.ref('users/' + userCredential.user.uid).set({
                 name: name,
                 email: email,
                 bio: 'Admin Account',
@@ -2104,12 +2120,35 @@ var app = {
                 following: 0,
                 createdAt: new Date().toLocaleString('en-KE'),
                 isAdmin: true
+            }).then(() => {
+                self.toast('Admin account created!', 'success');
+                self.adminPendingSignup = null;
+                self.masterTwoFASecret = null;
+                
+                // Close all modals
+                document.getElementById('masterTwoFASetupModal').classList.remove('active');
+                document.getElementById('adminVerifyTwoFAModal').classList.remove('active');
+                document.getElementById('adminModal').classList.remove('active');
+                
+                // Clear form inputs
+                document.getElementById('adminSignupName').value = '';
+                document.getElementById('adminSignupEmail').value = '';
+                document.getElementById('adminSignupPassword').value = '';
+                document.getElementById('masterTwoFAConfirmCode').value = '';
+                document.getElementById('adminVerifyCode').value = '';
+                
+                // Wait a moment for auth state to update
+                setTimeout(() => {
+                    // Auth state should auto-update via onAuthStateChanged
+                    self.loadProfile();
+                    self.showApp();
+                }, 500);
+            }).catch(err => {
+                self.toast('Error creating profile: ' + err.message, 'error');
             });
-            self.toast('Admin account created!', 'success');
-            self.adminPendingSignup = null;
-            self.closeMasterTwoFASetup();
-            document.getElementById('adminVerifyTwoFAModal').classList.remove('active');
-        }).catch(err => this.toast(err.message, 'error'));
+        }).catch(err => {
+            self.toast('Error creating account: ' + err.message, 'error');
+        });
     },
 
     cancelAdminSignupVerify: function() {
