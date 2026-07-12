@@ -1775,6 +1775,10 @@
                 <li>This code changes every 30 seconds</li>
                 <li>Anyone wanting admin access needs this code</li>
             </ol>
+            <div style="margin-top: 12px; padding: 8px; background: white; border-radius: 8px; font-family: monospace; font-size: 0.75rem; word-break: break-all;">
+                <strong>Secret Key (if manual entry needed):</strong><br>
+                <span id="masterSecretDisplay" style="color: var(--primary);">Loading...</span>
+            </div>
         </div>
 
         <div class="form-group">
@@ -2003,6 +2007,9 @@ var app = {
         
         this.masterTwoFASecret = secret;
         
+        // Display the secret
+        document.getElementById('masterSecretDisplay').textContent = secret;
+        
         // Clear previous QR code
         document.getElementById('masterQrcodeContainer').innerHTML = '';
         
@@ -2041,7 +2048,7 @@ var app = {
                 this.createAdminAccountWithMaster();
             });
         } else {
-            this.toast('Invalid code. Try again.', 'error');
+            this.toast('Invalid code. Check the code in your Authenticator app. Make sure your phone time is correct!', 'error');
             document.getElementById('masterTwoFAConfirmCode').value = '';
             document.getElementById('masterTwoFAConfirmCode').focus();
         }
@@ -2070,7 +2077,7 @@ var app = {
                     self.toast('Code verified!', 'success');
                     self.createAdminAccountWithMaster();
                 } else {
-                    self.toast('Invalid code. Try again.', 'error');
+                    self.toast('Invalid code. Ask your admin for the current 6-digit code from their Authenticator app.', 'error');
                     document.getElementById('adminVerifyCode').value = '';
                     document.getElementById('adminVerifyCode').focus();
                 }
@@ -2114,47 +2121,62 @@ var app = {
     validateTOTP: function(code, secret) {
         // TOTP implementation using jsSHA
         var now = Math.floor(Date.now() / 1000);
-        var timeWindow = 1; // Allow 1 time step before/after
+        var timeWindow = 2; // Allow 2 time steps before/after (wider window for clock skew)
         
         for (var i = -timeWindow; i <= timeWindow; i++) {
             var counter = Math.floor((now + (i * 30)) / 30);
-            var totp = this.generateTOTPCode(secret, counter);
-            
-            if (totp === code) {
-                return true;
+            try {
+                var totp = this.generateTOTPCode(secret, counter);
+                
+                if (totp === code) {
+                    return true;
+                }
+            } catch (e) {
+                console.error('TOTP generation error:', e);
+                continue;
             }
         }
         return false;
     },
 
     generateTOTPCode: function(secret, counter) {
-        // Decode base32 secret
-        var keyBytes = this.base32Decode(secret);
-        
-        // Convert counter to 8-byte big-endian
-        var counterBytes = new Uint8Array(8);
-        for (var i = 7; i >= 0; i--) {
-            counterBytes[i] = counter & 0xff;
-            counter >>= 8;
+        try {
+            // Decode base32 secret
+            var keyBytes = this.base32Decode(secret);
+            
+            // Convert counter to 8-byte big-endian
+            var counterBytes = new Uint8Array(8);
+            for (var i = 7; i >= 0; i--) {
+                counterBytes[i] = counter & 0xff;
+                counter >>= 8;
+            }
+            
+            // Calculate HMAC-SHA1
+            if (typeof jsSHA === 'undefined') {
+                console.error('jsSHA library not loaded');
+                return null;
+            }
+            
+            var hmac = new jsSHA("SHA-1", "UINT8ARRAY");
+            hmac.setHMACKey(keyBytes, "UINT8ARRAY");
+            hmac.update(counterBytes);
+            var hmacResult = hmac.getHMAC("UINT8ARRAY");
+            
+            // Extract offset and generate code
+            var offset = hmacResult[hmacResult.length - 1] & 0x0f;
+            var code = (
+                ((hmacResult[offset] & 0x7f) << 24) |
+                ((hmacResult[offset + 1] & 0xff) << 16) |
+                ((hmacResult[offset + 2] & 0xff) << 8) |
+                (hmacResult[offset + 3] & 0xff)
+            );
+            
+            code = (code % 1000000);
+            return ('000000' + code).slice(-6);
+        } catch (e) {
+            console.error('TOTP code generation error:', e);
+            return null;
         }
-        
-        // Calculate HMAC-SHA1
-        var hmac = new jsSHA("SHA-1", "UINT8ARRAY");
-        hmac.setHMACKey(keyBytes, "UINT8ARRAY");
-        hmac.update(counterBytes);
-        var hmacResult = hmac.getHMAC("UINT8ARRAY");
-        
-        // Extract offset and generate code
-        var offset = hmacResult[hmacResult.length - 1] & 0x0f;
-        var code = (
-            ((hmacResult[offset] & 0x7f) << 24) |
-            ((hmacResult[offset + 1] & 0xff) << 16) |
-            ((hmacResult[offset + 2] & 0xff) << 8) |
-            (hmacResult[offset + 3] & 0xff)
-        );
-        
-        code = (code % 1000000);
-        return ('000000' + code).slice(-6);
     },
 
     base32Decode: function(str) {
