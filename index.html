@@ -234,6 +234,7 @@
             flex: 1;
             overflow: hidden;
             background: var(--light);
+            position: relative;
         }
 
         /* VIEWS */
@@ -545,13 +546,26 @@
 
         /* CHAT VIEW */
         #chatView {
-            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none !important;
             flex-direction: column;
             height: 100%;
+            width: 100%;
+            background: var(--light);
+            z-index: 100;
         }
 
         #chatView.active {
-            display: flex;
+            display: flex !important;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            background: var(--light);
+            z-index: 100;
         }
 
         .chat-header {
@@ -944,7 +958,7 @@
         <!-- CHAT -->
         <div id="chatView">
             <div class="chat-header">
-                <button class="chat-back-btn" onclick="app.switchView('messages')">←</button>
+                <button class="chat-back-btn" onclick="app.backToMessages()">←</button>
                 <span id="chatUserName">Chat</span>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
@@ -1411,7 +1425,7 @@ var app = {
             if (uid !== this.user.uid) {
                 var u = this.users[uid];
                 html += `
-                    <div class="message-item" onclick="app.openChat('${uid}', '${u.name}')">
+                    <div class="message-item" data-uid="${uid}" data-name="${u.name}">
                         <div class="message-avatar">${u.name.charAt(0).toUpperCase()}</div>
                         <div class="message-content">
                             <div class="message-name">${u.name}</div>
@@ -1423,45 +1437,114 @@ var app = {
         });
         if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No users yet</div>';
         document.getElementById('messageList').innerHTML = html;
+        
+        // Add click handlers to message items
+        setTimeout(() => {
+            document.querySelectorAll('.message-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    var uid = this.getAttribute('data-uid');
+                    var name = this.getAttribute('data-name');
+                    self.openChat(uid, name);
+                });
+            });
+        }, 100);
     },
 
     openChat: function(uid, name) {
+        console.log('Opening chat with:', uid, name);
+        
+        // Hide all views
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('chatView').classList.remove('active');
+        
+        // Set chat data
         this.currentChat = { uid: uid, name: name };
         document.getElementById('chatUserName').textContent = name;
         document.getElementById('chatMessages').innerHTML = '';
         document.getElementById('chatInput').value = '';
+        
+        // Show chat view
         document.getElementById('chatView').classList.add('active');
-        this.loadChatMessages();
+        
+        // Load messages
+        var self = this;
+        setTimeout(() => {
+            self.loadChatMessages();
+        }, 50);
+    },
+
+    backToMessages: function() {
+        this.currentChat = null;
+        document.getElementById('chatView').classList.remove('active');
+        this.switchView('messages');
     },
 
     loadChatMessages: function() {
-        if (!this.currentChat) return;
+        if (!this.currentChat) {
+            console.error('No current chat');
+            return;
+        }
+        
         var self = this;
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+        
+        console.log('Loading messages from:', key);
+        
         db.ref('chats/' + key + '/messages').orderByChild('timestamp').on('value', s => {
             var html = '';
+            var hasMessages = false;
+            
             s.forEach(c => {
+                hasMessages = true;
                 var m = c.val();
-                var side = m.sender === self.user.uid ? 'sent' : 'received';
-                html += `<div class="message-bubble ${side}">${m.text}</div>`;
+                if (m && m.text) {
+                    var side = m.sender === self.user.uid ? 'sent' : 'received';
+                    html += `<div class="message-bubble ${side}">${m.text}</div>`;
+                }
             });
-            document.getElementById('chatMessages').innerHTML = html;
-            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+            
+            if (!hasMessages) {
+                html = '<div style="text-align: center; color: #6b7280; padding: 20px; flex: 1; display: flex; align-items: center; justify-content: center;">Start a conversation!</div>';
+            }
+            
+            var chatMessagesDiv = document.getElementById('chatMessages');
+            if (chatMessagesDiv) {
+                chatMessagesDiv.innerHTML = html;
+                setTimeout(() => {
+                    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+                }, 50);
+            }
+        }, err => {
+            console.error('Error loading messages:', err);
         });
     },
 
     sendMessage: function() {
-        if (!this.currentChat) return;
+        if (!this.currentChat) {
+            console.error('No chat selected');
+            this.toast('No chat selected', 'error');
+            return;
+        }
+        
         var text = document.getElementById('chatInput').value.trim();
-        if (!text) return;
+        if (!text) {
+            return;
+        }
 
-        var key = [this.user.uid, this.currentChat.uid].sort().join('_');
+        var self = this;
+        var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+        
         db.ref('chats/' + key + '/messages').push({
-            sender: this.user.uid,
+            sender: self.user.uid,
             text: text,
             timestamp: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            console.log('Message sent');
+            document.getElementById('chatInput').value = '';
+        }).catch(err => {
+            console.error('Send error:', err);
+            self.toast('Failed to send', 'error');
         });
-        document.getElementById('chatInput').value = '';
     },
 
     showWithdrawModal: function() {
