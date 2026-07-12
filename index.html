@@ -1756,32 +1756,50 @@
     </div>
 </div>
 
-<!-- 2FA SETUP MODAL -->
-<div class="logout-modal" id="twoFASetupModal">
+<!-- MASTER 2FA SETUP (ADMIN OWNER ONLY) -->
+<div class="logout-modal" id="masterTwoFASetupModal">
     <div class="logout-card" style="max-width: 500px; border-radius: 24px; padding: 32px;">
-        <h3 style="color: var(--text); font-size: 1.3rem; margin-bottom: 8px;">🔐 Set Up 2FA</h3>
-        <p style="color: var(--text-light); margin-bottom: 20px; font-size: 0.85rem;">Scan with Google Authenticator or Microsoft Authenticator</p>
+        <h3 style="color: var(--text); font-size: 1.3rem; margin-bottom: 8px;">🔐 Master Authenticator Setup</h3>
+        <p style="color: var(--text-light); margin-bottom: 20px; font-size: 0.85rem;">Scan this QR code ONCE with Google Authenticator. Everyone creating admin accounts will need this code.</p>
 
         <div style="background: var(--light); padding: 20px; border-radius: 16px; margin-bottom: 20px; text-align: center;">
-            <div id="qrcodeContainer" style="display: inline-block;"></div>
+            <div id="masterQrcodeContainer" style="display: inline-block;"></div>
         </div>
 
         <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 12px; padding: 12px; margin-bottom: 20px; font-size: 0.85rem;">
-            <strong>📱 Steps:</strong>
+            <strong>📱 One-Time Setup:</strong>
             <ol style="margin: 8px 0 0 20px; padding: 0;">
-                <li>Open Google Authenticator</li>
-                <li>Scan the QR code above</li>
-                <li>Enter the 6-digit code below</li>
+                <li>Open Google Authenticator on your phone</li>
+                <li>Tap + and scan the QR code</li>
+                <li>Save the 6-digit code shown</li>
+                <li>This code changes every 30 seconds</li>
+                <li>Anyone wanting admin access needs this code</li>
             </ol>
         </div>
 
         <div class="form-group">
-            <label class="form-label">Enter 6-Digit Code</label>
-            <input type="text" class="form-input" id="twoFACode" placeholder="000000" maxlength="6" pattern="[0-9]{6}" required style="font-size: 1.2rem; text-align: center; letter-spacing: 4px;">
+            <label class="form-label">Enter 6-Digit Code to Confirm</label>
+            <input type="text" class="form-input" id="masterTwoFAConfirmCode" placeholder="000000" maxlength="6" pattern="[0-9]{6}" required style="font-size: 1.2rem; text-align: center; letter-spacing: 4px;">
         </div>
 
-        <button class="btn-submit" onclick="app.verifyTwoFA()" style="margin-bottom: 10px;">Verify & Continue</button>
-        <button onclick="app.closeTwoFASetup()" style="width: 100%; background: var(--light); color: var(--text); border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 600;">Cancel</button>
+        <button class="btn-submit" onclick="app.confirmMasterTwoFA()" style="margin-bottom: 10px;">Setup Complete</button>
+        <button onclick="app.closeMasterTwoFASetup()" style="width: 100%; background: var(--light); color: var(--text); border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 600;">Cancel</button>
+    </div>
+</div>
+
+<!-- 2FA VERIFICATION FOR ADMIN SIGNUP -->
+<div class="logout-modal" id="adminVerifyTwoFAModal">
+    <div class="logout-card" style="max-width: 400px; border-radius: 24px; padding: 32px;">
+        <h3 style="color: var(--text); font-size: 1.3rem; margin-bottom: 8px;">🔐 Verify Admin Access</h3>
+        <p style="color: var(--text-light); margin-bottom: 20px; font-size: 0.85rem;">Ask your admin for the 6-digit code from their Google Authenticator</p>
+
+        <div class="form-group">
+            <label class="form-label">6-Digit Code</label>
+            <input type="text" class="form-input" id="adminVerifyCode" placeholder="000000" maxlength="6" pattern="[0-9]{6}" required style="font-size: 1.2rem; text-align: center; letter-spacing: 4px;" autofocus>
+        </div>
+
+        <button class="btn-submit" onclick="app.verifyAdminSignupCode()" style="margin-bottom: 10px;">Verify & Create Admin</button>
+        <button onclick="app.cancelAdminSignupVerify()" style="width: 100%; background: var(--light); color: var(--text); border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 600;">Cancel</button>
     </div>
 </div>
 
@@ -1827,10 +1845,8 @@ var app = {
     currentChat: null,
     following: {},
     unreadMessages: {},
-    twoFASecret: null,
-    adminLoginEmail: null,
-    adminLoginPass: null,
-    isSigningUpAsAdmin: false,
+    masterTwoFASecret: null,
+    adminPendingSignup: null,
 
     init: function() {
         auth.onAuthStateChanged(u => {
@@ -1943,27 +1959,9 @@ var app = {
         e.preventDefault();
         var email = document.getElementById('adminLoginEmail').value;
         var pass = document.getElementById('adminLoginPassword').value;
-        
-        // First verify password
-        auth.signInWithEmailAndPassword(email, pass).then(user => {
-            // Check if admin has 2FA enabled
-            db.ref('users/' + user.user.uid).once('value', snap => {
-                var userData = snap.val();
-                if (userData && userData.twoFAEnabled && userData.twoFASecret) {
-                    // 2FA is enabled, show 2FA login modal
-                    this.adminLoginEmail = email;
-                    this.adminLoginPass = pass;
-                    auth.signOut(); // Sign out for now
-                    document.getElementById('adminModal').classList.remove('active');
-                    document.getElementById('twoFALoginModal').classList.add('active');
-                    document.getElementById('twoFALoginCode').value = '';
-                    document.getElementById('twoFALoginCode').focus();
-                } else {
-                    // No 2FA, login normally
-                    this.closeAdminModal();
-                    this.toast('Admin logged in!', 'success');
-                }
-            });
+        auth.signInWithEmailAndPassword(email, pass).then(() => {
+            this.closeAdminModal();
+            this.toast('Admin logged in!', 'success');
         }).catch(err => this.toast(err.message, 'error'));
     },
 
@@ -1978,13 +1976,24 @@ var app = {
             return;
         }
 
-        this.adminLoginEmail = email;
-        this.adminLoginPass = pass;
-        this.isSigningUpAsAdmin = true;
-        this.generateAndShowTwoFA(name);
+        // Check if master 2FA is setup
+        var self = this;
+        db.ref('settings/masterTwoFASecret').once('value', snap => {
+            if (!snap.exists()) {
+                // First admin - need to setup master 2FA
+                self.adminPendingSignup = { name: name, email: email, password: pass };
+                self.setupMasterTwoFA();
+            } else {
+                // Master 2FA already setup - verify code
+                self.adminPendingSignup = { name: name, email: email, password: pass };
+                document.getElementById('adminModal').classList.remove('active');
+                document.getElementById('adminVerifyTwoFAModal').classList.add('active');
+                document.getElementById('adminVerifyCode').focus();
+            }
+        });
     },
 
-    generateAndShowTwoFA: function(name) {
+    setupMasterTwoFA: function() {
         // Generate random secret (16 characters)
         var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
         var secret = '';
@@ -1992,15 +2001,15 @@ var app = {
             secret += chars.charAt(Math.floor(Math.random() * chars.length));
         }
         
-        this.twoFASecret = secret;
+        this.masterTwoFASecret = secret;
         
         // Clear previous QR code
-        document.getElementById('qrcodeContainer').innerHTML = '';
+        document.getElementById('masterQrcodeContainer').innerHTML = '';
         
         // Generate QR code for Google Authenticator
-        var otpauthUrl = 'otpauth://totp/CHICHI%20Admin:' + encodeURIComponent(this.adminLoginEmail) + '?secret=' + secret + '&issuer=CHICHI';
+        var otpauthUrl = 'otpauth://totp/CHICHI%20Admin?secret=' + secret + '&issuer=CHICHI';
         
-        new QRCode(document.getElementById('qrcodeContainer'), {
+        new QRCode(document.getElementById('masterQrcodeContainer'), {
             text: otpauthUrl,
             width: 200,
             height: 200,
@@ -2008,38 +2017,98 @@ var app = {
             colorLight: '#ffffff'
         });
         
-        // Hide admin modal and show 2FA setup
+        // Hide admin modal and show master 2FA setup
         document.getElementById('adminModal').classList.remove('active');
-        document.getElementById('twoFASetupModal').classList.add('active');
-        document.getElementById('twoFACode').value = '';
-        document.getElementById('twoFACode').focus();
+        document.getElementById('masterTwoFASetupModal').classList.add('active');
+        document.getElementById('masterTwoFAConfirmCode').value = '';
+        document.getElementById('masterTwoFAConfirmCode').focus();
     },
 
-    verifyTwoFA: function() {
-        var code = document.getElementById('twoFACode').value;
+    confirmMasterTwoFA: function() {
+        var code = document.getElementById('masterTwoFAConfirmCode').value;
         
         if (!code || code.length !== 6) {
             this.toast('Enter valid 6-digit code', 'error');
             return;
         }
 
-        if (this.validateTOTP(code, this.twoFASecret)) {
-            this.toast('2FA verified!', 'success');
-            this.closeTwoFASetup();
+        if (this.validateTOTP(code, this.masterTwoFASecret)) {
+            this.toast('Master 2FA confirmed!', 'success');
             
-            // Now create the actual admin account
-            if (this.isSigningUpAsAdmin) {
-                var name = document.getElementById('adminSignupName').value;
-                this.createAdminAccount(name, this.adminLoginEmail, this.adminLoginPass, this.twoFASecret);
-            } else {
-                // Complete login
-                this.completeAdminLogin();
-            }
+            // Save master secret to Firebase
+            db.ref('settings/masterTwoFASecret').set(this.masterTwoFASecret).then(() => {
+                // Now create the admin account
+                this.createAdminAccountWithMaster();
+            });
         } else {
             this.toast('Invalid code. Try again.', 'error');
-            document.getElementById('twoFACode').value = '';
-            document.getElementById('twoFACode').focus();
+            document.getElementById('masterTwoFAConfirmCode').value = '';
+            document.getElementById('masterTwoFAConfirmCode').focus();
         }
+    },
+
+    closeMasterTwoFASetup: function() {
+        document.getElementById('masterTwoFASetupModal').classList.remove('active');
+        document.getElementById('adminModal').classList.add('active');
+        this.masterTwoFASecret = null;
+        this.adminPendingSignup = null;
+    },
+
+    verifyAdminSignupCode: function() {
+        var code = document.getElementById('adminVerifyCode').value;
+        
+        if (!code || code.length !== 6) {
+            this.toast('Enter valid 6-digit code', 'error');
+            return;
+        }
+
+        var self = this;
+        db.ref('settings/masterTwoFASecret').once('value', snap => {
+            if (snap.exists()) {
+                var secret = snap.val();
+                if (self.validateTOTP(code, secret)) {
+                    self.toast('Code verified!', 'success');
+                    self.createAdminAccountWithMaster();
+                } else {
+                    self.toast('Invalid code. Try again.', 'error');
+                    document.getElementById('adminVerifyCode').value = '';
+                    document.getElementById('adminVerifyCode').focus();
+                }
+            }
+        });
+    },
+
+    createAdminAccountWithMaster: function() {
+        var self = this;
+        if (!this.adminPendingSignup) return;
+        
+        var name = this.adminPendingSignup.name;
+        var email = this.adminPendingSignup.email;
+        var password = this.adminPendingSignup.password;
+        
+        auth.createUserWithEmailAndPassword(email, password).then(r => {
+            db.ref('users/' + r.user.uid).set({
+                name: name,
+                email: email,
+                bio: 'Admin Account',
+                profilePhoto: '',
+                balance: 0,
+                followers: 0,
+                following: 0,
+                createdAt: new Date().toLocaleString('en-KE'),
+                isAdmin: true
+            });
+            self.toast('Admin account created!', 'success');
+            self.adminPendingSignup = null;
+            self.closeMasterTwoFASetup();
+            document.getElementById('adminVerifyTwoFAModal').classList.remove('active');
+        }).catch(err => this.toast(err.message, 'error'));
+    },
+
+    cancelAdminSignupVerify: function() {
+        document.getElementById('adminVerifyTwoFAModal').classList.remove('active');
+        document.getElementById('adminModal').classList.add('active');
+        this.adminPendingSignup = null;
     },
 
     validateTOTP: function(code, secret) {
