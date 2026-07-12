@@ -282,8 +282,10 @@
 
         .app-content {
             flex: 1;
-            overflow-y: auto;
+            overflow: hidden;
             background: var(--light);
+            display: flex;
+            flex-direction: column;
         }
 
         .feed-view {
@@ -699,10 +701,13 @@
             min-height: 100%;
             flex-direction: column;
             width: 100%;
+            background: var(--light);
         }
 
         .chat-view.active {
             display: flex;
+            height: 100%;
+            overflow: hidden;
         }
 
         .chat-header {
@@ -731,6 +736,7 @@
             flex-direction: column;
             gap: 8px;
             width: 100%;
+            background: var(--light);
         }
 
         .message-bubble {
@@ -1102,7 +1108,7 @@
         <!-- CHAT VIEW -->
         <div class="chat-view" id="chatView">
             <div class="chat-header">
-                <button class="chat-back-btn" onclick="app.switchView('messages')">←</button>
+                <button class="chat-back-btn" onclick="app.goBackToMessages()">←</button>
                 <span id="chatUserName">Chat</span>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
@@ -1819,14 +1825,13 @@ var app = {
             return;
         }
 
+        var self = this;
         userIds.forEach(userId => {
             if (userId !== this.currentUser.uid) {
                 var user = this.allUsers[userId];
                 var messageItem = document.createElement('div');
                 messageItem.className = 'message-item';
-                messageItem.onclick = function() {
-                    app.openChat(userId, user.name);
-                };
+                messageItem.style.cursor = 'pointer';
                 messageItem.innerHTML = `
                     <div class="message-avatar">${user.name ? user.name.charAt(0).toUpperCase() : 'U'}</div>
                     <div class="message-content">
@@ -1834,44 +1839,89 @@ var app = {
                         <div class="message-preview">Tap to message</div>
                     </div>
                 `;
+                
+                // Proper event listener
+                messageItem.addEventListener('click', function() {
+                    self.openChat(userId, user.name);
+                });
+                
                 messagesList.appendChild(messageItem);
             }
         });
     },
 
     openChat: function(userId, userName) {
+        console.log('Opening chat with:', userId, userName);
         this.currentChatUser = {id: userId, name: userName};
         document.getElementById('chatUserName').textContent = userName;
-        this.switchView('chat');
-        setTimeout(() => this.loadChatMessages(), 100);
+        
+        // Clear previous messages
+        document.getElementById('chatMessages').innerHTML = '';
+        document.getElementById('chatInput').value = '';
+        
+        // Switch to chat view
+        document.querySelectorAll('.feed-view, #createPostView, .profile-view, .wallet-view, .messages-view, .chat-view').forEach(v => {
+            v.classList.remove('active');
+            v.style.display = 'none';
+        });
+        
+        document.getElementById('chatView').classList.add('active');
+        
+        // Load messages
+        var self = this;
+        setTimeout(() => {
+            console.log('Loading chat messages for:', self.currentChatUser.id);
+            self.loadChatMessages();
+        }, 100);
     },
 
     loadChatMessages: function() {
-        if (!this.currentChatUser) return;
+        if (!this.currentChatUser) {
+            console.error('No current chat user');
+            return;
+        }
+        
         var self = this;
         var chatKey = [self.currentUser.uid, self.currentChatUser.id].sort().join('_');
+        console.log('Loading messages from:', chatKey);
         
         database.ref('chats/' + chatKey + '/messages').orderByChild('timestamp').on('value', snapshot => {
             var chatMessages = document.getElementById('chatMessages');
-            if (!chatMessages) return;
+            if (!chatMessages) {
+                console.error('Chat messages container not found');
+                return;
+            }
 
             chatMessages.innerHTML = '';
 
+            var hasMessages = false;
             snapshot.forEach(child => {
+                hasMessages = true;
                 var msg = child.val();
+                if (!msg) return;
+                
                 var bubble = document.createElement('div');
                 bubble.className = 'message-bubble ' + (msg.sender === self.currentUser.uid ? 'sent' : 'received');
                 bubble.textContent = msg.text || '';
+                bubble.style.marginBottom = '8px';
                 chatMessages.appendChild(bubble);
             });
 
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            if (!hasMessages) {
+                chatMessages.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px; flex: 1; display: flex; align-items: center; justify-content: center;">Start a conversation! Send a message.</div>';
+            } else {
+                // Scroll to bottom
+                setTimeout(() => {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 100);
+            }
         });
     },
 
     sendMessage: function() {
         if (!this.currentChatUser) {
-            this.toast('No chat user selected', 'error');
+            this.toast('No chat selected', 'error');
+            console.error('No current chat user');
             return;
         }
         
@@ -1885,13 +1935,16 @@ var app = {
         var chatKey = [self.currentUser.uid, self.currentChatUser.id].sort().join('_');
         var messagesRef = database.ref('chats/' + chatKey + '/messages');
 
-        messagesRef.push({
+        var messageData = {
             sender: self.currentUser.uid,
             senderName: self.userProfile.name || self.currentUser.email,
             text: text,
             timestamp: firebase.database.ServerValue.TIMESTAMP,
             time: new Date().toLocaleString('en-KE')
-        }).then(() => {
+        };
+
+        messagesRef.push(messageData).then(() => {
+            console.log('Message sent successfully');
             document.getElementById('chatInput').value = '';
             var chatMessagesDiv = document.getElementById('chatMessages');
             if (chatMessagesDiv) {
@@ -1899,10 +1952,9 @@ var app = {
                     chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
                 }, 100);
             }
-            self.toast('Message sent! ✅', 'success');
         }).catch(error => {
+            console.error('Send message error:', error);
             self.toast('Failed to send: ' + error.message, 'error');
-            console.error('Send error:', error);
         });
     },
 
@@ -2048,6 +2100,13 @@ var app = {
 
     closeLogoutModal: function() {
         document.getElementById('logoutModal').classList.remove('active');
+    },
+
+    goBackToMessages: function() {
+        this.currentChatUser = null;
+        document.getElementById('chatMessages').innerHTML = '';
+        document.getElementById('chatInput').value = '';
+        this.switchView('messages');
     },
 
     confirmLogout: function() {
