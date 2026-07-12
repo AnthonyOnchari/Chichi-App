@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="mobile-web-app-capable" content="yes">
     <title>CHICHI - Social Media by Onchari Group</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -14,8 +13,6 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
         }
 
         :root {
@@ -37,7 +34,45 @@
             overflow: hidden;
             position: fixed;
             -webkit-font-smoothing: antialiased;
-            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* LOADING OVERLAY */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 9998;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 500;
         }
 
         /* LOADING SCREEN */
@@ -60,20 +95,7 @@
             display: none;
         }
 
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255,255,255,0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-text {
+        .loading-text-init {
             color: white;
             font-size: 0.9rem;
             font-weight: 500;
@@ -196,13 +218,8 @@
             border-radius: 12px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
             font-family: 'Inter', sans-serif;
             font-size: 0.95rem;
-        }
-
-        .btn-submit:active {
-            transform: scale(0.98);
         }
 
         /* MAIN APP */
@@ -232,7 +249,6 @@
             align-items: center;
             flex-shrink: 0;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            padding-top: max(12px, env(safe-area-inset-top));
         }
 
         .app-logo {
@@ -250,15 +266,10 @@
             border: none;
             color: white;
             cursor: pointer;
-            font-size: 1.1rem;
             padding: 6px 8px;
             border-radius: 6px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-icon:active {
-            background: rgba(255,255,255,0.3);
-            transform: scale(0.95);
+            font-size: 0.9rem;
+            font-weight: 600;
         }
 
         .app-content {
@@ -297,17 +308,11 @@
             background: var(--primary);
             color: white;
             border: none;
-            padding: 8px 12px;
+            padding: 6px 12px;
             border-radius: 20px;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn-refresh:active {
-            background: var(--primary-dark);
-            transform: scale(0.95);
         }
 
         .quick-post {
@@ -330,7 +335,8 @@
             justify-content: center;
             font-weight: 700;
             flex-shrink: 0;
-            object-fit: cover;
+            background-size: cover;
+            background-position: center;
         }
 
         .quick-post-input {
@@ -374,9 +380,9 @@
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 0.8rem;
             flex-shrink: 0;
-            object-fit: cover;
+            background-size: cover;
+            background-position: center;
         }
 
         .post-meta {
@@ -438,19 +444,13 @@
             background: none;
             color: var(--text-light);
             font-size: 0.75rem;
-            transition: all 0.3s ease;
-        }
-
-        .post-action:active {
-            color: var(--primary);
-            transform: scale(0.95);
         }
 
         /* PROFILE VIEW */
         .profile-view {
             display: none;
             min-height: 100%;
-            padding-bottom: 60px;
+            padding-bottom: 80px;
         }
 
         .profile-view.active {
@@ -481,9 +481,9 @@
             font-weight: 700;
             font-size: 1.5rem;
             flex-shrink: 0;
-            object-fit: cover;
+            background-size: cover;
+            background-position: center;
             cursor: pointer;
-            position: relative;
         }
 
         .profile-info {
@@ -497,6 +497,12 @@
         }
 
         .profile-email {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .profile-bio {
             font-size: 0.8rem;
             color: var(--text-light);
             margin-bottom: 8px;
@@ -613,7 +619,7 @@
         .messages-view {
             display: none;
             min-height: 100%;
-            padding-bottom: 60px;
+            padding-bottom: 80px;
         }
 
         .messages-view.active {
@@ -675,12 +681,11 @@
             display: flex;
             justify-content: space-around;
             background: white;
-            border-top: 2px solid var(--border);
-            padding: 12px 0;
-            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            border-top: 1px solid var(--border);
+            padding: 8px 0;
             min-height: 50px;
             width: 100%;
-            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
             z-index: 999;
         }
 
@@ -689,16 +694,22 @@
             text-align: center;
             padding: 8px;
             cursor: pointer;
-            font-size: 1.3rem;
             color: var(--text-light);
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 0.7rem;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .nav-item.active {
             color: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 1.3rem;
         }
 
         /* MODALS */
@@ -770,6 +781,135 @@
             border-left: 4px solid #ef4444;
             color: #ef4444;
         }
+
+        /* CHAT VIEW */
+        .chat-view {
+            display: none;
+            min-height: 100%;
+            padding-bottom: 80px;
+            flex-direction: column;
+        }
+
+        .chat-view.active {
+            display: flex;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message-bubble {
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            max-width: 80%;
+        }
+
+        .message-bubble.sent {
+            background: var(--primary);
+            color: white;
+            margin-left: auto;
+        }
+
+        .message-bubble.received {
+            background: var(--light);
+            color: var(--text);
+        }
+
+        .chat-input {
+            padding: 12px 16px;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 12px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .chat-input button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* LOGOUT MODAL */
+        .logout-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logout-modal.active {
+            display: flex;
+        }
+
+        .logout-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 300px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .logout-card h3 {
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .logout-card p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .logout-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .logout-buttons button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .logout-cancel {
+            background: var(--light);
+            color: var(--text);
+        }
+
+        .logout-confirm {
+            background: #ef4444;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -777,7 +917,13 @@
 <!-- LOADING SCREEN -->
 <div id="loadingScreen">
     <div class="spinner"></div>
-    <div class="loading-text">Loading CHICHI...</div>
+    <div class="loading-text-init">Loading CHICHI...</div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">Processing...</div>
 </div>
 
 <!-- AUTH PAGE -->
@@ -830,9 +976,9 @@
 <!-- MAIN APP -->
 <div class="main-app" id="mainApp">
     <div class="app-header">
-        <div class="app-logo">CHICHI ✨</div>
+        <div class="app-logo">CHICHI</div>
         <div class="header-actions">
-            <button class="btn-icon" onclick="app.logout()" title="Logout">🚪</button>
+            <button class="btn-icon" onclick="app.showLogoutModal()">Logout</button>
         </div>
     </div>
 
@@ -840,11 +986,11 @@
         <!-- FEED VIEW -->
         <div class="feed-view active" id="feedView">
             <div class="feed-header">
-                <div class="feed-title">Feed</div>
-                <button class="btn-refresh" onclick="app.loadPosts()">🔄</button>
+                <div class="feed-title">Home</div>
+                <button class="btn-refresh" onclick="app.loadPosts()">Refresh</button>
             </div>
             <div class="quick-post">
-                <div class="quick-post-avatar" id="quickPostAvatar">T</div>
+                <div class="quick-post-avatar" id="quickPostAvatar"></div>
                 <input type="text" class="quick-post-input" placeholder="What's on your mind?" onclick="app.switchView('create')">
             </div>
             <div id="feedContainer"></div>
@@ -854,11 +1000,11 @@
         <div id="createPostView" style="display: none; min-height: 100%; padding: 16px; padding-bottom: 80px;">
             <div style="background: white; border-radius: 16px; padding: 16px;">
                 <h2 style="margin-bottom: 16px;">Create Post</h2>
-                <img id="photoPreview" style="width: 100%; height: 200px; border-radius: 12px; background: var(--light); border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 3rem; object-fit: cover;" src="" alt="Photo preview">
+                <img id="photoPreview" style="width: 100%; height: 200px; border-radius: 12px; background: var(--light); border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; object-fit: cover;" src="" alt="Photo preview">
                 <input type="file" id="photoInput" style="display: none;" accept="image/*">
-                <button type="button" style="width: 100%; padding: 12px; background: var(--light); border: 2px dashed var(--primary); border-radius: 12px; color: var(--primary); font-weight: 600; cursor: pointer; margin-bottom: 12px; font-size: 0.9rem;" onclick="document.getElementById('photoInput').click()">📷 Upload Photo</button>
+                <button type="button" style="width: 100%; padding: 12px; background: var(--light); border: 2px dashed var(--primary); border-radius: 12px; color: var(--primary); font-weight: 600; cursor: pointer; margin-bottom: 12px; font-size: 0.9rem;" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
                 <textarea id="captionInput" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.9rem; resize: vertical; min-height: 80px; margin-bottom: 12px;" placeholder="Write a caption..."></textarea>
-                <button type="button" style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem;" onclick="app.createPost()">Post</button>
+                <button type="button" style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem;" onclick="app.createPost()">Share Post</button>
             </div>
         </div>
 
@@ -868,41 +1014,35 @@
         <!-- WALLET VIEW -->
         <div class="wallet-view" id="walletView">
             <div class="balance-card">
-                <div class="balance-label">💰 Your Balance</div>
+                <div class="balance-label">Wallet Balance</div>
                 <div class="balance-amount" id="balanceDisplay">KSh 0</div>
-                <button class="btn-withdraw" onclick="app.showWithdrawModal()">Request Withdrawal</button>
+                <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
             </div>
 
-            <h3 style="font-weight: 700; margin: 16px 0 12px;">Earn Money</h3>
+            <h3 style="font-weight: 700; margin: 16px 0 12px;">How You Earn</h3>
 
             <div class="earn-card">
-                <div class="earn-title">❤️ Like Posts</div>
-                <div class="earn-subtitle">Earn KSh 2 per like</div>
-                <button class="btn-earn" onclick="app.toast('Already earning from likes!', 'success')">Earning Active</button>
-            </div>
-
-            <div class="earn-card">
-                <div class="earn-title">💬 Comment & Engage</div>
-                <div class="earn-subtitle">Earn KSh 5 per comment</div>
-                <button class="btn-earn" onclick="app.toast('Commenting earns you money!', 'success')">Earning Active</button>
+                <div class="earn-title">Like Posts</div>
+                <div class="earn-subtitle">Earn KSh 0.2 per like</div>
+                <button class="btn-earn" onclick="app.toast('Earning active!', 'success')">Active</button>
             </div>
 
             <div class="earn-card">
-                <div class="earn-title">📸 Create Posts</div>
-                <div class="earn-subtitle">Earn KSh 10 per post</div>
-                <button class="btn-earn" onclick="app.toast('Each post earns you money!', 'success')">Earning Active</button>
+                <div class="earn-title">Share & Comment</div>
+                <div class="earn-subtitle">Earn KSh 0.5 per comment</div>
+                <button class="btn-earn" onclick="app.toast('Earning active!', 'success')">Active</button>
             </div>
 
             <div class="earn-card">
-                <div class="earn-title">⬇️ Downloads</div>
-                <div class="earn-subtitle">Earn KSh 1 per download of your photos</div>
-                <button class="btn-earn" onclick="app.toast('People downloading your photos earns you money!', 'success')">Earning Active</button>
+                <div class="earn-title">Create Posts</div>
+                <div class="earn-subtitle">Earn KSh 1 per post</div>
+                <button class="btn-earn" onclick="app.toast('Earning active!', 'success')">Active</button>
             </div>
 
             <div class="earn-card">
-                <div class="earn-title">👥 Referrals</div>
-                <div class="earn-subtitle">Earn KSh 100 per friend who joins</div>
-                <button class="btn-earn" onclick="app.shareReferralLink()">📤 Share Referral Link</button>
+                <div class="earn-title">Photo Downloads</div>
+                <div class="earn-subtitle">Earn KSh 0.1 per download</div>
+                <button class="btn-earn" onclick="app.toast('Earning active!', 'success')">Active</button>
             </div>
         </div>
 
@@ -911,15 +1051,40 @@
             <div style="padding: 12px 16px; background: white; border-bottom: 1px solid var(--border); font-weight: 600;">Messages</div>
             <div class="message-list" id="messagesList"></div>
         </div>
+
+        <!-- CHAT VIEW -->
+        <div class="chat-view" id="chatView">
+            <div style="padding: 12px 16px; background: white; border-bottom: 1px solid var(--border); font-weight: 600; cursor: pointer;" onclick="app.switchView('messages')">← Back</div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input">
+                <input type="text" id="chatInput" placeholder="Type message...">
+                <button type="button" onclick="app.sendMessage()">→</button>
+            </div>
+        </div>
     </div>
 
     <!-- Bottom Navigation -->
     <div class="bottom-nav">
-        <div class="nav-item active" onclick="app.switchView('feed')">📸</div>
-        <div class="nav-item" onclick="app.switchView('create')">➕</div>
-        <div class="nav-item" onclick="app.switchView('messages')">💬</div>
-        <div class="nav-item" onclick="app.switchView('wallet')">💰</div>
-        <div class="nav-item" onclick="app.switchView('profile')">👤</div>
+        <div class="nav-item active" onclick="app.switchView('feed')">
+            <div class="nav-icon">🏠</div>
+            <div>Home</div>
+        </div>
+        <div class="nav-item" onclick="app.switchView('create')">
+            <div class="nav-icon">✎</div>
+            <div>Create</div>
+        </div>
+        <div class="nav-item" onclick="app.switchView('messages')">
+            <div class="nav-icon">✉</div>
+            <div>Messages</div>
+        </div>
+        <div class="nav-item" onclick="app.switchView('wallet')">
+            <div class="nav-icon">💳</div>
+            <div>Wallet</div>
+        </div>
+        <div class="nav-item" onclick="app.switchView('profile')">
+            <div class="nav-icon">👤</div>
+            <div>Profile</div>
+        </div>
     </div>
 </div>
 
@@ -930,9 +1095,9 @@
         <h2 style="font-weight: 700; margin-bottom: 16px;">Edit Profile</h2>
         
         <div style="text-align: center; margin-bottom: 16px;">
-            <div class="profile-avatar-large" id="editProfilePhoto" style="width: 100px; height: 100px; margin: 0 auto;">T</div>
+            <div class="profile-avatar-large" id="editProfilePhoto"></div>
             <input type="file" id="profilePhotoInput" style="display: none;" accept="image/*">
-            <button type="button" style="margin-top: 8px; background: var(--light); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;" onclick="document.getElementById('profilePhotoInput').click()">📷 Change Photo</button>
+            <button type="button" style="margin-top: 8px; background: var(--light); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;" onclick="document.getElementById('profilePhotoInput').click()">Change Photo</button>
         </div>
 
         <div class="form-group">
@@ -956,7 +1121,7 @@
         <h2 style="font-weight: 700; margin-bottom: 16px;">Request Withdrawal</h2>
         <div class="form-group">
             <label class="form-label">Amount (KSh)</label>
-            <input type="number" class="form-input" id="withdrawAmount" placeholder="Minimum: 20 KSh" min="20">
+            <input type="number" class="form-input" id="withdrawAmount" placeholder="Minimum: 20 KSh" min="20" step="0.1">
         </div>
         <div class="form-group">
             <label class="form-label">Payment Method</label>
@@ -975,6 +1140,18 @@
             <label style="font-size: 0.8rem; color: var(--text-light);">I consent to CHICHI storing and using my account details for withdrawals only</label>
         </div>
         <button type="button" style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem;" onclick="app.processWithdrawal()">Request Withdrawal</button>
+    </div>
+</div>
+
+<!-- LOGOUT MODAL -->
+<div class="logout-modal" id="logoutModal">
+    <div class="logout-card">
+        <h3>Logout?</h3>
+        <p>Are you sure you want to logout?</p>
+        <div class="logout-buttons">
+            <button class="logout-cancel" onclick="app.closeLogoutModal()">Cancel</button>
+            <button class="logout-confirm" onclick="app.confirmLogout()">Logout</button>
+        </div>
     </div>
 </div>
 
@@ -1000,8 +1177,8 @@ var app = {
     allPosts: [],
     userBalance: 0,
     userProfile: {},
-    currentView: 'feed',
-    postsRef: null,
+    currentChatUser: null,
+    allUsers: {},
 
     init: function() {
         var self = this;
@@ -1015,13 +1192,20 @@ var app = {
             }
         });
 
-        document.getElementById('photoInput').addEventListener('change', function(e) {
-            app.handlePhotoSelect(e);
+        document.getElementById('photoInput').addEventListener('change', e => app.handlePhotoSelect(e));
+        document.getElementById('profilePhotoInput').addEventListener('change', e => app.handleProfilePhotoSelect(e));
+        document.getElementById('chatInput').addEventListener('keypress', e => {
+            if (e.key === 'Enter') app.sendMessage();
         });
+    },
 
-        document.getElementById('profilePhotoInput').addEventListener('change', function(e) {
-            app.handleProfilePhotoSelect(e);
-        });
+    showLoading: function(text = 'Processing...') {
+        document.getElementById('loadingOverlay').classList.add('active');
+        document.getElementById('loadingText').textContent = text;
+    },
+
+    hideLoading: function() {
+        document.getElementById('loadingOverlay').classList.remove('active');
     },
 
     showAuth: function() {
@@ -1035,28 +1219,37 @@ var app = {
         document.getElementById('authPage').classList.add('hide');
         document.getElementById('mainApp').classList.add('active');
 
-        this.postsRef = database.ref('posts');
+        this.loadUserProfile();
         this.loadPosts();
-
-        var initials = (this.currentUser.email || 'U').charAt(0).toUpperCase();
-        document.getElementById('quickPostAvatar').textContent = initials;
+        this.loadAllUsers();
     },
 
     loadUserProfile: function() {
         var self = this;
-        database.ref('users/' + this.currentUser.uid).on('value', function(snapshot) {
+        database.ref('users/' + this.currentUser.uid).on('value', snapshot => {
             if (snapshot.exists()) {
                 self.userProfile = snapshot.val();
                 self.userBalance = self.userProfile.balance || 0;
-                document.getElementById('balanceDisplay').textContent = 'KSh ' + self.userBalance;
+                document.getElementById('balanceDisplay').textContent = 'KSh ' + self.userBalance.toFixed(2);
+                self.updateQuickPostAvatar();
             }
         });
+    },
+
+    updateQuickPostAvatar: function() {
+        var avatar = document.getElementById('quickPostAvatar');
+        if (this.userProfile.profilePhoto) {
+            avatar.style.backgroundImage = 'url(' + this.userProfile.profilePhoto + ')';
+            avatar.textContent = '';
+        } else {
+            avatar.style.backgroundImage = 'none';
+            avatar.textContent = this.currentUser.email.charAt(0).toUpperCase();
+        }
     },
 
     switchTab: function(tab) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        
         document.querySelector('[onclick="app.switchTab(\'' + tab + '\')"]').classList.add('active');
         document.getElementById(tab + 'Tab').classList.add('active');
     },
@@ -1072,9 +1265,13 @@ var app = {
             return;
         }
 
-        auth.signInWithEmailAndPassword(email, password).catch(error => {
-            self.toast('Login failed: ' + error.message, 'error');
-        });
+        this.showLoading('Logging in...');
+        auth.signInWithEmailAndPassword(email, password)
+            .then(() => self.hideLoading())
+            .catch(error => {
+                self.hideLoading();
+                self.toast('Login failed: ' + error.message, 'error');
+            });
     },
 
     handleSignup: function(e) {
@@ -1089,8 +1286,9 @@ var app = {
             return;
         }
 
+        this.showLoading('Creating account...');
         auth.createUserWithEmailAndPassword(email, password)
-            .then(function(result) {
+            .then(result => {
                 database.ref('users/' + result.user.uid).set({
                     name: name,
                     email: email,
@@ -1101,47 +1299,46 @@ var app = {
                     following: 0,
                     createdAt: new Date().toLocaleString('en-KE')
                 });
+                self.hideLoading();
                 self.toast('Account created!', 'success');
             })
-            .catch(function(error) {
+            .catch(error => {
+                self.hideLoading();
                 self.toast('Signup failed: ' + error.message, 'error');
             });
     },
 
     switchView: function(view) {
-        document.querySelectorAll('.feed-view, #createPostView, .profile-view, .wallet-view, .messages-view').forEach(v => {
-            if (v.id === 'feedView' || v.classList.contains('feed-view')) v.classList.remove('active');
-            else v.style.display = 'none';
+        document.querySelectorAll('.feed-view, #createPostView, .profile-view, .wallet-view, .messages-view, .chat-view').forEach(v => {
+            v.classList.remove('active');
+            v.style.display = 'none';
         });
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         
         if (view === 'feed') {
             document.getElementById('feedView').classList.add('active');
-            this.loadPosts();
+            document.querySelector('.nav-item:nth-child(1)').classList.add('active');
         }
         else if (view === 'create') {
             document.getElementById('createPostView').style.display = 'block';
+            document.querySelector('.nav-item:nth-child(2)').classList.add('active');
         }
         else if (view === 'messages') {
             document.querySelector('.messages-view').style.display = 'block';
+            document.querySelector('.nav-item:nth-child(3)').classList.add('active');
             this.loadMessages();
         }
         else if (view === 'wallet') {
             document.querySelector('.wallet-view').style.display = 'block';
+            document.querySelector('.nav-item:nth-child(4)').classList.add('active');
         }
         else if (view === 'profile') {
             document.querySelector('.profile-view').style.display = 'block';
+            document.querySelector('.nav-item:nth-child(5)').classList.add('active');
             this.renderProfile();
         }
-
-        if (event && event.target) {
-            event.target.classList.add('active');
-        } else {
-            var navItems = document.querySelectorAll('.nav-item');
-            var viewIndex = ['feed', 'create', 'messages', 'wallet', 'profile'].indexOf(view);
-            if (viewIndex >= 0 && navItems[viewIndex]) {
-                navItems[viewIndex].classList.add('active');
-            }
+        else if (view === 'chat') {
+            document.getElementById('chatView').style.display = 'flex';
         }
     },
 
@@ -1149,7 +1346,7 @@ var app = {
         var file = e.target.files[0];
         if (!file) return;
         var reader = new FileReader();
-        reader.onload = function(event) {
+        reader.onload = event => {
             document.getElementById('photoPreview').src = event.target.result;
         };
         reader.readAsDataURL(file);
@@ -1159,10 +1356,11 @@ var app = {
         var file = e.target.files[0];
         if (!file) return;
         var reader = new FileReader();
-        reader.onload = function(event) {
-            document.getElementById('editProfilePhoto').textContent = '';
-            document.getElementById('editProfilePhoto').style.backgroundImage = 'url(' + event.target.result + ')';
-            document.getElementById('editProfilePhoto').style.backgroundSize = 'cover';
+        reader.onload = event => {
+            var photo = document.getElementById('editProfilePhoto');
+            photo.textContent = '';
+            photo.style.backgroundImage = 'url(' + event.target.result + ')';
+            photo.style.backgroundSize = 'cover';
         };
         reader.readAsDataURL(file);
     },
@@ -1180,6 +1378,8 @@ var app = {
             return;
         }
 
+        this.showLoading('Sharing post...');
+
         var formData = new FormData();
         formData.append('file', document.getElementById('photoInput').files[0]);
         formData.append('upload_preset', UPLOAD_PRESET);
@@ -1188,15 +1388,15 @@ var app = {
             method: 'POST',
             body: formData
         })
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            var photoUrl = data.secure_url;
-            var postRef = self.postsRef.push();
+        .then(r => r.json())
+        .then(data => {
+            var postRef = database.ref('posts').push();
             postRef.set({
                 userId: self.currentUser.uid,
                 userName: self.userProfile.name || 'User',
                 userEmail: self.currentUser.email,
-                photoUrl: photoUrl,
+                userPhoto: self.userProfile.profilePhoto || '',
+                photoUrl: data.secure_url,
                 caption: caption,
                 likes: 0,
                 comments: [],
@@ -1209,24 +1409,24 @@ var app = {
             document.getElementById('captionInput').value = '';
             document.getElementById('photoPreview').src = '';
 
+            self.hideLoading();
             self.toast('Post shared! 🎉', 'success');
-            self.userBalance += 10;
+            self.userBalance += 1;
             database.ref('users/' + self.currentUser.uid + '/balance').set(self.userBalance);
             self.switchView('feed');
         })
-        .catch(function(err) {
-            self.toast('Upload failed: ' + err.message, 'error');
+        .catch(err => {
+            self.hideLoading();
+            self.toast('Upload failed', 'error');
         });
     },
 
     loadPosts: function() {
         var self = this;
-        this.postsRef.orderByChild('timestamp').limitToLast(50).on('value', function(snapshot) {
+        database.ref('posts').orderByChild('timestamp').limitToLast(50).on('value', snapshot => {
             var posts = [];
-            snapshot.forEach(function(childSnapshot) {
-                var post = childSnapshot.val();
-                post.id = childSnapshot.key;
-                posts.unshift(post);
+            snapshot.forEach(child => {
+                posts.unshift({id: child.key, ...child.val()});
             });
             self.allPosts = posts;
             self.renderFeed();
@@ -1238,7 +1438,7 @@ var app = {
         feedContainer.innerHTML = '';
 
         if (this.allPosts.length === 0) {
-            feedContainer.innerHTML = '<div style="padding: 40px 16px; text-align: center; color: #6b7280;">No posts yet. Create one! 📸</div>';
+            feedContainer.innerHTML = '<div style="padding: 40px 16px; text-align: center; color: #6b7280;">No posts yet. Create one!</div>';
             return;
         }
 
@@ -1247,8 +1447,8 @@ var app = {
             postEl.className = 'post';
             postEl.innerHTML = `
                 <div class="post-header">
-                    <div class="post-user" onclick="app.viewProfile('${post.userId}')">
-                        <div class="post-avatar">${post.userName.charAt(0).toUpperCase()}</div>
+                    <div class="post-user">
+                        <div class="post-avatar" style="background-image: url(${post.userPhoto || ''}); background-size: cover;">${!post.userPhoto ? post.userName.charAt(0).toUpperCase() : ''}</div>
                         <div class="post-meta">
                             <div class="post-name">${post.userName}</div>
                             <div class="post-time">${post.createdAt}</div>
@@ -1258,12 +1458,11 @@ var app = {
                 </div>
                 <img src="${post.photoUrl}" class="post-image" alt="Post">
                 <div class="post-caption">${post.caption}</div>
-                <div class="post-stats">${post.likes} likes · ${post.downloads} downloads · ${post.comments.length} comments</div>
+                <div class="post-stats">${post.likes} likes · ${post.downloads} saves · ${post.comments.length} comments</div>
                 <div class="post-actions">
-                    <button class="post-action" onclick="app.likePost('${post.id}')">❤️ Like</button>
-                    <button class="post-action" onclick="app.downloadPost('${post.photoUrl}', '${post.id}')">⬇️ Save</button>
+                    <button class="post-action" onclick="app.likePost('${post.id}')">👍 Like</button>
+                    <button class="post-action" onclick="app.downloadPost('${post.photoUrl}', '${post.id}')">💾 Save</button>
                     <button class="post-action" onclick="app.commentPost('${post.id}')">💬 Comment</button>
-                    <button class="post-action" onclick="app.followUser('${post.userId}')">👥 Follow</button>
                 </div>
             `;
             feedContainer.appendChild(postEl);
@@ -1272,10 +1471,10 @@ var app = {
 
     likePost: function(postId) {
         var self = this;
-        database.ref('posts/' + postId + '/likes').once('value', function(snapshot) {
+        database.ref('posts/' + postId + '/likes').once('value', snapshot => {
             var likes = snapshot.val() || 0;
             database.ref('posts/' + postId + '/likes').set(likes + 1);
-            self.userBalance += 2;
+            self.userBalance += 0.2;
             database.ref('users/' + self.currentUser.uid + '/balance').set(self.userBalance);
         });
     },
@@ -1284,19 +1483,18 @@ var app = {
         try {
             var link = document.createElement('a');
             link.href = photoUrl;
-            link.download = 'chichi-' + postId + '.jpg';
+            link.download = 'chichi-photo.jpg';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            this.toast('Downloaded! ⬇️', 'success');
+            this.toast('Saved! 💾', 'success');
 
-            var self = this;
-            database.ref('posts/' + postId + '/downloads').once('value', function(snapshot) {
+            database.ref('posts/' + postId + '/downloads').once('value', snapshot => {
                 var downloads = snapshot.val() || 0;
                 database.ref('posts/' + postId + '/downloads').set(downloads + 1);
             });
         } catch (err) {
-            this.toast('Download failed', 'error');
+            this.toast('Save failed', 'error');
         }
     },
 
@@ -1305,18 +1503,19 @@ var app = {
         if (!comment) return;
 
         var self = this;
-        database.ref('posts/' + postId).once('value', function(snapshot) {
+        database.ref('posts/' + postId).once('value', snapshot => {
             var post = snapshot.val();
             var comments = post.comments || [];
             comments.push({
-                user: self.currentUser.email,
+                user: self.userProfile.name,
+                email: self.currentUser.email,
                 text: comment,
                 time: new Date().toLocaleString('en-KE')
             });
             database.ref('posts/' + postId + '/comments').set(comments);
-            self.userBalance += 5;
+            self.userBalance += 0.5;
             database.ref('users/' + self.currentUser.uid + '/balance').set(self.userBalance);
-            self.toast('Comment added! +5 KSh', 'success');
+            self.toast('Comment added! +0.5 KSh', 'success');
         });
     },
 
@@ -1325,14 +1524,6 @@ var app = {
             database.ref('posts/' + postId).remove();
             this.toast('Post deleted', 'success');
         }
-    },
-
-    followUser: function(userId) {
-        this.toast('Follow feature coming soon!', 'success');
-    },
-
-    viewProfile: function(userId) {
-        this.switchView('profile');
     },
 
     renderProfile: function() {
@@ -1346,7 +1537,7 @@ var app = {
                     <div class="profile-info">
                         <div class="profile-name">${this.userProfile.name || 'User'}</div>
                         <div class="profile-email">${this.userProfile.email}</div>
-                        <div style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 8px;">${this.userProfile.bio || 'No bio yet'}</div>
+                        <div class="profile-bio">${this.userProfile.bio || 'No bio yet'}</div>
                         <div class="profile-stats">
                             <div class="profile-stat">
                                 <div class="profile-stat-value">${userPostsCount}</div>
@@ -1372,13 +1563,14 @@ var app = {
         document.getElementById('editName').value = this.userProfile.name || '';
         document.getElementById('editBio').value = this.userProfile.bio || '';
         
+        var photo = document.getElementById('editProfilePhoto');
         if (this.userProfile.profilePhoto) {
-            document.getElementById('editProfilePhoto').style.backgroundImage = 'url(' + this.userProfile.profilePhoto + ')';
-            document.getElementById('editProfilePhoto').style.backgroundSize = 'cover';
-            document.getElementById('editProfilePhoto').textContent = '';
+            photo.style.backgroundImage = 'url(' + this.userProfile.profilePhoto + ')';
+            photo.style.backgroundSize = 'cover';
+            photo.textContent = '';
         } else {
-            document.getElementById('editProfilePhoto').textContent = this.currentUser.email.charAt(0).toUpperCase();
-            document.getElementById('editProfilePhoto').style.backgroundImage = 'none';
+            photo.style.backgroundImage = 'none';
+            photo.textContent = this.currentUser.email.charAt(0).toUpperCase();
         }
         
         document.getElementById('editProfileModal').classList.add('active');
@@ -1399,6 +1591,8 @@ var app = {
             return;
         }
 
+        this.showLoading('Saving profile...');
+
         if (profilePhotoFile) {
             var formData = new FormData();
             formData.append('file', profilePhotoFile);
@@ -1408,31 +1602,107 @@ var app = {
                 method: 'POST',
                 body: formData
             })
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                var profilePhoto = data.secure_url;
+            .then(r => r.json())
+            .then(data => {
                 database.ref('users/' + self.currentUser.uid).update({
                     name: name,
                     bio: bio,
-                    profilePhoto: profilePhoto
+                    profilePhoto: data.secure_url
                 });
+                self.hideLoading();
                 self.toast('Profile updated! ✅', 'success');
                 self.closeEditProfileModal();
                 self.renderProfile();
             });
         } else {
-            database.ref('users/' + self.currentUser.uid).update({
-                name: name,
-                bio: bio
-            });
+            database.ref('users/' + self.currentUser.uid).update({name, bio});
+            self.hideLoading();
             self.toast('Profile updated! ✅', 'success');
             self.closeEditProfileModal();
             self.renderProfile();
         }
     },
 
+    loadAllUsers: function() {
+        var self = this;
+        database.ref('users').on('value', snapshot => {
+            self.allUsers = snapshot.val() || {};
+        });
+    },
+
     loadMessages: function() {
-        document.getElementById('messagesList').innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">Messages coming soon! 💬</div>';
+        var messagesList = document.getElementById('messagesList');
+        messagesList.innerHTML = '';
+
+        var userIds = Object.keys(this.allUsers);
+        if (userIds.length === 0) {
+            messagesList.innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">No users yet</div>';
+            return;
+        }
+
+        userIds.forEach(userId => {
+            if (userId !== this.currentUser.uid) {
+                var user = this.allUsers[userId];
+                var messageItem = document.createElement('div');
+                messageItem.className = 'message-item';
+                messageItem.innerHTML = `
+                    <div class="message-avatar">${user.name.charAt(0).toUpperCase()}</div>
+                    <div class="message-content">
+                        <div class="message-name">${user.name}</div>
+                        <div class="message-preview">Tap to message</div>
+                    </div>
+                `;
+                messageItem.onclick = () => app.openChat(userId, user.name);
+                messagesList.appendChild(messageItem);
+            }
+        });
+    },
+
+    openChat: function(userId, userName) {
+        this.currentChatUser = {id: userId, name: userName};
+        this.switchView('chat');
+        this.loadChatMessages();
+    },
+
+    loadChatMessages: function() {
+        if (!this.currentChatUser) return;
+        var self = this;
+        var chatKey = [self.currentUser.uid, self.currentChatUser.id].sort().join('_');
+        
+        database.ref('chats/' + chatKey).on('value', snapshot => {
+            var messages = snapshot.val() || [];
+            var chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = '';
+
+            messages.forEach(msg => {
+                var bubble = document.createElement('div');
+                bubble.className = 'message-bubble ' + (msg.sender === self.currentUser.uid ? 'sent' : 'received');
+                bubble.textContent = msg.text;
+                chatMessages.appendChild(bubble);
+            });
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    },
+
+    sendMessage: function() {
+        if (!this.currentChatUser) return;
+        var text = document.getElementById('chatInput').value.trim();
+        if (!text) return;
+
+        var chatKey = [this.currentUser.uid, this.currentChatUser.id].sort().join('_');
+        var messagesRef = database.ref('chats/' + chatKey);
+
+        messagesRef.once('value', snapshot => {
+            var messages = snapshot.val() || [];
+            messages.push({
+                sender: this.currentUser.uid,
+                text: text,
+                time: new Date().toLocaleString('en-KE')
+            });
+            messagesRef.set(messages);
+            document.getElementById('chatInput').value = '';
+        });
     },
 
     showWithdrawModal: function() {
@@ -1448,7 +1718,7 @@ var app = {
     },
 
     processWithdrawal: function() {
-        var amount = parseInt(document.getElementById('withdrawAmount').value);
+        var amount = parseFloat(document.getElementById('withdrawAmount').value);
         var method = document.getElementById('paymentMethod').value;
         var account = document.getElementById('accountNumber').value;
         var consent = document.getElementById('dataConsent').checked;
@@ -1464,8 +1734,7 @@ var app = {
         }
 
         var self = this;
-        var withdrawalRef = database.ref('withdrawals').push();
-        withdrawalRef.set({
+        database.ref('withdrawals').push().set({
             userId: this.currentUser.uid,
             userEmail: this.currentUser.email,
             amount: amount,
@@ -1478,29 +1747,28 @@ var app = {
         this.userBalance -= amount;
         database.ref('users/' + this.currentUser.uid + '/balance').set(this.userBalance);
 
-        this.toast('Withdrawal requested! Processing...', 'success');
+        this.toast('Withdrawal requested! ✅', 'success');
         this.closeWithdrawModal();
         document.getElementById('withdrawAmount').value = '';
         document.getElementById('accountNumber').value = '';
         document.getElementById('dataConsent').checked = false;
     },
 
-    shareReferralLink: function() {
-        var link = 'https://chichi-app.vercel.app?ref=' + this.currentUser.uid;
-        if (navigator.share) {
-            navigator.share({ title: 'CHICHI', text: 'Join CHICHI and earn money!', url: link });
-        } else {
-            this.toast('Share: ' + link, 'success');
-        }
+    showLogoutModal: function() {
+        document.getElementById('logoutModal').classList.add('active');
     },
 
-    logout: function() {
-        if (confirm('Logout?')) {
-            auth.signOut().then(() => {
-                this.currentUser = null;
-                this.toast('Logged out', 'success');
-            });
-        }
+    closeLogoutModal: function() {
+        document.getElementById('logoutModal').classList.remove('active');
+    },
+
+    confirmLogout: function() {
+        var self = this;
+        auth.signOut().then(() => {
+            self.currentUser = null;
+            self.closeLogoutModal();
+            self.toast('Logged out', 'success');
+        });
     },
 
     toast: function(msg, type) {
