@@ -51,9 +51,7 @@
             gap: 16px;
         }
 
-        #loadingScreen.hidden {
-            display: none;
-        }
+        #loadingScreen.hidden { display: none; }
 
         .spinner {
             width: 40px;
@@ -200,6 +198,7 @@
             align-items: center;
             flex-shrink: 0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: relative;
         }
 
         .app-logo-container h1 {
@@ -221,6 +220,18 @@
         .header-actions {
             display: flex;
             gap: 8px;
+            align-items: center;
+        }
+
+        .header-badge {
+            position: absolute;
+            top: 8px;
+            right: 70px;
+            width: 12px;
+            height: 12px;
+            background: #22c55e;
+            border-radius: 50%;
+            border: 2px solid white;
         }
 
         .btn-icon {
@@ -346,6 +357,7 @@
             align-items: center;
             gap: 10px;
             flex: 1;
+            cursor: pointer;
         }
 
         .post-avatar {
@@ -472,6 +484,7 @@
 
         .profile-stat {
             text-align: center;
+            cursor: pointer;
         }
 
         .profile-stat-value { font-weight: 700; font-size: 1rem; }
@@ -488,6 +501,68 @@
             cursor: pointer;
             margin-top: 12px;
             transition: 0.3s;
+        }
+
+        /* EXPLORE/USERS VIEW */
+        .user-card {
+            background: white;
+            padding: 16px;
+            margin: 8px 16px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: 0.3s;
+        }
+
+        .user-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .user-card-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            background-size: cover;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .user-card-info {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .user-card-name { font-weight: 600; font-size: 0.9rem; }
+        .user-card-handle { font-size: 0.75rem; color: var(--text-light); }
+
+        .follow-btn {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: 0.3s;
+            flex-shrink: 0;
+        }
+
+        .follow-btn.following {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        .follow-btn:hover {
+            transform: scale(1.05);
         }
 
         /* WALLET VIEW */
@@ -537,7 +612,6 @@
         }
 
         .earn-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
-        .earn-subtitle { font-size: 0.8rem; color: var(--text-light); }
 
         /* MESSAGES VIEW */
         #messagesView {
@@ -550,6 +624,9 @@
             border-bottom: none;
             font-weight: 600;
             flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .message-list {
@@ -569,6 +646,7 @@
             align-items: center;
             transition: 0.3s;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            position: relative;
         }
 
         .message-item:hover {
@@ -576,9 +654,13 @@
             transform: translateY(-2px);
         }
 
+        .message-item.unread {
+            background: rgba(0, 212, 170, 0.05);
+        }
+
         .message-avatar {
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             background: var(--primary);
             color: white;
@@ -586,13 +668,44 @@
             align-items: center;
             justify-content: center;
             font-weight: 700;
+            font-size: 1rem;
+            background-size: cover;
             flex-shrink: 0;
+            position: relative;
+        }
+
+        .unread-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 20px;
+            height: 20px;
+            background: #22c55e;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.6rem;
+            font-weight: 700;
+        }
+
+        .message-content {
+            flex: 1;
+            min-width: 0;
         }
 
         .message-name { font-weight: 600; font-size: 0.9rem; }
-        .message-preview { font-size: 0.8rem; color: var(--text-light); }
+        .message-preview { font-size: 0.8rem; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* CHAT MODAL - Popup style like WhatsApp */
+        .message-time {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            flex-shrink: 0;
+        }
+
+        /* CHAT MODAL */
         .chat-modal-overlay {
             display: none;
             position: fixed;
@@ -656,6 +769,7 @@
             justify-content: center;
             font-weight: 700;
             font-size: 1.1rem;
+            background-size: cover;
             flex-shrink: 0;
         }
 
@@ -822,6 +936,7 @@
             transition: 0.3s;
             border-radius: 12px;
             margin: 0 4px;
+            position: relative;
         }
 
         .nav-item.active {
@@ -830,6 +945,23 @@
         }
 
         .nav-icon { font-size: 1.3rem; }
+
+        .nav-badge {
+            position: absolute;
+            top: -4px;
+            right: 0;
+            width: 18px;
+            height: 18px;
+            background: #22c55e;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.6rem;
+            font-weight: 700;
+        }
 
         /* MODALS */
         .modal-overlay {
@@ -844,11 +976,6 @@
             align-items: flex-end;
             justify-content: center;
             animation: fadeIn 0.3s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
         }
 
         .modal-overlay.active {
@@ -1039,35 +1166,14 @@
             box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
         }
 
-        .profile-options-modal {
-            background: white;
-            width: 100%;
-            max-width: 300px;
-            border-radius: 20px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            animation: slideUp 0.3s ease-out;
+        @keyframes messageBounce {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
         }
 
-        .profile-option-btn {
-            padding: 12px 16px;
-            background: var(--light);
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: 0.3s;
-        }
-
-        .profile-option-btn:hover {
-            background: var(--border);
-        }
-
-        .profile-option-btn.danger {
-            color: #ef4444;
-            border: 1px solid #ef4444;
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
     </style>
 </head>
@@ -1133,6 +1239,7 @@
             <h1>CHICHI</h1>
             <p class="app-subtitle">by Onchari Group</p>
         </div>
+        <div id="unreadBadgeContainer"></div>
         <div class="header-actions">
             <button class="btn-icon" onclick="app.showLogout()">Logout</button>
         </div>
@@ -1150,6 +1257,12 @@
                 <input type="text" class="quick-post-input" placeholder="Share something..." readonly>
             </div>
             <div id="feedContainer"></div>
+        </div>
+
+        <!-- EXPLORE/USERS -->
+        <div class="view" id="exploreView">
+            <div style="padding: 16px; font-weight: 600; background: white;">Discover People</div>
+            <div id="usersContainer" style="flex: 1; overflow-y: auto;"></div>
         </div>
 
         <!-- PROFILE -->
@@ -1181,10 +1294,11 @@
 
         <!-- MESSAGES -->
         <div class="view" id="messagesView">
-            <div class="messages-header">Messages</div>
+            <div class="messages-header">
+                <div>Messages</div>
+            </div>
             <div class="message-list" id="messageList"></div>
         </div>
-
     </div>
 
     <!-- CHAT MODAL (Popup) -->
@@ -1214,13 +1328,14 @@
             <div class="nav-icon">🏠</div>
             <div>Home</div>
         </div>
-        <div class="nav-item" onclick="app.showCreateModal()">
-            <div class="nav-icon">✎</div>
-            <div>Create</div>
+        <div class="nav-item" onclick="app.switchView('explore')">
+            <div class="nav-icon">🔍</div>
+            <div>Explore</div>
         </div>
         <div class="nav-item" onclick="app.switchView('messages')">
             <div class="nav-icon">✉</div>
             <div>Messages</div>
+            <div id="messagesBadge"></div>
         </div>
         <div class="nav-item" onclick="app.switchView('wallet')">
             <div class="nav-icon">💳</div>
@@ -1270,16 +1385,6 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="profilePhotoModal">
-    <div class="modal" style="max-width: 300px;">
-        <div class="profile-options-modal">
-            <button class="profile-option-btn" onclick="app.changeProfilePhoto()">📸 Change Photo</button>
-            <button class="profile-option-btn" onclick="app.viewProfilePhoto()">👁️ View Photo</button>
-            <button class="profile-option-btn" onclick="app.closeProfilePhotoModal()">Cancel</button>
-        </div>
-    </div>
-</div>
-
 <div class="logout-modal" id="logoutModal">
     <div class="logout-card">
         <h3>Logout?</h3>
@@ -1314,6 +1419,9 @@ var app = {
     users: {},
     balance: 0,
     currentChat: null,
+    following: [],
+    followers: [],
+    unreadMessages: {},
 
     init: function() {
         auth.onAuthStateChanged(u => {
@@ -1328,7 +1436,6 @@ var app = {
 
         document.getElementById('photoInput').addEventListener('change', e => this.previewPhoto(e));
         
-        // Chat input enter key handler
         var self = this;
         setTimeout(() => {
             var chatInput = document.getElementById('chatModalInput');
@@ -1355,6 +1462,8 @@ var app = {
         document.getElementById('mainApp').classList.add('active');
         this.loadPosts();
         this.loadUsers();
+        this.loadFollowing();
+        this.checkUnreadMessages();
     },
 
     loadProfile: function() {
@@ -1393,9 +1502,11 @@ var app = {
             this.loadPosts();
         } else if (view === 'messages') {
             this.loadMessages();
+        } else if (view === 'explore') {
+            this.loadAllUsers();
         }
 
-        var navIndex = ['feed', 'create', 'messages', 'wallet', 'profile'].indexOf(view);
+        var navIndex = ['feed', 'explore', 'messages', 'wallet', 'profile'].indexOf(view);
         if (navIndex >= 0) {
             document.querySelectorAll('.nav-item')[navIndex].classList.add('active');
         }
@@ -1527,7 +1638,7 @@ var app = {
                 html += `
                     <div class="post" id="post-${p.id}">
                         <div class="post-header">
-                            <div class="post-user">
+                            <div class="post-user" onclick="app.viewUserProfile('${p.userId}')">
                                 <div class="post-avatar" style="background-image: url(${p.userPhoto || ''});">${!p.userPhoto ? p.userName.charAt(0).toUpperCase() : ''}</div>
                                 <div>
                                     <div class="post-name">${p.userName}</div>
@@ -1558,14 +1669,6 @@ var app = {
             db.ref('posts/' + id + '/likes').set(likes);
             self.balance += 0.2;
             db.ref('users/' + self.user.uid + '/balance').set(self.balance);
-            // Update UI immediately
-            var post = document.getElementById('post-' + id);
-            if (post) {
-                var stats = post.querySelector('.post-stats');
-                if (stats) {
-                    stats.textContent = likes + ' likes · ' + (post.querySelector('.post-stats').textContent.split('·')[1]) + ' · ' + (post.querySelector('.post-stats').textContent.split('·')[2]);
-                }
-            }
         });
     },
 
@@ -1589,7 +1692,6 @@ var app = {
     deletePost: function(id) {
         if (confirm('Delete this post?')) {
             db.ref('posts/' + id).remove();
-            // Remove from UI immediately
             var post = document.getElementById('post-' + id);
             if (post) {
                 post.style.animation = 'slideUp 0.3s ease-out reverse';
@@ -1655,6 +1757,126 @@ var app = {
         });
     },
 
+    loadUsers: function() {
+        var self = this;
+        db.ref('users').on('value', s => {
+            self.users = s.val() || {};
+        });
+    },
+
+    loadAllUsers: function() {
+        var self = this;
+        var html = '';
+        Object.keys(this.users).forEach(uid => {
+            if (uid !== this.user.uid) {
+                var u = this.users[uid];
+                var isFollowing = self.following.includes(uid);
+                html += `
+                    <div class="user-card">
+                        <div class="user-card-avatar" style="background-image: url(${u.profilePhoto || ''});">${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}</div>
+                        <div class="user-card-info" onclick="app.viewUserProfile('${uid}')">
+                            <div class="user-card-name">${u.name}</div>
+                            <div class="user-card-handle">${u.followers || 0} followers</div>
+                        </div>
+                        <button class="follow-btn ${isFollowing ? 'following' : ''}" onclick="app.toggleFollow('${uid}')">${isFollowing ? '✓ Following' : 'Follow'}</button>
+                    </div>
+                `;
+            }
+        });
+        if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No users yet</div>';
+        document.getElementById('usersContainer').innerHTML = html;
+    },
+
+    toggleFollow: function(uid) {
+        var isFollowing = this.following.includes(uid);
+        
+        if (isFollowing) {
+            this.following = this.following.filter(id => id !== uid);
+        } else {
+            this.following.push(uid);
+        }
+        
+        db.ref('users/' + this.user.uid + '/following').set(this.following.length);
+        db.ref('users/' + this.user.uid).update({ followingList: this.following });
+        
+        db.ref('users/' + uid).once('value', s => {
+            var followers = (s.val().followers || 0) + (isFollowing ? -1 : 1);
+            db.ref('users/' + uid + '/followers').set(followers);
+        });
+        
+        this.loadAllUsers();
+        this.toast(isFollowing ? 'Unfollowed!' : 'Following!', 'success');
+    },
+
+    loadFollowing: function() {
+        var self = this;
+        db.ref('users/' + this.user.uid + '/followingList').once('value', s => {
+            self.following = s.val() || [];
+        });
+    },
+
+    viewUserProfile: function(uid) {
+        var u = this.users[uid];
+        if (!u) return;
+        
+        var isFollowing = this.following.includes(uid);
+        var userPosts = this.posts.filter(p => p.userId === uid).length;
+        
+        var html = `
+            <div class="profile-header">
+                <div class="profile-top">
+                    <div class="profile-avatar-large" style="background-image: url(${u.profilePhoto || ''});">${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}</div>
+                    <div class="profile-info">
+                        <div class="profile-name">${u.name}</div>
+                        <div class="profile-email">${u.email}</div>
+                        <div class="profile-stats">
+                            <div class="profile-stat"><div class="profile-stat-value">${userPosts}</div><div class="profile-stat-label">Posts</div></div>
+                            <div class="profile-stat"><div class="profile-stat-value">${u.followers || 0}</div><div class="profile-stat-label">Followers</div></div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-edit" onclick="app.toggleFollow('${uid}')">${isFollowing ? '✓ Following' : 'Follow'}</button>
+            </div>
+            <div style="padding: 16px; background: white; border-radius: 16px; margin: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="font-weight: 600; margin-bottom: 8px;">Bio</div>
+                <div style="color: var(--text-light); font-size: 0.9rem;">${u.bio || 'No bio yet'}</div>
+            </div>
+            <div style="padding: 16px;">Posts</div>
+            <div id="profilePosts"></div>
+        `;
+        
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `<div class="modal" style="max-height: 90vh; overflow-y: auto;">
+            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+            ${html}
+        </div>`;
+        
+        var postsHtml = '';
+        this.posts.filter(p => p.userId === uid).forEach(p => {
+            postsHtml += `
+                <div class="post">
+                    <div class="post-header">
+                        <div class="post-user">
+                            <div class="post-avatar" style="background-image: url(${p.userPhoto || ''});">${!p.userPhoto ? p.userName.charAt(0).toUpperCase() : ''}</div>
+                            <div>
+                                <div class="post-name">${p.userName}</div>
+                                <div class="post-time">${p.createdAt}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <img src="${p.photoUrl}" class="post-image" style="max-height: 200px;">
+                    <div class="post-caption">${p.caption}</div>
+                </div>
+            `;
+        });
+        
+        if (postsHtml === '') postsHtml = '<div style="text-align: center; color: #6b7280; padding: 20px;">No posts yet</div>';
+        
+        document.body.appendChild(modal);
+        modal.querySelector('#profilePosts').innerHTML = postsHtml;
+    },
+
     renderProfile: function() {
         var userPosts = this.posts.filter(p => p.userId === this.user.uid).length;
         var html = `
@@ -1666,7 +1888,8 @@ var app = {
                         <div class="profile-email">${this.user.email}</div>
                         <div class="profile-stats">
                             <div class="profile-stat"><div class="profile-stat-value">${userPosts}</div><div class="profile-stat-label">Posts</div></div>
-                            <div class="profile-stat"><div class="profile-stat-value">0</div><div class="profile-stat-label">Followers</div></div>
+                            <div class="profile-stat"><div class="profile-stat-value">${this.followers.length || 0}</div><div class="profile-stat-label">Followers</div></div>
+                            <div class="profile-stat"><div class="profile-stat-value">${this.following.length || 0}</div><div class="profile-stat-label">Following</div></div>
                         </div>
                     </div>
                 </div>
@@ -1728,15 +1951,19 @@ var app = {
     },
 
     showProfilePhotoModal: function() {
-        document.getElementById('profilePhotoModal').classList.add('active');
-    },
-
-    closeProfilePhotoModal: function() {
-        document.getElementById('profilePhotoModal').classList.remove('active');
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `<div class="modal" style="max-width: 300px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <button style="padding: 12px 16px; background: var(--light); border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.3s;" onclick="app.changeProfilePhoto(); this.closest('.modal-overlay').remove()">📸 Change Photo</button>
+                <button style="padding: 12px 16px; background: var(--light); border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.3s;" onclick="app.viewProfilePhoto(); this.closest('.modal-overlay').remove()">👁️ View Photo</button>
+                <button style="padding: 12px 16px; background: var(--light); border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.3s;" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
     },
 
     changeProfilePhoto: function() {
-        this.closeProfilePhotoModal();
         var input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
@@ -1764,7 +1991,6 @@ var app = {
     },
 
     viewProfilePhoto: function() {
-        this.closeProfilePhotoModal();
         if (this.profile.profilePhoto) {
             var modal = document.createElement('div');
             modal.className = 'modal-overlay active';
@@ -1778,23 +2004,19 @@ var app = {
         }
     },
 
-    loadUsers: function() {
-        var self = this;
-        db.ref('users').on('value', s => {
-            self.users = s.val() || {};
-        });
-    },
-
     loadMessages: function() {
         var self = this;
         var html = '';
         Object.keys(this.users).forEach(uid => {
-            if (uid !== this.user.uid) {
-                var u = this.users[uid];
+            if (uid !== self.user.uid) {
+                var u = self.users[uid];
+                var isUnread = self.unreadMessages[uid] && self.unreadMessages[uid] > 0;
                 html += `
-                    <div class="message-item" onclick="app.openChat('${uid}', '${u.name}')">
-                        <div class="message-avatar">${u.name.charAt(0).toUpperCase()}</div>
-                        <div>
+                    <div class="message-item ${isUnread ? 'unread' : ''}" onclick="app.openChat('${uid}', '${u.name}')">
+                        <div class="message-avatar" style="background-image: url(${u.profilePhoto || ''});">${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}
+                            ${isUnread ? `<div class="unread-badge">${self.unreadMessages[uid]}</div>` : ''}
+                        </div>
+                        <div class="message-content">
                             <div class="message-name">${u.name}</div>
                             <div class="message-preview">Tap to message</div>
                         </div>
@@ -1802,27 +2024,60 @@ var app = {
                 `;
             }
         });
-        if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No users yet</div>';
+        if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No messages yet</div>';
         document.getElementById('messageList').innerHTML = html;
     },
 
-    openChat: function(uid, name) {
-        console.log('Opening chat with:', uid, name);
+    checkUnreadMessages: function() {
+        var self = this;
+        Object.keys(this.users).forEach(uid => {
+            if (uid !== self.user.uid) {
+                var key = [self.user.uid, uid].sort().join('_');
+                db.ref('chats/' + key + '/messages').on('value', s => {
+                    var unreadCount = 0;
+                    s.forEach(c => {
+                        var m = c.val();
+                        if (m && m.sender !== self.user.uid && !m.read) {
+                            unreadCount++;
+                        }
+                    });
+                    self.unreadMessages[uid] = unreadCount;
+                    self.updateUnreadBadges();
+                });
+            }
+        });
+    },
+
+    updateUnreadBadges: function() {
+        var totalUnread = Object.values(this.unreadMessages).reduce((a, b) => a + b, 0);
         
-        // Set chat data
+        var badge = document.getElementById('messagesBadge');
+        if (totalUnread > 0) {
+            badge.innerHTML = `<div class="nav-badge">${totalUnread}</div>`;
+            
+            var headerBadge = document.getElementById('unreadBadgeContainer');
+            headerBadge.innerHTML = `<div class="header-badge"></div>`;
+        } else {
+            badge.innerHTML = '';
+            document.getElementById('unreadBadgeContainer').innerHTML = '';
+        }
+    },
+
+    openChat: function(uid, name) {
         this.currentChat = { uid: uid, name: name };
         document.getElementById('chatModalUserName').textContent = name;
         document.getElementById('chatModalMessages').innerHTML = '';
         document.getElementById('chatModalInput').value = '';
         
-        // Set avatar
         var avatar = document.getElementById('chatModalAvatar');
         avatar.textContent = name.charAt(0).toUpperCase();
+        if (this.users[uid] && this.users[uid].profilePhoto) {
+            avatar.style.backgroundImage = 'url(' + this.users[uid].profilePhoto + ')';
+            avatar.textContent = '';
+        }
         
-        // Show modal
         document.getElementById('chatModalOverlay').classList.add('active');
         
-        // Load messages
         var self = this;
         setTimeout(() => {
             self.loadChatMessages();
@@ -1833,6 +2088,7 @@ var app = {
     closeChatModal: function() {
         this.currentChat = null;
         document.getElementById('chatModalOverlay').classList.remove('active');
+        this.markMessagesAsRead();
     },
 
     loadChatMessages: function() {
@@ -1890,7 +2146,8 @@ var app = {
         db.ref('chats/' + key + '/messages').push({
             sender: self.user.uid,
             text: text,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            read: false
         }).then(() => {
             input.value = '';
             input.focus();
@@ -1904,6 +2161,25 @@ var app = {
             self.toast('Failed to send', 'error');
             input.focus();
         });
+    },
+
+    markMessagesAsRead: function() {
+        if (!this.currentChat) return;
+        
+        var self = this;
+        var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+        
+        db.ref('chats/' + key + '/messages').once('value', s => {
+            s.forEach(c => {
+                var m = c.val();
+                if (m && m.sender !== self.user.uid && !m.read) {
+                    db.ref('chats/' + key + '/messages/' + c.key).update({ read: true });
+                }
+            });
+        });
+        
+        this.unreadMessages[this.currentChat.uid] = 0;
+        this.updateUnreadBadges();
     },
 
     showWithdrawModal: function() {
