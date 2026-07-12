@@ -2,14 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChiChi APP - Connect & Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>ChiChi - Connect & Chat</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
 
         :root {
@@ -21,19 +25,28 @@
             --text-light: #6b7280;
         }
 
-        body {
+        html, body {
             font-family: 'Inter', sans-serif;
             background: var(--light);
             color: var(--text);
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
         }
 
+        /* ===== AUTH PAGE ===== */
         .auth-page {
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
+            width: 100%;
             background: linear-gradient(135deg, var(--primary) 0%, #6b5eff 100%);
-            padding: 20px;
+            padding: 16px;
+            overflow-y: auto;
         }
 
         .auth-page.hide {
@@ -43,7 +56,7 @@
         .auth-card {
             background: white;
             border-radius: 20px;
-            padding: 40px;
+            padding: 24px;
             max-width: 420px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -51,32 +64,33 @@
 
         .auth-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .auth-header h1 {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .auth-header p {
             color: var(--text-light);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .tabs {
             display: flex;
             border-bottom: 2px solid var(--border);
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         .tab {
             flex: 1;
-            padding: 12px;
+            padding: 10px;
             text-align: center;
             cursor: pointer;
             font-weight: 600;
+            font-size: 0.9rem;
             color: var(--text-light);
             border: none;
             background: none;
@@ -106,12 +120,20 @@
         }
 
         .form-group {
-            margin-bottom: 18px;
+            margin-bottom: 14px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text);
         }
 
         .form-input {
             width: 100%;
-            padding: 12px 16px;
+            padding: 12px;
             border: 2px solid var(--border);
             border-radius: 10px;
             font-size: 0.95rem;
@@ -125,6 +147,21 @@
             box-shadow: 0 0 0 3px rgba(46, 91, 255, 0.1);
         }
 
+        .profile-pic-upload {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .profile-pic-preview {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--light);
+            border: 2px solid var(--border);
+            object-fit: cover;
+        }
+
         .btn-submit {
             width: 100%;
             padding: 12px;
@@ -136,17 +173,17 @@
             cursor: pointer;
             transition: all 0.3s ease;
             font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
         }
 
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(46, 91, 255, 0.3);
+        .btn-submit:active {
+            transform: scale(0.98);
         }
 
         .auth-footer {
             text-align: center;
-            margin-top: 20px;
-            font-size: 0.85rem;
+            margin-top: 16px;
+            font-size: 0.8rem;
             color: var(--text-light);
         }
 
@@ -156,11 +193,12 @@
             font-weight: 600;
         }
 
+        /* ===== MAIN APP ===== */
         .main-app {
             display: none;
             height: 100vh;
-            display: flex;
             flex-direction: column;
+            width: 100%;
         }
 
         .main-app.active {
@@ -170,36 +208,49 @@
         .app-header {
             background: linear-gradient(135deg, var(--primary) 0%, #6b5eff 100%);
             color: white;
-            padding: 16px 20px;
+            padding: 12px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+            gap: 8px;
         }
 
         .app-logo {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 700;
         }
 
-        .header-actions {
+        .header-user {
             display: flex;
-            gap: 12px;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+        }
+
+        .header-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            object-fit: cover;
+            border: 2px solid white;
         }
 
         .btn-logout {
             background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: none;
             color: white;
-            padding: 6px 12px;
-            border-radius: 8px;
+            padding: 6px 10px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             font-weight: 600;
             transition: all 0.3s ease;
         }
 
-        .btn-logout:hover {
+        .btn-logout:active {
             background: rgba(255, 255, 255, 0.3);
         }
 
@@ -207,33 +258,43 @@
             display: flex;
             flex: 1;
             overflow: hidden;
+            gap: 0;
         }
 
         .user-sidebar {
-            width: 300px;
+            width: 100%;
             background: white;
             border-right: 1px solid var(--border);
             overflow-y: auto;
             display: flex;
             flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .user-sidebar.hidden {
+            display: none;
         }
 
         .sidebar-header {
-            padding: 16px;
+            padding: 12px;
             border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
         }
 
         .sidebar-title {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .search-input {
             width: 100%;
-            padding: 8px 12px;
+            padding: 8px 10px;
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 0.85rem;
             font-family: 'Inter', sans-serif;
         }
@@ -245,16 +306,19 @@
         }
 
         .user-item {
-            padding: 12px;
+            padding: 10px;
             margin-bottom: 4px;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
             background: var(--light);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .user-item:hover {
-            background: #f3f4f6;
+        .user-item:active {
+            background: #f0f1f2;
         }
 
         .user-item.active {
@@ -262,14 +326,37 @@
             border: 1px solid var(--primary);
         }
 
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            object-fit: cover;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
         .user-name {
             font-weight: 600;
-            font-size: 0.9rem;
-            margin-bottom: 4px;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .user-status {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-light);
         }
 
@@ -287,31 +374,58 @@
             height: 100%;
             color: var(--text-light);
             text-align: center;
+            padding: 20px;
         }
 
         .chat-header {
-            padding: 16px 20px;
+            padding: 12px;
             border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+        }
+
+        .chat-header-info {
+            flex: 1;
         }
 
         .chat-title {
             font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .chat-header-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+            object-fit: cover;
         }
 
         .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             background: #fafbfc;
         }
 
         .message {
             display: flex;
             gap: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
+            align-items: flex-end;
         }
 
         .message.own {
@@ -319,8 +433,8 @@
         }
 
         .avatar {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             background: var(--primary);
             color: white;
@@ -328,15 +442,16 @@
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             flex-shrink: 0;
+            object-fit: cover;
         }
 
         .bubble {
-            max-width: 60%;
-            padding: 10px 14px;
+            max-width: 70%;
+            padding: 10px 12px;
             border-radius: 12px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             line-height: 1.4;
             word-wrap: break-word;
         }
@@ -354,46 +469,49 @@
         }
 
         .chat-input-area {
-            padding: 16px 20px;
+            padding: 12px;
             background: white;
             border-top: 1px solid var(--border);
             display: flex;
-            gap: 10px;
+            gap: 8px;
+            flex-shrink: 0;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
         }
 
         .chat-input {
             flex: 1;
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 10px 14px;
+            border-radius: 8px;
+            padding: 10px 12px;
             font-family: 'Inter', sans-serif;
             font-size: 0.9rem;
             resize: none;
-            max-height: 80px;
+            max-height: 60px;
         }
 
         .chat-input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(46, 91, 255, 0.1);
+            box-shadow: 0 0 0 2px rgba(46, 91, 255, 0.1);
         }
 
         .btn-send {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
             background: var(--primary);
             color: white;
             border: none;
             cursor: pointer;
-            font-size: 1rem;
+            font-size: 0.9rem;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
-        .btn-send:hover {
+        .btn-send:active {
             background: #1e3d99;
         }
 
@@ -402,13 +520,14 @@
             bottom: 20px;
             right: 20px;
             background: white;
-            padding: 12px 20px;
+            padding: 12px 16px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             z-index: 10000;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 500;
             animation: slideUp 0.3s ease;
+            max-width: calc(100% - 40px);
         }
 
         .toast.success {
@@ -426,41 +545,63 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        @media (max-width: 600px) {
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .auth-card {
+                padding: 20px;
+            }
+
+            .auth-header h1 {
+                font-size: 1.4rem;
+            }
+
+            .form-input {
+                padding: 11px;
+                font-size: 16px; /* Prevent zoom on focus */
+            }
+
             .user-sidebar {
-                width: 100%;
-                height: 120px;
-                border-right: none;
-                border-bottom: 1px solid var(--border);
-                flex-direction: row;
-                overflow-x: auto;
-            }
-
-            .sidebar-header {
                 display: none;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 70%;
+                height: 100%;
+                z-index: 100;
+                border-right: 2px solid var(--primary);
             }
 
-            .user-list {
+            .user-sidebar.visible {
                 display: flex;
-                gap: 8px;
-                flex-direction: row;
-                padding: 8px;
             }
 
-            .user-item {
-                min-width: 100px;
-                margin-bottom: 0;
+            .chat-area {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: 16px;
+                border-radius: 16px;
             }
 
-            .bubble {
-                max-width: 85%;
+            .auth-header h1 {
+                font-size: 1.3rem;
+            }
+
+            .toast {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
             }
         }
     </style>
 </head>
 <body>
 
-<!-- LOGIN PAGE -->
+<!-- ===== AUTH PAGE ===== -->
 <div class="auth-page" id="authPage">
     <div class="auth-card">
         <div class="auth-header">
@@ -473,13 +614,16 @@
             <button class="tab" onclick="app.switchTab('signup')">Sign Up</button>
         </div>
 
+        <!-- Login -->
         <div class="tab-content active" id="loginTab">
             <form onsubmit="app.handleLogin(event)">
                 <div class="form-group">
-                    <input type="email" class="form-input" id="loginEmail" placeholder="Email" required>
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="loginEmail" placeholder="your@email.com" required>
                 </div>
                 <div class="form-group">
-                    <input type="password" class="form-input" id="loginPassword" placeholder="Password" required>
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="loginPassword" placeholder="••••••" required>
                 </div>
                 <button type="submit" class="btn-submit">Login</button>
             </form>
@@ -488,16 +632,24 @@
             </div>
         </div>
 
+        <!-- Signup -->
         <div class="tab-content" id="signupTab">
             <form onsubmit="app.handleSignup(event)">
                 <div class="form-group">
-                    <input type="text" class="form-input" id="signupName" placeholder="Full Name" required>
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-input" id="signupName" placeholder="Your Name" required>
                 </div>
                 <div class="form-group">
-                    <input type="email" class="form-input" id="signupEmail" placeholder="Email" required>
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="signupEmail" placeholder="your@email.com" required>
                 </div>
                 <div class="form-group">
-                    <input type="password" class="form-input" id="signupPassword" placeholder="Password" required>
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="signupPassword" placeholder="Min 6 chars" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Profile Picture URL (optional)</label>
+                    <input type="url" class="form-input" id="signupPicture" placeholder="https://example.com/pic.jpg">
                 </div>
                 <button type="submit" class="btn-submit">Create Account</button>
             </form>
@@ -508,39 +660,45 @@
     </div>
 </div>
 
-<!-- MAIN APP -->
+<!-- ===== MAIN APP ===== -->
 <div class="main-app" id="mainApp">
     <div class="app-header">
         <div class="app-logo">ChiChi</div>
-        <div class="header-actions">
-            <span id="userName" style="font-size: 0.9rem;">User</span>
-            <button class="btn-logout" onclick="app.logout()">Logout</button>
+        <div class="header-user">
+            <img id="headerAvatar" class="header-avatar" src="" alt="">
+            <span id="userName">User</span>
         </div>
+        <button class="btn-logout" onclick="app.logout()">Logout</button>
     </div>
 
     <div class="app-body">
-        <div class="user-sidebar">
+        <!-- User List -->
+        <div class="user-sidebar" id="userSidebar">
             <div class="sidebar-header">
-                <div class="sidebar-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="sidebar-title">
                     <span>Messages</span>
-                    <button onclick="app.loadUsers()" style="background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #2E5BFF; padding: 4px 8px;">↻</button>
+                    <button onclick="app.loadUsers()" style="background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--primary); padding: 4px;">↻</button>
                 </div>
                 <input type="text" class="search-input" id="searchInput" placeholder="Search users..." onkeyup="app.searchUsers()">
             </div>
             <div class="user-list" id="userList"></div>
         </div>
 
+        <!-- Chat Area -->
         <div class="chat-area">
             <div class="chat-empty" id="chatEmpty">
                 <div>
-                    <div style="font-size: 3rem; margin-bottom: 12px; opacity: 0.5;">💬</div>
-                    <div>Select a user to begin messaging</div>
+                    <div style="font-size: 2.5rem; margin-bottom: 12px; opacity: 0.5;">💬</div>
+                    <div style="font-size: 0.9rem;">Select a user to chat</div>
                 </div>
             </div>
 
             <div style="display: none; flex: 1; display: flex; flex-direction: column;" id="chatContainer">
                 <div class="chat-header">
-                    <div class="chat-title" id="chatWith">Select user</div>
+                    <img id="chatHeaderAvatar" class="chat-header-avatar" src="" alt="">
+                    <div class="chat-header-info">
+                        <div class="chat-title" id="chatWith">Select user</div>
+                    </div>
                 </div>
 
                 <div class="chat-messages" id="chatMessages"></div>
@@ -556,8 +714,8 @@
 
 <script>
 var app = {
-    SHEET_URL: "https://script.google.com/macros/s/AKfycbwZFTK5rfP6EIAsDc-uXhhsbcqR8Wcf5bj0f3IB_JXNZy_8HgtaVb1vB-T_N3Lf6fL9Cg/exec",
-    USE_CLOUD: true, // Set to true to use Google Sheets backend
+    SHEET_URL: "https://script.google.com/macros/s/AKfycby7RAwqvi39yhmhT8xi1ht4WltzXjc0N2RK6UCX9G2WYPtfBsKnslL5YKYxEQjQw83mwg/exec",
+    USE_CLOUD: true,
     currentUser: null,
     selectedUser: null,
     allUsers: [],
@@ -568,6 +726,7 @@ var app = {
         if (saved) {
             try {
                 this.currentUser = JSON.parse(saved);
+                console.log('User found: ' + this.currentUser.name);
                 this.showApp();
             } catch (e) {
                 console.error('Init error:', e);
@@ -579,7 +738,7 @@ var app = {
         if (ta) {
             ta.addEventListener('input', function() {
                 ta.style.height = 'auto';
-                ta.style.height = Math.min(ta.scrollHeight, 80) + 'px';
+                ta.style.height = Math.min(ta.scrollHeight, 60) + 'px';
             });
         }
     },
@@ -605,13 +764,15 @@ var app = {
             return;
         }
 
+        console.log('Login mode: CLOUD');
         var self = this;
 
-        // Try cloud first
         if (this.USE_CLOUD) {
+            console.log('Cloud login: ' + email);
             fetch(this.SHEET_URL + '?action=userLogin&email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password))
                 .then(function(r) { return r.json(); })
                 .then(function(res) {
+                    console.log('Cloud login response:', res);
                     if (res.success && res.user) {
                         self.currentUser = res.user;
                         localStorage.setItem('gfk_current_user', JSON.stringify(res.user));
@@ -623,8 +784,7 @@ var app = {
                 })
                 .catch(function(e) {
                     console.error('Cloud login error:', e);
-                    self.toast('Connection error - trying local', 'error');
-                    // Fallback to local
+                    self.toast('Connection error', 'error');
                     self.loginLocal(email, password);
                 });
         } else {
@@ -648,9 +808,7 @@ var app = {
             localStorage.setItem('gfk_current_user', JSON.stringify(user));
             this.toast('Logged in!', 'success');
             var self = this;
-            setTimeout(function() {
-                self.showApp();
-            }, 500);
+            setTimeout(function() { self.showApp(); }, 500);
         } else {
             this.toast('Invalid credentials', 'error');
         }
@@ -661,6 +819,7 @@ var app = {
         var name = document.getElementById('signupName').value.trim();
         var email = document.getElementById('signupEmail').value.trim();
         var password = document.getElementById('signupPassword').value;
+        var picture = document.getElementById('signupPicture').value.trim();
 
         if (!name || !email || !password) {
             this.toast('Fill all fields', 'error');
@@ -672,27 +831,32 @@ var app = {
             return;
         }
 
+        console.log('Signup mode: CLOUD');
+
         var self = this;
         var newUser = {
             name: name,
             email: email,
             password: password,
+            profilePicture: picture,
             followers: 0
         };
 
-        // Try cloud first
         if (this.USE_CLOUD) {
+            console.log('Cloud signup: ' + name);
             fetch(this.SHEET_URL, {
                 method: 'POST',
                 body: JSON.stringify({
                     action: 'userSignup',
                     name: name,
                     email: email,
-                    password: password
+                    password: password,
+                    profilePicture: picture
                 })
             })
             .then(function(r) { return r.json(); })
             .then(function(res) {
+                console.log('Cloud signup response:', res);
                 if (res.success) {
                     self.currentUser = newUser;
                     localStorage.setItem('gfk_current_user', JSON.stringify(newUser));
@@ -704,8 +868,7 @@ var app = {
             })
             .catch(function(e) {
                 console.error('Cloud signup error:', e);
-                self.toast('Connection error - using local storage', 'error');
-                // Fallback to local
+                self.toast('Connection error - using local', 'error');
                 self.signupLocal(newUser);
             });
         } else {
@@ -730,15 +893,24 @@ var app = {
 
         this.toast('Account created!', 'success');
         var self = this;
-        setTimeout(function() {
-            self.showApp();
-        }, 500);
+        setTimeout(function() { self.showApp(); }, 500);
     },
 
     showApp: function() {
         document.getElementById('authPage').classList.add('hide');
         document.getElementById('mainApp').classList.add('active');
+        
+        var pic = this.currentUser.profilePicture || '';
+        var initials = this.currentUser.name.charAt(0).toUpperCase();
+        
         document.getElementById('userName').textContent = this.currentUser.name;
+        
+        if (pic) {
+            document.getElementById('headerAvatar').src = pic;
+        } else {
+            document.getElementById('headerAvatar').textContent = initials;
+        }
+
         this.loadUsers();
         this.startAutoSync();
     },
@@ -746,27 +918,39 @@ var app = {
     loadUsers: function() {
         var self = this;
 
-        // Try cloud first
         if (this.USE_CLOUD) {
-            fetch(this.SHEET_URL + '?action=getAllUsers')
-                .then(function(r) { return r.json(); })
-                .then(function(users) {
-                    console.log('Cloud: Loaded ' + users.length + ' total users');
-                    self.allUsers = [];
-
-                    for (var i = 0; i < users.length; i++) {
-                        console.log('User: ' + users[i].name + ' (' + users[i].email + ')');
-                        if (users[i].email !== self.currentUser.email) {
-                            self.allUsers.push(users[i]);
+            var fetchUrl = this.SHEET_URL + '?action=getAllUsers';
+            console.log('Cloud URL:', fetchUrl);
+            
+            fetch(fetchUrl)
+                .then(function(r) { return r.text(); })
+                .then(function(text) {
+                    try {
+                        var data = JSON.parse(text);
+                        console.log('Parsed:', data, 'Is array?', Array.isArray(data));
+                        
+                        if (!Array.isArray(data)) {
+                            self.loadUsersLocal();
+                            return;
                         }
-                    }
+                        
+                        console.log('Cloud: Loaded ' + data.length + ' users');
+                        self.allUsers = [];
 
-                    console.log('Filtered ' + self.allUsers.length + ' other users');
-                    self.renderUserList();
+                        for (var i = 0; i < data.length; i++) {
+                            if (data[i].email !== self.currentUser.email) {
+                                self.allUsers.push(data[i]);
+                            }
+                        }
+
+                        self.renderUserList();
+                    } catch (e) {
+                        console.error('Parse error:', e);
+                        self.loadUsersLocal();
+                    }
                 })
                 .catch(function(e) {
-                    console.error('Cloud load error:', e);
-                    console.log('Falling back to local storage');
+                    console.error('Cloud error:', e);
                     self.loadUsersLocal();
                 });
         } else {
@@ -776,18 +960,14 @@ var app = {
 
     loadUsersLocal: function() {
         var users = JSON.parse(localStorage.getItem('gfk_users') || '[]');
-        console.log('Local: Loaded ' + users.length + ' total users');
-        
         this.allUsers = [];
 
         for (var i = 0; i < users.length; i++) {
-            console.log('User: ' + users[i].name + ' (' + users[i].email + ')');
             if (users[i].email !== this.currentUser.email) {
                 this.allUsers.push(users[i]);
             }
         }
 
-        console.log('Filtered ' + this.allUsers.length + ' other users');
         this.renderUserList();
     },
 
@@ -803,7 +983,18 @@ var app = {
                 div.className += ' active';
             }
             div.onclick = function() { self.selectUser(user); };
-            div.innerHTML = '<div class="user-name">' + user.name + '</div><div class="user-status">' + (user.followers || 0) + ' followers</div>';
+            
+            var pic = user.profilePicture || '';
+            var initials = (user.name || 'U').charAt(0).toUpperCase();
+            var avatarHtml = pic ? 
+                '<img src="' + pic + '" class="user-avatar" alt="' + user.name + '">' :
+                '<div class="user-avatar">' + initials + '</div>';
+            
+            div.innerHTML = avatarHtml + 
+                '<div class="user-info">' +
+                '<div class="user-name">' + user.name + '</div>' +
+                '<div class="user-status">' + (user.followers || 0) + ' followers</div>' +
+                '</div>';
             list.appendChild(div);
         });
     },
@@ -813,7 +1004,19 @@ var app = {
         document.getElementById('chatEmpty').style.display = 'none';
         document.getElementById('chatContainer').style.display = 'flex';
         document.getElementById('chatWith').textContent = user.name;
+        
+        var pic = user.profilePicture || '';
+        var initials = (user.name || 'U').charAt(0).toUpperCase();
+        var chatAvatar = document.getElementById('chatHeaderAvatar');
+        
+        if (pic) {
+            chatAvatar.src = pic;
+        } else {
+            chatAvatar.textContent = initials;
+        }
+        
         this.renderUserList();
+        document.getElementById('chatMessages').innerHTML = '';
     },
 
     sendMessage: function() {
@@ -831,7 +1034,7 @@ var app = {
         }
 
         var msg = {
-            timestamp: new Date().toLocaleString(),
+            timestamp: new Date().toLocaleString("en-KE"),
             senderEmail: this.currentUser.email,
             senderName: this.currentUser.name,
             recipientEmail: this.selectedUser.email,
@@ -839,12 +1042,10 @@ var app = {
             message: text
         };
 
-        // Display message immediately
         this.displayMessage(msg, true);
         input.value = '';
         input.style.height = 'auto';
 
-        // Send to backend
         fetch(this.SHEET_URL, {
             method: 'POST',
             body: JSON.stringify({
@@ -855,26 +1056,26 @@ var app = {
                 recipientName: msg.recipientName,
                 message: msg.message
             })
-        }).then(function(r) { return r.json(); })
-        .then(function(res) {
-            console.log('Message sent');
-        })
-        .catch(function(e) {
+        }).catch(function(e) {
             console.error('Send error:', e);
         });
     },
 
     displayMessage: function(msg, isOwn) {
         var container = document.getElementById('chatMessages');
-        if (container.innerHTML.includes('No messages yet')) {
-            container.innerHTML = '';
-        }
-
+        
         var div = document.createElement('div');
         div.className = 'message' + (isOwn ? ' own' : ' other');
+        
         var senderName = isOwn ? this.currentUser.name : this.selectedUser.name;
-        div.innerHTML = '<div class="avatar">' + senderName.charAt(0).toUpperCase() + '</div>' +
-                       '<div class="bubble">' + msg.message + '</div>';
+        var pic = isOwn ? this.currentUser.profilePicture : this.selectedUser.profilePicture;
+        var initials = (senderName || 'U').charAt(0).toUpperCase();
+        
+        var avatarHtml = pic ? 
+            '<img src="' + pic + '" class="avatar" alt="">' :
+            '<div class="avatar">' + initials + '</div>';
+        
+        div.innerHTML = avatarHtml + '<div class="bubble">' + msg.message + '</div>';
         container.appendChild(div);
         container.scrollTop = container.scrollHeight;
     },
@@ -900,23 +1101,30 @@ var app = {
                 div.className += ' active';
             }
             div.onclick = function() { self.selectUser(user); };
-            div.innerHTML = '<div class="user-name">' + user.name + '</div><div class="user-status">' + (user.followers || 0) + ' followers</div>';
+            
+            var pic = user.profilePicture || '';
+            var initials = (user.name || 'U').charAt(0).toUpperCase();
+            var avatarHtml = pic ? 
+                '<img src="' + pic + '" class="user-avatar" alt="' + user.name + '">' :
+                '<div class="user-avatar">' + initials + '</div>';
+            
+            div.innerHTML = avatarHtml + 
+                '<div class="user-info">' +
+                '<div class="user-name">' + user.name + '</div>' +
+                '<div class="user-status">' + (user.followers || 0) + ' followers</div>' +
+                '</div>';
             list.appendChild(div);
         });
     },
 
     startAutoSync: function() {
         var self = this;
-        
-        // Auto-sync every 3 seconds
         this.autoSyncInterval = setInterval(function() {
             self.loadUsers();
         }, 3000);
 
-        // Listen for changes in other tabs
         window.addEventListener('storage', function(e) {
             if (e.key === 'gfk_users') {
-                console.log('Users updated in another tab - syncing...');
                 self.loadUsers();
             }
         });
