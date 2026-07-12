@@ -1847,7 +1847,7 @@ var app = {
     },
 
     checkIfAdmin: function() {
-        if (ADMIN_EMAILS.includes(this.user.email)) {
+        if (this.profile && this.profile.isAdmin) {
             document.getElementById('adminBtn').style.display = 'inline-block';
         }
     },
@@ -1862,10 +1862,149 @@ var app = {
         document.getElementById('loadingScreen').classList.add('hidden');
         document.getElementById('authPage').style.display = 'none';
         document.getElementById('mainApp').classList.add('active');
-        this.loadPosts();
-        this.loadUsers();
-        this.loadFollowing();
-        this.trackUnreadMessages();
+        
+        // If admin, show admin view; otherwise show normal feed
+        if (this.profile && this.profile.isAdmin) {
+            this.switchView('admin');
+            this.loadAdminDashboard();
+        } else {
+            this.switchView('feed');
+            this.loadPosts();
+            this.loadUsers();
+            this.loadFollowing();
+            this.trackUnreadMessages();
+        }
+    },
+
+    loadAdminDashboard: function() {
+        var self = this;
+        
+        // Load all withdrawals
+        db.ref('withdrawals').once('value', snap => {
+            var withdrawals = [];
+            snap.forEach(child => {
+                withdrawals.push({
+                    id: child.key,
+                    ...child.val()
+                });
+            });
+            
+            // Sort by newest first
+            withdrawals.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            var pendingCount = withdrawals.filter(w => w.status === 'pending').length;
+            var approvedCount = withdrawals.filter(w => w.status === 'approved').length;
+            var rejectedCount = withdrawals.filter(w => w.status === 'rejected').length;
+            var totalAmount = withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
+            
+            var html = `
+                <div style="padding: 16px;">
+                    <h2 style="color: var(--text); margin-bottom: 16px; font-size: 1.3rem;">🔧 Admin Dashboard</h2>
+                    
+                    <!-- STATS -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                        <div style="background: var(--light); border-radius: 12px; padding: 14px;">
+                            <div style="color: var(--text-light); font-size: 0.8rem; margin-bottom: 4px;">Total Users</div>
+                            <div style="color: var(--text); font-size: 1.5rem; font-weight: 700;">` + Object.keys(self.users).length + `</div>
+                        </div>
+                        <div style="background: var(--light); border-radius: 12px; padding: 14px;">
+                            <div style="color: var(--text-light); font-size: 0.8rem; margin-bottom: 4px;">Total Posts</div>
+                            <div style="color: var(--text); font-size: 1.5rem; font-weight: 700;">` + self.posts.length + `</div>
+                        </div>
+                        <div style="background: #FFF8DC; border-radius: 12px; padding: 14px; border: 1px solid #FFD700;">
+                            <div style="color: #B8860B; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">⏳ Pending</div>
+                            <div style="color: #FFD700; font-size: 1.5rem; font-weight: 700;">` + pendingCount + `</div>
+                        </div>
+                        <div style="background: #E0F7F4; border-radius: 12px; padding: 14px; border: 1px solid #00D4AA;">
+                            <div style="color: #008B7C; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">✓ Approved</div>
+                            <div style="color: #00D4AA; font-size: 1.5rem; font-weight: 700;">` + approvedCount + `</div>
+                        </div>
+                    </div>
+
+                    <h3 style="color: var(--text); margin-bottom: 12px; font-size: 1.1rem;">💳 Withdrawal Requests</h3>
+                    <div style="background: var(--light); border-radius: 12px; padding: 0; overflow: hidden;">
+                        ` + (withdrawals.length === 0 ? `
+                            <div style="padding: 20px; text-align: center; color: var(--text-light); font-size: 0.9rem;">No withdrawal requests yet</div>
+                        ` : withdrawals.map(w => {
+                            var statusColor, statusBg, statusEmoji;
+                            if (w.status === 'pending') {
+                                statusColor = '#FFD700';
+                                statusBg = '#FFF8DC';
+                                statusEmoji = '⏳';
+                            } else if (w.status === 'approved') {
+                                statusColor = '#00D4AA';
+                                statusBg = '#E0F7F4';
+                                statusEmoji = '✓';
+                            } else {
+                                statusColor = '#FF6B6B';
+                                statusBg = '#FFE0E0';
+                                statusEmoji = '✕';
+                            }
+                            
+                            return `
+                                <div style="border-bottom: 1px solid var(--border); padding: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="color: var(--text); font-weight: 600; font-size: 0.95rem; margin-bottom: 2px;">` + w.userName + `</div>
+                                        <div style="color: var(--text-light); font-size: 0.8rem; margin-bottom: 2px; word-break: break-all;">` + w.userEmail + `</div>
+                                        <div style="color: var(--text); font-weight: 600; font-size: 0.9rem; margin-top: 6px;">KSh ` + w.amount + `</div>
+                                        <div style="color: var(--text-light); font-size: 0.75rem; margin-top: 4px;">Method: ` + w.method + ` | Account: ` + w.account + `</div>
+                                        <div style="color: var(--text-light); font-size: 0.7rem; margin-top: 4px;">` + (w.createdAt || 'N/A') + `</div>
+                                    </div>
+                                    <div style="text-align: right; flex-shrink: 0;">
+                                        <div style="background: ` + statusBg + `; color: ` + statusColor + `; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.75rem; margin-bottom: 8px; white-space: nowrap;">
+                                            ` + statusEmoji + ` ` + w.status.toUpperCase() + `
+                                        </div>
+                                        ` + (w.status === 'pending' ? `
+                                            <button onclick="app.approveWithdrawal('` + w.id + `')" style="background: #00D4AA; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem; margin-bottom: 4px; display: block; width: 100%; white-space: nowrap;">✓ Approve</button>
+                                            <button onclick="app.rejectWithdrawal('` + w.id + `')" style="background: #FF6B6B; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem; display: block; width: 100%; white-space: nowrap;">✕ Reject</button>
+                                        ` : `` ) + `
+                                    </div>
+                                </div>
+                            `;
+                        }).join('') + `
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('adminContent').innerHTML = html;
+        });
+    },
+
+    approveWithdrawal: function(withdrawalId) {
+        var self = this;
+        db.ref('withdrawals/' + withdrawalId).once('value', snap => {
+            if (snap.exists()) {
+                db.ref('withdrawals/' + withdrawalId).update({
+                    status: 'approved'
+                });
+                
+                self.toast('✓ Withdrawal approved!', 'success');
+                self.loadAdminDashboard();
+            }
+        });
+    },
+
+    rejectWithdrawal: function(withdrawalId) {
+        var self = this;
+        db.ref('withdrawals/' + withdrawalId).once('value', snap => {
+            if (snap.exists()) {
+                var withdrawal = snap.val();
+                
+                // Update withdrawal status
+                db.ref('withdrawals/' + withdrawalId).update({
+                    status: 'rejected'
+                });
+                
+                // Refund user balance
+                db.ref('users/' + withdrawal.userId + '/balance').once('value', balanceSnap => {
+                    var currentBalance = balanceSnap.val() || 0;
+                    db.ref('users/' + withdrawal.userId + '/balance').set(currentBalance + withdrawal.amount);
+                });
+                
+                self.toast('✕ Withdrawal rejected and refunded!', 'success');
+                self.loadAdminDashboard();
+            }
+        });
     },
 
     loadProfile: function() {
@@ -1882,6 +2021,8 @@ var app = {
                 } else {
                     avatar.textContent = self.user.email.charAt(0).toUpperCase();
                 }
+                // Check if user is admin
+                self.checkIfAdmin();
             }
         });
     },
@@ -2062,7 +2203,7 @@ var app = {
             this.loadMessages();
             this.clearUnreadBadge();
         } else if (view === 'admin') {
-            this.loadWithdrawals();
+            this.loadAdminDashboard();
         }
 
         var navIndex = ['feed', 'explore', 'messages', 'wallet', 'profile'].indexOf(view);
