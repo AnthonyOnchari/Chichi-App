@@ -198,7 +198,6 @@
             align-items: center;
             flex-shrink: 0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            position: relative;
         }
 
         .app-logo-container h1 {
@@ -220,18 +219,6 @@
         .header-actions {
             display: flex;
             gap: 8px;
-            align-items: center;
-        }
-
-        .header-badge {
-            position: absolute;
-            top: 8px;
-            right: 70px;
-            width: 12px;
-            height: 12px;
-            background: #22c55e;
-            border-radius: 50%;
-            border: 2px solid white;
         }
 
         .btn-icon {
@@ -357,7 +344,6 @@
             align-items: center;
             gap: 10px;
             flex: 1;
-            cursor: pointer;
         }
 
         .post-avatar {
@@ -371,9 +357,10 @@
             justify-content: center;
             font-weight: 700;
             background-size: cover;
+            cursor: pointer;
         }
 
-        .post-name { font-weight: 600; font-size: 0.9rem; }
+        .post-name { font-weight: 600; font-size: 0.9rem; cursor: pointer; }
         .post-time { font-size: 0.75rem; color: var(--text-light); }
 
         .post-menu {
@@ -431,6 +418,208 @@
             color: var(--primary);
         }
 
+        .post-action.liked {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* EXPLORE VIEW */
+        #exploreView {
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .explore-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 20px;
+        }
+
+        .explore-search-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 212, 170, 0.3);
+        }
+
+        .explore-search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 212, 170, 0.4);
+        }
+
+        .explore-text {
+            color: var(--text-light);
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        /* SEARCH MODAL */
+        .search-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(2px);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .search-modal-overlay.active {
+            display: flex;
+        }
+
+        .search-modal-box {
+            background: white;
+            width: 100%;
+            max-width: 450px;
+            height: 85vh;
+            max-height: 600px;
+            border-radius: 28px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .search-modal-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+            border-radius: 28px 28px 0 0;
+        }
+
+        .search-modal-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+
+        .search-modal-close:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .search-box-input {
+            flex: 1;
+            border: none;
+            background: white;
+            padding: 10px 14px;
+            border-radius: 20px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .search-box-input:focus {
+            outline: none;
+        }
+
+        .search-results-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .search-user {
+            background: white;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 16px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+        }
+
+        .search-user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            background-size: cover;
+        }
+
+        .search-user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .search-user-name { font-weight: 600; font-size: 0.95rem; }
+        .search-user-email { font-size: 0.75rem; color: var(--text-light); }
+
+        .search-user-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .search-msg-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.75rem;
+            transition: 0.3s;
+        }
+
+        .search-msg-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .search-view-btn {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.75rem;
+            transition: 0.3s;
+        }
+
+        .search-view-btn:hover {
+            background: #d1d5db;
+        }
+
         /* PROFILE VIEW */
         #profileView {
             flex-direction: column;
@@ -484,7 +673,6 @@
 
         .profile-stat {
             text-align: center;
-            cursor: pointer;
         }
 
         .profile-stat-value { font-weight: 700; font-size: 1rem; }
@@ -501,68 +689,6 @@
             cursor: pointer;
             margin-top: 12px;
             transition: 0.3s;
-        }
-
-        /* EXPLORE/USERS VIEW */
-        .user-card {
-            background: white;
-            padding: 16px;
-            margin: 8px 16px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: 0.3s;
-        }
-
-        .user-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .user-card-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            background-size: cover;
-            flex-shrink: 0;
-            cursor: pointer;
-        }
-
-        .user-card-info {
-            flex: 1;
-            cursor: pointer;
-        }
-
-        .user-card-name { font-weight: 600; font-size: 0.9rem; }
-        .user-card-handle { font-size: 0.75rem; color: var(--text-light); }
-
-        .follow-btn {
-            padding: 8px 16px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.8rem;
-            transition: 0.3s;
-            flex-shrink: 0;
-        }
-
-        .follow-btn.following {
-            background: var(--border);
-            color: var(--text);
-        }
-
-        .follow-btn:hover {
-            transform: scale(1.05);
         }
 
         /* WALLET VIEW */
@@ -612,6 +738,117 @@
         }
 
         .earn-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+        .earn-subtitle { font-size: 0.8rem; color: var(--text-light); }
+
+        /* ADMIN PANEL */
+        #adminView {
+            flex-direction: column;
+        }
+
+        .admin-header {
+            padding: 16px;
+            background: white;
+            border-bottom: none;
+            flex-shrink: 0;
+        }
+
+        .admin-title { font-weight: 700; font-size: 1.2rem; color: #dc2626; }
+
+        .admin-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .withdrawal-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--primary);
+        }
+
+        .withdrawal-card.pending {
+            border-left-color: #f59e0b;
+        }
+
+        .withdrawal-card.approved {
+            border-left-color: #22c55e;
+        }
+
+        .withdrawal-card.rejected {
+            border-left-color: #ef4444;
+        }
+
+        .withdrawal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .withdrawal-user { font-weight: 700; font-size: 0.95rem; }
+        .withdrawal-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .withdrawal-status.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .withdrawal-status.approved {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .withdrawal-status.rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .withdrawal-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+        }
+
+        .withdrawal-detail { display: flex; flex-direction: column; gap: 2px; }
+        .withdrawal-detail-label { color: var(--text-light); font-size: 0.75rem; }
+        .withdrawal-detail-value { font-weight: 600; word-break: break-word; }
+
+        .withdrawal-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .withdrawal-action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.75rem;
+            transition: 0.3s;
+        }
+
+        .withdrawal-approve {
+            background: #22c55e;
+            color: white;
+        }
+
+        .withdrawal-reject {
+            background: #ef4444;
+            color: white;
+        }
 
         /* MESSAGES VIEW */
         #messagesView {
@@ -624,9 +861,6 @@
             border-bottom: none;
             font-weight: 600;
             flex-shrink: 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
         .message-list {
@@ -654,10 +888,6 @@
             transform: translateY(-2px);
         }
 
-        .message-item.unread {
-            background: rgba(0, 212, 170, 0.05);
-        }
-
         .message-avatar {
             width: 50px;
             height: 50px;
@@ -668,27 +898,25 @@
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 1rem;
-            background-size: cover;
+            font-size: 1.1rem;
             flex-shrink: 0;
+            background-size: cover;
             position: relative;
         }
 
-        .unread-badge {
+        .message-avatar.unread {
+            border: 2px solid var(--primary);
+        }
+
+        .online-dot {
             position: absolute;
-            top: -4px;
-            right: -4px;
-            width: 20px;
-            height: 20px;
+            bottom: 0;
+            right: 0;
+            width: 14px;
+            height: 14px;
             background: #22c55e;
-            border-radius: 50%;
             border: 2px solid white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.6rem;
-            font-weight: 700;
+            border-radius: 50%;
         }
 
         .message-content {
@@ -696,12 +924,40 @@
             min-width: 0;
         }
 
-        .message-name { font-weight: 600; font-size: 0.9rem; }
-        .message-preview { font-size: 0.8rem; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .message-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
 
-        .message-time {
-            font-size: 0.75rem;
+        .message-name { font-weight: 600; font-size: 0.9rem; }
+        .message-time { font-size: 0.75rem; color: var(--text-light); }
+
+        .message-preview {
+            font-size: 0.8rem;
             color: var(--text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .message-preview.unread {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .unread-badge {
+            width: 20px;
+            height: 20px;
+            background: #22c55e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
             flex-shrink: 0;
         }
 
@@ -714,7 +970,7 @@
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.4);
-            z-index: 999;
+            z-index: 1000;
             align-items: center;
             justify-content: center;
             padding: 20px;
@@ -746,46 +1002,12 @@
             padding: 16px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 12px;
             flex-shrink: 0;
             border-radius: 28px 28px 0 0;
         }
 
-        .chat-modal-header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex: 1;
-        }
-
-        .chat-modal-avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.3);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.1rem;
-            background-size: cover;
-            flex-shrink: 0;
-        }
-
-        .chat-modal-header-text h3 {
-            margin: 0;
-            font-size: 0.95rem;
-            font-weight: 600;
-        }
-
-        .chat-modal-header-text p {
-            margin: 2px 0 0 0;
-            font-size: 0.75rem;
-            opacity: 0.9;
-        }
-
-        .chat-modal-close {
+        .chat-modal-back {
             background: rgba(255,255,255,0.2);
             border: none;
             color: white;
@@ -800,8 +1022,35 @@
             transition: 0.3s;
         }
 
-        .chat-modal-close:hover {
+        .chat-modal-back:hover {
             background: rgba(255,255,255,0.3);
+        }
+
+        .chat-modal-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            background-size: cover;
+        }
+
+        .chat-modal-header-text h3 {
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .chat-modal-header-text p {
+            margin: 2px 0 0 0;
+            font-size: 0.75rem;
+            opacity: 0.9;
         }
 
         .chat-modal-messages {
@@ -849,6 +1098,11 @@
             border: 1px solid var(--border);
             border-bottom-left-radius: 4px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        @keyframes messageBounce {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
         }
 
         .chat-modal-input {
@@ -948,19 +1202,18 @@
 
         .nav-badge {
             position: absolute;
-            top: -4px;
-            right: 0;
-            width: 18px;
-            height: 18px;
-            background: #22c55e;
+            top: 4px;
+            right: 8px;
+            width: 16px;
+            height: 16px;
+            background: #ef4444;
             border-radius: 50%;
-            border: 2px solid white;
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 700;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-size: 0.6rem;
-            font-weight: 700;
         }
 
         /* MODALS */
@@ -978,11 +1231,27 @@
             animation: fadeIn 0.3s ease-out;
         }
 
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         .modal-overlay.active {
             display: flex;
         }
 
         .modal {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            border-radius: 28px 28px 0 0;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .create-modal {
             background: white;
             width: 100%;
             max-width: 500px;
@@ -1101,23 +1370,6 @@
             background: #dc2626;
         }
 
-        /* CREATE POST MODAL */
-        .create-modal {
-            background: white;
-            width: 100%;
-            max-width: 500px;
-            border-radius: 28px 28px 0 0;
-            padding: 20px;
-            max-height: 90vh;
-            overflow-y: auto;
-            animation: slideUp 0.3s ease-out;
-        }
-
-        .create-modal h2 {
-            margin-bottom: 16px;
-            font-weight: 700;
-        }
-
         #photoPreview {
             width: 100%;
             height: 200px;
@@ -1128,6 +1380,7 @@
             object-fit: cover;
             cursor: pointer;
             transition: 0.3s;
+            display: none;
         }
 
         #photoPreview:hover {
@@ -1166,14 +1419,30 @@
             box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
         }
 
-        @keyframes messageBounce {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
+        .profile-options-modal {
+            background: white;
+            width: 100%;
+            max-width: 300px;
+            border-radius: 20px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: slideUp 0.3s ease-out;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .profile-option-btn {
+            padding: 12px 16px;
+            background: var(--light);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+
+        .profile-option-btn:hover {
+            background: var(--border);
         }
     </style>
 </head>
@@ -1239,8 +1508,8 @@
             <h1>CHICHI</h1>
             <p class="app-subtitle">by Onchari Group</p>
         </div>
-        <div id="unreadBadgeContainer"></div>
         <div class="header-actions">
+            <button class="btn-icon" id="adminBtn" style="display: none;" onclick="app.switchView('admin')">Admin</button>
             <button class="btn-icon" onclick="app.showLogout()">Logout</button>
         </div>
     </div>
@@ -1259,10 +1528,12 @@
             <div id="feedContainer"></div>
         </div>
 
-        <!-- EXPLORE/USERS -->
+        <!-- EXPLORE -->
         <div class="view" id="exploreView">
-            <div style="padding: 16px; font-weight: 600; background: white;">Discover People</div>
-            <div id="usersContainer" style="flex: 1; overflow-y: auto;"></div>
+            <div class="explore-content">
+                <div class="explore-text" style="font-size: 1rem; margin-bottom: 20px;">🔍 Find users and start messaging</div>
+                <button class="explore-search-btn" onclick="app.openSearchModal()">Search Users</button>
+            </div>
         </div>
 
         <!-- PROFILE -->
@@ -1279,46 +1550,34 @@
             </div>
             <h3 style="font-weight: 700; margin: 16px 0 12px;">Earning Methods</h3>
             <div class="earn-card">
-                <div class="earn-title">👍 Like Posts - KSh 0.2</div>
+                <div class="earn-title">👍 Like posts - KSh 0.2 (once per post)</div>
             </div>
             <div class="earn-card">
-                <div class="earn-title">💬 Comment - KSh 0.5</div>
+                <div class="earn-title">💬 Comment - KSh 0.5 (once per post)</div>
             </div>
             <div class="earn-card">
-                <div class="earn-title">📸 Create Post - KSh 1</div>
+                <div class="earn-title">📸 Create post - KSh 1</div>
             </div>
             <div class="earn-card">
                 <div class="earn-title">💾 Download - KSh 0.1</div>
+            </div>
+            <div class="earn-card">
+                <div class="earn-title">👥 Follow user - KSh 0.05</div>
             </div>
         </div>
 
         <!-- MESSAGES -->
         <div class="view" id="messagesView">
-            <div class="messages-header">
-                <div>Messages</div>
-            </div>
+            <div class="messages-header">Messages</div>
             <div class="message-list" id="messageList"></div>
         </div>
-    </div>
 
-    <!-- CHAT MODAL (Popup) -->
-    <div class="chat-modal-overlay" id="chatModalOverlay">
-        <div class="chat-modal-box">
-            <div class="chat-modal-header">
-                <div class="chat-modal-header-left">
-                    <div class="chat-modal-avatar" id="chatModalAvatar">U</div>
-                    <div class="chat-modal-header-text">
-                        <h3 id="chatModalUserName">Chat</h3>
-                        <p>Active now</p>
-                    </div>
-                </div>
-                <button class="chat-modal-close" onclick="app.closeChatModal()">✕</button>
+        <!-- ADMIN -->
+        <div class="view" id="adminView">
+            <div class="admin-header">
+                <div class="admin-title">💼 Withdrawal Requests</div>
             </div>
-            <div class="chat-modal-messages" id="chatModalMessages"></div>
-            <div class="chat-modal-input">
-                <input type="text" id="chatModalInput" placeholder="Message...">
-                <button class="chat-modal-send" onclick="app.sendChatMessage()">→</button>
-            </div>
+            <div class="admin-content" id="adminContent"></div>
         </div>
     </div>
 
@@ -1332,10 +1591,14 @@
             <div class="nav-icon">🔍</div>
             <div>Explore</div>
         </div>
+        <div class="nav-item" onclick="app.showCreateModal()">
+            <div class="nav-icon">✎</div>
+            <div>Create</div>
+        </div>
         <div class="nav-item" onclick="app.switchView('messages')">
             <div class="nav-icon">✉</div>
             <div>Messages</div>
-            <div id="messagesBadge"></div>
+            <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
         </div>
         <div class="nav-item" onclick="app.switchView('wallet')">
             <div class="nav-icon">💳</div>
@@ -1348,12 +1611,42 @@
     </div>
 </div>
 
+<!-- SEARCH MODAL -->
+<div class="search-modal-overlay" id="searchModalOverlay">
+    <div class="search-modal-box">
+        <div class="search-modal-header">
+            <input type="text" class="search-box-input" id="searchInput" placeholder="Search users..." oninput="app.handleSearch()">
+            <button class="search-modal-close" onclick="app.closeSearchModal()">✕</button>
+        </div>
+        <div class="search-results-container" id="searchResults"></div>
+    </div>
+</div>
+
+<!-- CHAT MODAL -->
+<div class="chat-modal-overlay" id="chatModalOverlay">
+    <div class="chat-modal-box">
+        <div class="chat-modal-header">
+            <button class="chat-modal-back" onclick="app.closeChatModal()">←</button>
+            <div class="chat-modal-avatar" id="chatModalAvatar">U</div>
+            <div class="chat-modal-header-text">
+                <h3 id="chatModalUserName">Chat</h3>
+                <p>Active now</p>
+            </div>
+        </div>
+        <div class="chat-modal-messages" id="chatModalMessages"></div>
+        <div class="chat-modal-input">
+            <input type="text" id="chatModalInput" placeholder="Message...">
+            <button class="chat-modal-send" onclick="app.sendChatMessage()">→</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODALS -->
 <div class="modal-overlay" id="createModal">
     <div class="create-modal">
         <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
         <h2>Create Post</h2>
-        <img id="photoPreview" alt="Preview" style="display: none;">
+        <img id="photoPreview" alt="Preview">
         <input type="file" id="photoInput" style="display: none;" accept="image/*">
         <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
         <textarea id="captionInput" placeholder="Write a caption..."></textarea>
@@ -1385,6 +1678,16 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="profilePhotoModal">
+    <div class="modal" style="max-width: 300px;">
+        <div class="profile-options-modal">
+            <button class="profile-option-btn" onclick="app.changeProfilePhoto()">📸 Change Photo</button>
+            <button class="profile-option-btn" onclick="app.viewProfilePhoto()">👁️ View Photo</button>
+            <button class="profile-option-btn" onclick="app.closeProfilePhotoModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <div class="logout-modal" id="logoutModal">
     <div class="logout-card">
         <h3>Logout?</h3>
@@ -1411,6 +1714,7 @@ var auth = firebase.auth();
 var db = firebase.database();
 const CLOUD_NAME = 'u1uilb6f';
 const UPLOAD_PRESET = 'chichi_photos';
+const ADMIN_EMAILS = ['anthony@onchari.com', 'admin@chichi.com'];
 
 var app = {
     user: null,
@@ -1419,8 +1723,7 @@ var app = {
     users: {},
     balance: 0,
     currentChat: null,
-    following: [],
-    followers: [],
+    following: {},
     unreadMessages: {},
 
     init: function() {
@@ -1429,6 +1732,7 @@ var app = {
                 this.user = u;
                 this.loadProfile();
                 this.showApp();
+                this.checkIfAdmin();
             } else {
                 this.showAuth();
             }
@@ -1450,6 +1754,12 @@ var app = {
         }, 500);
     },
 
+    checkIfAdmin: function() {
+        if (ADMIN_EMAILS.includes(this.user.email)) {
+            document.getElementById('adminBtn').style.display = 'inline-block';
+        }
+    },
+
     showAuth: function() {
         document.getElementById('loadingScreen').classList.add('hidden');
         document.getElementById('authPage').style.display = 'flex';
@@ -1463,7 +1773,7 @@ var app = {
         this.loadPosts();
         this.loadUsers();
         this.loadFollowing();
-        this.checkUnreadMessages();
+        this.trackUnreadMessages();
     },
 
     loadProfile: function() {
@@ -1502,12 +1812,13 @@ var app = {
             this.loadPosts();
         } else if (view === 'messages') {
             this.loadMessages();
-        } else if (view === 'explore') {
-            this.loadAllUsers();
+            this.clearUnreadBadge();
+        } else if (view === 'admin') {
+            this.loadWithdrawals();
         }
 
-        var navIndex = ['feed', 'explore', 'messages', 'wallet', 'profile'].indexOf(view);
-        if (navIndex >= 0) {
+        var navIndex = ['feed', 'explore', 'create', 'messages', 'wallet', 'profile'].indexOf(view);
+        if (navIndex >= 0 && navIndex !== 2) {
             document.querySelectorAll('.nav-item')[navIndex].classList.add('active');
         }
     },
@@ -1543,6 +1854,64 @@ var app = {
             });
             this.toast('Account created!', 'success');
         }).catch(err => this.toast(err.message, 'error'));
+    },
+
+    openSearchModal: function() {
+        document.getElementById('searchModalOverlay').classList.add('active');
+        document.getElementById('searchInput').focus();
+        document.getElementById('searchResults').innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">Start typing to search...</div>';
+    },
+
+    closeSearchModal: function() {
+        document.getElementById('searchModalOverlay').classList.remove('active');
+        document.getElementById('searchInput').value = '';
+    },
+
+    handleSearch: function() {
+        var query = document.getElementById('searchInput').value.toLowerCase().trim();
+        
+        if (!query) {
+            document.getElementById('searchResults').innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">Start typing to search...</div>';
+            return;
+        }
+
+        var results = [];
+        for (var uid in this.users) {
+            if (uid !== this.user.uid) {
+                var u = this.users[uid];
+                if (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)) {
+                    results.push({ uid: uid, user: u });
+                }
+            }
+        }
+
+        var html = '';
+        if (results.length === 0) {
+            html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No users found</div>';
+        } else {
+            results.forEach(r => {
+                html += `
+                    <div class="search-user">
+                        <div class="search-user-avatar" style="background-image: url(${r.user.profilePhoto || ''});">${!r.user.profilePhoto ? r.user.name.charAt(0).toUpperCase() : ''}</div>
+                        <div class="search-user-info">
+                            <div class="search-user-name">${r.user.name}</div>
+                            <div class="search-user-email">${r.user.email}</div>
+                        </div>
+                        <div class="search-user-actions">
+                            <button class="search-msg-btn" onclick="app.openChatFromSearch('${r.uid}', '${r.user.name}')">💬</button>
+                            <button class="search-view-btn" onclick="app.viewUserProfile('${r.uid}')">View</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        document.getElementById('searchResults').innerHTML = html;
+    },
+
+    openChatFromSearch: function(uid, name) {
+        this.openChat(uid, name);
+        // Keep search modal in background, chat modal is on top
     },
 
     showCreateModal: function() {
@@ -1595,8 +1964,9 @@ var app = {
                 userPhoto: self.profile.profilePhoto || '',
                 photoUrl: data.secure_url,
                 caption: caption,
-                likes: 0,
+                likes: {},
                 comments: [],
+                commentedUsers: {},
                 downloads: 0,
                 createdAt: new Date().toLocaleString('en-KE'),
                 timestamp: firebase.database.ServerValue.TIMESTAMP
@@ -1632,16 +2002,18 @@ var app = {
             html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No posts yet</div>';
         } else {
             this.posts.forEach(p => {
-                var likes = p.likes || 0;
+                var likes = (p.likes && Object.keys(p.likes).length) || 0;
                 var downloads = p.downloads || 0;
                 var comments = (p.comments && p.comments.length) || 0;
+                var userLiked = p.likes && p.likes[this.user.uid];
+                
                 html += `
                     <div class="post" id="post-${p.id}">
                         <div class="post-header">
-                            <div class="post-user" onclick="app.viewUserProfile('${p.userId}')">
-                                <div class="post-avatar" style="background-image: url(${p.userPhoto || ''});">${!p.userPhoto ? p.userName.charAt(0).toUpperCase() : ''}</div>
+                            <div class="post-user">
+                                <div class="post-avatar" style="background-image: url(${p.userPhoto || ''}); cursor: pointer;" onclick="app.viewUserProfile('${p.userId}')">${!p.userPhoto ? p.userName.charAt(0).toUpperCase() : ''}</div>
                                 <div>
-                                    <div class="post-name">${p.userName}</div>
+                                    <div class="post-name" onclick="app.viewUserProfile('${p.userId}')">${p.userName}</div>
                                     <div class="post-time">${p.createdAt}</div>
                                 </div>
                             </div>
@@ -1651,7 +2023,7 @@ var app = {
                         <div class="post-caption">${p.caption}</div>
                         <div class="post-stats">${likes} likes · ${downloads} saves · ${comments} comments</div>
                         <div class="post-actions">
-                            <button class="post-action" onclick="app.likePost('${p.id}')">👍 Like</button>
+                            <button class="post-action ${userLiked ? 'liked' : ''}" onclick="app.likePost('${p.id}')">👍 Like</button>
                             <button class="post-action" onclick="app.downloadPost('${p.photoUrl}', '${p.id}')">💾 Save</button>
                             <button class="post-action" onclick="app.viewComments('${p.id}')">💬 Comment (${comments})</button>
                         </div>
@@ -1664,11 +2036,22 @@ var app = {
 
     likePost: function(id) {
         var self = this;
-        db.ref('posts/' + id + '/likes').once('value', s => {
-            var likes = (s.val() || 0) + 1;
+        db.ref('posts/' + id).once('value', s => {
+            var post = s.val();
+            var likes = post.likes || {};
+            
+            if (likes[self.user.uid]) {
+                delete likes[self.user.uid];
+                self.toast('Like removed', 'success');
+            } else {
+                likes[self.user.uid] = true;
+                self.balance += 0.2;
+                db.ref('users/' + self.user.uid + '/balance').set(self.balance);
+                self.toast('+KSh 0.2', 'success');
+            }
+            
             db.ref('posts/' + id + '/likes').set(likes);
-            self.balance += 0.2;
-            db.ref('users/' + self.user.uid + '/balance').set(self.balance);
+            self.renderFeed();
         });
     },
 
@@ -1679,11 +2062,6 @@ var app = {
             link.download = 'photo.jpg';
             link.click();
             this.toast('Saved!', 'success');
-
-            var self = this;
-            db.ref('posts/' + id + '/downloads').once('value', s => {
-                db.ref('posts/' + id + '/downloads').set((s.val() || 0) + 1);
-            });
         } catch (err) {
             this.toast('Download failed', 'error');
         }
@@ -1703,9 +2081,11 @@ var app = {
 
     viewComments: function(id) {
         var self = this;
-        db.ref('posts/' + id + '/comments').once('value', s => {
-            var comments = s.val() || [];
-            if (!Array.isArray(comments)) comments = [];
+        db.ref('posts/' + id).once('value', s => {
+            var post = s.val();
+            var comments = post.comments || [];
+            var commentedUsers = post.commentedUsers || {};
+            var userCommented = commentedUsers[this.user.uid];
 
             var html = '';
             if (comments.length === 0) {
@@ -1722,7 +2102,7 @@ var app = {
 
             html += `<div style="border-top: 1px solid var(--border); padding-top: 12px; display: flex; gap: 8px;">
                 <input type="text" id="commentInput" placeholder="Add comment..." style="flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 10px 12px;">
-                <button onclick="app.submitComment('${id}')" style="background: var(--primary); color: white; border: none; border-radius: 20px; padding: 10px 16px; cursor: pointer; font-weight: 600;">Post</button>
+                <button onclick="app.submitComment('${id}')" style="background: ${userCommented ? '#d1d5db' : 'var(--primary)'}; color: ${userCommented ? 'var(--text-light)' : 'white'}; border: none; border-radius: 20px; padding: 10px 16px; cursor: pointer; font-weight: 600; ${userCommented ? 'cursor: not-allowed;' : ''}">${userCommented ? '✓ Earned' : 'Post'}</button>
             </div>`;
 
             var modal = document.createElement('div');
@@ -1741,140 +2121,92 @@ var app = {
         if (!text) return;
 
         var self = this;
-        db.ref('posts/' + id + '/comments').once('value', s => {
-            var comments = s.val() || [];
+        db.ref('posts/' + id).once('value', s => {
+            var post = s.val();
+            var comments = post.comments || [];
+            var commentedUsers = post.commentedUsers || {};
+            
+            if (commentedUsers[self.user.uid]) {
+                self.toast('Already earned from commenting on this post', 'error');
+                return;
+            }
+
             if (!Array.isArray(comments)) comments = [];
             comments.push({
                 user: self.profile.name,
                 text: text,
                 time: new Date().toLocaleString('en-KE')
             });
+            
+            commentedUsers[self.user.uid] = true;
+            
             db.ref('posts/' + id + '/comments').set(comments);
+            db.ref('posts/' + id + '/commentedUsers').set(commentedUsers);
+            
             self.balance += 0.5;
             db.ref('users/' + self.user.uid + '/balance').set(self.balance);
             document.querySelector('.modal-overlay').remove();
-            self.toast('Comment added!', 'success');
-        });
-    },
-
-    loadUsers: function() {
-        var self = this;
-        db.ref('users').on('value', s => {
-            self.users = s.val() || {};
-        });
-    },
-
-    loadAllUsers: function() {
-        var self = this;
-        var html = '';
-        Object.keys(this.users).forEach(uid => {
-            if (uid !== this.user.uid) {
-                var u = this.users[uid];
-                var isFollowing = self.following.includes(uid);
-                html += `
-                    <div class="user-card">
-                        <div class="user-card-avatar" style="background-image: url(${u.profilePhoto || ''});">${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}</div>
-                        <div class="user-card-info" onclick="app.viewUserProfile('${uid}')">
-                            <div class="user-card-name">${u.name}</div>
-                            <div class="user-card-handle">${u.followers || 0} followers</div>
-                        </div>
-                        <button class="follow-btn ${isFollowing ? 'following' : ''}" onclick="app.toggleFollow('${uid}')">${isFollowing ? '✓ Following' : 'Follow'}</button>
-                    </div>
-                `;
-            }
-        });
-        if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No users yet</div>';
-        document.getElementById('usersContainer').innerHTML = html;
-    },
-
-    toggleFollow: function(uid) {
-        var isFollowing = this.following.includes(uid);
-        
-        if (isFollowing) {
-            this.following = this.following.filter(id => id !== uid);
-        } else {
-            this.following.push(uid);
-        }
-        
-        db.ref('users/' + this.user.uid + '/following').set(this.following.length);
-        db.ref('users/' + this.user.uid).update({ followingList: this.following });
-        
-        db.ref('users/' + uid).once('value', s => {
-            var followers = (s.val().followers || 0) + (isFollowing ? -1 : 1);
-            db.ref('users/' + uid + '/followers').set(followers);
-        });
-        
-        this.loadAllUsers();
-        this.toast(isFollowing ? 'Unfollowed!' : 'Following!', 'success');
-    },
-
-    loadFollowing: function() {
-        var self = this;
-        db.ref('users/' + this.user.uid + '/followingList').once('value', s => {
-            self.following = s.val() || [];
+            self.toast('+KSh 0.5', 'success');
         });
     },
 
     viewUserProfile: function(uid) {
-        var u = this.users[uid];
-        if (!u) return;
-        
-        var isFollowing = this.following.includes(uid);
-        var userPosts = this.posts.filter(p => p.userId === uid).length;
-        
-        var html = `
-            <div class="profile-header">
-                <div class="profile-top">
-                    <div class="profile-avatar-large" style="background-image: url(${u.profilePhoto || ''});">${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}</div>
-                    <div class="profile-info">
-                        <div class="profile-name">${u.name}</div>
-                        <div class="profile-email">${u.email}</div>
-                        <div class="profile-stats">
-                            <div class="profile-stat"><div class="profile-stat-value">${userPosts}</div><div class="profile-stat-label">Posts</div></div>
-                            <div class="profile-stat"><div class="profile-stat-value">${u.followers || 0}</div><div class="profile-stat-label">Followers</div></div>
-                        </div>
-                    </div>
-                </div>
-                <button class="btn-edit" onclick="app.toggleFollow('${uid}')">${isFollowing ? '✓ Following' : 'Follow'}</button>
-            </div>
-            <div style="padding: 16px; background: white; border-radius: 16px; margin: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                <div style="font-weight: 600; margin-bottom: 8px;">Bio</div>
-                <div style="color: var(--text-light); font-size: 0.9rem;">${u.bio || 'No bio yet'}</div>
-            </div>
-            <div style="padding: 16px;">Posts</div>
-            <div id="profilePosts"></div>
-        `;
-        
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = `<div class="modal" style="max-height: 90vh; overflow-y: auto;">
-            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-            ${html}
-        </div>`;
-        
-        var postsHtml = '';
-        this.posts.filter(p => p.userId === uid).forEach(p => {
-            postsHtml += `
-                <div class="post">
-                    <div class="post-header">
-                        <div class="post-user">
-                            <div class="post-avatar" style="background-image: url(${p.userPhoto || ''});">${!p.userPhoto ? p.userName.charAt(0).toUpperCase() : ''}</div>
-                            <div>
-                                <div class="post-name">${p.userName}</div>
-                                <div class="post-time">${p.createdAt}</div>
+        if (uid === this.user.uid) {
+            this.switchView('profile');
+        } else {
+            var self = this;
+            db.ref('users/' + uid).once('value', s => {
+                if (s.exists()) {
+                    var user = s.val();
+                    var isFollowing = this.following[uid] || false;
+                    var html = `
+                        <div class="profile-header">
+                            <div class="profile-top">
+                                <div class="profile-avatar-large" style="background-image: url(${user.profilePhoto || ''});">${!user.profilePhoto ? user.name.charAt(0).toUpperCase() : ''}</div>
+                                <div class="profile-info">
+                                    <div class="profile-name">${user.name || 'User'}</div>
+                                    <div class="profile-email">${user.email}</div>
+                                    <div class="profile-stats">
+                                        <div class="profile-stat"><div class="profile-stat-value">-</div><div class="profile-stat-label">Posts</div></div>
+                                        <div class="profile-stat"><div class="profile-stat-value">${user.followers || 0}</div><div class="profile-stat-label">Followers</div></div>
+                                    </div>
+                                </div>
                             </div>
+                            <button class="follow-btn ${isFollowing ? 'following' : ''}" onclick="app.toggleFollow('${uid}', '${user.name}')" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; width: 100%; margin-top: 12px;">${isFollowing ? '✓ Following' : '+ Follow'}</button>
                         </div>
-                    </div>
-                    <img src="${p.photoUrl}" class="post-image" style="max-height: 200px;">
-                    <div class="post-caption">${p.caption}</div>
-                </div>
-            `;
+                    `;
+                    
+                    var modal = document.createElement('div');
+                    modal.className = 'modal-overlay active';
+                    modal.innerHTML = `<div class="modal">
+                        <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+                        ${html}
+                    </div>`;
+                    document.body.appendChild(modal);
+                }
+            });
+        }
+    },
+
+    toggleFollow: function(uid, name) {
+        var self = this;
+        var isFollowing = this.following[uid] || false;
+        
+        if (isFollowing) {
+            delete this.following[uid];
+        } else {
+            this.following[uid] = true;
+            this.balance += 0.05;
+            db.ref('users/' + this.user.uid + '/balance').set(this.balance);
+        }
+        
+        db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
+        db.ref('users/' + uid + '/followers').once('value', s => {
+            var followers = (s.val() || 0) + (isFollowing ? -1 : 1);
+            db.ref('users/' + uid + '/followers').set(followers);
         });
         
-        if (postsHtml === '') postsHtml = '<div style="text-align: center; color: #6b7280; padding: 20px;">No posts yet</div>';
-        
-        document.body.appendChild(modal);
-        modal.querySelector('#profilePosts').innerHTML = postsHtml;
+        this.toast(isFollowing ? 'Unfollowed' : 'Following ' + name + '! +KSh 0.05', 'success');
     },
 
     renderProfile: function() {
@@ -1888,8 +2220,7 @@ var app = {
                         <div class="profile-email">${this.user.email}</div>
                         <div class="profile-stats">
                             <div class="profile-stat"><div class="profile-stat-value">${userPosts}</div><div class="profile-stat-label">Posts</div></div>
-                            <div class="profile-stat"><div class="profile-stat-value">${this.followers.length || 0}</div><div class="profile-stat-label">Followers</div></div>
-                            <div class="profile-stat"><div class="profile-stat-value">${this.following.length || 0}</div><div class="profile-stat-label">Following</div></div>
+                            <div class="profile-stat"><div class="profile-stat-value">${this.profile.followers || 0}</div><div class="profile-stat-label">Followers</div></div>
                         </div>
                     </div>
                 </div>
@@ -1907,6 +2238,7 @@ var app = {
 
         var postsHtml = '';
         this.posts.filter(p => p.userId === this.user.uid).forEach(p => {
+            var likes = (p.likes && Object.keys(p.likes).length) || 0;
             postsHtml += `
                 <div class="post" id="post-${p.id}">
                     <div class="post-header">
@@ -1921,6 +2253,7 @@ var app = {
                     </div>
                     <img src="${p.photoUrl}" class="post-image">
                     <div class="post-caption">${p.caption}</div>
+                    <div class="post-stats">${likes} likes</div>
                     <div class="post-actions">
                         <button class="post-action" onclick="app.likePost('${p.id}')">👍 Like</button>
                         <button class="post-action" onclick="app.downloadPost('${p.photoUrl}', '${p.id}')">💾 Save</button>
@@ -1951,19 +2284,15 @@ var app = {
     },
 
     showProfilePhotoModal: function() {
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = `<div class="modal" style="max-width: 300px;">
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <button style="padding: 12px 16px; background: var(--light); border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.3s;" onclick="app.changeProfilePhoto(); this.closest('.modal-overlay').remove()">📸 Change Photo</button>
-                <button style="padding: 12px 16px; background: var(--light); border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.3s;" onclick="app.viewProfilePhoto(); this.closest('.modal-overlay').remove()">👁️ View Photo</button>
-                <button style="padding: 12px 16px; background: var(--light); border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.3s;" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-            </div>
-        </div>`;
-        document.body.appendChild(modal);
+        document.getElementById('profilePhotoModal').classList.add('active');
+    },
+
+    closeProfilePhotoModal: function() {
+        document.getElementById('profilePhotoModal').classList.remove('active');
     },
 
     changeProfilePhoto: function() {
+        this.closeProfilePhotoModal();
         var input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
@@ -1983,6 +2312,7 @@ var app = {
                     db.ref('users/' + this.user.uid + '/profilePhoto').set(data.secure_url);
                     this.toast('Photo updated!', 'success');
                     this.renderProfile();
+                    this.loadMessages();
                 })
                 .catch(err => this.toast('Upload failed', 'error'));
             }
@@ -1991,6 +2321,7 @@ var app = {
     },
 
     viewProfilePhoto: function() {
+        this.closeProfilePhotoModal();
         if (this.profile.profilePhoto) {
             var modal = document.createElement('div');
             modal.className = 'modal-overlay active';
@@ -2004,63 +2335,51 @@ var app = {
         }
     },
 
+    loadUsers: function() {
+        var self = this;
+        db.ref('users').on('value', s => {
+            self.users = s.val() || {};
+        });
+    },
+
+    loadFollowing: function() {
+        var self = this;
+        db.ref('users/' + this.user.uid + '/following').once('value', s => {
+            var following = s.val() || 0;
+        });
+    },
+
     loadMessages: function() {
         var self = this;
         var html = '';
-        Object.keys(this.users).forEach(uid => {
-            if (uid !== self.user.uid) {
-                var u = self.users[uid];
-                var isUnread = self.unreadMessages[uid] && self.unreadMessages[uid] > 0;
+        var userIds = Object.keys(this.users);
+        
+        userIds.forEach(uid => {
+            if (uid !== this.user.uid) {
+                var u = this.users[uid];
+                var isUnread = this.unreadMessages[uid] || false;
+                
                 html += `
                     <div class="message-item ${isUnread ? 'unread' : ''}" onclick="app.openChat('${uid}', '${u.name}')">
-                        <div class="message-avatar" style="background-image: url(${u.profilePhoto || ''});">${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}
-                            ${isUnread ? `<div class="unread-badge">${self.unreadMessages[uid]}</div>` : ''}
+                        <div class="message-avatar ${isUnread ? 'unread' : ''}" style="background-image: url(${u.profilePhoto || ''}); position: relative;">
+                            ${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}
+                            <div class="online-dot" style="display: ${Math.random() > 0.5 ? 'block' : 'none'};"></div>
                         </div>
                         <div class="message-content">
-                            <div class="message-name">${u.name}</div>
-                            <div class="message-preview">Tap to message</div>
+                            <div class="message-top">
+                                <div class="message-name">${u.name}</div>
+                                <div class="message-time">Now</div>
+                            </div>
+                            <div class="message-preview ${isUnread ? 'unread' : ''}">Tap to message</div>
                         </div>
+                        ${isUnread ? '<div class="unread-badge">1</div>' : ''}
                     </div>
                 `;
             }
         });
-        if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No messages yet</div>';
-        document.getElementById('messageList').innerHTML = html;
-    },
-
-    checkUnreadMessages: function() {
-        var self = this;
-        Object.keys(this.users).forEach(uid => {
-            if (uid !== self.user.uid) {
-                var key = [self.user.uid, uid].sort().join('_');
-                db.ref('chats/' + key + '/messages').on('value', s => {
-                    var unreadCount = 0;
-                    s.forEach(c => {
-                        var m = c.val();
-                        if (m && m.sender !== self.user.uid && !m.read) {
-                            unreadCount++;
-                        }
-                    });
-                    self.unreadMessages[uid] = unreadCount;
-                    self.updateUnreadBadges();
-                });
-            }
-        });
-    },
-
-    updateUnreadBadges: function() {
-        var totalUnread = Object.values(this.unreadMessages).reduce((a, b) => a + b, 0);
         
-        var badge = document.getElementById('messagesBadge');
-        if (totalUnread > 0) {
-            badge.innerHTML = `<div class="nav-badge">${totalUnread}</div>`;
-            
-            var headerBadge = document.getElementById('unreadBadgeContainer');
-            headerBadge.innerHTML = `<div class="header-badge"></div>`;
-        } else {
-            badge.innerHTML = '';
-            document.getElementById('unreadBadgeContainer').innerHTML = '';
-        }
+        if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No users yet</div>';
+        document.getElementById('messageList').innerHTML = html;
     },
 
     openChat: function(uid, name) {
@@ -2070,10 +2389,13 @@ var app = {
         document.getElementById('chatModalInput').value = '';
         
         var avatar = document.getElementById('chatModalAvatar');
-        avatar.textContent = name.charAt(0).toUpperCase();
-        if (this.users[uid] && this.users[uid].profilePhoto) {
-            avatar.style.backgroundImage = 'url(' + this.users[uid].profilePhoto + ')';
+        var userPhoto = this.users[uid] && this.users[uid].profilePhoto;
+        if (userPhoto) {
+            avatar.style.backgroundImage = 'url(' + userPhoto + ')';
             avatar.textContent = '';
+        } else {
+            avatar.style.backgroundImage = 'none';
+            avatar.textContent = name.charAt(0).toUpperCase();
         }
         
         document.getElementById('chatModalOverlay').classList.add('active');
@@ -2081,6 +2403,7 @@ var app = {
         var self = this;
         setTimeout(() => {
             self.loadChatMessages();
+            self.markAsRead(uid);
             document.getElementById('chatModalInput').focus();
         }, 100);
     },
@@ -2088,7 +2411,6 @@ var app = {
     closeChatModal: function() {
         this.currentChat = null;
         document.getElementById('chatModalOverlay').classList.remove('active');
-        this.markMessagesAsRead();
     },
 
     loadChatMessages: function() {
@@ -2121,8 +2443,6 @@ var app = {
                     chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
                 }, 50);
             }
-        }, err => {
-            console.error('Error loading messages:', err);
         });
     },
 
@@ -2146,8 +2466,7 @@ var app = {
         db.ref('chats/' + key + '/messages').push({
             sender: self.user.uid,
             text: text,
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            read: false
+            timestamp: firebase.database.ServerValue.TIMESTAMP
         }).then(() => {
             input.value = '';
             input.focus();
@@ -2163,23 +2482,46 @@ var app = {
         });
     },
 
-    markMessagesAsRead: function() {
-        if (!this.currentChat) return;
-        
+    trackUnreadMessages: function() {
         var self = this;
-        var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+        var userIds = Object.keys(this.users);
         
-        db.ref('chats/' + key + '/messages').once('value', s => {
-            s.forEach(c => {
-                var m = c.val();
-                if (m && m.sender !== self.user.uid && !m.read) {
-                    db.ref('chats/' + key + '/messages/' + c.key).update({ read: true });
-                }
-            });
+        userIds.forEach(uid => {
+            if (uid !== self.user.uid) {
+                var key = [self.user.uid, uid].sort().join('_');
+                db.ref('chats/' + key + '/messages').limitToLast(1).on('value', s => {
+                    var hasUnread = false;
+                    s.forEach(c => {
+                        var m = c.val();
+                        if (m && m.sender !== self.user.uid) {
+                            hasUnread = true;
+                        }
+                    });
+                    self.unreadMessages[uid] = hasUnread;
+                    self.updateUnreadBadge();
+                });
+            }
         });
-        
-        this.unreadMessages[this.currentChat.uid] = 0;
-        this.updateUnreadBadges();
+    },
+
+    markAsRead: function(uid) {
+        this.unreadMessages[uid] = false;
+        this.updateUnreadBadge();
+    },
+
+    updateUnreadBadge: function() {
+        var unreadCount = Object.values(this.unreadMessages).filter(v => v).length;
+        var badge = document.getElementById('messagesBadge');
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    },
+
+    clearUnreadBadge: function() {
+        document.getElementById('messagesBadge').style.display = 'none';
     },
 
     showWithdrawModal: function() {
@@ -2205,6 +2547,7 @@ var app = {
         db.ref('withdrawals').push({
             userId: this.user.uid,
             userName: this.profile.name,
+            userEmail: this.user.email,
             amount: amount,
             method: document.getElementById('paymentMethod').value,
             account: document.getElementById('accountNumber').value,
@@ -2216,6 +2559,80 @@ var app = {
         db.ref('users/' + this.user.uid + '/balance').set(this.balance);
         this.toast('Withdrawal requested!', 'success');
         this.closeWithdrawModal();
+        document.getElementById('withdrawAmount').value = '';
+        document.getElementById('accountNumber').value = '';
+    },
+
+    loadWithdrawals: function() {
+        var self = this;
+        db.ref('withdrawals').on('value', s => {
+            var withdrawals = [];
+            s.forEach(c => {
+                var w = c.val();
+                if (w) {
+                    w.id = c.key;
+                    withdrawals.push(w);
+                }
+            });
+
+            var html = '';
+            if (withdrawals.length === 0) {
+                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No withdrawal requests</div>';
+            } else {
+                withdrawals.reverse().forEach(w => {
+                    html += `
+                        <div class="withdrawal-card ${w.status}">
+                            <div class="withdrawal-header">
+                                <div class="withdrawal-user">${w.userName}</div>
+                                <div class="withdrawal-status ${w.status}">${w.status}</div>
+                            </div>
+                            <div class="withdrawal-details">
+                                <div class="withdrawal-detail">
+                                    <div class="withdrawal-detail-label">Amount</div>
+                                    <div class="withdrawal-detail-value">KSh ${w.amount}</div>
+                                </div>
+                                <div class="withdrawal-detail">
+                                    <div class="withdrawal-detail-label">Method</div>
+                                    <div class="withdrawal-detail-value">${w.method}</div>
+                                </div>
+                                <div class="withdrawal-detail">
+                                    <div class="withdrawal-detail-label">Account</div>
+                                    <div class="withdrawal-detail-value">${w.account}</div>
+                                </div>
+                                <div class="withdrawal-detail">
+                                    <div class="withdrawal-detail-label">Email</div>
+                                    <div class="withdrawal-detail-value">${w.userEmail}</div>
+                                </div>
+                            </div>
+                            ${w.status === 'pending' ? `
+                                <div class="withdrawal-actions">
+                                    <button class="withdrawal-action-btn withdrawal-approve" onclick="app.approveWithdrawal('${w.id}')">Approve</button>
+                                    <button class="withdrawal-action-btn withdrawal-reject" onclick="app.rejectWithdrawal('${w.id}')">Reject</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('adminContent').innerHTML = html;
+        });
+    },
+
+    approveWithdrawal: function(id) {
+        db.ref('withdrawals/' + id + '/status').set('approved');
+        this.toast('Withdrawal approved!', 'success');
+    },
+
+    rejectWithdrawal: function(id) {
+        db.ref('withdrawals/' + id).once('value', s => {
+            var w = s.val();
+            db.ref('users/' + w.userId + '/balance').once('value', bal => {
+                db.ref('users/' + w.userId + '/balance').set((bal.val() || 0) + w.amount);
+            });
+            db.ref('withdrawals/' + id + '/status').set('rejected');
+            this.toast('Withdrawal rejected!', 'success');
+        });
     },
 
     showLogout: function() {
