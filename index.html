@@ -1024,6 +1024,7 @@
             <p class="app-subtitle">by Onchari Group</p>
         </div>
         <div class="header-actions">
+            <button class="btn-icon" onclick="app.showAdminWithdrawals()" title="Admin - Withdrawals">⚙️</button>
             <button class="btn-icon" onclick="app.showLogoutModal()">Logout</button>
         </div>
     </div>
@@ -1192,6 +1193,19 @@
     </div>
 </div>
 
+<!-- COMMENTS MODAL -->
+<div class="modal-overlay" id="commentsModal">
+    <div class="modal">
+        <div class="modal-close"><button onclick="app.closeCommentsModal()">✕</button></div>
+        <h2 style="font-weight: 700; margin-bottom: 16px;">Comments</h2>
+        <div id="commentsContainer" style="max-height: 400px; overflow-y: auto; margin-bottom: 16px;"></div>
+        <div style="display: flex; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px;">
+            <input type="text" id="newCommentInput" placeholder="Write a comment..." style="flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 10px 12px; font-family: 'Inter', sans-serif;">
+            <button type="button" onclick="app.submitComment()" style="background: var(--primary); color: white; border: none; border-radius: 20px; padding: 10px 16px; cursor: pointer; font-weight: 600;">Post</button>
+        </div>
+    </div>
+</div>
+
 <!-- LOGOUT MODAL -->
 <div class="logout-modal" id="logoutModal">
     <div class="logout-card">
@@ -1201,6 +1215,15 @@
             <button class="logout-cancel" onclick="app.closeLogoutModal()">Cancel</button>
             <button class="logout-confirm" onclick="app.confirmLogout()">Logout</button>
         </div>
+    </div>
+</div>
+
+<!-- ADMIN WITHDRAWALS MODAL -->
+<div class="modal-overlay" id="adminWithdrawalsModal">
+    <div class="modal">
+        <div class="modal-close"><button onclick="app.closeAdminModal()">✕</button></div>
+        <h2 style="font-weight: 700; margin-bottom: 16px;">Pending Withdrawals</h2>
+        <div id="withdrawalsContainer" style="max-height: 500px; overflow-y: auto;"></div>
     </div>
 </div>
 
@@ -1524,7 +1547,7 @@ var app = {
                 <div class="post-actions">
                     <button class="post-action" onclick="app.likePost('${post.id}')">👍 Like</button>
                     <button class="post-action" onclick="app.downloadPost('${post.photoUrl}', '${post.id}')">💾 Save</button>
-                    <button class="post-action" onclick="app.commentPost('${post.id}')">💬 Comment</button>
+                    <button class="post-action" onclick="app.viewComments('${post.id}')">💬 Comment (${commentsLength})</button>
                 </div>
             `;
             feedContainer.appendChild(postEl);
@@ -1560,24 +1583,73 @@ var app = {
         }
     },
 
-    commentPost: function(postId) {
-        var comment = prompt('Write a comment:');
-        if (!comment) return;
+    currentCommentPostId: null,
+
+    viewComments: function(postId) {
+        this.currentCommentPostId = postId;
+        var self = this;
+        
+        database.ref('posts/' + postId + '/comments').once('value', snapshot => {
+            var comments = snapshot.val() || [];
+            var commentsContainer = document.getElementById('commentsContainer');
+            commentsContainer.innerHTML = '';
+
+            if (!Array.isArray(comments)) {
+                comments = [];
+            }
+
+            if (comments.length === 0) {
+                commentsContainer.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No comments yet. Be the first!</div>';
+            } else {
+                comments.forEach(comment => {
+                    var commentEl = document.createElement('div');
+                    commentEl.style.cssText = 'padding: 12px; background: var(--light); border-radius: 8px; margin-bottom: 8px;';
+                    commentEl.innerHTML = `
+                        <div style="font-weight: 600; font-size: 0.9rem;">${comment.user || comment.email}</div>
+                        <div style="font-size: 0.85rem; margin: 4px 0;">${comment.text}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-light);">${comment.time}</div>
+                    `;
+                    commentsContainer.appendChild(commentEl);
+                });
+            }
+        });
+
+        document.getElementById('commentsModal').classList.add('active');
+    },
+
+    closeCommentsModal: function() {
+        document.getElementById('commentsModal').classList.remove('active');
+        document.getElementById('newCommentInput').value = '';
+    },
+
+    submitComment: function() {
+        if (!this.currentCommentPostId) return;
+        
+        var text = document.getElementById('newCommentInput').value.trim();
+        if (!text) {
+            this.toast('Type a comment', 'error');
+            return;
+        }
 
         var self = this;
-        database.ref('posts/' + postId).once('value', snapshot => {
-            var post = snapshot.val();
-            var comments = post.comments && Array.isArray(post.comments) ? post.comments : [];
+        database.ref('posts/' + self.currentCommentPostId + '/comments').once('value', snapshot => {
+            var comments = snapshot.val() || [];
+            if (!Array.isArray(comments)) comments = [];
+            
             comments.push({
-                user: self.userProfile.name,
+                user: self.userProfile.name || 'User',
                 email: self.currentUser.email,
-                text: comment,
+                text: text,
                 time: new Date().toLocaleString('en-KE')
             });
-            database.ref('posts/' + postId + '/comments').set(comments);
+            
+            database.ref('posts/' + self.currentCommentPostId + '/comments').set(comments);
             self.userBalance += 0.5;
             database.ref('users/' + self.currentUser.uid + '/balance').set(self.userBalance);
-            self.toast('Comment added! +0.5 KSh', 'success');
+            
+            document.getElementById('newCommentInput').value = '';
+            self.toast('Comment posted! +0.5 KSh', 'success');
+            self.viewComments(self.currentCommentPostId);
         });
     },
 
@@ -1658,7 +1730,7 @@ var app = {
                 <div class="post-actions">
                     <button class="post-action" onclick="app.likePost('${post.id}')">👍 Like</button>
                     <button class="post-action" onclick="app.downloadPost('${post.photoUrl}', '${post.id}')">💾 Save</button>
-                    <button class="post-action" onclick="app.commentPost('${post.id}')">💬 Comment</button>
+                    <button class="post-action" onclick="app.viewComments('${post.id}')">💬 Comment (${commentsLength})</button>
                 </div>
             `;
             postsContainer.appendChild(postEl);
@@ -1798,22 +1870,40 @@ var app = {
     },
 
     sendMessage: function() {
-        if (!this.currentChatUser) return;
+        if (!this.currentChatUser) {
+            this.toast('No chat user selected', 'error');
+            return;
+        }
+        
         var text = document.getElementById('chatInput').value.trim();
-        if (!text) return;
+        if (!text) {
+            this.toast('Type a message', 'error');
+            return;
+        }
 
         var self = this;
         var chatKey = [self.currentUser.uid, self.currentChatUser.id].sort().join('_');
+        var messagesRef = database.ref('chats/' + chatKey + '/messages');
 
-        database.ref('chats/' + chatKey + '/messages').push().set({
-            sender: this.currentUser.uid,
-            senderName: this.userProfile.name,
+        messagesRef.push({
+            sender: self.currentUser.uid,
+            senderName: self.userProfile.name || self.currentUser.email,
             text: text,
             timestamp: firebase.database.ServerValue.TIMESTAMP,
             time: new Date().toLocaleString('en-KE')
+        }).then(() => {
+            document.getElementById('chatInput').value = '';
+            var chatMessagesDiv = document.getElementById('chatMessages');
+            if (chatMessagesDiv) {
+                setTimeout(() => {
+                    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+                }, 100);
+            }
+            self.toast('Message sent! ✅', 'success');
+        }).catch(error => {
+            self.toast('Failed to send: ' + error.message, 'error');
+            console.error('Send error:', error);
         });
-
-        document.getElementById('chatInput').value = '';
     },
 
     showWithdrawModal: function() {
@@ -1847,6 +1937,7 @@ var app = {
         var self = this;
         database.ref('withdrawals').push().set({
             userId: this.currentUser.uid,
+            userName: this.userProfile.name || 'User',
             userEmail: this.currentUser.email,
             amount: amount,
             method: method,
@@ -1863,6 +1954,92 @@ var app = {
         document.getElementById('withdrawAmount').value = '';
         document.getElementById('accountNumber').value = '';
         document.getElementById('dataConsent').checked = false;
+    },
+
+    showAdminWithdrawals: function() {
+        var self = this;
+        database.ref('withdrawals').orderByChild('createdAt').on('value', snapshot => {
+            var withdrawalsContainer = document.getElementById('withdrawalsContainer');
+            withdrawalsContainer.innerHTML = '';
+
+            var withdrawals = [];
+            snapshot.forEach(child => {
+                var withdrawal = child.val();
+                if (withdrawal) {
+                    withdrawal.id = child.key;
+                    withdrawals.push(withdrawal);
+                }
+            });
+
+            if (withdrawals.length === 0) {
+                withdrawalsContainer.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No withdrawals yet</div>';
+                return;
+            }
+
+            withdrawals.reverse().forEach(withdrawal => {
+                var withdrawalEl = document.createElement('div');
+                withdrawalEl.style.cssText = 'background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px;';
+                withdrawalEl.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.95rem;">${withdrawal.userName}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-light);">${withdrawal.userEmail}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">KSh ${withdrawal.amount}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-light);">${withdrawal.method}</div>
+                        </div>
+                    </div>
+                    <div style="background: var(--light); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 0.85rem;">
+                        <div style="font-weight: 600;">Account: ${withdrawal.account}</div>
+                        <div style="color: var(--text-light);">Date: ${withdrawal.createdAt}</div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="app.approveWithdrawal('${withdrawal.id}', '${withdrawal.amount}', '${withdrawal.method}')" style="flex: 1; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">✅ Approve</button>
+                        <button onclick="app.rejectWithdrawal('${withdrawal.id}')" style="flex: 1; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">❌ Reject</button>
+                    </div>
+                `;
+                withdrawalsContainer.appendChild(withdrawalEl);
+            });
+        });
+
+        document.getElementById('adminWithdrawalsModal').classList.add('active');
+    },
+
+    closeAdminModal: function() {
+        document.getElementById('adminWithdrawalsModal').classList.remove('active');
+    },
+
+    approveWithdrawal: function(withdrawalId, amount, method) {
+        if (confirm('Approve withdrawal of KSh ' + amount + ' via ' + method + '?')) {
+            database.ref('withdrawals/' + withdrawalId).update({
+                status: 'approved',
+                approvedAt: new Date().toLocaleString('en-KE')
+            });
+            this.toast('Withdrawal approved! ✅', 'success');
+            this.showAdminWithdrawals();
+        }
+    },
+
+    rejectWithdrawal: function(withdrawalId) {
+        if (confirm('Reject this withdrawal? User will get refunded.')) {
+            database.ref('withdrawals/' + withdrawalId).once('value', snapshot => {
+                var withdrawal = snapshot.val();
+                database.ref('withdrawals/' + withdrawalId).update({
+                    status: 'rejected',
+                    rejectedAt: new Date().toLocaleString('en-KE')
+                });
+                
+                // Refund user
+                database.ref('users/' + withdrawal.userId + '/balance').once('value', userSnapshot => {
+                    var currentBalance = userSnapshot.val() || 0;
+                    database.ref('users/' + withdrawal.userId + '/balance').set(currentBalance + parseFloat(withdrawal.amount));
+                });
+                
+                this.toast('Withdrawal rejected. User refunded!', 'success');
+                this.showAdminWithdrawals();
+            });
+        }
     },
 
     showLogoutModal: function() {
