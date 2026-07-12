@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>ChiChi - Messages</title>
+    <title>CHICHI - Social Media by Onchari Group</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
@@ -25,11 +25,12 @@
             --text: #111827;
             --text-light: #6b7280;
             --blue: #2E5BFF;
+            --gold: #FFC24B;
         }
 
         html, body {
             font-family: 'Inter', sans-serif;
-            background: white;
+            background: var(--light);
             color: var(--text);
             width: 100%;
             height: 100%;
@@ -39,7 +40,7 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* ===== AUTH PAGE ===== */
+        /* AUTH PAGE */
         .auth-page {
             display: flex;
             align-items: center;
@@ -71,8 +72,8 @@
 
         .auth-header h1 {
             font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 8px;
+            font-weight: 800;
+            margin-bottom: 4px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -81,7 +82,14 @@
 
         .auth-header p {
             color: var(--text-light);
-            font-size: 0.9rem;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+
+        .auth-header .creator {
+            color: var(--primary);
+            font-size: 0.75rem;
+            font-weight: 600;
         }
 
         .tabs {
@@ -185,362 +193,106 @@
             font-weight: 600;
         }
 
-        /* ===== MAIN APP ===== */
+        /* MAIN APP */
         .main-app {
             display: none;
             height: 100vh;
             width: 100%;
             overflow: hidden;
+            flex-direction: column;
         }
 
         .main-app.active {
             display: flex;
         }
 
-        .app-container {
-            display: flex;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Chat List View */
-        .chat-list-view {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            background: white;
-            overflow: hidden;
-        }
-
-        .chat-list-view.hidden {
-            display: none;
-        }
-
-        .list-header {
-            padding: 16px;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-        }
-
-        .list-header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .list-title {
-            font-size: 1.4rem;
-            font-weight: 800;
-        }
-
-        .header-user-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .user-avatar-small {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 0.8rem;
-            object-fit: cover;
-            cursor: pointer;
-        }
-
-        .btn-logout-icon {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.2rem;
-            color: var(--text-light);
-        }
-
-        .activities-section {
-            padding: 16px;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-        }
-
-        .activities-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-light);
-            text-transform: uppercase;
-            margin-bottom: 10px;
-        }
-
-        .activities-scroll {
-            display: flex;
-            gap: 12px;
-            overflow-x: auto;
-            padding-bottom: 4px;
-        }
-
-        .activities-scroll::-webkit-scrollbar {
-            display: none;
-        }
-
-        .activity-avatar {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.1rem;
-            flex-shrink: 0;
-            border: 2px solid var(--primary);
-            object-fit: cover;
-            cursor: pointer;
-        }
-
-        .activity-avatar.add-btn {
-            background: var(--light);
-            border: 2px dashed var(--border);
-            color: var(--primary);
-            font-size: 1.4rem;
-        }
-
-        .messages-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-light);
-            text-transform: uppercase;
-            margin: 16px 16px 8px;
-        }
-
-        .chat-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0 8px;
-        }
-
-        .chat-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            margin: 0 8px 4px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: white;
-            position: relative;
-        }
-
-        .chat-item:active {
-            background: #f3f4f6;
-        }
-
-        .chat-item.active {
-            background: linear-gradient(135deg, rgba(0, 212, 170, 0.1) 0%, rgba(0, 184, 148, 0.05) 100%);
-        }
-
-        .chat-avatar {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1rem;
-            flex-shrink: 0;
-            object-fit: cover;
-            position: relative;
-        }
-
-        .online-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: var(--primary);
-            border: 2px solid white;
-            position: absolute;
-            bottom: 0;
-            right: 0;
-        }
-
-        .chat-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .chat-name {
-            font-weight: 600;
-            font-size: 0.95rem;
-            margin-bottom: 2px;
-            color: var(--text);
-        }
-
-        .chat-preview {
-            font-size: 0.8rem;
-            color: var(--text-light);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .chat-time {
-            font-size: 0.75rem;
-            color: var(--text-light);
-            flex-shrink: 0;
-        }
-
-        .unread-badge {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-
-        .bottom-nav {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 12px 0 20px;
-            border-top: 1px solid var(--border);
-            background: white;
-            flex-shrink: 0;
-        }
-
-        .nav-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.4rem;
-            color: var(--text-light);
-            padding: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .nav-btn.active {
-            color: var(--primary);
-        }
-
-        /* Chat View */
-        .chat-view {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            background: white;
-            overflow: hidden;
-        }
-
-        .chat-view.hidden {
-            display: none;
-        }
-
-        .chat-header {
+        .app-header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             padding: 12px 16px;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 12px;
             flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             padding-top: max(12px, env(safe-area-inset-top));
         }
 
-        .chat-header-back {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            cursor: pointer;
+        .app-logo {
             font-size: 1.2rem;
-            padding: 6px 8px;
-            border-radius: 6px;
+            font-weight: 800;
         }
 
-        .chat-header-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.3);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-            object-fit: cover;
-        }
-
-        .chat-header-info {
-            flex: 1;
-        }
-
-        .chat-header-name {
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-
-        .chat-header-status {
-            font-size: 0.75rem;
+        .app-logo-small {
+            font-size: 0.7rem;
             opacity: 0.9;
         }
 
-        .chat-header-actions {
+        .header-actions {
             display: flex;
-            gap: 6px;
+            gap: 8px;
         }
 
-        .chat-header-btn {
+        .btn-icon {
             background: rgba(255,255,255,0.2);
             border: none;
             color: white;
             cursor: pointer;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             padding: 6px 8px;
             border-radius: 6px;
+            transition: all 0.3s ease;
         }
 
-        .chat-messages {
+        .btn-icon:active {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .app-content {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            background: var(--light);
+        }
+
+        .app-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .app-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .app-content::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 170, 0.3);
+            border-radius: 2px;
+        }
+
+        /* FEED VIEW */
+        .feed-view {
+            display: none;
+            min-height: 100%;
+        }
+
+        .feed-view.active {
+            display: block;
+        }
+
+        .post {
+            background: white;
+            border-bottom: 8px solid var(--light);
+            overflow: hidden;
+        }
+
+        .post-header {
+            padding: 12px 16px;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             gap: 10px;
-            background: #f9fafb;
         }
 
-        .message {
-            display: flex;
-            gap: 8px;
-            align-items: flex-end;
-        }
-
-        .message.own {
-            flex-direction: row-reverse;
-        }
-
-        .message-avatar {
-            width: 32px;
-            height: 32px;
+        .post-avatar {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             background: var(--primary);
             color: white;
@@ -548,82 +300,352 @@
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 0.7rem;
+            font-size: 0.8rem;
             flex-shrink: 0;
             object-fit: cover;
         }
 
-        .message-bubble {
-            max-width: 70%;
-            padding: 11px 14px;
-            border-radius: 16px;
+        .post-meta {
+            flex: 1;
+        }
+
+        .post-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .post-time {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .post-image {
+            width: 100%;
+            height: auto;
+            max-height: 400px;
+            object-fit: cover;
+        }
+
+        .post-caption {
+            padding: 12px 16px;
             font-size: 0.9rem;
             line-height: 1.4;
-            word-wrap: break-word;
         }
 
-        .message.own .message-bubble {
-            background: var(--primary);
-            color: white;
-            border-radius: 16px 4px 16px 16px;
+        .post-stats {
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            border-bottom: 1px solid var(--border);
         }
 
-        .message.other .message-bubble {
-            background: #e5e7eb;
-            color: var(--text);
-            border-radius: 4px 16px 16px 16px;
-        }
-
-        .chat-input-area {
-            padding: 12px 16px;
-            background: white;
-            border-top: 1px solid var(--border);
+        .post-actions {
+            padding: 8px 16px;
             display: flex;
-            gap: 8px;
-            flex-shrink: 0;
-            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            gap: 16px;
         }
 
-        .chat-input {
+        .post-action {
             flex: 1;
+            text-align: center;
+            cursor: pointer;
+            padding: 8px;
+            border: none;
+            background: none;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .post-action:active {
+            color: var(--primary);
+        }
+
+        .post-action.liked {
+            color: #ef4444;
+        }
+
+        /* CREATE POST VIEW */
+        .create-post-view {
+            display: none;
+            min-height: 100%;
+        }
+
+        .create-post-view.active {
+            display: block;
+        }
+
+        .create-container {
+            background: white;
+            border-radius: 16px;
+            margin: 16px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .upload-preview {
+            width: 100%;
+            height: 200px;
+            border-radius: 12px;
+            background: var(--light);
+            border: 2px dashed var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            font-size: 3rem;
+            color: var(--text-light);
+            overflow: hidden;
+            object-fit: cover;
+        }
+
+        .upload-preview.has-image {
+            border: none;
+            background: transparent;
+        }
+
+        .photo-input {
+            display: none;
+        }
+
+        .btn-upload {
+            width: 100%;
+            padding: 12px;
+            background: var(--light);
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+        }
+
+        .btn-upload:active {
+            background: rgba(0, 212, 170, 0.1);
+        }
+
+        .caption-input {
+            width: 100%;
+            padding: 12px;
             border: 1px solid var(--border);
-            border-radius: 22px;
-            padding: 10px 14px;
+            border-radius: 12px;
             font-family: 'Inter', sans-serif;
             font-size: 0.9rem;
-            resize: none;
-            max-height: 60px;
+            resize: vertical;
+            min-height: 80px;
+            margin-bottom: 12px;
         }
 
-        .chat-input:focus {
+        .caption-input:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 2px rgba(0, 212, 170, 0.1);
         }
 
-        .chat-input-btn {
-            width: 36px;
-            height: 36px;
+        .btn-post {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .btn-post:active {
+            transform: scale(0.98);
+        }
+
+        .btn-post:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* PROFILE VIEW */
+        .profile-view {
+            display: none;
+            min-height: 100%;
+        }
+
+        .profile-view.active {
+            display: block;
+        }
+
+        .profile-header {
+            background: white;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .profile-avatar-large {
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
             background: var(--primary);
             color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+            object-fit: cover;
+        }
+
+        .profile-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .profile-email {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 12px;
+        }
+
+        .profile-stat {
+            text-align: center;
+        }
+
+        .profile-stat-value {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .profile-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        /* EARN VIEW */
+        .earn-view {
+            display: none;
+            min-height: 100%;
+        }
+
+        .earn-view.active {
+            display: block;
+            padding: 16px;
+        }
+
+        .earn-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        .balance-label {
+            opacity: 0.9;
+            font-size: 0.8rem;
+        }
+
+        .balance-amount {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+
+        .earn-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+
+        .earn-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+
+        .btn-earn {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        /* MESSAGES VIEW */
+        .messages-view {
+            display: none;
+            height: 100%;
+            flex-direction: column;
+        }
+
+        .messages-view.active {
+            display: flex;
+        }
+
+        .messages-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .message-item {
+            background: white;
+            padding: 12px;
+            margin-bottom: 4px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .message-item:active {
+            background: var(--light);
+        }
+
+        /* BOTTOM NAV */
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            background: white;
+            border-top: 1px solid var(--border);
+            padding: 8px 0 max(8px, env(safe-area-inset-bottom));
             flex-shrink: 0;
         }
 
-        .chat-input-btn:active {
-            background: var(--primary-dark);
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 1.3rem;
+            color: var(--text-light);
+            transition: all 0.3s ease;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
         }
 
         .toast {
             position: fixed;
-            bottom: 20px;
+            bottom: 80px;
             right: 20px;
             background: white;
             padding: 12px 16px;
@@ -662,7 +684,7 @@
             }
 
             .toast {
-                bottom: 10px;
+                bottom: 70px;
                 right: 10px;
                 left: 10px;
                 max-width: none;
@@ -676,8 +698,9 @@
 <div class="auth-page" id="authPage">
     <div class="auth-card">
         <div class="auth-header">
-            <h1>ChiChi</h1>
-            <p>Connect & Chat Instantly</p>
+            <h1>CHICHI</h1>
+            <p>Social Media by Onchari Group</p>
+            <div class="creator">Powered by Onchari Group Team</div>
         </div>
 
         <div class="tabs">
@@ -716,10 +739,6 @@
                     <label class="form-label">Password</label>
                     <input type="password" class="form-input" id="signupPassword" placeholder="Min 6 chars" required>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Profile Picture URL (optional)</label>
-                    <input type="url" class="form-input" id="signupPicture" placeholder="https://example.com/pic.jpg">
-                </div>
                 <button type="submit" class="btn-submit">Create Account</button>
             </form>
             <div class="auth-footer">
@@ -731,107 +750,121 @@
 
 <!-- MAIN APP -->
 <div class="main-app" id="mainApp">
-    <div class="app-container">
-        <!-- Chat List View -->
-        <div class="chat-list-view" id="chatListView">
-            <div class="list-header">
-                <div class="list-header-top">
-                    <div class="list-title">Messages</div>
-                    <div class="header-user-info">
-                        <img id="headerAvatar" class="user-avatar-small" src="" alt="">
-                        <button class="btn-logout-icon" onclick="app.logout()" title="Logout">🚪</button>
-                    </div>
-                </div>
-            </div>
+    <!-- Header -->
+    <div class="app-header">
+        <div class="app-logo">CHICHI <div class="app-logo-small">by Onchari Group</div></div>
+        <div class="header-actions">
+            <button class="btn-icon" onclick="app.toggleNotifications()" title="Notifications">🔔</button>
+            <button class="btn-icon" onclick="app.logout()" title="Logout">🚪</button>
+        </div>
+    </div>
 
-            <!-- Activities Section -->
-            <div class="activities-section">
-                <div class="activities-label">Activities</div>
-                <div class="activities-scroll" id="activitiesList"></div>
-            </div>
+    <!-- Content Area -->
+    <div class="app-content">
+        <!-- FEED VIEW -->
+        <div class="feed-view active" id="feedView"></div>
 
-            <!-- Messages Label -->
-            <div class="messages-label">Messages</div>
-
-            <!-- Chat List -->
-            <div class="chat-list" id="chatListContainer"></div>
-
-            <!-- Bottom Navigation -->
-            <div class="bottom-nav">
-                <button class="nav-btn active">💬</button>
-                <button class="nav-btn">📞</button>
-                <button class="nav-btn">📷</button>
-                <button class="nav-btn">⚙️</button>
+        <!-- CREATE POST VIEW -->
+        <div class="create-post-view" id="createPostView">
+            <div class="create-container">
+                <h2 style="margin-bottom: 16px; font-size: 1rem;">Create Post</h2>
+                
+                <img id="photoPreview" class="upload-preview" src="" alt="Photo preview">
+                <input type="file" id="photoInput" class="photo-input" accept="image/*">
+                
+                <button class="btn-upload" onclick="document.getElementById('photoInput').click()">
+                    📷 Upload Photo
+                </button>
+                
+                <textarea class="caption-input" id="captionInput" placeholder="Write a caption..."></textarea>
+                
+                <button class="btn-post" onclick="app.createPost()">Post</button>
             </div>
         </div>
 
-        <!-- Chat View -->
-        <div class="chat-view hidden" id="chatView">
-            <!-- Chat Header -->
-            <div class="chat-header">
-                <button class="chat-header-back" onclick="app.backToList()">←</button>
-                <img id="chatHeaderAvatar" class="chat-header-avatar" src="" alt="">
-                <div class="chat-header-info">
-                    <div class="chat-header-name" id="chatHeaderName">Select user</div>
-                    <div class="chat-header-status">Active Now</div>
-                </div>
-                <div class="chat-header-actions">
-                    <button class="chat-header-btn">☎️</button>
-                    <button class="chat-header-btn">📹</button>
-                </div>
+        <!-- PROFILE VIEW -->
+        <div class="profile-view" id="profileView"></div>
+
+        <!-- EARN VIEW -->
+        <div class="earn-view" id="earnView">
+            <div class="earn-card balance-card">
+                <div class="balance-label">Your Balance</div>
+                <div class="balance-amount" id="balanceAmount">KSh 0</div>
             </div>
 
-            <!-- Messages -->
-            <div class="chat-messages" id="chatMessages"></div>
+            <div class="earn-card">
+                <div class="earn-title">🎡 Daily Spin Wheel</div>
+                <div class="earn-subtitle">Spin once per day and win 50-500 KSh</div>
+                <button class="btn-earn" onclick="app.spinWheel()">🎯 Spin Now</button>
+            </div>
 
-            <!-- Input Area -->
-            <div class="chat-input-area">
-                <button class="chat-input-btn">📷</button>
-                <textarea class="chat-input" id="chatInput" placeholder="Type here..." rows="1"></textarea>
-                <button class="chat-input-btn" onclick="app.sendMessage()">➤</button>
+            <div class="earn-card">
+                <div class="earn-title">🚶 Walk to Earn</div>
+                <div class="earn-subtitle">Earn KSh 50 per 1,000 steps</div>
+                <button class="btn-earn" onclick="app.startWalkToEarn()">👟 Start Walking</button>
+            </div>
+
+            <div class="earn-card">
+                <div class="earn-title">👥 Refer Friends</div>
+                <div class="earn-subtitle">Earn KSh 100 for each friend who joins</div>
+                <button class="btn-earn" onclick="app.shareReferralLink()">📤 Share Link</button>
             </div>
         </div>
+
+        <!-- MESSAGES VIEW -->
+        <div class="messages-view" id="messagesView">
+            <div class="messages-list" id="messagesList"></div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="app.switchView('feed')">📸</div>
+        <div class="nav-item" onclick="app.switchView('create')">➕</div>
+        <div class="nav-item" onclick="app.switchView('messages')">💬</div>
+        <div class="nav-item" onclick="app.switchView('earn')">💰</div>
+        <div class="nav-item" onclick="app.switchView('profile')">👤</div>
     </div>
 </div>
 
 <script>
 var app = {
-    SHEET_URL: "https://script.google.com/macros/s/AKfycby7RAwqvi39yhmhT8xi1ht4WltzXjc0N2RK6UCX9G2WYPtfBsKnslL5YKYxEQjQw83mwg/exec",
-    USE_CLOUD: true,
+    // CLOUDINARY CONFIG
+    CLOUD_NAME: 'u1uilb6f',
+    UPLOAD_PRESET: 'chichi_photos',  // YOU NEED TO CREATE THIS!
+    
+    // FIREBASE CONFIG (for database)
+    FIREBASE_URL: 'https://chichi-001-default-rtdb.firebaseio.com',
+    
+    // APP STATE
     currentUser: null,
-    selectedUser: null,
-    allUsers: [],
-    autoSyncInterval: null,
+    allPosts: [],
+    userBalance: 0,
+    currentView: 'feed',
 
     init: function() {
-        var saved = localStorage.getItem('gfk_current_user');
+        var saved = localStorage.getItem('chichi_user');
         if (saved) {
             try {
                 this.currentUser = JSON.parse(saved);
                 this.showApp();
             } catch (e) {
-                localStorage.removeItem('gfk_current_user');
+                localStorage.removeItem('chichi_user');
             }
         }
 
-        var ta = document.getElementById('chatInput');
-        if (ta) {
-            ta.addEventListener('input', function() {
-                ta.style.height = 'auto';
-                ta.style.height = Math.min(ta.scrollHeight, 60) + 'px';
-            });
-        }
+        // Photo input handler
+        document.getElementById('photoInput').addEventListener('change', function(e) {
+            app.handlePhotoSelect(e);
+        });
     },
 
     switchTab: function(tab) {
-        document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-        document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         
-        var activeTab = document.querySelector('[onclick="app.switchTab(\'' + tab + '\')"]');
-        if (activeTab) activeTab.classList.add('active');
-        
-        var content = document.getElementById(tab + 'Tab');
-        if (content) content.classList.add('active');
+        document.querySelector('[onclick="app.switchTab(\'' + tab + '\')"]').classList.add('active');
+        document.getElementById(tab + 'Tab').classList.add('active');
     },
 
     handleLogin: function(e) {
@@ -844,46 +877,14 @@ var app = {
             return;
         }
 
-        var self = this;
-
-        if (this.USE_CLOUD) {
-            fetch(this.SHEET_URL + '?action=userLogin&email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password))
-                .then(function(r) { return r.json(); })
-                .then(function(res) {
-                    if (res.success && res.user) {
-                        self.currentUser = res.user;
-                        localStorage.setItem('gfk_current_user', JSON.stringify(res.user));
-                        self.toast('Logged in!', 'success');
-                        setTimeout(function() { self.showApp(); }, 500);
-                    } else {
-                        self.toast('Invalid credentials', 'error');
-                    }
-                })
-                .catch(function(e) {
-                    self.loginLocal(email, password);
-                });
-        } else {
-            this.loginLocal(email, password);
-        }
-    },
-
-    loginLocal: function(email, password) {
-        var users = JSON.parse(localStorage.getItem('gfk_users') || '[]');
-        var user = null;
-
-        for (var i = 0; i < users.length; i++) {
-            if (users[i].email === email && users[i].password === password) {
-                user = users[i];
-                break;
-            }
-        }
+        var users = JSON.parse(localStorage.getItem('chichi_users') || '[]');
+        var user = users.find(u => u.email === email && u.password === password);
 
         if (user) {
             this.currentUser = user;
-            localStorage.setItem('gfk_current_user', JSON.stringify(user));
+            localStorage.setItem('chichi_user', JSON.stringify(user));
             this.toast('Logged in!', 'success');
-            var self = this;
-            setTimeout(function() { self.showApp(); }, 500);
+            setTimeout(() => this.showApp(), 500);
         } else {
             this.toast('Invalid credentials', 'error');
         }
@@ -894,303 +895,311 @@ var app = {
         var name = document.getElementById('signupName').value.trim();
         var email = document.getElementById('signupEmail').value.trim();
         var password = document.getElementById('signupPassword').value;
-        var picture = document.getElementById('signupPicture').value.trim();
 
-        if (!name || !email || !password) {
-            this.toast('Fill all fields', 'error');
+        if (!name || !email || !password || password.length < 6) {
+            this.toast('Fill all fields (password 6+ chars)', 'error');
             return;
         }
 
-        if (password.length < 6) {
-            this.toast('Password min 6 chars', 'error');
+        var users = JSON.parse(localStorage.getItem('chichi_users') || '[]');
+        if (users.find(u => u.email === email)) {
+            this.toast('Email already exists', 'error');
             return;
         }
 
-        var self = this;
-        var newUser = { name: name, email: email, password: password, profilePicture: picture, followers: 0 };
-
-        if (this.USE_CLOUD) {
-            fetch(this.SHEET_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'userSignup', name: name, email: email, password: password, profilePicture: picture })
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(res) {
-                if (res.success) {
-                    self.currentUser = newUser;
-                    localStorage.setItem('gfk_current_user', JSON.stringify(newUser));
-                    self.toast('Account created!', 'success');
-                    setTimeout(function() { self.showApp(); }, 500);
-                } else {
-                    self.toast(res.error || 'Signup failed', 'error');
-                }
-            })
-            .catch(function(e) {
-                self.signupLocal(newUser);
-            });
-        } else {
-            this.signupLocal(newUser);
-        }
-    },
-
-    signupLocal: function(newUser) {
-        var users = JSON.parse(localStorage.getItem('gfk_users') || '[]');
-
-        for (var i = 0; i < users.length; i++) {
-            if (users[i].email === newUser.email) {
-                this.toast('Email already exists', 'error');
-                return;
-            }
-        }
+        var newUser = {
+            id: Date.now(),
+            name: name,
+            email: email,
+            password: password,
+            balance: 0,
+            createdAt: new Date().toLocaleString('en-KE')
+        };
 
         users.push(newUser);
-        localStorage.setItem('gfk_users', JSON.stringify(users));
+        localStorage.setItem('chichi_users', JSON.stringify(users));
+        
         this.currentUser = newUser;
-        localStorage.setItem('gfk_current_user', JSON.stringify(newUser));
-
+        localStorage.setItem('chichi_user', JSON.stringify(newUser));
+        
         this.toast('Account created!', 'success');
-        var self = this;
-        setTimeout(function() { self.showApp(); }, 500);
+        setTimeout(() => this.showApp(), 500);
     },
 
     showApp: function() {
         document.getElementById('authPage').classList.add('hide');
         document.getElementById('mainApp').classList.add('active');
+        this.userBalance = this.currentUser.balance || 0;
+        this.loadPosts();
+        this.renderProfile();
+    },
+
+    switchView: function(view) {
+        // Hide all views
+        document.querySelectorAll('.feed-view, .create-post-view, .messages-view, .earn-view, .profile-view').forEach(v => v.classList.remove('active'));
         
-        var pic = this.currentUser.profilePicture || '';
-        var initials = this.currentUser.name.charAt(0).toUpperCase();
+        // Remove active from nav
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         
-        var avatar = document.getElementById('headerAvatar');
-        if (pic) {
-            avatar.style.backgroundImage = 'url(' + pic + ')';
-        } else {
-            avatar.textContent = initials;
+        // Show selected view
+        if (view === 'feed') document.getElementById('feedView').classList.add('active');
+        else if (view === 'create') document.getElementById('createPostView').classList.add('active');
+        else if (view === 'messages') {
+            document.getElementById('messagesView').classList.add('active');
+            this.loadMessages();
+        }
+        else if (view === 'earn') {
+            document.getElementById('earnView').classList.add('active');
+            document.getElementById('balanceAmount').textContent = 'KSh ' + this.userBalance;
+        }
+        else if (view === 'profile') {
+            document.getElementById('profileView').classList.add('active');
+            this.renderProfile();
         }
 
-        this.loadUsers();
-        this.startAutoSync();
+        // Mark nav as active
+        event.target.classList.add('active');
+        this.currentView = view;
     },
 
-    loadUsers: function() {
-        var self = this;
+    handlePhotoSelect: function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
 
-        if (this.USE_CLOUD) {
-            fetch(this.SHEET_URL + '?action=getAllUsers')
-                .then(function(r) { return r.text(); })
-                .then(function(text) {
-                    try {
-                        var data = JSON.parse(text);
-                        if (!Array.isArray(data)) {
-                            self.loadUsersLocal();
-                            return;
-                        }
-                        
-                        self.allUsers = [];
-                        for (var i = 0; i < data.length; i++) {
-                            if (data[i].email !== self.currentUser.email) {
-                                self.allUsers.push(data[i]);
-                            }
-                        }
-
-                        self.renderChatList();
-                    } catch (e) {
-                        self.loadUsersLocal();
-                    }
-                })
-                .catch(function(e) {
-                    self.loadUsersLocal();
-                });
-        } else {
-            this.loadUsersLocal();
-        }
+        var reader = new FileReader();
+        reader.onload = function(event) {
+            document.getElementById('photoPreview').src = event.target.result;
+            document.getElementById('photoPreview').classList.add('has-image');
+        };
+        reader.readAsDataURL(file);
     },
 
-    loadUsersLocal: function() {
-        var users = JSON.parse(localStorage.getItem('gfk_users') || '[]');
-        this.allUsers = [];
-
-        for (var i = 0; i < users.length; i++) {
-            if (users[i].email !== this.currentUser.email) {
-                this.allUsers.push(users[i]);
-            }
-        }
-
-        this.renderChatList();
-    },
-
-    renderChatList: function() {
-        var container = document.getElementById('chatListContainer');
-        var activities = document.getElementById('activitiesList');
-        
-        container.innerHTML = '';
-        activities.innerHTML = '';
-
-        var self = this;
-
-        // Add activities
-        activities.innerHTML = '<div class="activity-avatar add-btn">+</div>';
-        
-        this.allUsers.forEach(function(user) {
-            var pic = user.profilePicture || '';
-            var initials = (user.name || 'U').charAt(0).toUpperCase();
-            
-            var actDiv = document.createElement('div');
-            actDiv.className = 'activity-avatar';
-            if (pic) {
-                actDiv.style.backgroundImage = 'url(' + pic + ')';
-            } else {
-                actDiv.textContent = initials;
-            }
-            actDiv.onclick = function() { self.selectUser(user); };
-            activities.appendChild(actDiv);
-        });
-
-        // Add chat items
-        this.allUsers.forEach(function(user) {
-            var pic = user.profilePicture || '';
-            var initials = (user.name || 'U').charAt(0).toUpperCase();
-            
-            var item = document.createElement('div');
-            item.className = 'chat-item';
-            
-            var avatarDiv = document.createElement('div');
-            avatarDiv.className = 'chat-avatar';
-            if (pic) {
-                avatarDiv.style.backgroundImage = 'url(' + pic + ')';
-            } else {
-                avatarDiv.textContent = initials;
-            }
-            avatarDiv.innerHTML += '<div class="online-indicator"></div>';
-            
-            var content = document.createElement('div');
-            content.className = 'chat-content';
-            content.innerHTML = '<div class="chat-name">' + user.name + '</div><div class="chat-preview">Tap to message</div>';
-            
-            item.appendChild(avatarDiv);
-            item.appendChild(content);
-            item.onclick = function() { self.selectUser(user); };
-            
-            container.appendChild(item);
-        });
-    },
-
-    selectUser: function(user) {
-        this.selectedUser = user;
-        
-        document.getElementById('chatListView').classList.add('hidden');
-        document.getElementById('chatView').classList.remove('hidden');
-        
-        document.getElementById('chatHeaderName').textContent = user.name;
-        
-        var pic = user.profilePicture || '';
-        var initials = (user.name || 'U').charAt(0).toUpperCase();
-        var avatar = document.getElementById('chatHeaderAvatar');
-        
-        if (pic) {
-            avatar.style.backgroundImage = 'url(' + pic + ')';
-        } else {
-            avatar.textContent = initials;
-        }
-        
-        document.getElementById('chatMessages').innerHTML = '';
-    },
-
-    backToList: function() {
-        document.getElementById('chatListView').classList.remove('hidden');
-        document.getElementById('chatView').classList.add('hidden');
-        this.selectedUser = null;
-    },
-
-    sendMessage: function() {
-        if (!this.selectedUser) {
-            this.toast('Select user first', 'error');
+    createPost: async function() {
+        if (!document.getElementById('photoPreview').src || !document.getElementById('photoPreview').src.includes('data:')) {
+            this.toast('Select a photo first', 'error');
             return;
         }
 
-        var input = document.getElementById('chatInput');
-        var text = input.value.trim();
-
-        if (!text) return;
-
-        var msg = {
-            timestamp: new Date().toLocaleString("en-KE"),
-            senderEmail: this.currentUser.email,
-            senderName: this.currentUser.name,
-            recipientEmail: this.selectedUser.email,
-            recipientName: this.selectedUser.name,
-            message: text
-        };
-
-        this.displayMessage(msg, true);
-        input.value = '';
-        input.style.height = 'auto';
-
-        fetch(this.SHEET_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'peerMessage',
-                senderEmail: msg.senderEmail,
-                senderName: msg.senderName,
-                recipientEmail: msg.recipientEmail,
-                recipientName: msg.recipientName,
-                message: msg.message
-            })
-        }).catch(function(e) {
-            console.error('Send error:', e);
-        });
-    },
-
-    displayMessage: function(msg, isOwn) {
-        var container = document.getElementById('chatMessages');
-        
-        var div = document.createElement('div');
-        div.className = 'message' + (isOwn ? ' own' : ' other');
-        
-        var senderName = isOwn ? this.currentUser.name : this.selectedUser.name;
-        var pic = isOwn ? this.currentUser.profilePicture : this.selectedUser.profilePicture;
-        var initials = (senderName || 'U').charAt(0).toUpperCase();
-        
-        var avatarDiv = document.createElement('div');
-        avatarDiv.className = 'message-avatar';
-        if (pic) {
-            avatarDiv.style.backgroundImage = 'url(' + pic + ')';
-        } else {
-            avatarDiv.textContent = initials;
+        var caption = document.getElementById('captionInput').value.trim();
+        if (!caption) {
+            this.toast('Write a caption', 'error');
+            return;
         }
-        
-        var bubble = document.createElement('div');
-        bubble.className = 'message-bubble';
-        bubble.textContent = msg.message;
-        
-        div.appendChild(avatarDiv);
-        div.appendChild(bubble);
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
+
+        // Show uploading
+        var btn = event.target;
+        btn.textContent = 'Uploading...';
+        btn.disabled = true;
+
+        try {
+            // Upload to Cloudinary
+            var formData = new FormData();
+            formData.append('file', document.getElementById('photoInput').files[0]);
+            formData.append('upload_preset', this.UPLOAD_PRESET);
+
+            var response = await fetch(`https://api.cloudinary.com/v1_1/${this.CLOUD_NAME}/image/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            var data = await response.json();
+            var photoUrl = data.secure_url;
+
+            // Create post object
+            var post = {
+                id: Date.now(),
+                userId: this.currentUser.id,
+                userName: this.currentUser.name,
+                userEmail: this.currentUser.email,
+                photoUrl: photoUrl,
+                caption: caption,
+                likes: 0,
+                comments: [],
+                createdAt: new Date().toLocaleString('en-KE'),
+                liked: false
+            };
+
+            // Save to localStorage (or Firebase)
+            this.allPosts.unshift(post);
+            localStorage.setItem('chichi_posts', JSON.stringify(this.allPosts));
+
+            // Reset form
+            document.getElementById('photoInput').value = '';
+            document.getElementById('captionInput').value = '';
+            document.getElementById('photoPreview').src = '';
+            document.getElementById('photoPreview').classList.remove('has-image');
+
+            btn.textContent = 'Post';
+            btn.disabled = false;
+
+            this.toast('Post shared! 🎉', 'success');
+            this.switchView('feed');
+            this.loadPosts();
+
+        } catch (err) {
+            console.error('Upload error:', err);
+            this.toast('Upload failed: ' + err.message, 'error');
+            btn.textContent = 'Post';
+            btn.disabled = false;
+        }
     },
 
-    startAutoSync: function() {
-        var self = this;
-        this.autoSyncInterval = setInterval(function() {
-            self.loadUsers();
-        }, 3000);
+    loadPosts: function() {
+        this.allPosts = JSON.parse(localStorage.getItem('chichi_posts') || '[]');
+        var feedView = document.getElementById('feedView');
+        feedView.innerHTML = '';
 
-        window.addEventListener('storage', function(e) {
-            if (e.key === 'gfk_users') {
-                self.loadUsers();
-            }
+        if (this.allPosts.length === 0) {
+            feedView.innerHTML = '<div style="padding: 40px 16px; text-align: center; color: #6b7280;">No posts yet. Create one to get started! 📸</div>';
+            return;
+        }
+
+        this.allPosts.forEach(post => {
+            var postEl = document.createElement('div');
+            postEl.className = 'post';
+            postEl.innerHTML = `
+                <div class="post-header">
+                    <div class="post-avatar">${post.userName.charAt(0).toUpperCase()}</div>
+                    <div class="post-meta">
+                        <div class="post-name">${post.userName}</div>
+                        <div class="post-time">${post.createdAt}</div>
+                    </div>
+                </div>
+                <img src="${post.photoUrl}" class="post-image" alt="Post photo">
+                <div class="post-caption">${post.caption}</div>
+                <div class="post-stats">${post.likes} likes · ${post.comments.length} comments</div>
+                <div class="post-actions">
+                    <button class="post-action ${post.liked ? 'liked' : ''}" onclick="app.likePost(${post.id})">
+                        ${post.liked ? '❤️' : '🤍'} Like
+                    </button>
+                    <button class="post-action" onclick="app.commentPost(${post.id})">
+                        💬 Comment
+                    </button>
+                    <button class="post-action" onclick="app.sharePost(${post.id})">
+                        📤 Share
+                    </button>
+                </div>
+            `;
+            feedView.appendChild(postEl);
         });
+    },
+
+    likePost: function(postId) {
+        var post = this.allPosts.find(p => p.id === postId);
+        if (!post) return;
+
+        if (post.liked) {
+            post.likes--;
+            post.liked = false;
+        } else {
+            post.likes++;
+            post.liked = true;
+            // Earn KSh 2 for liking
+            this.userBalance += 2;
+            this.currentUser.balance = this.userBalance;
+            localStorage.setItem('chichi_user', JSON.stringify(this.currentUser));
+        }
+
+        localStorage.setItem('chichi_posts', JSON.stringify(this.allPosts));
+        this.loadPosts();
+    },
+
+    commentPost: function(postId) {
+        var comment = prompt('Write a comment:');
+        if (!comment) return;
+
+        var post = this.allPosts.find(p => p.id === postId);
+        if (!post) return;
+
+        post.comments.push({
+            user: this.currentUser.name,
+            text: comment,
+            time: new Date().toLocaleTimeString('en-KE')
+        });
+
+        // Earn KSh 5 for commenting
+        this.userBalance += 5;
+        this.currentUser.balance = this.userBalance;
+        localStorage.setItem('chichi_user', JSON.stringify(this.currentUser));
+        localStorage.setItem('chichi_posts', JSON.stringify(this.allPosts));
+
+        this.loadPosts();
+        this.toast('Comment added! +5 KSh', 'success');
+    },
+
+    sharePost: function(postId) {
+        this.toast('Post shared! +10 KSh', 'success');
+        this.userBalance += 10;
+        this.currentUser.balance = this.userBalance;
+        localStorage.setItem('chichi_user', JSON.stringify(this.currentUser));
+    },
+
+    spinWheel: function() {
+        var spinAmount = [50, 100, 200, 300, 500][Math.floor(Math.random() * 5)];
+        this.userBalance += spinAmount;
+        this.currentUser.balance = this.userBalance;
+        localStorage.setItem('chichi_user', JSON.stringify(this.currentUser));
+        document.getElementById('balanceAmount').textContent = 'KSh ' + this.userBalance;
+        this.toast(`You won KSh ${spinAmount}! 🎉`, 'success');
+    },
+
+    startWalkToEarn: function() {
+        this.toast('Walk to Earn activated! Track your steps 👟', 'success');
+        // In a real app, this would use device pedometer
+    },
+
+    shareReferralLink: function() {
+        var link = 'https://chichi-app.vercel.app?ref=' + this.currentUser.id;
+        if (navigator.share) {
+            navigator.share({ title: 'CHICHI', text: 'Join me on CHICHI!', url: link });
+        } else {
+            alert('Share link: ' + link);
+        }
+    },
+
+    loadMessages: function() {
+        // TODO: Load messages from backend
+        document.getElementById('messagesList').innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">Messages feature coming soon 💬</div>';
+    },
+
+    renderProfile: function() {
+        var profileView = document.getElementById('profileView');
+        profileView.innerHTML = `
+            <div class="profile-header">
+                <div class="profile-avatar-large">${this.currentUser.name.charAt(0).toUpperCase()}</div>
+                <div class="profile-name">${this.currentUser.name}</div>
+                <div class="profile-email">${this.currentUser.email}</div>
+                
+                <div class="profile-stats">
+                    <div class="profile-stat">
+                        <div class="profile-stat-value">${this.allPosts.filter(p => p.userId === this.currentUser.id).length}</div>
+                        <div class="profile-stat-label">Posts</div>
+                    </div>
+                    <div class="profile-stat">
+                        <div class="profile-stat-value">0</div>
+                        <div class="profile-stat-label">Followers</div>
+                    </div>
+                    <div class="profile-stat">
+                        <div class="profile-stat-value">KSh ${this.userBalance}</div>
+                        <div class="profile-stat-label">Balance</div>
+                    </div>
+                </div>
+            </div>
+        `;
     },
 
     logout: function() {
         if (confirm('Logout?')) {
             this.currentUser = null;
-            this.selectedUser = null;
-            localStorage.removeItem('gfk_current_user');
-            if (this.autoSyncInterval) clearInterval(this.autoSyncInterval);
+            localStorage.removeItem('chichi_user');
             document.getElementById('authPage').classList.remove('hide');
             document.getElementById('mainApp').classList.remove('active');
             this.toast('Logged out', 'success');
         }
+    },
+
+    toggleNotifications: function() {
+        this.toast('No new notifications 🔔', 'success');
     },
 
     toast: function(msg, type) {
@@ -1199,9 +1208,9 @@ var app = {
         toast.textContent = msg;
         document.body.appendChild(toast);
 
-        setTimeout(function() {
+        setTimeout(() => {
             toast.style.animation = 'slideUp 0.3s reverse ease';
-            setTimeout(function() { toast.remove(); }, 300);
+            setTimeout(() => toast.remove(), 300);
         }, 3000);
     }
 };
