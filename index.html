@@ -1759,10 +1759,6 @@
     </div>
 </div>
 
-<!-- MASTER 2FA SETUP (ADMIN OWNER ONLY) -->
-<div class="logout-modal" id="masterTwoFASetupModal" style="display: none;">
-</div>
-
 <!-- ADMIN SECRET CODE VERIFICATION -->
 <div class="logout-modal" id="adminVerifyTwoFAModal">
     <div class="logout-card" style="max-width: 400px; border-radius: 24px; padding: 32px;">
@@ -1779,22 +1775,6 @@
     </div>
 </div>
 
-<!-- 2FA LOGIN MODAL -->
-<div class="logout-modal" id="twoFALoginModal">
-    <div class="logout-card" style="max-width: 400px; border-radius: 24px; padding: 32px;">
-        <h3 style="color: var(--text); font-size: 1.3rem; margin-bottom: 8px;">🔐 Enter 2FA Code</h3>
-        <p style="color: var(--text-light); margin-bottom: 20px; font-size: 0.85rem;">Check your Google Authenticator app</p>
-
-        <div class="form-group">
-            <label class="form-label">6-Digit Code</label>
-            <input type="text" class="form-input" id="twoFALoginCode" placeholder="000000" maxlength="6" pattern="[0-9]{6}" required style="font-size: 1.2rem; text-align: center; letter-spacing: 4px;" autofocus>
-        </div>
-
-        <button class="btn-submit" onclick="app.verifyTwoFALogin()" style="margin-bottom: 10px;">Login</button>
-        <button onclick="app.closeTwoFALogin()" style="width: 100%; background: var(--light); color: var(--text); border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 600;">Cancel</button>
-    </div>
-</div>
-
 <script>
 var firebaseConfig = {
   apiKey: "AIzaSyD_tSXJCOLffm4ZMtM8gXOCH5CXFOKdqWM",
@@ -1806,6 +1786,23 @@ var firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+
+// 🔧 FIREBASE DEBUG & TIMEOUT SAFETY
+firebase.database().ref('.info/connected').on('value', function(snapshot) {
+  if (snapshot.val() === true) {
+    console.log('✓ Firebase connected');
+  } else {
+    console.log('✗ Firebase disconnected - check your internet');
+  }
+});
+
+// ⏱️ LOADING TIMEOUT - fallback if Firebase hangs
+var loadingTimeout = setTimeout(() => {
+  console.error('⚠️ Loading timeout - Firebase unreachable or slow');
+  document.getElementById('loadingScreen').classList.add('hidden');
+  document.getElementById('authPage').style.display = 'flex';
+}, 8000);
+
 var auth = firebase.auth();
 var db = firebase.database();
 const CLOUD_NAME = 'u1uilb6f';
@@ -1825,6 +1822,7 @@ var app = {
 
     init: function() {
         auth.onAuthStateChanged(u => {
+            clearTimeout(loadingTimeout); // Clear timeout when auth state changes
             if (u) {
                 this.user = u;
                 this.loadProfile();
@@ -2177,7 +2175,6 @@ var app = {
                 self.masterTwoFASecret = null;
                 
                 // Close all modals
-                document.getElementById('masterTwoFASetupModal').classList.remove('active');
                 document.getElementById('adminVerifyTwoFAModal').classList.remove('active');
                 document.getElementById('adminModal').classList.remove('active');
                 
@@ -2185,7 +2182,6 @@ var app = {
                 document.getElementById('adminSignupName').value = '';
                 document.getElementById('adminSignupEmail').value = '';
                 document.getElementById('adminSignupPassword').value = '';
-                document.getElementById('masterTwoFAConfirmCode').value = '';
                 document.getElementById('adminVerifyCode').value = '';
                 
                 // Wait a moment for auth state to update
@@ -2206,14 +2202,6 @@ var app = {
         document.getElementById('adminVerifyTwoFAModal').classList.remove('active');
         document.getElementById('adminModal').classList.add('active');
         this.adminPendingSignup = null;
-    },
-
-    closeTwoFALogin: function() {
-        document.getElementById('twoFALoginModal').classList.remove('active');
-    },
-
-    verifyTwoFALogin: function() {
-        // Not used in new simple secret code flow
     },
 
     switchView: function(view) {
