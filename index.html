@@ -1863,21 +1863,34 @@ var app = {
         document.getElementById('authPage').style.display = 'none';
         document.getElementById('mainApp').classList.add('active');
         
-        // If admin, show admin view; otherwise show normal feed
-        if (this.profile && this.profile.isAdmin) {
-            this.switchView('admin');
-            this.loadAdminDashboard();
-        } else {
-            this.switchView('feed');
-            this.loadPosts();
-            this.loadUsers();
-            this.loadFollowing();
-            this.trackUnreadMessages();
-        }
+        // Load all data first
+        this.loadPosts();
+        this.loadUsers();
+        this.loadFollowing();
+        this.trackUnreadMessages();
+        
+        // Then check if admin and show appropriate view
+        var self = this;
+        setTimeout(() => {
+            if (self.profile && self.profile.isAdmin) {
+                self.switchView('admin');
+            } else {
+                self.switchView('feed');
+            }
+        }, 500);
     },
 
     loadAdminDashboard: function() {
         var self = this;
+        var adminContent = document.getElementById('adminContent');
+        
+        if (!adminContent) {
+            console.error('Admin content div not found');
+            return;
+        }
+        
+        // Show loading
+        adminContent.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-light);">Loading dashboard...</div>';
         
         // Load all withdrawals
         db.ref('withdrawals').once('value', snap => {
@@ -1890,12 +1903,17 @@ var app = {
             });
             
             // Sort by newest first
-            withdrawals.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            withdrawals.sort((a, b) => {
+                var dateA = new Date(b.createdAt || 0);
+                var dateB = new Date(a.createdAt || 0);
+                return dateA - dateB;
+            });
             
             var pendingCount = withdrawals.filter(w => w.status === 'pending').length;
             var approvedCount = withdrawals.filter(w => w.status === 'approved').length;
-            var rejectedCount = withdrawals.filter(w => w.status === 'rejected').length;
             var totalAmount = withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
+            var userCount = Object.keys(self.users || {}).length;
+            var postCount = (self.posts || []).length;
             
             var html = `
                 <div style="padding: 16px;">
@@ -1905,11 +1923,11 @@ var app = {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
                         <div style="background: var(--light); border-radius: 12px; padding: 14px;">
                             <div style="color: var(--text-light); font-size: 0.8rem; margin-bottom: 4px;">Total Users</div>
-                            <div style="color: var(--text); font-size: 1.5rem; font-weight: 700;">` + Object.keys(self.users).length + `</div>
+                            <div style="color: var(--text); font-size: 1.5rem; font-weight: 700;">` + userCount + `</div>
                         </div>
                         <div style="background: var(--light); border-radius: 12px; padding: 14px;">
                             <div style="color: var(--text-light); font-size: 0.8rem; margin-bottom: 4px;">Total Posts</div>
-                            <div style="color: var(--text); font-size: 1.5rem; font-weight: 700;">` + self.posts.length + `</div>
+                            <div style="color: var(--text); font-size: 1.5rem; font-weight: 700;">` + postCount + `</div>
                         </div>
                         <div style="background: #FFF8DC; border-radius: 12px; padding: 14px; border: 1px solid #FFD700;">
                             <div style="color: #B8860B; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">⏳ Pending</div>
@@ -1944,15 +1962,15 @@ var app = {
                             return `
                                 <div style="border-bottom: 1px solid var(--border); padding: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
                                     <div style="flex: 1; min-width: 0;">
-                                        <div style="color: var(--text); font-weight: 600; font-size: 0.95rem; margin-bottom: 2px;">` + w.userName + `</div>
-                                        <div style="color: var(--text-light); font-size: 0.8rem; margin-bottom: 2px; word-break: break-all;">` + w.userEmail + `</div>
-                                        <div style="color: var(--text); font-weight: 600; font-size: 0.9rem; margin-top: 6px;">KSh ` + w.amount + `</div>
-                                        <div style="color: var(--text-light); font-size: 0.75rem; margin-top: 4px;">Method: ` + w.method + ` | Account: ` + w.account + `</div>
+                                        <div style="color: var(--text); font-weight: 600; font-size: 0.95rem; margin-bottom: 2px;">` + (w.userName || 'Unknown') + `</div>
+                                        <div style="color: var(--text-light); font-size: 0.8rem; margin-bottom: 2px; word-break: break-all;">` + (w.userEmail || 'N/A') + `</div>
+                                        <div style="color: var(--text); font-weight: 600; font-size: 0.9rem; margin-top: 6px;">KSh ` + (w.amount || 0) + `</div>
+                                        <div style="color: var(--text-light); font-size: 0.75rem; margin-top: 4px;">Method: ` + (w.method || 'N/A') + ` | Account: ` + (w.account || 'N/A') + `</div>
                                         <div style="color: var(--text-light); font-size: 0.7rem; margin-top: 4px;">` + (w.createdAt || 'N/A') + `</div>
                                     </div>
                                     <div style="text-align: right; flex-shrink: 0;">
                                         <div style="background: ` + statusBg + `; color: ` + statusColor + `; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.75rem; margin-bottom: 8px; white-space: nowrap;">
-                                            ` + statusEmoji + ` ` + w.status.toUpperCase() + `
+                                            ` + statusEmoji + ` ` + (w.status || 'pending').toUpperCase() + `
                                         </div>
                                         ` + (w.status === 'pending' ? `
                                             <button onclick="app.approveWithdrawal('` + w.id + `')" style="background: #00D4AA; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem; margin-bottom: 4px; display: block; width: 100%; white-space: nowrap;">✓ Approve</button>
@@ -1966,7 +1984,10 @@ var app = {
                 </div>
             `;
             
-            document.getElementById('adminContent').innerHTML = html;
+            adminContent.innerHTML = html;
+        }).catch(err => {
+            adminContent.innerHTML = '<div style="padding: 20px; color: red;">Error loading withdrawals: ' + err.message + '</div>';
+            console.error('Error loading withdrawals:', err);
         });
     },
 
