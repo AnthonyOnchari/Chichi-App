@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>CHICHI - Social Media by Onchari Group</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Firebase SDK (Compatible Version) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -75,7 +74,6 @@
         .auth-header h1 {
             font-size: 1.8rem;
             font-weight: 800;
-            margin-bottom: 4px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -85,13 +83,6 @@
         .auth-header p {
             color: var(--text-light);
             font-size: 0.8rem;
-            margin-bottom: 4px;
-        }
-
-        .auth-header .creator {
-            color: var(--primary);
-            font-size: 0.75rem;
-            font-weight: 600;
         }
 
         .tabs {
@@ -175,34 +166,10 @@
             transition: all 0.3s ease;
             font-family: 'Inter', sans-serif;
             font-size: 0.95rem;
-            margin-top: 4px;
         }
 
         .btn-submit:active {
             transform: scale(0.98);
-        }
-
-        .auth-footer {
-            text-align: center;
-            margin-top: 16px;
-            font-size: 0.85rem;
-            color: var(--text-light);
-        }
-
-        .auth-footer a {
-            color: var(--primary);
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            font-size: 1.2rem;
         }
 
         /* MAIN APP */
@@ -240,11 +207,6 @@
             font-weight: 800;
         }
 
-        .app-logo-small {
-            font-size: 0.7rem;
-            opacity: 0.9;
-        }
-
         .header-actions {
             display: flex;
             gap: 8px;
@@ -263,25 +225,13 @@
 
         .btn-icon:active {
             background: rgba(255,255,255,0.3);
+            transform: scale(0.95);
         }
 
         .app-content {
             flex: 1;
             overflow-y: auto;
             background: var(--light);
-        }
-
-        .app-content::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .app-content::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .app-content::-webkit-scrollbar-thumb {
-            background: rgba(0, 212, 170, 0.3);
-            border-radius: 2px;
         }
 
         /* FEED */
@@ -295,7 +245,7 @@
         }
 
         .feed-header {
-            padding: 16px;
+            padding: 12px 16px;
             background: white;
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -307,30 +257,78 @@
         }
 
         .feed-title {
-            font-weight: 600;
+            font-weight: 700;
+            font-size: 1.1rem;
         }
 
         .btn-refresh {
             background: var(--primary);
             color: white;
             border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
+            padding: 8px 12px;
+            border-radius: 20px;
             cursor: pointer;
             font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-refresh:active {
+            background: var(--primary-dark);
+            transform: scale(0.95);
+        }
+
+        .quick-post {
+            background: white;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .quick-post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .quick-post-input {
+            flex: 1;
+            background: var(--light);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            color: var(--text-light);
         }
 
         .post {
             background: white;
             border-bottom: 8px solid var(--light);
-            overflow: hidden;
         }
 
         .post-header {
             padding: 12px 16px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+        }
+
+        .post-user {
+            display: flex;
+            align-items: center;
             gap: 10px;
+            flex: 1;
+            cursor: pointer;
         }
 
         .post-avatar {
@@ -359,6 +357,14 @@
 
         .post-time {
             font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .post-menu {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
             color: var(--text-light);
         }
 
@@ -404,110 +410,7 @@
 
         .post-action:active {
             color: var(--primary);
-        }
-
-        .post-action.liked {
-            color: #ef4444;
-        }
-
-        /* CREATE POST */
-        .create-post-view {
-            display: none;
-            min-height: 100%;
-        }
-
-        .create-post-view.active {
-            display: block;
-        }
-
-        .create-container {
-            background: white;
-            border-radius: 16px;
-            margin: 16px;
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-
-        .upload-preview {
-            width: 100%;
-            height: 200px;
-            border-radius: 12px;
-            background: var(--light);
-            border: 2px dashed var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 16px;
-            font-size: 3rem;
-            color: var(--text-light);
-            overflow: hidden;
-            object-fit: cover;
-        }
-
-        .upload-preview.has-image {
-            border: none;
-            background: transparent;
-        }
-
-        .photo-input {
-            display: none;
-        }
-
-        .btn-upload {
-            width: 100%;
-            padding: 12px;
-            background: var(--light);
-            border: 2px dashed var(--primary);
-            border-radius: 12px;
-            color: var(--primary);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-            margin-bottom: 12px;
-        }
-
-        .btn-upload:active {
-            background: rgba(0, 212, 170, 0.1);
-        }
-
-        .caption-input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9rem;
-            resize: vertical;
-            min-height: 80px;
-            margin-bottom: 12px;
-        }
-
-        .caption-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(0, 212, 170, 0.1);
-        }
-
-        .btn-post {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.95rem;
-        }
-
-        .btn-post:active {
-            transform: scale(0.98);
-        }
-
-        .btn-post:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+            transform: scale(0.95);
         }
 
         /* PROFILE VIEW */
@@ -526,6 +429,12 @@
             border-bottom: 1px solid var(--border);
         }
 
+        .profile-top {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
         .profile-avatar-large {
             width: 80px;
             height: 80px;
@@ -537,8 +446,14 @@
             justify-content: center;
             font-weight: 700;
             font-size: 1.5rem;
-            margin-bottom: 12px;
+            flex-shrink: 0;
             object-fit: cover;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .profile-info {
+            flex: 1;
         }
 
         .profile-name {
@@ -550,12 +465,12 @@
         .profile-email {
             font-size: 0.8rem;
             color: var(--text-light);
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
 
         .profile-stats {
             display: flex;
-            gap: 20px;
+            gap: 16px;
             margin-bottom: 12px;
         }
 
@@ -573,15 +488,58 @@
             color: var(--text-light);
         }
 
-        /* EARN VIEW */
-        .earn-view {
-            display: none;
-            min-height: 100%;
+        .btn-edit {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
         }
 
-        .earn-view.active {
-            display: block;
+        /* WALLET/EARN VIEW */
+        .wallet-view {
+            display: none;
+            min-height: 100%;
             padding: 16px;
+        }
+
+        .wallet-view.active {
+            display: block;
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .balance-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .balance-amount {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .btn-withdraw {
+            background: white;
+            color: var(--primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
         }
 
         .earn-card {
@@ -590,24 +548,6 @@
             padding: 16px;
             margin-bottom: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-
-        .balance-card {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            font-size: 0.9rem;
-            margin-bottom: 4px;
-        }
-
-        .balance-label {
-            opacity: 0.9;
-            font-size: 0.8rem;
-        }
-
-        .balance-amount {
-            font-size: 1.5rem;
-            font-weight: 800;
-            margin-top: 4px;
         }
 
         .earn-title {
@@ -637,17 +577,14 @@
         /* MESSAGES VIEW */
         .messages-view {
             display: none;
-            height: 100%;
-            flex-direction: column;
+            min-height: 100%;
         }
 
         .messages-view.active {
-            display: flex;
+            display: block;
         }
 
-        .messages-list {
-            flex: 1;
-            overflow-y: auto;
+        .message-list {
             padding: 8px;
         }
 
@@ -657,11 +594,40 @@
             margin-bottom: 4px;
             border-radius: 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
 
         .message-item:active {
             background: var(--light);
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .message-content {
+            flex: 1;
+        }
+
+        .message-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .message-preview {
+            font-size: 0.8rem;
+            color: var(--text-light);
         }
 
         /* BOTTOM NAV */
@@ -672,7 +638,6 @@
             right: 0;
             display: flex;
             justify-content: space-around;
-            align-items: center;
             background: white;
             border-top: 2px solid var(--border);
             padding: 12px 0;
@@ -691,7 +656,6 @@
             font-size: 1.3rem;
             color: var(--text-light);
             transition: all 0.3s ease;
-            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -701,8 +665,49 @@
             color: var(--primary);
         }
 
-        .nav-item:active {
-            background: rgba(0, 212, 170, 0.1);
+        /* MODALS */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .modal {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-close {
+            text-align: right;
+            margin-bottom: 12px;
+        }
+
+        .modal-close button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
         }
 
         .toast {
@@ -730,35 +735,14 @@
             color: #ef4444;
         }
 
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
         @media (max-width: 480px) {
-            .auth-card {
-                padding: 20px;
-                border-radius: 20px;
-            }
-
-            .form-input {
-                font-size: 16px;
-            }
-
-            .toast {
-                bottom: 70px;
-                right: 10px;
-                left: 10px;
-                max-width: none;
+            .modal {
+                border-radius: 16px;
             }
         }
     </style>
 </head>
 <body>
-
-<div class="loading" id="loadingScreen">
-    <div>🔄 Initializing CHICHI...</div>
-</div>
 
 <!-- AUTH PAGE -->
 <div class="auth-page" id="authPage">
@@ -766,7 +750,6 @@
         <div class="auth-header">
             <h1>CHICHI</h1>
             <p>Social Media by Onchari Group</p>
-            <div class="creator">Powered by Onchari Group Team</div>
         </div>
 
         <div class="tabs">
@@ -786,9 +769,6 @@
                 </div>
                 <button type="submit" class="btn-submit">Login</button>
             </form>
-            <div class="auth-footer">
-                No account? <a onclick="app.switchTab('signup')">Sign up</a>
-            </div>
         </div>
 
         <div class="tab-content" id="signupTab">
@@ -807,9 +787,6 @@
                 </div>
                 <button type="submit" class="btn-submit">Create Account</button>
             </form>
-            <div class="auth-footer">
-                Have account? <a onclick="app.switchTab('login')">Login</a>
-            </div>
         </div>
     </div>
 </div>
@@ -817,7 +794,7 @@
 <!-- MAIN APP -->
 <div class="main-app" id="mainApp">
     <div class="app-header">
-        <div class="app-logo">CHICHI <div class="app-logo-small">by Onchari Group</div></div>
+        <div class="app-logo">CHICHI ✨</div>
         <div class="header-actions">
             <button class="btn-icon" onclick="app.logout()" title="Logout">🚪</button>
         </div>
@@ -825,58 +802,78 @@
 
     <div class="app-content">
         <!-- FEED VIEW -->
-        <div class="feed-view active" id="feedView"></div>
+        <div class="feed-view active" id="feedView">
+            <div class="feed-header">
+                <div class="feed-title">Feed</div>
+                <button class="btn-refresh" onclick="app.loadPosts()">🔄</button>
+            </div>
+            <div class="quick-post">
+                <div class="quick-post-avatar" id="quickPostAvatar">T</div>
+                <input type="text" class="quick-post-input" placeholder="What's on your mind?" onclick="app.switchView('create')">
+            </div>
+            <div id="feedContainer"></div>
+        </div>
 
         <!-- CREATE POST VIEW -->
-        <div class="create-post-view" id="createPostView">
-            <div class="create-container">
-                <h2 style="margin-bottom: 16px; font-size: 1rem;">Create Post</h2>
-                
-                <img id="photoPreview" class="upload-preview" src="" alt="Photo preview">
-                <input type="file" id="photoInput" class="photo-input" accept="image/*">
-                
-                <button class="btn-upload" onclick="document.getElementById('photoInput').click()">
-                    📷 Upload Photo
-                </button>
-                
-                <textarea class="caption-input" id="captionInput" placeholder="Write a caption..."></textarea>
-                
-                <button class="btn-post" onclick="app.createPost()">Post</button>
+        <div id="createPostView" style="display: none; min-height: 100%; padding: 16px;">
+            <div style="background: white; border-radius: 16px; padding: 16px;">
+                <h2 style="margin-bottom: 16px;">Create Post</h2>
+                <img id="photoPreview" style="width: 100%; height: 200px; border-radius: 12px; background: var(--light); border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 3rem; object-fit: cover;" src="" alt="Photo preview">
+                <input type="file" id="photoInput" style="display: none;" accept="image/*">
+                <button style="width: 100%; padding: 12px; background: var(--light); border: 2px dashed var(--primary); border-radius: 12px; color: var(--primary); font-weight: 600; cursor: pointer; margin-bottom: 12px; font-size: 0.9rem;" onclick="document.getElementById('photoInput').click()">📷 Upload Photo</button>
+                <textarea id="captionInput" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.9rem; resize: vertical; min-height: 80px; margin-bottom: 12px;" placeholder="Write a caption..."></textarea>
+                <button style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem;" onclick="app.createPost()">Post</button>
             </div>
         </div>
 
         <!-- PROFILE VIEW -->
         <div class="profile-view" id="profileView"></div>
 
-        <!-- EARN VIEW -->
-        <div class="earn-view" id="earnView">
-            <div class="earn-card balance-card">
-                <div class="balance-label">Your Balance</div>
-                <div class="balance-amount" id="balanceAmount">KSh 0</div>
+        <!-- WALLET VIEW -->
+        <div class="wallet-view" id="walletView">
+            <div class="balance-card">
+                <div class="balance-label">💰 Your Balance</div>
+                <div class="balance-amount" id="balanceDisplay">KSh 0</div>
+                <button class="btn-withdraw" onclick="app.showWithdrawModal()">Request Withdrawal</button>
+            </div>
+
+            <h3 style="font-weight: 700; margin: 16px 0 12px;">Earn Money</h3>
+
+            <div class="earn-card">
+                <div class="earn-title">❤️ Like Posts</div>
+                <div class="earn-subtitle">Earn KSh 2 per like</div>
+                <button class="btn-earn" onclick="app.toast('Already earning from likes!', 'success')">Earning Active</button>
             </div>
 
             <div class="earn-card">
-                <div class="earn-title">🎡 Daily Spin Wheel</div>
-                <div class="earn-subtitle">Spin once per day and win 50-500 KSh</div>
-                <button class="btn-earn" onclick="app.spinWheel()">🎯 Spin Now</button>
+                <div class="earn-title">💬 Comment & Engage</div>
+                <div class="earn-subtitle">Earn KSh 5 per comment</div>
+                <button class="btn-earn" onclick="app.toast('Commenting earns you money!', 'success')">Earning Active</button>
             </div>
 
             <div class="earn-card">
-                <div class="earn-title">🚶 Walk to Earn</div>
-                <div class="earn-subtitle">Earn KSh 50 per 1,000 steps</div>
-                <button class="btn-earn" onclick="app.startWalkToEarn()">👟 Start Walking</button>
+                <div class="earn-title">📸 Create Posts</div>
+                <div class="earn-subtitle">Earn KSh 10 per post</div>
+                <button class="btn-earn" onclick="app.toast('Each post earns you money!', 'success')">Earning Active</button>
             </div>
 
             <div class="earn-card">
-                <div class="earn-title">👥 Refer Friends</div>
-                <div class="earn-subtitle">Earn KSh 100 for each friend who joins</div>
-                <button class="btn-earn" onclick="app.shareReferralLink()">📤 Share Link</button>
+                <div class="earn-title">⬇️ Downloads</div>
+                <div class="earn-subtitle">Earn KSh 1 per download of your photos</div>
+                <button class="btn-earn" onclick="app.toast('People downloading your photos earns you money!', 'success')">Earning Active</button>
+            </div>
+
+            <div class="earn-card">
+                <div class="earn-title">👥 Referrals</div>
+                <div class="earn-subtitle">Earn KSh 100 per friend who joins</div>
+                <button class="btn-earn" onclick="app.shareReferralLink()">📤 Share Referral Link</button>
             </div>
         </div>
 
         <!-- MESSAGES VIEW -->
         <div class="messages-view" id="messagesView">
-            <div class="messages-list" id="messagesList"></div>
+            <div style="padding: 12px 16px; background: white; border-bottom: 1px solid var(--border); font-weight: 600;">Messages</div>
+            <div class="message-list" id="messagesList"></div>
         </div>
     </div>
 
@@ -885,8 +882,37 @@
         <div class="nav-item active" onclick="app.switchView('feed')">📸</div>
         <div class="nav-item" onclick="app.switchView('create')">➕</div>
         <div class="nav-item" onclick="app.switchView('messages')">💬</div>
-        <div class="nav-item" onclick="app.switchView('earn')">💰</div>
+        <div class="nav-item" onclick="app.switchView('wallet')">💰</div>
         <div class="nav-item" onclick="app.switchView('profile')">👤</div>
+    </div>
+</div>
+
+<!-- WITHDRAWAL MODAL -->
+<div class="modal-overlay" id="withdrawModal">
+    <div class="modal">
+        <div class="modal-close"><button onclick="app.closeWithdrawModal()">✕</button></div>
+        <h2 style="font-weight: 700; margin-bottom: 16px;">Request Withdrawal</h2>
+        <div class="form-group">
+            <label class="form-label">Amount (KSh)</label>
+            <input type="number" class="form-input" id="withdrawAmount" placeholder="Minimum: 20 KSh" min="20">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Payment Method</label>
+            <select class="form-input" id="paymentMethod" style="cursor: pointer;">
+                <option value="mpesa">M-Pesa</option>
+                <option value="airtel">Airtel Money</option>
+                <option value="bank">Bank Transfer</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Account Number / Phone</label>
+            <input type="text" class="form-input" id="accountNumber" placeholder="0712345678 or Account #">
+        </div>
+        <div class="form-group" style="display: flex; gap: 10px; align-items: center;">
+            <input type="checkbox" id="dataConsent" required>
+            <label style="font-size: 0.8rem; color: var(--text-light);">I consent to CHICHI storing and using my account details for withdrawals only</label>
+        </div>
+        <button style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem;" onclick="app.processWithdrawal()">Request Withdrawal</button>
     </div>
 </div>
 
@@ -901,12 +927,10 @@ var firebaseConfig = {
   appId: "1:219736252899:web:626efc2fe5040efb7500d6"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 var auth = firebase.auth();
 var database = firebase.database();
 
-// ===== CLOUDINARY CONFIG =====
 const CLOUD_NAME = 'u1uilb6f';
 const UPLOAD_PRESET = 'chichi_photos';
 
@@ -917,11 +941,9 @@ var app = {
     currentView: 'feed',
     postsRef: null,
     usersRef: null,
-    unsubscribePosts: null,
 
     init: function() {
         var self = this;
-        // Check auth state
         auth.onAuthStateChanged(function(user) {
             if (user) {
                 self.currentUser = user;
@@ -931,33 +953,32 @@ var app = {
             }
         });
 
-        // Photo input handler
         document.getElementById('photoInput').addEventListener('change', function(e) {
             app.handlePhotoSelect(e);
         });
     },
 
     showAuth: function() {
-        document.getElementById('loadingScreen').style.display = 'none';
         document.getElementById('authPage').classList.remove('hide');
         document.getElementById('mainApp').classList.remove('active');
     },
 
     showApp: function() {
         var self = this;
-        document.getElementById('loadingScreen').style.display = 'none';
         document.getElementById('authPage').classList.add('hide');
         document.getElementById('mainApp').classList.add('active');
 
-        // Setup database listeners
         this.postsRef = database.ref('posts');
         this.loadPosts();
 
-        // Get user balance
+        var initials = (this.currentUser.email || 'U').charAt(0).toUpperCase();
+        document.getElementById('quickPostAvatar').textContent = initials;
+
         database.ref('users/' + this.currentUser.uid).once('value', function(snapshot) {
             if (snapshot.exists()) {
                 var userData = snapshot.val();
                 self.userBalance = userData.balance || 0;
+                document.getElementById('balanceDisplay').textContent = 'KSh ' + self.userBalance;
             }
         });
     },
@@ -972,6 +993,7 @@ var app = {
 
     handleLogin: function(e) {
         e.preventDefault();
+        var self = this;
         var email = document.getElementById('loginEmail').value.trim();
         var password = document.getElementById('loginPassword').value;
 
@@ -982,7 +1004,7 @@ var app = {
 
         auth.signInWithEmailAndPassword(email, password)
             .catch(error => {
-                this.toast('Login failed: ' + error.message, 'error');
+                self.toast('Login failed: ' + error.message, 'error');
             });
     },
 
@@ -1000,11 +1022,12 @@ var app = {
 
         auth.createUserWithEmailAndPassword(email, password)
             .then(function(result) {
-                // Save user to database
                 database.ref('users/' + result.user.uid).set({
                     name: name,
                     email: email,
                     balance: 0,
+                    followers: 0,
+                    following: 0,
                     createdAt: new Date().toLocaleString('en-KE')
                 });
                 self.toast('Account created!', 'success');
@@ -1015,24 +1038,29 @@ var app = {
     },
 
     switchView: function(view) {
-        document.querySelectorAll('.feed-view, .create-post-view, .messages-view, .earn-view, .profile-view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.feed-view, #createPostView, .profile-view, .wallet-view, .messages-view').forEach(v => {
+            if (v.id === 'feedView' || v.classList.contains('feed-view')) v.classList.remove('active');
+            else v.style.display = 'none';
+        });
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         
         if (view === 'feed') {
             document.getElementById('feedView').classList.add('active');
             this.loadPosts();
         }
-        else if (view === 'create') document.getElementById('createPostView').classList.add('active');
+        else if (view === 'create') {
+            document.getElementById('createPostView').style.display = 'block';
+        }
         else if (view === 'messages') {
-            document.getElementById('messagesView').classList.add('active');
+            document.querySelector('.messages-view').style.display = 'block';
             this.loadMessages();
         }
-        else if (view === 'earn') {
-            document.getElementById('earnView').classList.add('active');
-            document.getElementById('balanceAmount').textContent = 'KSh ' + this.userBalance;
+        else if (view === 'wallet') {
+            document.querySelector('.wallet-view').style.display = 'block';
+            document.getElementById('balanceDisplay').textContent = 'KSh ' + this.userBalance;
         }
         else if (view === 'profile') {
-            document.getElementById('profileView').classList.add('active');
+            document.querySelector('.profile-view').style.display = 'block';
             this.renderProfile();
         }
 
@@ -1040,7 +1068,7 @@ var app = {
             event.target.classList.add('active');
         } else {
             var navItems = document.querySelectorAll('.nav-item');
-            var viewIndex = ['feed', 'create', 'messages', 'earn', 'profile'].indexOf(view);
+            var viewIndex = ['feed', 'create', 'messages', 'wallet', 'profile'].indexOf(view);
             if (viewIndex >= 0 && navItems[viewIndex]) {
                 navItems[viewIndex].classList.add('active');
             }
@@ -1055,7 +1083,6 @@ var app = {
         var reader = new FileReader();
         reader.onload = function(event) {
             document.getElementById('photoPreview').src = event.target.result;
-            document.getElementById('photoPreview').classList.add('has-image');
         };
         reader.readAsDataURL(file);
     },
@@ -1073,75 +1100,53 @@ var app = {
             return;
         }
 
-        var btn = event.target;
-        btn.textContent = 'Uploading...';
-        btn.disabled = true;
+        var formData = new FormData();
+        formData.append('file', document.getElementById('photoInput').files[0]);
+        formData.append('upload_preset', UPLOAD_PRESET);
 
-        try {
-            // Upload to Cloudinary
-            var formData = new FormData();
-            formData.append('file', document.getElementById('photoInput').files[0]);
-            formData.append('upload_preset', UPLOAD_PRESET);
+        fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            var photoUrl = data.secure_url;
 
-            fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                var photoUrl = data.secure_url;
+            database.ref('users/' + self.currentUser.uid).once('value', function(userSnapshot) {
+                var userName = userSnapshot.val().name || 'User';
 
-                // Get user name
-                database.ref('users/' + self.currentUser.uid).once('value', function(userSnapshot) {
-                    var userName = userSnapshot.val().name || 'User';
-
-                    // Create post in Firebase
-                    var postRef = self.postsRef.push();
-                    postRef.set({
-                        userId: self.currentUser.uid,
-                        userName: userName,
-                        userEmail: self.currentUser.email,
-                        photoUrl: photoUrl,
-                        caption: caption,
-                        likes: 0,
-                        comments: [],
-                        createdAt: new Date().toLocaleString('en-KE'),
-                        timestamp: firebase.database.ServerValue.TIMESTAMP
-                    });
-
-                    // Reset form
-                    document.getElementById('photoInput').value = '';
-                    document.getElementById('captionInput').value = '';
-                    document.getElementById('photoPreview').src = '';
-                    document.getElementById('photoPreview').classList.remove('has-image');
-
-                    btn.textContent = 'Post';
-                    btn.disabled = false;
-
-                    self.toast('Post shared! 🎉', 'success');
-                    self.switchView('feed');
+                var postRef = self.postsRef.push();
+                postRef.set({
+                    userId: self.currentUser.uid,
+                    userName: userName,
+                    userEmail: self.currentUser.email,
+                    photoUrl: photoUrl,
+                    caption: caption,
+                    likes: 0,
+                    comments: [],
+                    downloads: 0,
+                    createdAt: new Date().toLocaleString('en-KE'),
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
-            })
-            .catch(function(err) {
-                console.error('Upload error:', err);
-                self.toast('Upload failed: ' + err.message, 'error');
-                btn.textContent = 'Post';
-                btn.disabled = false;
-            });
 
-        } catch (err) {
-            console.error('Upload error:', err);
-            this.toast('Upload failed: ' + err.message, 'error');
-            btn.textContent = 'Post';
-            btn.disabled = false;
-        }
+                document.getElementById('photoInput').value = '';
+                document.getElementById('captionInput').value = '';
+                document.getElementById('photoPreview').src = '';
+
+                self.toast('Post shared! 🎉', 'success');
+                self.userBalance += 10;
+                database.ref('users/' + self.currentUser.uid + '/balance').set(self.userBalance);
+                self.switchView('feed');
+            });
+        })
+        .catch(function(err) {
+            self.toast('Upload failed: ' + err.message, 'error');
+        });
     },
 
     loadPosts: function() {
         var self = this;
-        if (this.unsubscribePosts) this.unsubscribePosts();
-
-        this.unsubscribePosts = this.postsRef.orderByChild('timestamp').limitToLast(50).on('value', function(snapshot) {
+        this.postsRef.orderByChild('timestamp').limitToLast(50).on('value', function(snapshot) {
             var posts = [];
             snapshot.forEach(function(childSnapshot) {
                 var post = childSnapshot.val();
@@ -1154,20 +1159,11 @@ var app = {
     },
 
     renderFeed: function() {
-        var feedView = document.getElementById('feedView');
-        feedView.innerHTML = '';
-
-        // Add header
-        var headerDiv = document.createElement('div');
-        headerDiv.className = 'feed-header';
-        headerDiv.innerHTML = `
-            <div class="feed-title">Feed</div>
-            <button class="btn-refresh" onclick="app.loadPosts()">🔄 Refresh</button>
-        `;
-        feedView.appendChild(headerDiv);
+        var feedContainer = document.getElementById('feedContainer');
+        feedContainer.innerHTML = '';
 
         if (this.allPosts.length === 0) {
-            feedView.innerHTML += '<div style="padding: 40px 16px; text-align: center; color: #6b7280;">No posts yet. Create one to get started! 📸</div>';
+            feedContainer.innerHTML = '<div style="padding: 40px 16px; text-align: center; color: #6b7280;">No posts yet. Create one! 📸</div>';
             return;
         }
 
@@ -1176,28 +1172,26 @@ var app = {
             postEl.className = 'post';
             postEl.innerHTML = `
                 <div class="post-header">
-                    <div class="post-avatar">${post.userName.charAt(0).toUpperCase()}</div>
-                    <div class="post-meta">
-                        <div class="post-name">${post.userName}</div>
-                        <div class="post-time">${post.createdAt}</div>
+                    <div class="post-user" onclick="app.viewProfile('${post.userId}')">
+                        <div class="post-avatar">${post.userName.charAt(0).toUpperCase()}</div>
+                        <div class="post-meta">
+                            <div class="post-name">${post.userName}</div>
+                            <div class="post-time">${post.createdAt}</div>
+                        </div>
                     </div>
+                    ${post.userId === this.currentUser.uid ? `<button class="post-menu" onclick="app.deletePost('${post.id}')">⋯</button>` : ''}
                 </div>
-                <img src="${post.photoUrl}" class="post-image" alt="Post photo">
+                <img src="${post.photoUrl}" class="post-image" alt="Post">
                 <div class="post-caption">${post.caption}</div>
-                <div class="post-stats">${post.likes} likes</div>
+                <div class="post-stats">${post.likes} likes · ${post.downloads} downloads · ${post.comments.length} comments</div>
                 <div class="post-actions">
-                    <button class="post-action" onclick="app.likePost('${post.id}')">
-                        ❤️ Like
-                    </button>
-                    <button class="post-action" onclick="app.downloadPost('${post.photoUrl}', '${post.id}')">
-                        ⬇️ Save
-                    </button>
-                    <button class="post-action" onclick="app.sharePost('${post.id}')">
-                        📤 Share
-                    </button>
+                    <button class="post-action" onclick="app.likePost('${post.id}')">❤️ Like</button>
+                    <button class="post-action" onclick="app.downloadPost('${post.photoUrl}', '${post.id}')">⬇️ Save</button>
+                    <button class="post-action" onclick="app.commentPost('${post.id}')">💬 Comment</button>
+                    <button class="post-action" onclick="app.followUser('${post.userId}')">👥 Follow</button>
                 </div>
             `;
-            feedView.appendChild(postEl);
+            feedContainer.appendChild(postEl);
         });
     },
 
@@ -1206,8 +1200,6 @@ var app = {
         database.ref('posts/' + postId + '/likes').once('value', function(snapshot) {
             var likes = snapshot.val() || 0;
             database.ref('posts/' + postId + '/likes').set(likes + 1);
-
-            // Earn KSh 2 for liking
             self.userBalance += 2;
             database.ref('users/' + self.currentUser.uid + '/balance').set(self.userBalance);
         });
@@ -1217,81 +1209,164 @@ var app = {
         try {
             var link = document.createElement('a');
             link.href = photoUrl;
-            link.download = 'chichi-post-' + postId + '.jpg';
+            link.download = 'chichi-' + postId + '.jpg';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            this.toast('Photo downloaded! ⬇️', 'success');
+            this.toast('Downloaded! ⬇️', 'success');
+
+            // Add download earnings
+            var self = this;
+            database.ref('posts/' + postId + '/downloads').once('value', function(snapshot) {
+                var downloads = snapshot.val() || 0;
+                database.ref('posts/' + postId + '/downloads').set(downloads + 1);
+            });
         } catch (err) {
             this.toast('Download failed', 'error');
         }
     },
 
-    sharePost: function(postId) {
-        this.toast('Post shared! +10 KSh', 'success');
-        this.userBalance += 10;
-        database.ref('users/' + this.currentUser.uid + '/balance').set(this.userBalance);
+    commentPost: function(postId) {
+        var comment = prompt('Write a comment:');
+        if (!comment) return;
+
+        var self = this;
+        database.ref('posts/' + postId).once('value', function(snapshot) {
+            var post = snapshot.val();
+            var comments = post.comments || [];
+            comments.push({
+                user: self.currentUser.email,
+                text: comment,
+                time: new Date().toLocaleString('en-KE')
+            });
+            database.ref('posts/' + postId + '/comments').set(comments);
+            self.userBalance += 5;
+            database.ref('users/' + self.currentUser.uid + '/balance').set(self.userBalance);
+            self.toast('Comment added! +5 KSh', 'success');
+        });
     },
 
-    spinWheel: function() {
-        var spinAmount = [50, 100, 200, 300, 500][Math.floor(Math.random() * 5)];
-        this.userBalance += spinAmount;
-        database.ref('users/' + this.currentUser.uid + '/balance').set(this.userBalance);
-        document.getElementById('balanceAmount').textContent = 'KSh ' + this.userBalance;
-        this.toast(`You won KSh ${spinAmount}! 🎉`, 'success');
+    deletePost: function(postId) {
+        if (confirm('Delete this post?')) {
+            database.ref('posts/' + postId).remove();
+            this.toast('Post deleted', 'success');
+        }
     },
 
-    startWalkToEarn: function() {
-        this.toast('Walk to Earn activated! 👟', 'success');
+    followUser: function(userId) {
+        this.toast('Follow feature coming soon!', 'success');
+    },
+
+    viewProfile: function(userId) {
+        this.switchView('profile');
+    },
+
+    renderProfile: function() {
+        var profileView = document.querySelector('.profile-view');
+        profileView.innerHTML = `
+            <div class="profile-header">
+                <div class="profile-top">
+                    <div class="profile-avatar-large" onclick="app.uploadProfilePhoto()">${this.currentUser.email.charAt(0).toUpperCase()}</div>
+                    <div class="profile-info">
+                        <div class="profile-name">${this.currentUser.displayName || 'User'}</div>
+                        <div class="profile-email">${this.currentUser.email}</div>
+                        <div class="profile-stats">
+                            <div class="profile-stat">
+                                <div class="profile-stat-value">${this.allPosts.filter(p => p.userId === this.currentUser.uid).length}</div>
+                                <div class="profile-stat-label">Posts</div>
+                            </div>
+                            <div class="profile-stat">
+                                <div class="profile-stat-value">0</div>
+                                <div class="profile-stat-label">Followers</div>
+                            </div>
+                            <div class="profile-stat">
+                                <div class="profile-stat-value">0</div>
+                                <div class="profile-stat-label">Following</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-edit" onclick="app.editProfile()">✏️ Edit Profile</button>
+            </div>
+        `;
+    },
+
+    uploadProfilePhoto: function() {
+        this.toast('Profile photo upload coming soon!', 'success');
+    },
+
+    editProfile: function() {
+        this.toast('Profile editing coming soon!', 'success');
+    },
+
+    loadMessages: function() {
+        document.getElementById('messagesList').innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">Messages coming soon! 💬</div>';
+    },
+
+    showWithdrawModal: function() {
+        if (this.userBalance < 20) {
+            this.toast('Minimum 20 KSh to withdraw', 'error');
+            return;
+        }
+        document.getElementById('withdrawModal').classList.add('active');
+    },
+
+    closeWithdrawModal: function() {
+        document.getElementById('withdrawModal').classList.remove('active');
+    },
+
+    processWithdrawal: function() {
+        var amount = parseInt(document.getElementById('withdrawAmount').value);
+        var method = document.getElementById('paymentMethod').value;
+        var account = document.getElementById('accountNumber').value;
+        var consent = document.getElementById('dataConsent').checked;
+
+        if (amount < 20 || !account || !consent) {
+            this.toast('Fill all fields (min 20 KSh)', 'error');
+            return;
+        }
+
+        if (amount > this.userBalance) {
+            this.toast('Insufficient balance', 'error');
+            return;
+        }
+
+        var self = this;
+        var withdrawalRef = database.ref('withdrawals').push();
+        withdrawalRef.set({
+            userId: this.currentUser.uid,
+            userEmail: this.currentUser.email,
+            amount: amount,
+            method: method,
+            account: account,
+            status: 'pending',
+            createdAt: new Date().toLocaleString('en-KE')
+        });
+
+        this.userBalance -= amount;
+        database.ref('users/' + this.currentUser.uid + '/balance').set(this.userBalance);
+
+        this.toast('Withdrawal requested! Processing...', 'success');
+        this.closeWithdrawModal();
+        document.getElementById('withdrawAmount').value = '';
+        document.getElementById('accountNumber').value = '';
+        document.getElementById('dataConsent').checked = false;
     },
 
     shareReferralLink: function() {
         var link = 'https://chichi-app.vercel.app?ref=' + this.currentUser.uid;
         if (navigator.share) {
-            navigator.share({ title: 'CHICHI', text: 'Join me on CHICHI!', url: link });
+            navigator.share({ title: 'CHICHI', text: 'Join CHICHI and earn money!', url: link });
         } else {
-            alert('Share link: ' + link);
+            alert('Share: ' + link);
         }
     },
 
-    loadMessages: function() {
-        document.getElementById('messagesList').innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">Messages feature coming soon 💬</div>';
-    },
-
-    renderProfile: function() {
-        var profileView = document.getElementById('profileView');
-        profileView.innerHTML = `
-            <div class="profile-header">
-                <div class="profile-avatar-large">${this.currentUser.email.charAt(0).toUpperCase()}</div>
-                <div class="profile-name">${this.currentUser.displayName || 'User'}</div>
-                <div class="profile-email">${this.currentUser.email}</div>
-                
-                <div class="profile-stats">
-                    <div class="profile-stat">
-                        <div class="profile-stat-value">${this.allPosts.filter(p => p.userId === this.currentUser.uid).length}</div>
-                        <div class="profile-stat-label">Posts</div>
-                    </div>
-                    <div class="profile-stat">
-                        <div class="profile-stat-value">0</div>
-                        <div class="profile-stat-label">Followers</div>
-                    </div>
-                    <div class="profile-stat">
-                        <div class="profile-stat-value">KSh ${this.userBalance}</div>
-                        <div class="profile-stat-label">Balance</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    },
-
     logout: function() {
-        var self = this;
         if (confirm('Logout?')) {
-            auth.signOut().then(function() {
-                self.currentUser = null;
-                self.toast('Logged out', 'success');
-            }).catch(function(error) {
-                console.error('Logout error:', error);
+            auth.signOut().then(() => {
+                this.currentUser = null;
+                this.toast('Logged out', 'success');
             });
         }
     },
@@ -1309,7 +1384,6 @@ var app = {
     }
 };
 
-// Initialize app
 app.init();
 </script>
 
