@@ -252,8 +252,8 @@
         }
 
         .app-logo {
-            font-size: 1.2rem;
-            font-weight: 800;
+            font-size: 0.95rem;
+            font-weight: 700;
         }
 
         .header-actions {
@@ -281,10 +281,12 @@
         .feed-view {
             display: none;
             min-height: 100%;
+            width: 100%;
         }
 
         .feed-view.active {
             display: block;
+            width: 100%;
         }
 
         .feed-header {
@@ -350,9 +352,20 @@
             color: var(--text-light);
         }
 
+        #feedContainer {
+            width: 100%;
+            display: block;
+        }
+
+        #profilePostsContainer {
+            width: 100%;
+            display: block;
+        }
+
         .post {
             background: white;
             border-bottom: 8px solid var(--light);
+            width: 100%;
         }
 
         .post-header {
@@ -827,25 +840,29 @@
             border-top: 1px solid var(--border);
             display: flex;
             gap: 8px;
+            position: sticky;
+            bottom: 0;
+            width: 100%;
         }
 
         .chat-input input {
             flex: 1;
             border: 1px solid var(--border);
             border-radius: 20px;
-            padding: 8px 12px;
+            padding: 10px 12px;
             font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
         }
 
         .chat-input button {
             background: var(--primary);
             color: white;
             border: none;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
+            border-radius: 20px;
+            padding: 10px 16px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 0.85rem;
         }
 
         /* LOGOUT MODAL */
@@ -976,7 +993,7 @@
 <!-- MAIN APP -->
 <div class="main-app" id="mainApp">
     <div class="app-header">
-        <div class="app-logo">CHICHI</div>
+        <div class="app-logo">CHICHI by Onchari Group</div>
         <div class="header-actions">
             <button class="btn-icon" onclick="app.showLogoutModal()">Logout</button>
         </div>
@@ -1054,11 +1071,14 @@
 
         <!-- CHAT VIEW -->
         <div class="chat-view" id="chatView">
-            <div style="padding: 12px 16px; background: white; border-bottom: 1px solid var(--border); font-weight: 600; cursor: pointer;" onclick="app.switchView('messages')">← Back</div>
+            <div style="padding: 12px 16px; background: white; border-bottom: 1px solid var(--border); font-weight: 600; display: flex; align-items: center; gap: 12px;">
+                <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer;" onclick="app.switchView('messages')">←</button>
+                <span id="chatUserName">Chat</span>
+            </div>
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input">
-                <input type="text" id="chatInput" placeholder="Type message...">
-                <button type="button" onclick="app.sendMessage()">→</button>
+                <input type="text" id="chatInput" placeholder="Type message..." autocomplete="off">
+                <button type="button" onclick="app.sendMessage()">Send</button>
             </div>
         </div>
     </div>
@@ -1318,6 +1338,7 @@ var app = {
         if (view === 'feed') {
             document.getElementById('feedView').classList.add('active');
             document.querySelector('.nav-item:nth-child(1)').classList.add('active');
+            this.loadPosts();
         }
         else if (view === 'create') {
             document.getElementById('createPostView').style.display = 'block';
@@ -1403,17 +1424,20 @@ var app = {
                 downloads: 0,
                 createdAt: new Date().toLocaleString('en-KE'),
                 timestamp: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                document.getElementById('photoInput').value = '';
+                document.getElementById('captionInput').value = '';
+                document.getElementById('photoPreview').src = '';
+
+                self.hideLoading();
+                self.toast('Post shared! 🎉', 'success');
+                self.userBalance += 1;
+                database.ref('users/' + self.currentUser.uid + '/balance').set(self.userBalance);
+                
+                // Force reload posts
+                self.loadPosts();
+                setTimeout(() => self.switchView('feed'), 500);
             });
-
-            document.getElementById('photoInput').value = '';
-            document.getElementById('captionInput').value = '';
-            document.getElementById('photoPreview').src = '';
-
-            self.hideLoading();
-            self.toast('Post shared! 🎉', 'success');
-            self.userBalance += 1;
-            database.ref('users/' + self.currentUser.uid + '/balance').set(self.userBalance);
-            self.switchView('feed');
         })
         .catch(err => {
             self.hideLoading();
@@ -1435,30 +1459,38 @@ var app = {
 
     renderFeed: function() {
         var feedContainer = document.getElementById('feedContainer');
+        
+        if (!feedContainer) {
+            console.log('Feed container not found');
+            return;
+        }
+
         feedContainer.innerHTML = '';
 
-        if (this.allPosts.length === 0) {
-            feedContainer.innerHTML = '<div style="padding: 40px 16px; text-align: center; color: #6b7280;">No posts yet. Create one!</div>';
+        if (!this.allPosts || this.allPosts.length === 0) {
+            feedContainer.innerHTML = '<div style="padding: 40px 16px; text-align: center; color: #6b7280;">No posts yet. Be the first to create one!</div>';
             return;
         }
 
         this.allPosts.forEach(post => {
+            if (!post || !post.id) return;
+            
             var postEl = document.createElement('div');
             postEl.className = 'post';
             postEl.innerHTML = `
                 <div class="post-header">
                     <div class="post-user">
-                        <div class="post-avatar" style="background-image: url(${post.userPhoto || ''}); background-size: cover;">${!post.userPhoto ? post.userName.charAt(0).toUpperCase() : ''}</div>
+                        <div class="post-avatar" style="background-image: url(${post.userPhoto || ''}); background-size: cover;">${!post.userPhoto ? (post.userName ? post.userName.charAt(0).toUpperCase() : 'U') : ''}</div>
                         <div class="post-meta">
-                            <div class="post-name">${post.userName}</div>
-                            <div class="post-time">${post.createdAt}</div>
+                            <div class="post-name">${post.userName || 'User'}</div>
+                            <div class="post-time">${post.createdAt || ''}</div>
                         </div>
                     </div>
                     ${post.userId === this.currentUser.uid ? `<button class="post-menu" onclick="app.deletePost('${post.id}')">⋯</button>` : ''}
                 </div>
-                <img src="${post.photoUrl}" class="post-image" alt="Post">
-                <div class="post-caption">${post.caption}</div>
-                <div class="post-stats">${post.likes} likes · ${post.downloads} saves · ${post.comments.length} comments</div>
+                <img src="${post.photoUrl}" class="post-image" alt="Post" style="width: 100%;">
+                <div class="post-caption">${post.caption || ''}</div>
+                <div class="post-stats">${post.likes || 0} likes · ${post.downloads || 0} saves · ${(post.comments && post.comments.length) || 0} comments</div>
                 <div class="post-actions">
                     <button class="post-action" onclick="app.likePost('${post.id}')">👍 Like</button>
                     <button class="post-action" onclick="app.downloadPost('${post.photoUrl}', '${post.id}')">💾 Save</button>
@@ -1528,9 +1560,10 @@ var app = {
 
     renderProfile: function() {
         var profileView = document.querySelector('.profile-view');
-        var userPostsCount = this.allPosts.filter(p => p.userId === this.currentUser.uid).length;
+        var userPosts = this.allPosts.filter(p => p.userId === this.currentUser.uid);
+        var userPostsCount = userPosts.length;
         
-        profileView.innerHTML = `
+        var profileHTML = `
             <div class="profile-header">
                 <div class="profile-top">
                     <div class="profile-avatar-large" style="background-image: url(${this.userProfile.profilePhoto || ''}); background-size: cover;">${!this.userProfile.profilePhoto ? this.currentUser.email.charAt(0).toUpperCase() : ''}</div>
@@ -1556,7 +1589,44 @@ var app = {
                 </div>
                 <button class="btn-edit" onclick="app.openEditProfileModal()">✏️ Edit Profile</button>
             </div>
+            <div style="padding: 16px; background: white; border-bottom: 1px solid var(--border); font-weight: 600;">My Posts</div>
+            <div id="profilePostsContainer"></div>
         `;
+        
+        profileView.innerHTML = profileHTML;
+
+        // Render user's posts only
+        var postsContainer = document.getElementById('profilePostsContainer');
+        if (userPosts.length === 0) {
+            postsContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">No posts yet</div>';
+            return;
+        }
+
+        userPosts.forEach(post => {
+            var postEl = document.createElement('div');
+            postEl.className = 'post';
+            postEl.innerHTML = `
+                <div class="post-header">
+                    <div class="post-user">
+                        <div class="post-avatar" style="background-image: url(${post.userPhoto || ''}); background-size: cover;">${!post.userPhoto ? post.userName.charAt(0).toUpperCase() : ''}</div>
+                        <div class="post-meta">
+                            <div class="post-name">${post.userName}</div>
+                            <div class="post-time">${post.createdAt}</div>
+                        </div>
+                    </div>
+                    <button class="post-menu" onclick="app.deletePost('${post.id}')">⋯</button>
+                </div>
+                <img src="${post.photoUrl}" class="post-image" alt="Post">
+                <div class="post-caption">${post.caption}</div>
+                <div class="post-stats">${post.likes} likes · ${post.downloads} saves · ${post.comments.length} comments</div>
+                <div class="post-actions">
+                    <button class="post-action" onclick="app.likePost('${post.id}')">👍 Like</button>
+                    <button class="post-action" onclick="app.downloadPost('${post.photoUrl}', '${post.id}')">💾 Save</button>
+                    <button class="post-action" onclick="app.commentPost('${post.id}')">💬 Comment</button>
+                </div>
+            `;
+            postsContainer.appendChild(postEl);
+        });
     },
 
     openEditProfileModal: function() {
@@ -1660,8 +1730,9 @@ var app = {
 
     openChat: function(userId, userName) {
         this.currentChatUser = {id: userId, name: userName};
+        document.getElementById('chatUserName').textContent = userName;
         this.switchView('chat');
-        this.loadChatMessages();
+        setTimeout(() => this.loadChatMessages(), 100);
     },
 
     loadChatMessages: function() {
@@ -1669,12 +1740,12 @@ var app = {
         var self = this;
         var chatKey = [self.currentUser.uid, self.currentChatUser.id].sort().join('_');
         
-        database.ref('chats/' + chatKey).on('value', snapshot => {
-            var messages = snapshot.val() || [];
+        database.ref('chats/' + chatKey + '/messages').orderByChild('timestamp').on('value', snapshot => {
             var chatMessages = document.getElementById('chatMessages');
             chatMessages.innerHTML = '';
 
-            messages.forEach(msg => {
+            snapshot.forEach(child => {
+                var msg = child.val();
                 var bubble = document.createElement('div');
                 bubble.className = 'message-bubble ' + (msg.sender === self.currentUser.uid ? 'sent' : 'received');
                 bubble.textContent = msg.text;
@@ -1690,19 +1761,18 @@ var app = {
         var text = document.getElementById('chatInput').value.trim();
         if (!text) return;
 
-        var chatKey = [this.currentUser.uid, this.currentChatUser.id].sort().join('_');
-        var messagesRef = database.ref('chats/' + chatKey);
+        var self = this;
+        var chatKey = [self.currentUser.uid, self.currentChatUser.id].sort().join('_');
 
-        messagesRef.once('value', snapshot => {
-            var messages = snapshot.val() || [];
-            messages.push({
-                sender: this.currentUser.uid,
-                text: text,
-                time: new Date().toLocaleString('en-KE')
-            });
-            messagesRef.set(messages);
-            document.getElementById('chatInput').value = '';
+        database.ref('chats/' + chatKey + '/messages').push().set({
+            sender: this.currentUser.uid,
+            senderName: this.userProfile.name,
+            text: text,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            time: new Date().toLocaleString('en-KE')
         });
+
+        document.getElementById('chatInput').value = '';
     },
 
     showWithdrawModal: function() {
