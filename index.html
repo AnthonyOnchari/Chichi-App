@@ -6,7 +6,6 @@
     <meta name="mobile-web-app-capable" content="yes">
     <title>CHICHI - Social Media by Onchari Group</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -39,6 +38,45 @@
             position: fixed;
             -webkit-font-smoothing: antialiased;
             -webkit-tap-highlight-color: transparent;
+        }
+
+        /* LOADING SCREEN */
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        #loadingScreen.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
 
         /* AUTH PAGE */
@@ -78,11 +116,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-        }
-
-        .auth-header p {
-            color: var(--text-light);
-            font-size: 0.8rem;
         }
 
         .tabs {
@@ -234,7 +267,6 @@
             background: var(--light);
         }
 
-        /* FEED */
         .feed-view {
             display: none;
             min-height: 100%;
@@ -298,6 +330,7 @@
             justify-content: center;
             font-weight: 700;
             flex-shrink: 0;
+            object-fit: cover;
         }
 
         .quick-post-input {
@@ -417,6 +450,7 @@
         .profile-view {
             display: none;
             min-height: 100%;
+            padding-bottom: 60px;
         }
 
         .profile-view.active {
@@ -504,6 +538,7 @@
             display: none;
             min-height: 100%;
             padding: 16px;
+            padding-bottom: 80px;
         }
 
         .wallet-view.active {
@@ -578,6 +613,7 @@
         .messages-view {
             display: none;
             min-height: 100%;
+            padding-bottom: 60px;
         }
 
         .messages-view.active {
@@ -713,6 +749,7 @@
         .toast {
             position: fixed;
             bottom: 80px;
+            left: 20px;
             right: 20px;
             background: white;
             padding: 12px 16px;
@@ -722,7 +759,6 @@
             font-size: 0.8rem;
             font-weight: 500;
             animation: slideUp 0.3s ease;
-            max-width: calc(100% - 40px);
         }
 
         .toast.success {
@@ -734,15 +770,15 @@
             border-left: 4px solid #ef4444;
             color: #ef4444;
         }
-
-        @media (max-width: 480px) {
-            .modal {
-                border-radius: 16px;
-            }
-        }
     </style>
 </head>
 <body>
+
+<!-- LOADING SCREEN -->
+<div id="loadingScreen">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading CHICHI...</div>
+</div>
 
 <!-- AUTH PAGE -->
 <div class="auth-page" id="authPage">
@@ -815,14 +851,14 @@
         </div>
 
         <!-- CREATE POST VIEW -->
-        <div id="createPostView" style="display: none; min-height: 100%; padding: 16px;">
+        <div id="createPostView" style="display: none; min-height: 100%; padding: 16px; padding-bottom: 80px;">
             <div style="background: white; border-radius: 16px; padding: 16px;">
                 <h2 style="margin-bottom: 16px;">Create Post</h2>
                 <img id="photoPreview" style="width: 100%; height: 200px; border-radius: 12px; background: var(--light); border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 3rem; object-fit: cover;" src="" alt="Photo preview">
                 <input type="file" id="photoInput" style="display: none;" accept="image/*">
-                <button style="width: 100%; padding: 12px; background: var(--light); border: 2px dashed var(--primary); border-radius: 12px; color: var(--primary); font-weight: 600; cursor: pointer; margin-bottom: 12px; font-size: 0.9rem;" onclick="document.getElementById('photoInput').click()">📷 Upload Photo</button>
+                <button type="button" style="width: 100%; padding: 12px; background: var(--light); border: 2px dashed var(--primary); border-radius: 12px; color: var(--primary); font-weight: 600; cursor: pointer; margin-bottom: 12px; font-size: 0.9rem;" onclick="document.getElementById('photoInput').click()">📷 Upload Photo</button>
                 <textarea id="captionInput" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.9rem; resize: vertical; min-height: 80px; margin-bottom: 12px;" placeholder="Write a caption..."></textarea>
-                <button style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem;" onclick="app.createPost()">Post</button>
+                <button type="button" style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem;" onclick="app.createPost()">Post</button>
             </div>
         </div>
 
@@ -887,6 +923,32 @@
     </div>
 </div>
 
+<!-- EDIT PROFILE MODAL -->
+<div class="modal-overlay" id="editProfileModal">
+    <div class="modal">
+        <div class="modal-close"><button onclick="app.closeEditProfileModal()">✕</button></div>
+        <h2 style="font-weight: 700; margin-bottom: 16px;">Edit Profile</h2>
+        
+        <div style="text-align: center; margin-bottom: 16px;">
+            <div class="profile-avatar-large" id="editProfilePhoto" style="width: 100px; height: 100px; margin: 0 auto;">T</div>
+            <input type="file" id="profilePhotoInput" style="display: none;" accept="image/*">
+            <button type="button" style="margin-top: 8px; background: var(--light); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;" onclick="document.getElementById('profilePhotoInput').click()">📷 Change Photo</button>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-input" id="editName" placeholder="Your Name">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Bio</label>
+            <textarea class="form-input" id="editBio" placeholder="Tell us about yourself..." style="resize: vertical; min-height: 60px;"></textarea>
+        </div>
+
+        <button type="button" style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem;" onclick="app.saveProfile()">Save Changes</button>
+    </div>
+</div>
+
 <!-- WITHDRAWAL MODAL -->
 <div class="modal-overlay" id="withdrawModal">
     <div class="modal">
@@ -912,12 +974,11 @@
             <input type="checkbox" id="dataConsent" required>
             <label style="font-size: 0.8rem; color: var(--text-light);">I consent to CHICHI storing and using my account details for withdrawals only</label>
         </div>
-        <button style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem;" onclick="app.processWithdrawal()">Request Withdrawal</button>
+        <button type="button" style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem;" onclick="app.processWithdrawal()">Request Withdrawal</button>
     </div>
 </div>
 
 <script>
-// ===== FIREBASE CONFIG =====
 var firebaseConfig = {
   apiKey: "AIzaSyD_tSXJCOLffm4ZMtM8gXOCH5CXFOKdqWM",
   authDomain: "chichi-001.firebaseapp.com",
@@ -938,15 +999,16 @@ var app = {
     currentUser: null,
     allPosts: [],
     userBalance: 0,
+    userProfile: {},
     currentView: 'feed',
     postsRef: null,
-    usersRef: null,
 
     init: function() {
         var self = this;
         auth.onAuthStateChanged(function(user) {
             if (user) {
                 self.currentUser = user;
+                self.loadUserProfile();
                 self.showApp();
             } else {
                 self.showAuth();
@@ -956,15 +1018,20 @@ var app = {
         document.getElementById('photoInput').addEventListener('change', function(e) {
             app.handlePhotoSelect(e);
         });
+
+        document.getElementById('profilePhotoInput').addEventListener('change', function(e) {
+            app.handleProfilePhotoSelect(e);
+        });
     },
 
     showAuth: function() {
+        document.getElementById('loadingScreen').classList.add('hidden');
         document.getElementById('authPage').classList.remove('hide');
         document.getElementById('mainApp').classList.remove('active');
     },
 
     showApp: function() {
-        var self = this;
+        document.getElementById('loadingScreen').classList.add('hidden');
         document.getElementById('authPage').classList.add('hide');
         document.getElementById('mainApp').classList.add('active');
 
@@ -973,11 +1040,14 @@ var app = {
 
         var initials = (this.currentUser.email || 'U').charAt(0).toUpperCase();
         document.getElementById('quickPostAvatar').textContent = initials;
+    },
 
-        database.ref('users/' + this.currentUser.uid).once('value', function(snapshot) {
+    loadUserProfile: function() {
+        var self = this;
+        database.ref('users/' + this.currentUser.uid).on('value', function(snapshot) {
             if (snapshot.exists()) {
-                var userData = snapshot.val();
-                self.userBalance = userData.balance || 0;
+                self.userProfile = snapshot.val();
+                self.userBalance = self.userProfile.balance || 0;
                 document.getElementById('balanceDisplay').textContent = 'KSh ' + self.userBalance;
             }
         });
@@ -1002,10 +1072,9 @@ var app = {
             return;
         }
 
-        auth.signInWithEmailAndPassword(email, password)
-            .catch(error => {
-                self.toast('Login failed: ' + error.message, 'error');
-            });
+        auth.signInWithEmailAndPassword(email, password).catch(error => {
+            self.toast('Login failed: ' + error.message, 'error');
+        });
     },
 
     handleSignup: function(e) {
@@ -1025,6 +1094,8 @@ var app = {
                 database.ref('users/' + result.user.uid).set({
                     name: name,
                     email: email,
+                    bio: '',
+                    profilePhoto: '',
                     balance: 0,
                     followers: 0,
                     following: 0,
@@ -1057,7 +1128,6 @@ var app = {
         }
         else if (view === 'wallet') {
             document.querySelector('.wallet-view').style.display = 'block';
-            document.getElementById('balanceDisplay').textContent = 'KSh ' + this.userBalance;
         }
         else if (view === 'profile') {
             document.querySelector('.profile-view').style.display = 'block';
@@ -1073,13 +1143,11 @@ var app = {
                 navItems[viewIndex].classList.add('active');
             }
         }
-        this.currentView = view;
     },
 
     handlePhotoSelect: function(e) {
         var file = e.target.files[0];
         if (!file) return;
-
         var reader = new FileReader();
         reader.onload = function(event) {
             document.getElementById('photoPreview').src = event.target.result;
@@ -1087,9 +1155,21 @@ var app = {
         reader.readAsDataURL(file);
     },
 
+    handleProfilePhotoSelect: function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(event) {
+            document.getElementById('editProfilePhoto').textContent = '';
+            document.getElementById('editProfilePhoto').style.backgroundImage = 'url(' + event.target.result + ')';
+            document.getElementById('editProfilePhoto').style.backgroundSize = 'cover';
+        };
+        reader.readAsDataURL(file);
+    },
+
     createPost: function() {
         var self = this;
-        if (!document.getElementById('photoPreview').src || !document.getElementById('photoPreview').src.includes('data:')) {
+        if (!document.getElementById('photoPreview').src) {
             this.toast('Select a photo first', 'error');
             return;
         }
@@ -1111,33 +1191,28 @@ var app = {
         .then(function(response) { return response.json(); })
         .then(function(data) {
             var photoUrl = data.secure_url;
-
-            database.ref('users/' + self.currentUser.uid).once('value', function(userSnapshot) {
-                var userName = userSnapshot.val().name || 'User';
-
-                var postRef = self.postsRef.push();
-                postRef.set({
-                    userId: self.currentUser.uid,
-                    userName: userName,
-                    userEmail: self.currentUser.email,
-                    photoUrl: photoUrl,
-                    caption: caption,
-                    likes: 0,
-                    comments: [],
-                    downloads: 0,
-                    createdAt: new Date().toLocaleString('en-KE'),
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
-
-                document.getElementById('photoInput').value = '';
-                document.getElementById('captionInput').value = '';
-                document.getElementById('photoPreview').src = '';
-
-                self.toast('Post shared! 🎉', 'success');
-                self.userBalance += 10;
-                database.ref('users/' + self.currentUser.uid + '/balance').set(self.userBalance);
-                self.switchView('feed');
+            var postRef = self.postsRef.push();
+            postRef.set({
+                userId: self.currentUser.uid,
+                userName: self.userProfile.name || 'User',
+                userEmail: self.currentUser.email,
+                photoUrl: photoUrl,
+                caption: caption,
+                likes: 0,
+                comments: [],
+                downloads: 0,
+                createdAt: new Date().toLocaleString('en-KE'),
+                timestamp: firebase.database.ServerValue.TIMESTAMP
             });
+
+            document.getElementById('photoInput').value = '';
+            document.getElementById('captionInput').value = '';
+            document.getElementById('photoPreview').src = '';
+
+            self.toast('Post shared! 🎉', 'success');
+            self.userBalance += 10;
+            database.ref('users/' + self.currentUser.uid + '/balance').set(self.userBalance);
+            self.switchView('feed');
         })
         .catch(function(err) {
             self.toast('Upload failed: ' + err.message, 'error');
@@ -1215,7 +1290,6 @@ var app = {
             document.body.removeChild(link);
             this.toast('Downloaded! ⬇️', 'success');
 
-            // Add download earnings
             var self = this;
             database.ref('posts/' + postId + '/downloads').once('value', function(snapshot) {
                 var downloads = snapshot.val() || 0;
@@ -1263,16 +1337,19 @@ var app = {
 
     renderProfile: function() {
         var profileView = document.querySelector('.profile-view');
+        var userPostsCount = this.allPosts.filter(p => p.userId === this.currentUser.uid).length;
+        
         profileView.innerHTML = `
             <div class="profile-header">
                 <div class="profile-top">
-                    <div class="profile-avatar-large" onclick="app.uploadProfilePhoto()">${this.currentUser.email.charAt(0).toUpperCase()}</div>
+                    <div class="profile-avatar-large" style="background-image: url(${this.userProfile.profilePhoto || ''}); background-size: cover;">${!this.userProfile.profilePhoto ? this.currentUser.email.charAt(0).toUpperCase() : ''}</div>
                     <div class="profile-info">
-                        <div class="profile-name">${this.currentUser.displayName || 'User'}</div>
-                        <div class="profile-email">${this.currentUser.email}</div>
+                        <div class="profile-name">${this.userProfile.name || 'User'}</div>
+                        <div class="profile-email">${this.userProfile.email}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 8px;">${this.userProfile.bio || 'No bio yet'}</div>
                         <div class="profile-stats">
                             <div class="profile-stat">
-                                <div class="profile-stat-value">${this.allPosts.filter(p => p.userId === this.currentUser.uid).length}</div>
+                                <div class="profile-stat-value">${userPostsCount}</div>
                                 <div class="profile-stat-label">Posts</div>
                             </div>
                             <div class="profile-stat">
@@ -1286,17 +1363,72 @@ var app = {
                         </div>
                     </div>
                 </div>
-                <button class="btn-edit" onclick="app.editProfile()">✏️ Edit Profile</button>
+                <button class="btn-edit" onclick="app.openEditProfileModal()">✏️ Edit Profile</button>
             </div>
         `;
     },
 
-    uploadProfilePhoto: function() {
-        this.toast('Profile photo upload coming soon!', 'success');
+    openEditProfileModal: function() {
+        document.getElementById('editName').value = this.userProfile.name || '';
+        document.getElementById('editBio').value = this.userProfile.bio || '';
+        
+        if (this.userProfile.profilePhoto) {
+            document.getElementById('editProfilePhoto').style.backgroundImage = 'url(' + this.userProfile.profilePhoto + ')';
+            document.getElementById('editProfilePhoto').style.backgroundSize = 'cover';
+            document.getElementById('editProfilePhoto').textContent = '';
+        } else {
+            document.getElementById('editProfilePhoto').textContent = this.currentUser.email.charAt(0).toUpperCase();
+            document.getElementById('editProfilePhoto').style.backgroundImage = 'none';
+        }
+        
+        document.getElementById('editProfileModal').classList.add('active');
     },
 
-    editProfile: function() {
-        this.toast('Profile editing coming soon!', 'success');
+    closeEditProfileModal: function() {
+        document.getElementById('editProfileModal').classList.remove('active');
+    },
+
+    saveProfile: function() {
+        var self = this;
+        var name = document.getElementById('editName').value.trim();
+        var bio = document.getElementById('editBio').value.trim();
+        var profilePhotoFile = document.getElementById('profilePhotoInput').files[0];
+
+        if (!name) {
+            this.toast('Name is required', 'error');
+            return;
+        }
+
+        if (profilePhotoFile) {
+            var formData = new FormData();
+            formData.append('file', profilePhotoFile);
+            formData.append('upload_preset', UPLOAD_PRESET);
+
+            fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                var profilePhoto = data.secure_url;
+                database.ref('users/' + self.currentUser.uid).update({
+                    name: name,
+                    bio: bio,
+                    profilePhoto: profilePhoto
+                });
+                self.toast('Profile updated! ✅', 'success');
+                self.closeEditProfileModal();
+                self.renderProfile();
+            });
+        } else {
+            database.ref('users/' + self.currentUser.uid).update({
+                name: name,
+                bio: bio
+            });
+            self.toast('Profile updated! ✅', 'success');
+            self.closeEditProfileModal();
+            self.renderProfile();
+        }
     },
 
     loadMessages: function() {
@@ -1358,7 +1490,7 @@ var app = {
         if (navigator.share) {
             navigator.share({ title: 'CHICHI', text: 'Join CHICHI and earn money!', url: link });
         } else {
-            alert('Share: ' + link);
+            this.toast('Share: ' + link, 'success');
         }
     },
 
