@@ -81,7 +81,7 @@
 
         .auth-card {
             background: white;
-            border-radius: 24px;
+            border-radius: 28px;
             padding: 28px;
             max-width: 420px;
             width: 100%;
@@ -114,6 +114,7 @@
             border: none;
             background: none;
             position: relative;
+            transition: 0.3s;
         }
 
         .tab.active {
@@ -149,9 +150,10 @@
             width: 100%;
             padding: 12px;
             border: 2px solid var(--border);
-            border-radius: 12px;
+            border-radius: 14px;
             font-size: 0.95rem;
             font-family: 'Inter', sans-serif;
+            transition: 0.3s;
         }
 
         .form-input:focus {
@@ -166,10 +168,11 @@
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             border: none;
-            border-radius: 12px;
+            border-radius: 14px;
             font-weight: 600;
             cursor: pointer;
             font-family: 'Inter', sans-serif;
+            transition: 0.3s;
         }
 
         /* APP */
@@ -196,13 +199,14 @@
             justify-content: space-between;
             align-items: center;
             flex-shrink: 0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .app-logo-container h1 {
             font-size: 1.2rem;
             font-weight: 800;
             margin: 0;
+            letter-spacing: 2px;
         }
 
         .app-subtitle {
@@ -225,9 +229,14 @@
             color: white;
             cursor: pointer;
             padding: 6px 12px;
-            border-radius: 6px;
+            border-radius: 10px;
             font-size: 0.9rem;
             font-weight: 600;
+            transition: 0.3s;
+        }
+
+        .btn-icon:hover {
+            background: rgba(255,255,255,0.3);
         }
 
         .app-content {
@@ -244,19 +253,16 @@
             width: 100%;
             overflow-y: auto;
             flex-direction: column;
+            padding-bottom: 80px;
         }
 
         .view.active { display: flex; }
 
         /* FEED VIEW */
-        #feedView {
-            flex-direction: column;
-        }
-
         .feed-header {
             padding: 12px 16px;
             background: white;
-            border-bottom: 1px solid var(--border);
+            border-bottom: none;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -268,11 +274,20 @@
         .quick-post {
             background: white;
             padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: none;
             display: flex;
             gap: 10px;
             align-items: center;
             flex-shrink: 0;
+            margin: 8px 16px;
+            border-radius: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .quick-post:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .quick-post-avatar {
@@ -286,6 +301,7 @@
             justify-content: center;
             font-weight: 700;
             background-size: cover;
+            flex-shrink: 0;
         }
 
         .quick-post-input {
@@ -302,13 +318,20 @@
         #feedContainer {
             flex: 1;
             overflow-y: auto;
-            padding-bottom: 60px;
         }
 
         .post {
             background: white;
-            border-bottom: 8px solid var(--light);
-            margin-bottom: 0;
+            margin: 8px 16px;
+            border-radius: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow: hidden;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .post-header {
@@ -347,6 +370,11 @@
             cursor: pointer;
             font-size: 1.2rem;
             color: var(--text-light);
+            transition: 0.3s;
+        }
+
+        .post-menu:hover {
+            color: var(--primary);
         }
 
         .post-image {
@@ -384,19 +412,25 @@
             background: none;
             color: var(--text-light);
             font-size: 0.75rem;
+            transition: 0.3s;
+        }
+
+        .post-action:hover {
+            color: var(--primary);
         }
 
         /* PROFILE VIEW */
         #profileView {
             flex-direction: column;
-            padding-bottom: 80px;
         }
 
         .profile-header {
             background: white;
             padding: 16px;
-            border-bottom: 1px solid var(--border);
+            border-radius: 18px;
+            margin: 16px;
             flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .profile-top {
@@ -408,7 +442,7 @@
         .profile-avatar-large {
             width: 80px;
             height: 80px;
-            border-radius: 50%;
+            border-radius: 20px;
             background: var(--primary);
             color: white;
             display: flex;
@@ -417,6 +451,13 @@
             font-weight: 700;
             font-size: 1.5rem;
             background-size: cover;
+            cursor: pointer;
+            position: relative;
+            transition: 0.3s;
+        }
+
+        .profile-avatar-large:hover {
+            transform: scale(1.05);
         }
 
         .profile-info { flex: 1; }
@@ -439,25 +480,14 @@
         .btn-edit {
             width: 100%;
             padding: 10px;
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: 600;
             cursor: pointer;
             margin-top: 12px;
-        }
-
-        .profile-section-title {
-            padding: 16px;
-            background: white;
-            border-bottom: 1px solid var(--border);
-            font-weight: 600;
-        }
-
-        #profilePostsContainer {
-            flex: 1;
-            overflow-y: auto;
+            transition: 0.3s;
         }
 
         /* WALLET VIEW */
@@ -469,10 +499,12 @@
         .balance-card {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            border-radius: 16px;
+            border-radius: 20px;
             padding: 20px;
             margin-bottom: 16px;
             text-align: center;
+            box-shadow: 0 8px 16px rgba(0,212,170,0.3);
+            animation: slideUp 0.3s ease-out;
         }
 
         .balance-label { font-size: 0.9rem; opacity: 0.9; }
@@ -487,13 +519,21 @@
             font-weight: 600;
             cursor: pointer;
             font-size: 0.9rem;
+            transition: 0.3s;
         }
 
         .earn-card {
             background: white;
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 16px;
             margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: 0.3s;
+        }
+
+        .earn-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .earn-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
@@ -507,7 +547,7 @@
         .messages-header {
             padding: 12px 16px;
             background: white;
-            border-bottom: 1px solid var(--border);
+            border-bottom: none;
             font-weight: 600;
             flex-shrink: 0;
         }
@@ -521,12 +561,19 @@
         .message-item {
             background: white;
             padding: 12px;
-            margin-bottom: 4px;
-            border-radius: 12px;
+            margin-bottom: 8px;
+            border-radius: 16px;
             cursor: pointer;
             display: flex;
             gap: 10px;
             align-items: center;
+            transition: 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .message-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
         }
 
         .message-avatar {
@@ -539,17 +586,35 @@
             align-items: center;
             justify-content: center;
             font-weight: 700;
+            flex-shrink: 0;
         }
 
         .message-name { font-weight: 600; font-size: 0.9rem; }
         .message-preview { font-size: 0.8rem; color: var(--text-light); }
 
-        /* CHAT VIEW - Uses inline styles for fixed positioning */
+        /* CHAT VIEW */
+        #chatView {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            flex-direction: column;
+            background: var(--light);
+            z-index: 999;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #chatView.active {
+            display: flex;
+        }
 
         .chat-header {
             padding: 12px 16px;
-            background: white;
-            border-bottom: 1px solid var(--border);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
             font-weight: 600;
             display: flex;
             align-items: center;
@@ -559,11 +624,18 @@
         }
 
         .chat-back-btn {
-            background: none;
+            background: rgba(255,255,255,0.2);
             border: none;
             font-size: 1.3rem;
             cursor: pointer;
-            padding: 0;
+            padding: 6px 10px;
+            border-radius: 8px;
+            color: white;
+            transition: 0.3s;
+        }
+
+        .chat-back-btn:hover {
+            background: rgba(255,255,255,0.3);
         }
 
         .chat-messages {
@@ -578,57 +650,77 @@
 
         .message-bubble {
             padding: 10px 12px;
-            border-radius: 12px;
+            border-radius: 16px;
             font-size: 0.9rem;
             max-width: 80%;
             word-wrap: break-word;
-            animation: messageSlide 0.3s ease-out;
+            animation: messageBounce 0.3s ease-out;
         }
 
-        @keyframes messageSlide {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes messageBounce {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
         }
 
         .message-bubble.sent {
             background: var(--primary);
             color: white;
             margin-left: auto;
+            border-bottom-right-radius: 4px;
         }
 
         .message-bubble.received {
             background: white;
             color: var(--text);
             border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
         }
 
-        /* CREATE POST */
-        #createView {
-            flex-direction: column;
-            padding: 16px;
-            padding-bottom: 80px;
+        .chat-input-overlay {
+            position: fixed;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            padding: 12px 16px;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+            z-index: 998;
+            animation: slideUp 0.3s ease-out;
         }
 
-        #photoPreview {
-            width: 100%;
-            height: 200px;
-            border-radius: 12px;
-            background: var(--light);
-            border: 2px dashed var(--border);
-            margin-bottom: 16px;
-            object-fit: cover;
-        }
-
-        #captionInput {
-            width: 100%;
-            padding: 12px;
+        .chat-input-overlay input {
+            flex: 1;
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 20px;
+            padding: 10px 12px;
             font-family: 'Inter', sans-serif;
             font-size: 0.9rem;
-            resize: vertical;
-            min-height: 80px;
-            margin-bottom: 12px;
+            min-height: 40px;
+            transition: 0.3s;
+        }
+
+        .chat-input-overlay input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+        }
+
+        .chat-input-overlay button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            min-height: 40px;
+            flex-shrink: 0;
+            transition: 0.3s;
         }
 
         /* BOTTOM NAV */
@@ -642,8 +734,9 @@
             background: white;
             border-top: 1px solid var(--border);
             padding: 8px 0;
-            z-index: 999;
+            z-index: 990;
             width: 100%;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
         }
 
         .nav-item {
@@ -658,10 +751,14 @@
             justify-content: center;
             gap: 4px;
             font-size: 0.7rem;
+            transition: 0.3s;
+            border-radius: 12px;
+            margin: 0 4px;
         }
 
         .nav-item.active {
             color: var(--primary);
+            background: rgba(0, 212, 170, 0.1);
         }
 
         .nav-icon { font-size: 1.3rem; }
@@ -678,6 +775,12 @@
             z-index: 2000;
             align-items: flex-end;
             justify-content: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .modal-overlay.active {
@@ -688,10 +791,11 @@
             background: white;
             width: 100%;
             max-width: 500px;
-            border-radius: 20px 20px 0 0;
+            border-radius: 28px 28px 0 0;
             padding: 20px;
-            max-height: 80vh;
+            max-height: 90vh;
             overflow-y: auto;
+            animation: slideUp 0.3s ease-out;
         }
 
         .modal-close {
@@ -705,20 +809,26 @@
             font-size: 1.5rem;
             cursor: pointer;
             color: var(--text-light);
+            transition: 0.3s;
+        }
+
+        .modal-close button:hover {
+            color: var(--text);
         }
 
         .toast {
             position: fixed;
-            bottom: 80px;
+            bottom: 100px;
             left: 20px;
             right: 20px;
             background: white;
             padding: 12px 16px;
-            border-radius: 10px;
+            border-radius: 14px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             z-index: 10000;
             font-size: 0.8rem;
             font-weight: 500;
+            animation: slideUp 0.3s ease-out;
         }
 
         .toast.success {
@@ -743,6 +853,7 @@
             z-index: 3000;
             align-items: center;
             justify-content: center;
+            animation: fadeIn 0.3s ease-out;
         }
 
         .logout-modal.active {
@@ -751,11 +862,12 @@
 
         .logout-card {
             background: white;
-            border-radius: 16px;
+            border-radius: 20px;
             padding: 24px;
             width: 90%;
             max-width: 300px;
             text-align: center;
+            animation: slideUp 0.3s ease-out;
         }
 
         .logout-card h3 { margin-bottom: 8px; }
@@ -770,9 +882,10 @@
             flex: 1;
             padding: 10px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             font-weight: 600;
+            transition: 0.3s;
         }
 
         .logout-cancel {
@@ -780,9 +893,113 @@
             color: var(--text);
         }
 
+        .logout-cancel:hover {
+            background: var(--border);
+        }
+
         .logout-confirm {
             background: #ef4444;
             color: white;
+        }
+
+        .logout-confirm:hover {
+            background: #dc2626;
+        }
+
+        /* CREATE POST MODAL */
+        .create-modal {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            border-radius: 28px 28px 0 0;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .create-modal h2 {
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
+        #photoPreview {
+            width: 100%;
+            height: 200px;
+            border-radius: 16px;
+            background: var(--light);
+            border: 2px dashed var(--primary);
+            margin-bottom: 16px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        #photoPreview:hover {
+            background: rgba(0, 212, 170, 0.05);
+        }
+
+        .photo-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: 0.3s;
+        }
+
+        #captionInput {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 80px;
+            margin-bottom: 12px;
+            transition: 0.3s;
+        }
+
+        #captionInput:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+        }
+
+        .profile-options-modal {
+            background: white;
+            width: 100%;
+            max-width: 300px;
+            border-radius: 20px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .profile-option-btn {
+            padding: 12px 16px;
+            background: var(--light);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+
+        .profile-option-btn:hover {
+            background: var(--border);
+        }
+
+        .profile-option-btn.danger {
+            color: #ef4444;
+            border: 1px solid #ef4444;
         }
     </style>
 </head>
@@ -849,7 +1066,6 @@
             <p class="app-subtitle">by Onchari Group</p>
         </div>
         <div class="header-actions">
-            <button class="btn-icon" onclick="app.showLogout()">⚙️</button>
             <button class="btn-icon" onclick="app.showLogout()">Logout</button>
         </div>
     </div>
@@ -859,25 +1075,13 @@
         <div class="view active" id="feedView">
             <div class="feed-header">
                 <div class="feed-title">Home</div>
-                <button style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 0.75rem;" onclick="app.loadPosts()">Refresh</button>
+                <button style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 14px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.3s;" onclick="app.loadPosts()">Refresh</button>
             </div>
-            <div class="quick-post">
+            <div class="quick-post" onclick="app.showCreateModal()">
                 <div class="quick-post-avatar" id="quickPostAvatar">U</div>
-                <input type="text" class="quick-post-input" placeholder="What's on your mind?" onclick="app.switchView('create')">
+                <input type="text" class="quick-post-input" placeholder="Share something..." readonly>
             </div>
             <div id="feedContainer"></div>
-        </div>
-
-        <!-- CREATE -->
-        <div class="view" id="createView">
-            <div style="background: white; border-radius: 16px; padding: 16px;">
-                <h2 style="margin-bottom: 16px;">Create Post</h2>
-                <img id="photoPreview" alt="Preview">
-                <input type="file" id="photoInput" style="display: none;" accept="image/*">
-                <button type="button" style="width: 100%; padding: 12px; background: var(--light); border: 2px dashed var(--primary); border-radius: 12px; color: var(--primary); font-weight: 600; cursor: pointer; margin-bottom: 12px;" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
-                <textarea id="captionInput" placeholder="Write a caption..."></textarea>
-                <button type="button" style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;" onclick="app.createPost()">Share Post</button>
-            </div>
         </div>
 
         <!-- PROFILE -->
@@ -914,17 +1118,19 @@
         </div>
 
         <!-- CHAT -->
-        <div id="chatView" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 999; flex-direction: column; background: var(--light); width: 100%; height: 100vh;">
+        <div id="chatView">
             <div class="chat-header">
                 <button class="chat-back-btn" onclick="app.backToMessages()">←</button>
                 <span id="chatUserName">Chat</span>
             </div>
-            <div class="chat-messages" id="chatMessages" style="flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--light);"></div>
-            <div style="display: flex; gap: 8px; padding: 12px 16px; background: white; border-top: 1px solid var(--border); align-items: stretch; flex-shrink: 0; width: 100%;">
-                <input type="text" id="chatInput" placeholder="Type message..." style="flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 10px 12px; font-family: 'Inter', sans-serif; font-size: 0.9rem; min-height: 40px;">
-                <button onclick="app.sendMessage()" style="background: var(--primary); color: white; border: none; border-radius: 20px; padding: 10px 20px; cursor: pointer; font-weight: 600; font-size: 0.85rem; min-height: 40px; flex-shrink: 0; white-space: nowrap;">Send</button>
-            </div>
+            <div class="chat-messages" id="chatMessages"></div>
         </div>
+    </div>
+
+    <!-- CHAT INPUT OVERLAY (stays on top of nav) -->
+    <div class="chat-input-overlay" id="chatInputOverlay" style="display: none;">
+        <input type="text" id="chatInput" placeholder="Type message...">
+        <button onclick="app.sendMessage()">Send</button>
     </div>
 
     <!-- NAV -->
@@ -933,7 +1139,7 @@
             <div class="nav-icon">🏠</div>
             <div>Home</div>
         </div>
-        <div class="nav-item" onclick="app.switchView('create')">
+        <div class="nav-item" onclick="app.showCreateModal()">
             <div class="nav-icon">✎</div>
             <div>Create</div>
         </div>
@@ -953,6 +1159,18 @@
 </div>
 
 <!-- MODALS -->
+<div class="modal-overlay" id="createModal">
+    <div class="create-modal">
+        <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
+        <h2>Create Post</h2>
+        <img id="photoPreview" alt="Preview" style="display: none;">
+        <input type="file" id="photoInput" style="display: none;" accept="image/*">
+        <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
+        <textarea id="captionInput" placeholder="Write a caption..."></textarea>
+        <button type="button" class="btn-submit" onclick="app.createPost()">Share Post</button>
+    </div>
+</div>
+
 <div class="modal-overlay" id="withdrawModal">
     <div class="modal">
         <div class="modal-close"><button onclick="app.closeWithdrawModal()">✕</button></div>
@@ -973,7 +1191,17 @@
             <label class="form-label">Account/Phone</label>
             <input type="text" class="form-input" id="accountNumber" placeholder="0712345678">
         </div>
-        <button style="width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;" onclick="app.processWithdrawal()">Request</button>
+        <button style="width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s;" onclick="app.processWithdrawal()">Request</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="profilePhotoModal">
+    <div class="modal" style="max-width: 300px;">
+        <div class="profile-options-modal">
+            <button class="profile-option-btn" onclick="app.changeProfilePhoto()">📸 Change Photo</button>
+            <button class="profile-option-btn" onclick="app.viewProfilePhoto()">👁️ View Photo</button>
+            <button class="profile-option-btn" onclick="app.closeProfilePhotoModal()">Cancel</button>
+        </div>
     </div>
 </div>
 
@@ -1024,20 +1252,6 @@ var app = {
         });
 
         document.getElementById('photoInput').addEventListener('change', e => this.previewPhoto(e));
-        
-        // Chat input enter key handler
-        var self = this;
-        setTimeout(() => {
-            var chatInput = document.getElementById('chatInput');
-            if (chatInput) {
-                chatInput.addEventListener('keypress', e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        self.sendMessage();
-                    }
-                });
-            }
-        }, 500);
     },
 
     showAuth: function() {
@@ -1080,18 +1294,21 @@ var app = {
     },
 
     switchView: function(view) {
+        // Close chat if switching away
+        if (view !== 'chat') {
+            this.closeChatView();
+        }
+
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById(view + 'View').classList.add('active');
         
-        if (view === 'messages') {
-            document.getElementById('chatView').classList.remove('active');
-            this.loadMessages();
-        } else if (view === 'profile') {
+        if (view === 'profile') {
             this.renderProfile();
         } else if (view === 'feed') {
-            document.getElementById('chatView').classList.remove('active');
             this.loadPosts();
+        } else if (view === 'messages') {
+            this.loadMessages();
         }
 
         var navIndex = ['feed', 'create', 'messages', 'wallet', 'profile'].indexOf(view);
@@ -1133,12 +1350,25 @@ var app = {
         }).catch(err => this.toast(err.message, 'error'));
     },
 
+    showCreateModal: function() {
+        document.getElementById('createModal').classList.add('active');
+    },
+
+    closeCreateModal: function() {
+        document.getElementById('createModal').classList.remove('active');
+        document.getElementById('photoInput').value = '';
+        document.getElementById('captionInput').value = '';
+        document.getElementById('photoPreview').style.display = 'none';
+    },
+
     previewPhoto: function(e) {
         var file = e.target.files[0];
         if (file) {
             var reader = new FileReader();
             reader.onload = evt => {
-                document.getElementById('photoPreview').src = evt.target.result;
+                var preview = document.getElementById('photoPreview');
+                preview.src = evt.target.result;
+                preview.style.display = 'block';
             };
             reader.readAsDataURL(file);
         }
@@ -1176,12 +1406,10 @@ var app = {
                 createdAt: new Date().toLocaleString('en-KE'),
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             }).then(() => {
-                document.getElementById('photoInput').value = '';
-                document.getElementById('captionInput').value = '';
-                document.getElementById('photoPreview').src = '';
                 self.balance += 1;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
                 self.toast('Post shared!', 'success');
+                self.closeCreateModal();
                 self.switchView('feed');
             });
         }).catch(err => this.toast('Upload failed', 'error'));
@@ -1213,7 +1441,7 @@ var app = {
                 var downloads = p.downloads || 0;
                 var comments = (p.comments && p.comments.length) || 0;
                 html += `
-                    <div class="post">
+                    <div class="post" id="post-${p.id}">
                         <div class="post-header">
                             <div class="post-user">
                                 <div class="post-avatar" style="background-image: url(${p.userPhoto || ''});">${!p.userPhoto ? p.userName.charAt(0).toUpperCase() : ''}</div>
@@ -1246,6 +1474,14 @@ var app = {
             db.ref('posts/' + id + '/likes').set(likes);
             self.balance += 0.2;
             db.ref('users/' + self.user.uid + '/balance').set(self.balance);
+            // Update UI immediately
+            var post = document.getElementById('post-' + id);
+            if (post) {
+                var stats = post.querySelector('.post-stats');
+                if (stats) {
+                    stats.textContent = likes + ' likes · ' + (post.querySelector('.post-stats').textContent.split('·')[1]) + ' · ' + (post.querySelector('.post-stats').textContent.split('·')[2]);
+                }
+            }
         });
     },
 
@@ -1266,6 +1502,19 @@ var app = {
         }
     },
 
+    deletePost: function(id) {
+        if (confirm('Delete this post?')) {
+            db.ref('posts/' + id).remove();
+            // Remove from UI immediately
+            var post = document.getElementById('post-' + id);
+            if (post) {
+                post.style.animation = 'slideUp 0.3s ease-out reverse';
+                setTimeout(() => post.remove(), 300);
+            }
+            this.toast('Deleted', 'success');
+        }
+    },
+
     viewComments: function(id) {
         var self = this;
         db.ref('posts/' + id + '/comments').once('value', s => {
@@ -1277,7 +1526,7 @@ var app = {
                 html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No comments yet</div>';
             } else {
                 comments.forEach(c => {
-                    html += `<div style="background: var(--light); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                    html += `<div style="background: var(--light); padding: 12px; border-radius: 12px; margin-bottom: 8px;">
                         <div style="font-weight: 600; font-size: 0.9rem;">${c.user || c.email}</div>
                         <div style="font-size: 0.85rem; margin: 4px 0;">${c.text}</div>
                         <div style="font-size: 0.75rem; color: var(--text-light);">${c.time}</div>
@@ -1287,7 +1536,7 @@ var app = {
 
             html += `<div style="border-top: 1px solid var(--border); padding-top: 12px; display: flex; gap: 8px;">
                 <input type="text" id="commentInput" placeholder="Add comment..." style="flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 10px 12px;">
-                <button onclick="app.submitComment('${id}')" style="background: var(--primary); color: white; border: none; border-radius: 20px; padding: 10px 16px; cursor: pointer;">Post</button>
+                <button onclick="app.submitComment('${id}')" style="background: var(--primary); color: white; border: none; border-radius: 20px; padding: 10px 16px; cursor: pointer; font-weight: 600;">Post</button>
             </div>`;
 
             var modal = document.createElement('div');
@@ -1322,19 +1571,12 @@ var app = {
         });
     },
 
-    deletePost: function(id) {
-        if (confirm('Delete?')) {
-            db.ref('posts/' + id).remove();
-            this.toast('Deleted', 'success');
-        }
-    },
-
     renderProfile: function() {
         var userPosts = this.posts.filter(p => p.userId === this.user.uid).length;
         var html = `
             <div class="profile-header">
                 <div class="profile-top">
-                    <div class="profile-avatar-large" style="background-image: url(${this.profile.profilePhoto || ''});">${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}</div>
+                    <div class="profile-avatar-large" onclick="app.showProfilePhotoModal()" style="background-image: url(${this.profile.profilePhoto || ''});">${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}</div>
                     <div class="profile-info">
                         <div class="profile-name">${this.profile.name || 'User'}</div>
                         <div class="profile-email">${this.user.email}</div>
@@ -1344,9 +1586,13 @@ var app = {
                         </div>
                     </div>
                 </div>
-                <button class="btn-edit" onclick="alert('Edit profile coming soon')">✏️ Edit Profile</button>
+                <button class="btn-edit" onclick="app.showEditProfileModal()">✏️ Edit Profile</button>
             </div>
-            <div class="profile-section-title">My Posts</div>
+            <div style="padding: 16px; background: white; border-radius: 16px; margin: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="font-weight: 600; margin-bottom: 8px;">Bio</div>
+                <div style="color: var(--text-light); font-size: 0.9rem;">${this.profile.bio || 'No bio yet'}</div>
+            </div>
+            <div style="padding: 16px;">My Posts</div>
             <div id="profilePosts"></div>
         `;
 
@@ -1355,7 +1601,7 @@ var app = {
         var postsHtml = '';
         this.posts.filter(p => p.userId === this.user.uid).forEach(p => {
             postsHtml += `
-                <div class="post">
+                <div class="post" id="post-${p.id}">
                     <div class="post-header">
                         <div class="post-user">
                             <div class="post-avatar" style="background-image: url(${p.userPhoto || ''});">${!p.userPhoto ? p.userName.charAt(0).toUpperCase() : ''}</div>
@@ -1380,6 +1626,74 @@ var app = {
         document.getElementById('profilePosts').innerHTML = postsHtml;
     },
 
+    showEditProfileModal: function() {
+        var name = prompt('Edit name:', this.profile.name || '');
+        if (name !== null) {
+            var bio = prompt('Edit bio:', this.profile.bio || '');
+            if (bio !== null) {
+                this.profile.name = name;
+                this.profile.bio = bio;
+                db.ref('users/' + this.user.uid).update({
+                    name: name,
+                    bio: bio
+                });
+                this.toast('Profile updated!', 'success');
+                this.renderProfile();
+            }
+        }
+    },
+
+    showProfilePhotoModal: function() {
+        document.getElementById('profilePhotoModal').classList.add('active');
+    },
+
+    closeProfilePhotoModal: function() {
+        document.getElementById('profilePhotoModal').classList.remove('active');
+    },
+
+    changeProfilePhoto: function() {
+        this.closeProfilePhotoModal();
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = e => {
+            var file = e.target.files[0];
+            if (file) {
+                var formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', UPLOAD_PRESET);
+                fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(r => r.json())
+                .then(data => {
+                    this.profile.profilePhoto = data.secure_url;
+                    db.ref('users/' + this.user.uid + '/profilePhoto').set(data.secure_url);
+                    this.toast('Photo updated!', 'success');
+                    this.renderProfile();
+                })
+                .catch(err => this.toast('Upload failed', 'error'));
+            }
+        };
+        input.click();
+    },
+
+    viewProfilePhoto: function() {
+        this.closeProfilePhotoModal();
+        if (this.profile.profilePhoto) {
+            var modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = `<div class="modal" style="max-width: 400px;">
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+                <img src="${this.profile.profilePhoto}" style="width: 100%; border-radius: 16px;">
+            </div>`;
+            document.body.appendChild(modal);
+        } else {
+            this.toast('No profile photo yet', 'error');
+        }
+    },
+
     loadUsers: function() {
         var self = this;
         db.ref('users').on('value', s => {
@@ -1394,9 +1708,9 @@ var app = {
             if (uid !== this.user.uid) {
                 var u = this.users[uid];
                 html += `
-                    <div class="message-item" data-uid="${uid}" data-name="${u.name}">
+                    <div class="message-item" onclick="app.openChat('${uid}', '${u.name}')">
                         <div class="message-avatar">${u.name.charAt(0).toUpperCase()}</div>
-                        <div class="message-content">
+                        <div>
                             <div class="message-name">${u.name}</div>
                             <div class="message-preview">Tap to message</div>
                         </div>
@@ -1406,17 +1720,6 @@ var app = {
         });
         if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No users yet</div>';
         document.getElementById('messageList').innerHTML = html;
-        
-        // Add click handlers to message items
-        setTimeout(() => {
-            document.querySelectorAll('.message-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    var uid = this.getAttribute('data-uid');
-                    var name = this.getAttribute('data-name');
-                    self.openChat(uid, name);
-                });
-            });
-        }, 100);
     },
 
     openChat: function(uid, name) {
@@ -1431,44 +1734,37 @@ var app = {
         document.getElementById('chatMessages').innerHTML = '';
         document.getElementById('chatInput').value = '';
         
-        // Show chat view - fully fixed positioning covers entire screen
+        // Show chat view
         var chatView = document.getElementById('chatView');
-        chatView.style.display = 'flex';
-        chatView.style.flexDirection = 'column';
         chatView.classList.add('active');
+        
+        // Show input overlay
+        document.getElementById('chatInputOverlay').style.display = 'flex';
         
         // Load messages
         var self = this;
         setTimeout(() => {
             self.loadChatMessages();
-            // Scroll to bottom
-            var messagesDiv = document.getElementById('chatMessages');
-            if (messagesDiv) {
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-            // Focus input
             document.getElementById('chatInput').focus();
         }, 100);
     },
 
-    backToMessages: function() {
+    closeChatView: function() {
         this.currentChat = null;
-        var chatView = document.getElementById('chatView');
-        chatView.style.display = 'none';
-        chatView.classList.remove('active');
+        document.getElementById('chatView').classList.remove('active');
+        document.getElementById('chatInputOverlay').style.display = 'none';
+    },
+
+    backToMessages: function() {
+        this.closeChatView();
         this.switchView('messages');
     },
 
     loadChatMessages: function() {
-        if (!this.currentChat) {
-            console.error('No current chat');
-            return;
-        }
+        if (!this.currentChat) return;
         
         var self = this;
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
-        
-        console.log('Loading messages from:', key);
         
         db.ref('chats/' + key + '/messages').orderByChild('timestamp').on('value', s => {
             var html = '';
@@ -1501,7 +1797,6 @@ var app = {
 
     sendMessage: function() {
         if (!this.currentChat) {
-            console.error('No chat selected');
             this.toast('No chat selected', 'error');
             return;
         }
@@ -1514,7 +1809,6 @@ var app = {
             return;
         }
 
-        console.log('Sending message:', text);
         var self = this;
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
         
@@ -1523,10 +1817,8 @@ var app = {
             text: text,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         }).then(() => {
-            console.log('✅ Message sent successfully');
             input.value = '';
             input.focus();
-            // Scroll to bottom
             var messagesDiv = document.getElementById('chatMessages');
             if (messagesDiv) {
                 setTimeout(() => {
@@ -1534,8 +1826,7 @@ var app = {
                 }, 50);
             }
         }).catch(err => {
-            console.error('❌ Send error:', err);
-            self.toast('Failed to send: ' + err.message, 'error');
+            self.toast('Failed to send', 'error');
             input.focus();
         });
     },
