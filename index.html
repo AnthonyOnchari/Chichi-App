@@ -7,6 +7,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>CHICHI - Social Media by Onchari Group</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
     <style>
         * {
             margin: 0;
@@ -24,8 +28,6 @@
             --border: #e5e7eb;
             --text: #111827;
             --text-light: #6b7280;
-            --blue: #2E5BFF;
-            --gold: #FFC24B;
         }
 
         html, body {
@@ -193,11 +195,26 @@
             font-weight: 600;
         }
 
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            font-size: 1.2rem;
+        }
+
         /* MAIN APP */
         .main-app {
             display: none;
-            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             width: 100%;
+            height: 100vh;
             overflow: hidden;
             flex-direction: column;
         }
@@ -267,15 +284,40 @@
             border-radius: 2px;
         }
 
-        /* FEED VIEW */
+        /* FEED */
         .feed-view {
             display: none;
             min-height: 100%;
-            padding-bottom: 20px;
         }
 
         .feed-view.active {
             display: block;
+        }
+
+        .feed-header {
+            padding: 16px;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .feed-title {
+            font-weight: 600;
+        }
+
+        .btn-refresh {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
         }
 
         .post {
@@ -343,18 +385,20 @@
         .post-actions {
             padding: 8px 16px;
             display: flex;
-            gap: 16px;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
         .post-action {
             flex: 1;
+            min-width: 45px;
             text-align: center;
             cursor: pointer;
             padding: 8px;
             border: none;
             background: none;
             color: var(--text-light);
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             transition: all 0.3s ease;
         }
 
@@ -366,11 +410,10 @@
             color: #ef4444;
         }
 
-        /* CREATE POST VIEW */
+        /* CREATE POST */
         .create-post-view {
             display: none;
             min-height: 100%;
-            padding-bottom: 20px;
         }
 
         .create-post-view.active {
@@ -471,7 +514,6 @@
         .profile-view {
             display: none;
             min-height: 100%;
-            padding-bottom: 20px;
         }
 
         .profile-view.active {
@@ -540,7 +582,6 @@
         .earn-view.active {
             display: block;
             padding: 16px;
-            padding-bottom: 40px;
         }
 
         .earn-card {
@@ -608,7 +649,6 @@
             flex: 1;
             overflow-y: auto;
             padding: 8px;
-            padding-bottom: 16px;
         }
 
         .message-item {
@@ -626,6 +666,10 @@
 
         /* BOTTOM NAV */
         .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             display: flex;
             justify-content: space-around;
             align-items: center;
@@ -633,10 +677,10 @@
             border-top: 2px solid var(--border);
             padding: 12px 0;
             padding-bottom: calc(12px + env(safe-area-inset-bottom));
-            flex-shrink: 0;
             min-height: 50px;
             width: 100%;
-            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 999;
         }
 
         .nav-item {
@@ -656,7 +700,7 @@
         .nav-item.active {
             color: var(--primary);
         }
-        
+
         .nav-item:active {
             background: rgba(0, 212, 170, 0.1);
         }
@@ -711,6 +755,10 @@
     </style>
 </head>
 <body>
+
+<div class="loading" id="loadingScreen">
+    <div>🔄 Initializing CHICHI...</div>
+</div>
 
 <!-- AUTH PAGE -->
 <div class="auth-page" id="authPage">
@@ -768,16 +816,13 @@
 
 <!-- MAIN APP -->
 <div class="main-app" id="mainApp">
-    <!-- Header -->
     <div class="app-header">
         <div class="app-logo">CHICHI <div class="app-logo-small">by Onchari Group</div></div>
         <div class="header-actions">
-            <button class="btn-icon" onclick="app.toggleNotifications()" title="Notifications">🔔</button>
             <button class="btn-icon" onclick="app.logout()" title="Logout">🚪</button>
         </div>
     </div>
 
-    <!-- Content Area -->
     <div class="app-content">
         <!-- FEED VIEW -->
         <div class="feed-view active" id="feedView"></div>
@@ -846,34 +891,72 @@
 </div>
 
 <script>
+// ===== FIREBASE CONFIG =====
+const firebaseConfig = {
+  apiKey: "AIzaSyCReFC50nVSKjdTaACzgU02cvhZ2iTdA8",
+  authDomain: "chichi-001.firebaseapp.com",
+  projectId: "chichi-001",
+  storageBucket: "chichi-001.firebasestorage.app",
+  messagingSenderId: "219736252899",
+  appId: "1:219736252899:web:626efc2fe5040efb7500d6"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const database = firebase.database();
+
+// ===== CLOUDINARY CONFIG =====
+const CLOUD_NAME = 'u1uilb6f';
+const UPLOAD_PRESET = 'chichi_photos';
+
 var app = {
-    // CLOUDINARY CONFIG
-    CLOUD_NAME: 'u1uilb6f',
-    UPLOAD_PRESET: 'chichi_photos',  // YOU NEED TO CREATE THIS!
-    
-    // FIREBASE CONFIG (for database)
-    FIREBASE_URL: 'https://chichi-001-default-rtdb.firebaseio.com',
-    
-    // APP STATE
     currentUser: null,
     allPosts: [],
     userBalance: 0,
     currentView: 'feed',
+    postsRef: null,
+    usersRef: null,
+    unsubscribePosts: null,
 
     init: function() {
-        var saved = localStorage.getItem('chichi_user');
-        if (saved) {
-            try {
-                this.currentUser = JSON.parse(saved);
+        // Check auth state
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                this.currentUser = user;
                 this.showApp();
-            } catch (e) {
-                localStorage.removeItem('chichi_user');
+            } else {
+                this.showAuth();
             }
-        }
+        });
 
         // Photo input handler
         document.getElementById('photoInput').addEventListener('change', function(e) {
             app.handlePhotoSelect(e);
+        });
+    },
+
+    showAuth: function() {
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('authPage').classList.remove('hide');
+        document.getElementById('mainApp').classList.remove('active');
+    },
+
+    showApp: function() {
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('authPage').classList.add('hide');
+        document.getElementById('mainApp').classList.add('active');
+
+        // Setup database listeners
+        this.postsRef = database.ref('posts');
+        this.loadPosts();
+
+        // Get user balance
+        database.ref('users/' + this.currentUser.uid).once('value').then(snapshot => {
+            if (snapshot.exists()) {
+                var userData = snapshot.val();
+                this.userBalance = userData.balance || 0;
+            }
         });
     },
 
@@ -895,17 +978,13 @@ var app = {
             return;
         }
 
-        var users = JSON.parse(localStorage.getItem('chichi_users') || '[]');
-        var user = users.find(u => u.email === email && u.password === password);
-
-        if (user) {
-            this.currentUser = user;
-            localStorage.setItem('chichi_user', JSON.stringify(user));
-            this.toast('Logged in!', 'success');
-            setTimeout(() => this.showApp(), 500);
-        } else {
-            this.toast('Invalid credentials', 'error');
-        }
+        auth.signInWithEmailAndPassword(email, password)
+            .then(result => {
+                this.toast('Logged in!', 'success');
+            })
+            .catch(error => {
+                this.toast('Login failed: ' + error.message, 'error');
+            });
     },
 
     handleSignup: function(e) {
@@ -919,48 +998,30 @@ var app = {
             return;
         }
 
-        var users = JSON.parse(localStorage.getItem('chichi_users') || '[]');
-        if (users.find(u => u.email === email)) {
-            this.toast('Email already exists', 'error');
-            return;
-        }
-
-        var newUser = {
-            id: Date.now(),
-            name: name,
-            email: email,
-            password: password,
-            balance: 0,
-            createdAt: new Date().toLocaleString('en-KE')
-        };
-
-        users.push(newUser);
-        localStorage.setItem('chichi_users', JSON.stringify(users));
-        
-        this.currentUser = newUser;
-        localStorage.setItem('chichi_user', JSON.stringify(newUser));
-        
-        this.toast('Account created!', 'success');
-        setTimeout(() => this.showApp(), 500);
-    },
-
-    showApp: function() {
-        document.getElementById('authPage').classList.add('hide');
-        document.getElementById('mainApp').classList.add('active');
-        this.userBalance = this.currentUser.balance || 0;
-        this.loadPosts();
-        this.renderProfile();
+        auth.createUserWithEmailAndPassword(email, password)
+            .then(result => {
+                // Save user to database
+                database.ref('users/' + result.user.uid).set({
+                    name: name,
+                    email: email,
+                    balance: 0,
+                    createdAt: new Date().toLocaleString('en-KE')
+                });
+                this.toast('Account created!', 'success');
+            })
+            .catch(error => {
+                this.toast('Signup failed: ' + error.message, 'error');
+            });
     },
 
     switchView: function(view) {
-        // Hide all views
         document.querySelectorAll('.feed-view, .create-post-view, .messages-view, .earn-view, .profile-view').forEach(v => v.classList.remove('active'));
-        
-        // Remove active from nav
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         
-        // Show selected view
-        if (view === 'feed') document.getElementById('feedView').classList.add('active');
+        if (view === 'feed') {
+            document.getElementById('feedView').classList.add('active');
+            this.loadPosts();
+        }
         else if (view === 'create') document.getElementById('createPostView').classList.add('active');
         else if (view === 'messages') {
             document.getElementById('messagesView').classList.add('active');
@@ -975,11 +1036,9 @@ var app = {
             this.renderProfile();
         }
 
-        // Mark nav as active - handle both click and programmatic calls
         if (event && event.target) {
             event.target.classList.add('active');
         } else {
-            // Programmatic call - find nav item by index
             var navItems = document.querySelectorAll('.nav-item');
             var viewIndex = ['feed', 'create', 'messages', 'earn', 'profile'].indexOf(view);
             if (viewIndex >= 0 && navItems[viewIndex]) {
@@ -1013,7 +1072,6 @@ var app = {
             return;
         }
 
-        // Show uploading
         var btn = event.target;
         btn.textContent = 'Uploading...';
         btn.disabled = true;
@@ -1022,9 +1080,9 @@ var app = {
             // Upload to Cloudinary
             var formData = new FormData();
             formData.append('file', document.getElementById('photoInput').files[0]);
-            formData.append('upload_preset', this.UPLOAD_PRESET);
+            formData.append('upload_preset', UPLOAD_PRESET);
 
-            var response = await fetch(`https://api.cloudinary.com/v1_1/${this.CLOUD_NAME}/image/upload`, {
+            var response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
                 method: 'POST',
                 body: formData
             });
@@ -1032,23 +1090,23 @@ var app = {
             var data = await response.json();
             var photoUrl = data.secure_url;
 
-            // Create post object
-            var post = {
-                id: Date.now(),
-                userId: this.currentUser.id,
-                userName: this.currentUser.name,
+            // Get user name
+            var userSnapshot = await database.ref('users/' + this.currentUser.uid).once('value');
+            var userName = userSnapshot.val().name || 'User';
+
+            // Create post in Firebase
+            var postRef = this.postsRef.push();
+            postRef.set({
+                userId: this.currentUser.uid,
+                userName: userName,
                 userEmail: this.currentUser.email,
                 photoUrl: photoUrl,
                 caption: caption,
                 likes: 0,
                 comments: [],
                 createdAt: new Date().toLocaleString('en-KE'),
-                liked: false
-            };
-
-            // Save to localStorage (or Firebase)
-            this.allPosts.unshift(post);
-            localStorage.setItem('chichi_posts', JSON.stringify(this.allPosts));
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
 
             // Reset form
             document.getElementById('photoInput').value = '';
@@ -1061,7 +1119,6 @@ var app = {
 
             this.toast('Post shared! 🎉', 'success');
             this.switchView('feed');
-            this.loadPosts();
 
         } catch (err) {
             console.error('Upload error:', err);
@@ -1072,12 +1129,35 @@ var app = {
     },
 
     loadPosts: function() {
-        this.allPosts = JSON.parse(localStorage.getItem('chichi_posts') || '[]');
+        if (this.unsubscribePosts) this.unsubscribePosts();
+
+        this.unsubscribePosts = this.postsRef.orderByChild('timestamp').limitToLast(50).on('value', snapshot => {
+            var posts = [];
+            snapshot.forEach(function(childSnapshot) {
+                var post = childSnapshot.val();
+                post.id = childSnapshot.key;
+                posts.unshift(post);
+            });
+            app.allPosts = posts;
+            app.renderFeed();
+        });
+    },
+
+    renderFeed: function() {
         var feedView = document.getElementById('feedView');
         feedView.innerHTML = '';
 
+        // Add header
+        var headerDiv = document.createElement('div');
+        headerDiv.className = 'feed-header';
+        headerDiv.innerHTML = `
+            <div class="feed-title">Feed</div>
+            <button class="btn-refresh" onclick="app.loadPosts()">🔄 Refresh</button>
+        `;
+        feedView.appendChild(headerDiv);
+
         if (this.allPosts.length === 0) {
-            feedView.innerHTML = '<div style="padding: 40px 16px; text-align: center; color: #6b7280;">No posts yet. Create one to get started! 📸</div>';
+            feedView.innerHTML += '<div style="padding: 40px 16px; text-align: center; color: #6b7280;">No posts yet. Create one to get started! 📸</div>';
             return;
         }
 
@@ -1094,15 +1174,15 @@ var app = {
                 </div>
                 <img src="${post.photoUrl}" class="post-image" alt="Post photo">
                 <div class="post-caption">${post.caption}</div>
-                <div class="post-stats">${post.likes} likes · ${post.comments.length} comments</div>
+                <div class="post-stats">${post.likes} likes</div>
                 <div class="post-actions">
-                    <button class="post-action ${post.liked ? 'liked' : ''}" onclick="app.likePost(${post.id})">
-                        ${post.liked ? '❤️' : '🤍'} Like
+                    <button class="post-action" onclick="app.likePost('${post.id}')">
+                        ❤️ Like
                     </button>
-                    <button class="post-action" onclick="app.commentPost(${post.id})">
-                        💬 Comment
+                    <button class="post-action" onclick="app.downloadPost('${post.photoUrl}', '${post.id}')">
+                        ⬇️ Save
                     </button>
-                    <button class="post-action" onclick="app.sharePost(${post.id})">
+                    <button class="post-action" onclick="app.sharePost('${post.id}')">
                         📤 Share
                     </button>
                 </div>
@@ -1112,71 +1192,50 @@ var app = {
     },
 
     likePost: function(postId) {
-        var post = this.allPosts.find(p => p.id === postId);
-        if (!post) return;
+        database.ref('posts/' + postId + '/likes').once('value').then(snapshot => {
+            var likes = snapshot.val() || 0;
+            database.ref('posts/' + postId + '/likes').set(likes + 1);
 
-        if (post.liked) {
-            post.likes--;
-            post.liked = false;
-        } else {
-            post.likes++;
-            post.liked = true;
             // Earn KSh 2 for liking
             this.userBalance += 2;
-            this.currentUser.balance = this.userBalance;
-            localStorage.setItem('chichi_user', JSON.stringify(this.currentUser));
-        }
-
-        localStorage.setItem('chichi_posts', JSON.stringify(this.allPosts));
-        this.loadPosts();
+            database.ref('users/' + this.currentUser.uid + '/balance').set(this.userBalance);
+        });
     },
 
-    commentPost: function(postId) {
-        var comment = prompt('Write a comment:');
-        if (!comment) return;
-
-        var post = this.allPosts.find(p => p.id === postId);
-        if (!post) return;
-
-        post.comments.push({
-            user: this.currentUser.name,
-            text: comment,
-            time: new Date().toLocaleTimeString('en-KE')
-        });
-
-        // Earn KSh 5 for commenting
-        this.userBalance += 5;
-        this.currentUser.balance = this.userBalance;
-        localStorage.setItem('chichi_user', JSON.stringify(this.currentUser));
-        localStorage.setItem('chichi_posts', JSON.stringify(this.allPosts));
-
-        this.loadPosts();
-        this.toast('Comment added! +5 KSh', 'success');
+    downloadPost: function(photoUrl, postId) {
+        try {
+            var link = document.createElement('a');
+            link.href = photoUrl;
+            link.download = 'chichi-post-' + postId + '.jpg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            this.toast('Photo downloaded! ⬇️', 'success');
+        } catch (err) {
+            this.toast('Download failed', 'error');
+        }
     },
 
     sharePost: function(postId) {
         this.toast('Post shared! +10 KSh', 'success');
         this.userBalance += 10;
-        this.currentUser.balance = this.userBalance;
-        localStorage.setItem('chichi_user', JSON.stringify(this.currentUser));
+        database.ref('users/' + this.currentUser.uid + '/balance').set(this.userBalance);
     },
 
     spinWheel: function() {
         var spinAmount = [50, 100, 200, 300, 500][Math.floor(Math.random() * 5)];
         this.userBalance += spinAmount;
-        this.currentUser.balance = this.userBalance;
-        localStorage.setItem('chichi_user', JSON.stringify(this.currentUser));
+        database.ref('users/' + this.currentUser.uid + '/balance').set(this.userBalance);
         document.getElementById('balanceAmount').textContent = 'KSh ' + this.userBalance;
         this.toast(`You won KSh ${spinAmount}! 🎉`, 'success');
     },
 
     startWalkToEarn: function() {
-        this.toast('Walk to Earn activated! Track your steps 👟', 'success');
-        // In a real app, this would use device pedometer
+        this.toast('Walk to Earn activated! 👟', 'success');
     },
 
     shareReferralLink: function() {
-        var link = 'https://chichi-app.vercel.app?ref=' + this.currentUser.id;
+        var link = 'https://chichi-app.vercel.app?ref=' + this.currentUser.uid;
         if (navigator.share) {
             navigator.share({ title: 'CHICHI', text: 'Join me on CHICHI!', url: link });
         } else {
@@ -1185,7 +1244,6 @@ var app = {
     },
 
     loadMessages: function() {
-        // TODO: Load messages from backend
         document.getElementById('messagesList').innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">Messages feature coming soon 💬</div>';
     },
 
@@ -1193,13 +1251,13 @@ var app = {
         var profileView = document.getElementById('profileView');
         profileView.innerHTML = `
             <div class="profile-header">
-                <div class="profile-avatar-large">${this.currentUser.name.charAt(0).toUpperCase()}</div>
-                <div class="profile-name">${this.currentUser.name}</div>
+                <div class="profile-avatar-large">${this.currentUser.email.charAt(0).toUpperCase()}</div>
+                <div class="profile-name">${this.currentUser.displayName || 'User'}</div>
                 <div class="profile-email">${this.currentUser.email}</div>
                 
                 <div class="profile-stats">
                     <div class="profile-stat">
-                        <div class="profile-stat-value">${this.allPosts.filter(p => p.userId === this.currentUser.id).length}</div>
+                        <div class="profile-stat-value">${this.allPosts.filter(p => p.userId === this.currentUser.uid).length}</div>
                         <div class="profile-stat-label">Posts</div>
                     </div>
                     <div class="profile-stat">
@@ -1217,16 +1275,11 @@ var app = {
 
     logout: function() {
         if (confirm('Logout?')) {
-            this.currentUser = null;
-            localStorage.removeItem('chichi_user');
-            document.getElementById('authPage').classList.remove('hide');
-            document.getElementById('mainApp').classList.remove('active');
-            this.toast('Logged out', 'success');
+            auth.signOut().then(() => {
+                this.currentUser = null;
+                this.toast('Logged out', 'success');
+            });
         }
-    },
-
-    toggleNotifications: function() {
-        this.toast('No new notifications 🔔', 'success');
     },
 
     toast: function(msg, type) {
@@ -1242,9 +1295,8 @@ var app = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', function() {
-    app.init();
-});
+// Initialize app
+app.init();
 </script>
 
 </body>
