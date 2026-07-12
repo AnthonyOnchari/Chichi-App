@@ -35,7 +35,6 @@
             position: fixed;
         }
 
-        /* LOADING */
         #loadingScreen {
             position: fixed;
             top: 0;
@@ -64,7 +63,6 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* AUTH */
         .auth-page {
             display: flex;
             align-items: center;
@@ -173,7 +171,6 @@
             transition: 0.3s;
         }
 
-        /* APP */
         .main-app {
             display: none;
             position: fixed;
@@ -244,7 +241,6 @@
             position: relative;
         }
 
-        /* VIEWS */
         .view {
             display: none;
             height: 100%;
@@ -256,7 +252,6 @@
 
         .view.active { display: flex; }
 
-        /* FEED VIEW */
         .feed-header {
             padding: 12px 16px;
             background: white;
@@ -423,12 +418,6 @@
             font-weight: 600;
         }
 
-        /* EXPLORE VIEW */
-        #exploreView {
-            flex-direction: column;
-            padding: 20px;
-        }
-
         .explore-content {
             display: flex;
             flex-direction: column;
@@ -436,6 +425,7 @@
             justify-content: center;
             height: 100%;
             gap: 20px;
+            padding: 20px;
         }
 
         .explore-search-btn {
@@ -456,13 +446,6 @@
             box-shadow: 0 6px 16px rgba(0, 212, 170, 0.4);
         }
 
-        .explore-text {
-            color: var(--text-light);
-            text-align: center;
-            font-size: 0.9rem;
-        }
-
-        /* SEARCH MODAL */
         .search-modal-overlay {
             display: none;
             position: fixed;
@@ -620,7 +603,6 @@
             background: #d1d5db;
         }
 
-        /* PROFILE VIEW */
         #profileView {
             flex-direction: column;
         }
@@ -691,7 +673,6 @@
             transition: 0.3s;
         }
 
-        /* WALLET VIEW */
         #walletView {
             flex-direction: column;
             padding: 16px;
@@ -738,119 +719,7 @@
         }
 
         .earn-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
-        .earn-subtitle { font-size: 0.8rem; color: var(--text-light); }
 
-        /* ADMIN PANEL */
-        #adminView {
-            flex-direction: column;
-        }
-
-        .admin-header {
-            padding: 16px;
-            background: white;
-            border-bottom: none;
-            flex-shrink: 0;
-        }
-
-        .admin-title { font-weight: 700; font-size: 1.2rem; color: #dc2626; }
-
-        .admin-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px;
-        }
-
-        .withdrawal-card {
-            background: white;
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            border-left: 4px solid var(--primary);
-        }
-
-        .withdrawal-card.pending {
-            border-left-color: #f59e0b;
-        }
-
-        .withdrawal-card.approved {
-            border-left-color: #22c55e;
-        }
-
-        .withdrawal-card.rejected {
-            border-left-color: #ef4444;
-        }
-
-        .withdrawal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .withdrawal-user { font-weight: 700; font-size: 0.95rem; }
-        .withdrawal-status {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .withdrawal-status.pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .withdrawal-status.approved {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .withdrawal-status.rejected {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .withdrawal-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 12px;
-            font-size: 0.85rem;
-        }
-
-        .withdrawal-detail { display: flex; flex-direction: column; gap: 2px; }
-        .withdrawal-detail-label { color: var(--text-light); font-size: 0.75rem; }
-        .withdrawal-detail-value { font-weight: 600; word-break: break-word; }
-
-        .withdrawal-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .withdrawal-action-btn {
-            flex: 1;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.75rem;
-            transition: 0.3s;
-        }
-
-        .withdrawal-approve {
-            background: #22c55e;
-            color: white;
-        }
-
-        .withdrawal-reject {
-            background: #ef4444;
-            color: white;
-        }
-
-        /* MESSAGES VIEW */
         #messagesView {
             flex-direction: column;
         }
@@ -902,10 +771,6 @@
             flex-shrink: 0;
             background-size: cover;
             position: relative;
-        }
-
-        .message-avatar.unread {
-            border: 2px solid var(--primary);
         }
 
         .online-dot {
@@ -961,7 +826,6 @@
             flex-shrink: 0;
         }
 
-        /* CHAT MODAL */
         .chat-modal-overlay {
             display: none;
             position: fixed;
@@ -1159,7 +1023,6 @@
             transform: scale(0.95);
         }
 
-        /* BOTTOM NAV */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -1216,7 +1079,6 @@
             justify-content: center;
         }
 
-        /* MODALS */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -1305,7 +1167,6 @@
             color: #ef4444;
         }
 
-        /* LOGOUT MODAL */
         .logout-modal {
             display: none;
             position: fixed;
@@ -1479,9 +1340,6 @@
                 </div>
                 <button type="submit" class="btn-submit">Login</button>
             </form>
-            <div style="text-align: center; margin-top: 16px;">
-                <button onclick="app.openAdminModal()" style="background: none; border: none; color: var(--primary); cursor: pointer; font-weight: 600; text-decoration: underline; font-size: 0.85rem;">Admin Access →</button>
-            </div>
         </div>
 
         <div class="tab-content" id="signupTab">
@@ -1500,10 +1358,6 @@
                 </div>
                 <button type="submit" class="btn-submit">Create Account</button>
             </form>
-            <div style="text-align: center; margin-top: 16px;">
-                <button onclick="app.openAdminModal()" style="background: none; border: none; color: var(--primary); cursor: pointer; font-weight: 600; text-decoration: underline; font-size: 0.85rem;">Admin Access →</button>
-            </div>
-        </div>
         </div>
     </div>
 </div>
@@ -1515,14 +1369,8 @@
             <h1>CHICHI</h1>
             <p class="app-subtitle">by Onchari Group</p>
         </div>
-        <div>
-                <h1 style="margin: 0; font-size: 1.8rem;">CHICHI</h1>
-                <p class="app-subtitle" style="margin: 0;">by Onchari Group</p>
-            </div>
-        </div>
         <div class="header-actions">
             <button class="btn-icon" onclick="app.showCreateModal()">✎ Create</button>
-            <button class="btn-icon" id="adminBtn" style="display: none;" onclick="app.switchView('admin')">Admin</button>
             <button class="btn-icon" onclick="app.showLogout()">Logout</button>
         </div>
     </div>
@@ -1544,7 +1392,7 @@
         <!-- EXPLORE -->
         <div class="view" id="exploreView">
             <div class="explore-content">
-                <div class="explore-text" style="font-size: 1rem; margin-bottom: 20px;">🔍 Find users and start messaging</div>
+                <div style="font-size: 1rem; margin-bottom: 20px;">🔍 Find users and start messaging</div>
                 <button class="explore-search-btn" onclick="app.openSearchModal()">Search Users</button>
             </div>
         </div>
@@ -1583,14 +1431,6 @@
         <div class="view" id="messagesView">
             <div class="messages-header">Messages</div>
             <div class="message-list" id="messageList"></div>
-        </div>
-
-        <!-- ADMIN -->
-        <div class="view" id="adminView">
-            <div class="admin-header">
-                <div class="admin-title">💼 Withdrawal Requests</div>
-            </div>
-            <div class="admin-content" id="adminContent"></div>
         </div>
     </div>
 
@@ -1650,7 +1490,7 @@
     </div>
 </div>
 
-<!-- MODALS -->
+<!-- CREATE POST MODAL -->
 <div class="modal-overlay" id="createModal">
     <div class="create-modal">
         <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
@@ -1663,6 +1503,7 @@
     </div>
 </div>
 
+<!-- WITHDRAW MODAL -->
 <div class="modal-overlay" id="withdrawModal">
     <div class="modal">
         <div class="modal-close"><button onclick="app.closeWithdrawModal()">✕</button></div>
@@ -1687,6 +1528,7 @@
     </div>
 </div>
 
+<!-- PROFILE PHOTO MODAL -->
 <div class="modal-overlay" id="profilePhotoModal">
     <div class="modal" style="max-width: 300px;">
         <div class="profile-options-modal">
@@ -1697,6 +1539,7 @@
     </div>
 </div>
 
+<!-- LOGOUT MODAL -->
 <div class="logout-modal" id="logoutModal">
     <div class="logout-card">
         <h3>Logout?</h3>
@@ -1705,73 +1548,6 @@
             <button class="logout-cancel" onclick="app.closeLogout()">Cancel</button>
             <button class="logout-confirm" onclick="app.confirmLogout()">Logout</button>
         </div>
-    </div>
-</div>
-
-<!-- ADMIN LOGIN MODAL -->
-<div class="logout-modal" id="adminModal">
-    <div class="logout-card" style="max-width: 400px; border-radius: 24px; padding: 32px;">
-        <h3 style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 1.4rem; margin-bottom: 4px;">💼 Admin Access</h3>
-        <p style="color: var(--text-light); margin-bottom: 20px; font-size: 0.85rem;">Login or create admin account</p>
-
-        <div class="tabs" style="margin-bottom: 20px;">
-            <button class="tab active" onclick="app.switchAdminTab('adminLogin')" style="flex: 1; padding: 12px;">Login</button>
-            <button class="tab" onclick="app.switchAdminTab('adminSignup')" style="flex: 1; padding: 12px;">Sign Up</button>
-        </div>
-
-        <!-- Admin Login Tab -->
-        <div id="adminLoginTab" class="tab-content active">
-            <form onsubmit="app.handleAdminLogin(event)">
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-input" id="adminLoginEmail" placeholder="admin@chichi.com" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Password</label>
-                    <input type="password" class="form-input" id="adminLoginPassword" placeholder="••••••" required>
-                </div>
-                <button type="submit" class="btn-submit" style="margin-top: 16px;">Next</button>
-            </form>
-        </div>
-
-        <!-- Admin Signup Tab -->
-        <div id="adminSignupTab" class="tab-content">
-            <form onsubmit="app.handleAdminSignup(event)">
-                <div class="form-group">
-                    <label class="form-label">Name</label>
-                    <input type="text" class="form-input" id="adminSignupName" placeholder="Admin Name" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-input" id="adminSignupEmail" placeholder="admin@chichi.com" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Password</label>
-                    <input type="password" class="form-input" id="adminSignupPassword" placeholder="Min 6 chars" required>
-                </div>
-                <button type="submit" class="btn-submit" style="margin-top: 16px;">Next</button>
-            </form>
-        </div>
-
-        <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px;">
-            <button onclick="app.closeAdminModal()" style="width: 100%; background: var(--light); color: var(--text); border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 600;">Back</button>
-        </div>
-    </div>
-</div>
-
-<!-- ADMIN SECRET CODE VERIFICATION -->
-<div class="logout-modal" id="adminVerifyTwoFAModal">
-    <div class="logout-card" style="max-width: 400px; border-radius: 24px; padding: 32px;">
-        <h3 style="color: var(--text); font-size: 1.3rem; margin-bottom: 8px;">🔐 Admin Secret Code</h3>
-        <p style="color: var(--text-light); margin-bottom: 20px; font-size: 0.85rem;">Enter the secret code to create or verify admin access</p>
-
-        <div class="form-group">
-            <label class="form-label">Secret Code</label>
-            <input type="password" class="form-input" id="adminVerifyCode" placeholder="Enter secret code" required style="font-size: 1rem;" autofocus>
-        </div>
-
-        <button class="btn-submit" onclick="app.verifyAdminSignupCode()" style="margin-bottom: 10px;">Verify & Create Admin</button>
-        <button onclick="app.cancelAdminSignupVerify()" style="width: 100%; background: var(--light); color: var(--text); border: none; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 600;">Cancel</button>
     </div>
 </div>
 
@@ -1807,7 +1583,6 @@ var auth = firebase.auth();
 var db = firebase.database();
 const CLOUD_NAME = 'u1uilb6f';
 const UPLOAD_PRESET = 'chichi_photos';
-const ADMIN_EMAILS = ['anthony@onchari.com', 'admin@chichi.com'];
 
 var app = {
     user: null,
@@ -1818,16 +1593,14 @@ var app = {
     currentChat: null,
     following: {},
     unreadMessages: {},
-    adminPendingSignup: null,
 
     init: function() {
         auth.onAuthStateChanged(u => {
-            clearTimeout(loadingTimeout); // Clear timeout when auth state changes
+            clearTimeout(loadingTimeout);
             if (u) {
                 this.user = u;
                 this.loadProfile();
                 this.showApp();
-                this.checkIfAdmin();
             } else {
                 this.showAuth();
             }
@@ -1849,12 +1622,6 @@ var app = {
         }, 500);
     },
 
-    checkIfAdmin: function() {
-        if (this.profile && this.profile.isAdmin) {
-            document.getElementById('adminBtn').style.display = 'inline-block';
-        }
-    },
-
     showAuth: function() {
         document.getElementById('loadingScreen').classList.add('hidden');
         document.getElementById('authPage').style.display = 'flex';
@@ -1866,169 +1633,11 @@ var app = {
         document.getElementById('authPage').style.display = 'none';
         document.getElementById('mainApp').classList.add('active');
         
-        // Load all data first
         this.loadPosts();
         this.loadUsers();
         this.loadFollowing();
         this.trackUnreadMessages();
-        
-        // Then check if admin and show appropriate view
-        var self = this;
-        setTimeout(() => {
-            if (self.profile && self.profile.isAdmin) {
-                self.switchView('admin');
-            } else {
-                self.switchView('feed');
-            }
-        }, 500);
-    },
-
-    loadAdminDashboard: function() {
-        var self = this;
-        var adminContent = document.getElementById('adminContent');
-        
-        if (!adminContent) {
-            console.error('Admin content div not found');
-            return;
-        }
-        
-        // Show loading
-        adminContent.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-light);">Loading dashboard...</div>';
-        
-        // Load all withdrawals
-        db.ref('withdrawals').once('value', snap => {
-            var withdrawals = [];
-            snap.forEach(child => {
-                withdrawals.push({
-                    id: child.key,
-                    ...child.val()
-                });
-            });
-            
-            // Sort by newest first
-            withdrawals.sort((a, b) => {
-                var dateA = new Date(b.createdAt || 0);
-                var dateB = new Date(a.createdAt || 0);
-                return dateA - dateB;
-            });
-            
-            var pendingCount = withdrawals.filter(w => w.status === 'pending').length;
-            var approvedCount = withdrawals.filter(w => w.status === 'approved').length;
-            var totalAmount = withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
-            var userCount = Object.keys(self.users || {}).length;
-            var postCount = (self.posts || []).length;
-            
-            var html = `
-                <div style="padding: 16px;">
-                    <h2 style="color: var(--text); margin-bottom: 16px; font-size: 1.3rem;">🔧 Admin Dashboard</h2>
-                    
-                    <!-- STATS -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
-                        <div style="background: var(--light); border-radius: 12px; padding: 14px;">
-                            <div style="color: var(--text-light); font-size: 0.8rem; margin-bottom: 4px;">Total Users</div>
-                            <div style="color: var(--text); font-size: 1.5rem; font-weight: 700;">` + userCount + `</div>
-                        </div>
-                        <div style="background: var(--light); border-radius: 12px; padding: 14px;">
-                            <div style="color: var(--text-light); font-size: 0.8rem; margin-bottom: 4px;">Total Posts</div>
-                            <div style="color: var(--text); font-size: 1.5rem; font-weight: 700;">` + postCount + `</div>
-                        </div>
-                        <div style="background: #FFF8DC; border-radius: 12px; padding: 14px; border: 1px solid #FFD700;">
-                            <div style="color: #B8860B; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">⏳ Pending</div>
-                            <div style="color: #FFD700; font-size: 1.5rem; font-weight: 700;">` + pendingCount + `</div>
-                        </div>
-                        <div style="background: #E0F7F4; border-radius: 12px; padding: 14px; border: 1px solid #00D4AA;">
-                            <div style="color: #008B7C; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">✓ Approved</div>
-                            <div style="color: #00D4AA; font-size: 1.5rem; font-weight: 700;">` + approvedCount + `</div>
-                        </div>
-                    </div>
-
-                    <h3 style="color: var(--text); margin-bottom: 12px; font-size: 1.1rem;">💳 Withdrawal Requests</h3>
-                    <div style="background: var(--light); border-radius: 12px; padding: 0; overflow: hidden;">
-                        ` + (withdrawals.length === 0 ? `
-                            <div style="padding: 20px; text-align: center; color: var(--text-light); font-size: 0.9rem;">No withdrawal requests yet</div>
-                        ` : withdrawals.map(w => {
-                            var statusColor, statusBg, statusEmoji;
-                            if (w.status === 'pending') {
-                                statusColor = '#FFD700';
-                                statusBg = '#FFF8DC';
-                                statusEmoji = '⏳';
-                            } else if (w.status === 'approved') {
-                                statusColor = '#00D4AA';
-                                statusBg = '#E0F7F4';
-                                statusEmoji = '✓';
-                            } else {
-                                statusColor = '#FF6B6B';
-                                statusBg = '#FFE0E0';
-                                statusEmoji = '✕';
-                            }
-                            
-                            return `
-                                <div style="border-bottom: 1px solid var(--border); padding: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
-                                    <div style="flex: 1; min-width: 0;">
-                                        <div style="color: var(--text); font-weight: 600; font-size: 0.95rem; margin-bottom: 2px;">` + (w.userName || 'Unknown') + `</div>
-                                        <div style="color: var(--text-light); font-size: 0.8rem; margin-bottom: 2px; word-break: break-all;">` + (w.userEmail || 'N/A') + `</div>
-                                        <div style="color: var(--text); font-weight: 600; font-size: 0.9rem; margin-top: 6px;">KSh ` + (w.amount || 0) + `</div>
-                                        <div style="color: var(--text-light); font-size: 0.75rem; margin-top: 4px;">Method: ` + (w.method || 'N/A') + ` | Account: ` + (w.account || 'N/A') + `</div>
-                                        <div style="color: var(--text-light); font-size: 0.7rem; margin-top: 4px;">` + (w.createdAt || 'N/A') + `</div>
-                                    </div>
-                                    <div style="text-align: right; flex-shrink: 0;">
-                                        <div style="background: ` + statusBg + `; color: ` + statusColor + `; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.75rem; margin-bottom: 8px; white-space: nowrap;">
-                                            ` + statusEmoji + ` ` + (w.status || 'pending').toUpperCase() + `
-                                        </div>
-                                        ` + (w.status === 'pending' ? `
-                                            <button onclick="app.approveWithdrawal('` + w.id + `')" style="background: #00D4AA; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem; margin-bottom: 4px; display: block; width: 100%; white-space: nowrap;">✓ Approve</button>
-                                            <button onclick="app.rejectWithdrawal('` + w.id + `')" style="background: #FF6B6B; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem; display: block; width: 100%; white-space: nowrap;">✕ Reject</button>
-                                        ` : `` ) + `
-                                    </div>
-                                </div>
-                            `;
-                        }).join('') + `
-                    </div>
-                </div>
-            `;
-            
-            adminContent.innerHTML = html;
-        }).catch(err => {
-            adminContent.innerHTML = '<div style="padding: 20px; color: red;">Error loading withdrawals: ' + err.message + '</div>';
-            console.error('Error loading withdrawals:', err);
-        });
-    },
-
-    approveWithdrawal: function(withdrawalId) {
-        var self = this;
-        db.ref('withdrawals/' + withdrawalId).once('value', snap => {
-            if (snap.exists()) {
-                db.ref('withdrawals/' + withdrawalId).update({
-                    status: 'approved'
-                });
-                
-                self.toast('✓ Withdrawal approved!', 'success');
-                self.loadAdminDashboard();
-            }
-        });
-    },
-
-    rejectWithdrawal: function(withdrawalId) {
-        var self = this;
-        db.ref('withdrawals/' + withdrawalId).once('value', snap => {
-            if (snap.exists()) {
-                var withdrawal = snap.val();
-                
-                // Update withdrawal status
-                db.ref('withdrawals/' + withdrawalId).update({
-                    status: 'rejected'
-                });
-                
-                // Refund user balance
-                db.ref('users/' + withdrawal.userId + '/balance').once('value', balanceSnap => {
-                    var currentBalance = balanceSnap.val() || 0;
-                    db.ref('users/' + withdrawal.userId + '/balance').set(currentBalance + withdrawal.amount);
-                });
-                
-                self.toast('✕ Withdrawal rejected and refunded!', 'success');
-                self.loadAdminDashboard();
-            }
-        });
+        this.switchView('feed');
     },
 
     loadProfile: function() {
@@ -2045,8 +1654,6 @@ var app = {
                 } else {
                     avatar.textContent = self.user.email.charAt(0).toUpperCase();
                 }
-                // Check if user is admin
-                self.checkIfAdmin();
             }
         });
     },
@@ -2056,152 +1663,6 @@ var app = {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelector('[onclick="app.switchTab(\'' + tab + '\')"]').classList.add('active');
         document.getElementById(tab + 'Tab').classList.add('active');
-    },
-
-    openAdminModal: function() {
-        document.getElementById('adminModal').classList.add('active');
-    },
-
-    closeAdminModal: function() {
-        document.getElementById('adminModal').classList.remove('active');
-        document.getElementById('adminLoginEmail').value = '';
-        document.getElementById('adminLoginPassword').value = '';
-        document.getElementById('adminSignupName').value = '';
-        document.getElementById('adminSignupEmail').value = '';
-        document.getElementById('adminSignupPassword').value = '';
-    },
-
-    switchAdminTab: function(tab) {
-        // Remove active from all tabs and content
-        var adminModal = document.getElementById('adminModal');
-        var tabs = adminModal.querySelectorAll('.tab');
-        var contents = adminModal.querySelectorAll('.tab-content');
-        
-        tabs.forEach(t => t.classList.remove('active'));
-        contents.forEach(c => c.classList.remove('active'));
-        
-        // Add active to clicked tab and corresponding content
-        if (tab === 'adminLogin') {
-            tabs[0].classList.add('active');
-            document.getElementById('adminLoginTab').classList.add('active');
-        } else if (tab === 'adminSignup') {
-            tabs[1].classList.add('active');
-            document.getElementById('adminSignupTab').classList.add('active');
-        }
-    },
-
-    handleAdminLogin: function(e) {
-        e.preventDefault();
-        var email = document.getElementById('adminLoginEmail').value;
-        var pass = document.getElementById('adminLoginPassword').value;
-        var self = this;
-        
-        auth.signInWithEmailAndPassword(email, pass).then(() => {
-            self.toast('Admin logged in!', 'success');
-            
-            // Close modals
-            document.getElementById('adminModal').classList.remove('active');
-            document.getElementById('adminLoginEmail').value = '';
-            document.getElementById('adminLoginPassword').value = '';
-            
-            // Load profile and show app
-            setTimeout(() => {
-                self.loadProfile();
-                self.showApp();
-            }, 500);
-        }).catch(err => this.toast(err.message, 'error'));
-    },
-
-    handleAdminSignup: function(e) {
-        e.preventDefault();
-        var name = document.getElementById('adminSignupName').value;
-        var email = document.getElementById('adminSignupEmail').value;
-        var pass = document.getElementById('adminSignupPassword').value;
-        
-        if (pass.length < 6) {
-            this.toast('Password must be 6+ characters', 'error');
-            return;
-        }
-
-        // Store pending signup and show secret code verification
-        this.adminPendingSignup = { name: name, email: email, password: pass };
-        document.getElementById('adminModal').classList.remove('active');
-        document.getElementById('adminVerifyTwoFAModal').classList.add('active');
-        document.getElementById('adminVerifyCode').value = '';
-        document.getElementById('adminVerifyCode').placeholder = 'Enter admin secret code';
-        document.getElementById('adminVerifyCode').focus();
-    },
-
-    verifyAdminSignupCode: function() {
-        var code = document.getElementById('adminVerifyCode').value.trim();
-        var ADMIN_SECRET = 'CHICHI26303@Admin';
-        
-        if (code === ADMIN_SECRET) {
-            this.toast('Code verified!', 'success');
-            this.createAdminAccountWithMaster();
-        } else {
-            this.toast('Invalid admin secret code. Try again.', 'error');
-            document.getElementById('adminVerifyCode').value = '';
-            document.getElementById('adminVerifyCode').focus();
-        }
-    },
-
-    createAdminAccountWithMaster: function() {
-        var self = this;
-        if (!this.adminPendingSignup) {
-            this.toast('Error: No pending signup data', 'error');
-            return;
-        }
-        
-        var name = this.adminPendingSignup.name;
-        var email = this.adminPendingSignup.email;
-        var password = this.adminPendingSignup.password;
-        
-        auth.createUserWithEmailAndPassword(email, password).then(userCredential => {
-            // Create user profile in database
-            db.ref('users/' + userCredential.user.uid).set({
-                name: name,
-                email: email,
-                bio: 'Admin Account',
-                profilePhoto: '',
-                balance: 0,
-                followers: 0,
-                following: 0,
-                createdAt: new Date().toLocaleString('en-KE'),
-                isAdmin: true
-            }).then(() => {
-                self.toast('Admin account created!', 'success');
-                self.adminPendingSignup = null;
-                self.masterTwoFASecret = null;
-                
-                // Close all modals
-                document.getElementById('adminVerifyTwoFAModal').classList.remove('active');
-                document.getElementById('adminModal').classList.remove('active');
-                
-                // Clear form inputs
-                document.getElementById('adminSignupName').value = '';
-                document.getElementById('adminSignupEmail').value = '';
-                document.getElementById('adminSignupPassword').value = '';
-                document.getElementById('adminVerifyCode').value = '';
-                
-                // Wait a moment for auth state to update
-                setTimeout(() => {
-                    // Auth state should auto-update via onAuthStateChanged
-                    self.loadProfile();
-                    self.showApp();
-                }, 500);
-            }).catch(err => {
-                self.toast('Error creating profile: ' + err.message, 'error');
-            });
-        }).catch(err => {
-            self.toast('Error creating account: ' + err.message, 'error');
-        });
-    },
-
-    cancelAdminSignupVerify: function() {
-        document.getElementById('adminVerifyTwoFAModal').classList.remove('active');
-        document.getElementById('adminModal').classList.add('active');
-        this.adminPendingSignup = null;
     },
 
     switchView: function(view) {
@@ -2216,8 +1677,6 @@ var app = {
         } else if (view === 'messages') {
             this.loadMessages();
             this.clearUnreadBadge();
-        } else if (view === 'admin') {
-            this.loadAdminDashboard();
         }
 
         var navIndex = ['feed', 'explore', 'messages', 'wallet', 'profile'].indexOf(view);
@@ -2314,7 +1773,6 @@ var app = {
 
     openChatFromSearch: function(uid, name) {
         this.openChat(uid, name);
-        // Keep search modal in background, chat modal is on top
     },
 
     showCreateModal: function() {
@@ -2964,78 +2422,6 @@ var app = {
         this.closeWithdrawModal();
         document.getElementById('withdrawAmount').value = '';
         document.getElementById('accountNumber').value = '';
-    },
-
-    loadWithdrawals: function() {
-        var self = this;
-        db.ref('withdrawals').on('value', s => {
-            var withdrawals = [];
-            s.forEach(c => {
-                var w = c.val();
-                if (w) {
-                    w.id = c.key;
-                    withdrawals.push(w);
-                }
-            });
-
-            var html = '';
-            if (withdrawals.length === 0) {
-                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No withdrawal requests</div>';
-            } else {
-                withdrawals.reverse().forEach(w => {
-                    html += `
-                        <div class="withdrawal-card ${w.status}">
-                            <div class="withdrawal-header">
-                                <div class="withdrawal-user">${w.userName}</div>
-                                <div class="withdrawal-status ${w.status}">${w.status}</div>
-                            </div>
-                            <div class="withdrawal-details">
-                                <div class="withdrawal-detail">
-                                    <div class="withdrawal-detail-label">Amount</div>
-                                    <div class="withdrawal-detail-value">KSh ${w.amount}</div>
-                                </div>
-                                <div class="withdrawal-detail">
-                                    <div class="withdrawal-detail-label">Method</div>
-                                    <div class="withdrawal-detail-value">${w.method}</div>
-                                </div>
-                                <div class="withdrawal-detail">
-                                    <div class="withdrawal-detail-label">Account</div>
-                                    <div class="withdrawal-detail-value">${w.account}</div>
-                                </div>
-                                <div class="withdrawal-detail">
-                                    <div class="withdrawal-detail-label">Email</div>
-                                    <div class="withdrawal-detail-value">${w.userEmail}</div>
-                                </div>
-                            </div>
-                            ${w.status === 'pending' ? `
-                                <div class="withdrawal-actions">
-                                    <button class="withdrawal-action-btn withdrawal-approve" onclick="app.approveWithdrawal('${w.id}')">Approve</button>
-                                    <button class="withdrawal-action-btn withdrawal-reject" onclick="app.rejectWithdrawal('${w.id}')">Reject</button>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-            }
-
-            document.getElementById('adminContent').innerHTML = html;
-        });
-    },
-
-    approveWithdrawal: function(id) {
-        db.ref('withdrawals/' + id + '/status').set('approved');
-        this.toast('Withdrawal approved!', 'success');
-    },
-
-    rejectWithdrawal: function(id) {
-        db.ref('withdrawals/' + id).once('value', s => {
-            var w = s.val();
-            db.ref('users/' + w.userId + '/balance').once('value', bal => {
-                db.ref('users/' + w.userId + '/balance').set((bal.val() || 0) + w.amount);
-            });
-            db.ref('withdrawals/' + id + '/status').set('rejected');
-            this.toast('Withdrawal rejected!', 'success');
-        });
     },
 
     showLogout: function() {
