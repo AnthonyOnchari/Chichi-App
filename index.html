@@ -697,7 +697,7 @@
 
         /* CHAT VIEW */
         .chat-view {
-            display: none;
+            display: none !important;
             min-height: 100%;
             flex-direction: column;
             width: 100%;
@@ -705,9 +705,11 @@
         }
 
         .chat-view.active {
-            display: flex;
+            display: flex !important;
             height: 100%;
             overflow: hidden;
+            flex-direction: column;
+            width: 100%;
         }
 
         .chat-header {
@@ -1387,37 +1389,53 @@ var app = {
     },
 
     switchView: function(view) {
-        document.querySelectorAll('.feed-view, #createPostView, .profile-view, .wallet-view, .messages-view, .chat-view').forEach(v => {
+        // Hide all views and remove active class
+        var allViews = document.querySelectorAll('.feed-view, #createPostView, .profile-view, .wallet-view, .messages-view, .chat-view');
+        allViews.forEach(v => {
             v.classList.remove('active');
-            v.style.display = 'none';
+            v.style.display = '';  // Clear inline style
         });
+        
+        // Remove active from nav items
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         
+        // Show requested view
         if (view === 'feed') {
-            document.getElementById('feedView').classList.add('active');
+            var feedView = document.getElementById('feedView');
+            feedView.classList.add('active');
+            feedView.style.display = 'block';
             document.querySelector('.nav-item:nth-child(1)').classList.add('active');
             this.loadPosts();
         }
         else if (view === 'create') {
-            document.getElementById('createPostView').style.display = 'block';
+            var createView = document.getElementById('createPostView');
+            createView.style.display = 'block';
             document.querySelector('.nav-item:nth-child(2)').classList.add('active');
         }
         else if (view === 'messages') {
-            document.querySelector('.messages-view').style.display = 'block';
+            var messagesView = document.querySelector('.messages-view');
+            messagesView.classList.add('active');
+            messagesView.style.display = 'block';
             document.querySelector('.nav-item:nth-child(3)').classList.add('active');
             this.loadMessages();
         }
         else if (view === 'wallet') {
-            document.querySelector('.wallet-view').style.display = 'block';
+            var walletView = document.querySelector('.wallet-view');
+            walletView.classList.add('active');
+            walletView.style.display = 'block';
             document.querySelector('.nav-item:nth-child(4)').classList.add('active');
         }
         else if (view === 'profile') {
-            document.querySelector('.profile-view').style.display = 'block';
+            var profileView = document.querySelector('.profile-view');
+            profileView.classList.add('active');
+            profileView.style.display = 'block';
             document.querySelector('.nav-item:nth-child(5)').classList.add('active');
             this.renderProfile();
         }
         else if (view === 'chat') {
-            document.getElementById('chatView').classList.add('active');
+            var chatView = document.getElementById('chatView');
+            chatView.classList.add('active');
+            chatView.style.display = 'flex';  // Chat needs flex display
         }
     },
 
@@ -1859,13 +1877,17 @@ var app = {
         document.getElementById('chatMessages').innerHTML = '';
         document.getElementById('chatInput').value = '';
         
-        // Switch to chat view
-        document.querySelectorAll('.feed-view, #createPostView, .profile-view, .wallet-view, .messages-view, .chat-view').forEach(v => {
+        // Hide all views properly
+        var allViews = document.querySelectorAll('.feed-view, #createPostView, .profile-view, .wallet-view, .messages-view, .chat-view');
+        allViews.forEach(v => {
             v.classList.remove('active');
-            v.style.display = 'none';
+            v.style.display = '';  // Clear inline style, not 'none'
         });
         
-        document.getElementById('chatView').classList.add('active');
+        // Show chat view with both class and inline style
+        var chatView = document.getElementById('chatView');
+        chatView.classList.add('active');
+        chatView.style.display = 'flex';  // Force display flex
         
         // Load messages
         var self = this;
@@ -2106,6 +2128,7 @@ var app = {
         this.currentChatUser = null;
         document.getElementById('chatMessages').innerHTML = '';
         document.getElementById('chatInput').value = '';
+        // Properly switch to messages view
         this.switchView('messages');
     },
 
