@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8335709146055597" crossorigin="anonymous"></script>
     <script async src="https://fundingchoicesmessages.google.com/i/publish.js?onload=consentPopup" type="text/javascript"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -1005,6 +1006,28 @@
             to { opacity: 1; transform: scale(1); }
         }
 
+        @keyframes slideIn {
+            from { 
+                opacity: 0; 
+                transform: translateX(100%);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOut {
+            from { 
+                opacity: 1; 
+                transform: translateX(0);
+            }
+            to { 
+                opacity: 0; 
+                transform: translateX(100%);
+            }
+        }
+
         .chat-modal-input {
             padding: 12px 16px;
             background: white;
@@ -1979,7 +2002,10 @@
 
         <!-- EXPLORE -->
         <div class="view" id="exploreView">
-            <div style="padding: 16px; font-weight: 600;">Popular Users</div>
+            <div style="padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 600;">Popular Users</div>
+                <button style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 14px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.3s;" onclick="app.loadExplore()">🔄 Refresh</button>
+            </div>
             <div id="exploreUsersList"></div>
         </div>
 
@@ -2281,6 +2307,16 @@ var app = {
         
         // Initialize consent management
         this.initConsent();
+        
+        // Register Service Worker for push notifications
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/firebase-messaging-sw.js').then(reg => {
+                console.log('Service Worker registered for notifications');
+                self.initNotifications();
+            }).catch(err => {
+                console.log('Service Worker registration failed:', err);
+            });
+        }
         
         auth.onAuthStateChanged(u => {
             clearTimeout(loadingTimeout);
@@ -3203,10 +3239,18 @@ var app = {
             // Unfollow
             delete this.following[uid];
         } else {
-            // Follow - earn silently
+            // Follow - earn silently and notify
             this.following[uid] = true;
             this.balance += 0.05;
             db.ref('users/' + this.user.uid + '/balance').set(this.balance);
+            
+            // Trigger notification to the followed user
+            db.ref('users/' + uid + '/fcmToken').once('value', snap => {
+                if (snap.val()) {
+                    // In a real app, you'd call a Cloud Function to send the notification
+                    console.log('Sending follow notification to', name);
+                }
+            });
         }
         
         db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
@@ -3267,6 +3311,12 @@ var app = {
                 </div>
             </div>
             </div>
+
+            <div style="padding: 16px;">
+                <button style="width: 100%; padding: 12px; background: white; border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-weight: 600; cursor: pointer; transition: 0.3s; margin-bottom: 12px;" onclick="app.showNotificationPreferences()">🔔 Notification Settings</button>
+                <button style="width: 100%; padding: 12px; background: white; border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-weight: 600; cursor: pointer; transition: 0.3s;" onclick="app.showLogout()">🚪 Logout</button>
+            </div>
+
             <div style="padding: 16px;">My Posts</div>
             <div id="profilePosts"></div>
         `;
@@ -3445,7 +3495,20 @@ var app = {
     loadUsers: function() {
         var self = this;
         db.ref('users').on('value', s => {
-            self.users = s.val() || {};
+            var allUsers = s.val() || {};
+            self.users = {};
+            
+            // Filter out null, deleted, or invalid users
+            for (var uid in allUsers) {
+                if (allUsers[uid] && allUsers[uid].name && allUsers[uid].email) {
+                    self.users[uid] = allUsers[uid];
+                }
+            }
+            
+            // Re-render explore view if it's active
+            if (document.getElementById('exploreView').classList.contains('active')) {
+                self.loadExplore();
+            }
         });
     },
 
@@ -3460,7 +3523,8 @@ var app = {
         var self = this;
         var sorted = [];
         for (var uid in this.users) {
-            if (uid !== this.user.uid) {
+            // Only include valid users (not deleted, has name)
+            if (uid !== this.user.uid && this.users[uid] && this.users[uid].name) {
                 sorted.push({ uid: uid, user: this.users[uid] });
             }
         }
@@ -3497,6 +3561,9 @@ var app = {
         userIds.forEach(uid => {
             if (uid !== this.user.uid) {
                 var u = this.users[uid];
+                // Skip deleted/null users
+                if (!u || !u.name) return;
+                
                 var chatKey = [this.user.uid, uid].sort().join('_');
                 var unreadCount = 0;
                 var lastMessage = 'Tap to message';
@@ -3786,7 +3853,7 @@ var app = {
             image: imageUrls.length === 1 ? imageUrls[0] : imageUrls,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         }).then(() => {
-            self.toast('Image sent!', 'success');
+            self.toast('Image sent! 📸', 'success');
             var messagesDiv = document.getElementById('chatModalMessages');
             if (messagesDiv) {
                 setTimeout(() => {
@@ -4081,7 +4148,147 @@ var app = {
         localStorage.setItem('userConsentDate', new Date().toISOString());
         document.getElementById('consentBanner').classList.remove('show');
         this.toast('Consent preferences saved', 'success');
+    },
+
+    initNotifications: function() {
+        var self = this;
+        
+        // Only initialize if user is authenticated
+        if (!this.user) {
+            setTimeout(() => self.initNotifications(), 1000);
+            return;
+        }
+        
+        try {
+            const messaging = firebase.messaging();
+            
+            // Request notification permission
+            Notification.requestPermission().then(function(permission) {
+                if (permission === 'granted') {
+                    console.log('Notification permission granted');
+                    
+                    // Get FCM token
+                    messaging.getToken({
+                        vapidKey: 'BAFdptanJv5UUvAEM702UGDSlZ6UrkrZVA5paCzmJzhIyjaGZVumjyecwGzit-1vGmVwOVB45Y2Js29I8sAuflA'
+                    }).then(token => {
+                        if (token) {
+                            console.log('FCM Token:', token);
+                            // Save token to Firebase
+                            db.ref('users/' + self.user.uid + '/fcmToken').set(token);
+                            self.toast('Notifications enabled ✓', 'success');
+                        }
+                    }).catch(err => {
+                        console.log('Error getting FCM token:', err);
+                    });
+                } else {
+                    console.log('Notification permission denied');
+                }
+            }).catch(err => {
+                console.log('Error requesting notification permission:', err);
+            });
+            
+            // Handle foreground messages
+            messaging.onMessage(function(payload) {
+                console.log('Message received in foreground:', payload);
+                self.showNotificationToast(payload.notification.title, payload.notification.body);
+            });
+        } catch (err) {
+            console.log('Notification initialization error:', err);
+        }
+    },
+
+    showNotificationToast: function(title, body) {
+        var notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            max-width: 300px;
+            animation: slideIn 0.3s ease;
+            cursor: pointer;
+        `;
+        notification.innerHTML = `
+            <div style="font-weight: 700; color: var(--primary); margin-bottom: 4px;">${title}</div>
+            <div style="font-size: 0.9rem; color: var(--text);">${body}</div>
+        `;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+    },
+
+    sendNotification: function(userId, title, body, data) {
+        // This would typically be called from a Cloud Function
+        // For now, we're just logging it
+        console.log('Notification to send to', userId, ':', title, body);
+    },
+
+    showNotificationPreferences: function() {
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        var notifSettings = localStorage.getItem('notificationSettings') ? JSON.parse(localStorage.getItem('notificationSettings')) : {
+            messages: true,
+            followers: true,
+            likes: true,
+            comments: true,
+            posts: true
+        };
+        
+        modal.innerHTML = `<div class="modal" style="max-width: 400px;">
+            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+            <h2 style="margin-bottom: 16px; font-weight: 700;">🔔 Notification Preferences</h2>
+            
+            <div style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="font-weight: 600;">💬 New Messages</div>
+                    <input type="checkbox" id="notif-messages" ${notifSettings.messages ? 'checked' : ''} onchange="app.updateNotificationSettings()">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="font-weight: 600;">👥 New Followers</div>
+                    <input type="checkbox" id="notif-followers" ${notifSettings.followers ? 'checked' : ''} onchange="app.updateNotificationSettings()">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="font-weight: 600;">❤️ Likes</div>
+                    <input type="checkbox" id="notif-likes" ${notifSettings.likes ? 'checked' : ''} onchange="app.updateNotificationSettings()">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="font-weight: 600;">💬 Comments</div>
+                    <input type="checkbox" id="notif-comments" ${notifSettings.comments ? 'checked' : ''} onchange="app.updateNotificationSettings()">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="font-weight: 600;">📝 New Posts</div>
+                    <input type="checkbox" id="notif-posts" ${notifSettings.posts ? 'checked' : ''} onchange="app.updateNotificationSettings()">
+                </div>
+            </div>
+
+            <div style="background: rgba(0, 212, 170, 0.05); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; color: var(--text-light);">
+                ✓ Notifications enabled! You will receive updates for your selected preferences.
+            </div>
+
+            <button class="btn-submit" style="width: 100%;" onclick="this.closest('.modal-overlay').remove()">Close</button>
+        </div>`;
+        document.body.appendChild(modal);
+    },
+
+    updateNotificationSettings: function() {
+        var settings = {
+            messages: document.getElementById('notif-messages').checked,
+            followers: document.getElementById('notif-followers').checked,
+            likes: document.getElementById('notif-likes').checked,
+            comments: document.getElementById('notif-comments').checked,
+            posts: document.getElementById('notif-posts').checked
+        };
+        localStorage.setItem('notificationSettings', JSON.stringify(settings));
+        this.toast('Notification preferences updated ✓', 'success');
     }
+
 };
 
 app.init();
