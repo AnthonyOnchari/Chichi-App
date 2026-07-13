@@ -9,8 +9,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8335709146055597" crossorigin="anonymous"></script>
     <script async src="https://fundingchoicesmessages.google.com/i/publish.js?onload=consentPopup" type="text/javascript"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -2382,8 +2384,15 @@ var app = {
         
         // Register Service Worker for push notifications
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/firebase-messaging-sw.js').then(reg => {
-                self.initNotifications();
+            navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
+                .then(reg => {
+                    console.log('✅ Service Worker registered');
+                    self.initNotifications();
+                })
+                .catch(err => {
+                    console.error('⚠️ SW failed:', err);
+                    self.initNotifications();
+                });
         }
         
         auth.onAuthStateChanged(u => {
