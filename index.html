@@ -94,6 +94,75 @@
             background: #FFB800;
         }
 
+        /* 3D Toggle Switch */
+        .toggle-switch-3d {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            width: 60px;
+            height: 32px;
+        }
+
+        .toggle-switch-3d input {
+            display: none;
+        }
+
+        .toggle-slider-3d {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+            border-radius: 50px;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.15);
+            border: 2px solid #ccc;
+        }
+
+        .toggle-slider-3d::before {
+            content: '';
+            position: absolute;
+            height: 24px;
+            width: 24px;
+            left: 3px;
+            bottom: 2px;
+            background: linear-gradient(145deg, #ffffff, #f3f4f6);
+            border-radius: 50%;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), inset -1px -1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .toggle-switch-3d input:checked + .toggle-slider-3d {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 212, 170, 0.3);
+            border-color: var(--primary);
+        }
+
+        .toggle-switch-3d input:checked + .toggle-slider-3d::before {
+            transform: translateX(28px);
+            background: linear-gradient(145deg, #00D4AA, #00B894);
+            box-shadow: 0 4px 12px rgba(0, 212, 170, 0.4), inset -1px -1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .toggle-switch-3d:hover .toggle-slider-3d {
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        body.dark-mode .toggle-slider-3d {
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+            border-color: #4b5563;
+        }
+
+        body.dark-mode .toggle-slider-3d::before {
+            background: linear-gradient(145deg, #4b5563, #6b7280);
+        }
+
+        body.dark-mode .toggle-switch-3d input:checked + .toggle-slider-3d {
+            background: linear-gradient(135deg, #00D4AA 0%, #00B894 100%);
+        }
+
         :root {
             --primary: #00D4AA;
             --primary-dark: #00B894;
@@ -1957,14 +2026,9 @@
 window.app = window.app || {
     handleSearch: function() {},
     toggleTheme: function() {},
-    openChatFromSearch: function() {},
-    toggleFollow: function() {},
-    closeSearchModal: function() {},
-    showLogout: function() {},
-    switchView: function() {},
-    showAdmin: function() {},
-    toast: function() {}
 };
+
+// Real app object will be defined below in main script
 </script>
 
 <!-- THEME TOGGLE -->
@@ -2071,7 +2135,10 @@ window.app = window.app || {
             <h1>CHICHI</h1>
         </div>
         <div class="header-actions">
-            <button class="btn-icon" onclick="app.showCreateModal()">Create</button>
+            <label class="toggle-switch-3d">
+                <input type="checkbox" id="headerToggle" onchange="app.handleHeaderToggle(event)">
+                <span class="toggle-slider-3d"></span>
+            </label>
             <button class="btn-icon" onclick="app.openAdminModal()">Admin</button>
             <button class="btn-icon" onclick="app.showLogout()">Logout</button>
         </div>
@@ -2222,11 +2289,12 @@ window.app = window.app || {
 <!-- LOGOUT MODAL -->
 <div class="logout-modal" id="logoutModal">
     <div class="logout-card">
-        <h3>Logout?</h3>
-        <p>Are you sure?</p>
+        <h3>Account Options</h3>
+        <p>What would you like to do?</p>
         <div class="logout-buttons">
             <button class="logout-cancel" onclick="app.closeLogout()">Cancel</button>
-            <button class="logout-confirm" onclick="app.confirmLogout()">Logout</button>
+            <button class="logout-confirm" onclick="app.justLogout()">Logout Only</button>
+            <button class="logout-confirm" style="background: #ff4444;" onclick="app.deleteAccountPermanently()">🗑️ Delete Account</button>
         </div>
     </div>
 </div>
@@ -2368,9 +2436,16 @@ firebase.database().ref('.info/connected').on('value', function(snapshot) {
 });
 
 var loadingTimeout = setTimeout(() => {
-  document.getElementById('loadingScreen').classList.remove('active');
-  document.getElementById('authPage').style.display = 'flex';
-}, 3000);  // Reduced from 8000ms to 3000ms
+  var loading = document.getElementById('loadingScreen');
+  if (loading) {
+    loading.classList.remove('active');
+    loading.style.display = 'none';
+  }
+  var authPage = document.getElementById('authPage');
+  if (authPage) {
+    authPage.style.display = 'flex';
+  }
+}, 3000);  // 3 second fallback
 
 var auth = firebase.auth();
 var db = firebase.database();
@@ -2454,32 +2529,89 @@ var app = {
     },
 
     showAuth: function() {
-        document.getElementById('loadingScreen').classList.remove('active');
-        document.getElementById('authPage').style.display = 'flex';
-        document.getElementById('mainApp').style.display = 'none';
-        document.getElementById('adminPortal').style.display = 'none';
+        // Hide loading screen completely
+        var loading = document.getElementById('loadingScreen');
+        if (loading) {
+            loading.classList.remove('active');
+            loading.style.display = 'none';
+        }
+        
+        // Show auth page
+        var authPage = document.getElementById('authPage');
+        if (authPage) {
+            authPage.style.display = 'flex';
+            authPage.style.visibility = 'visible';
+            authPage.style.opacity = '1';
+        }
+        
+        // Hide main app
+        var mainApp = document.getElementById('mainApp');
+        if (mainApp) {
+            mainApp.style.display = 'none';
+            mainApp.classList.remove('active');
+        }
+        
+        // Hide admin portal
+        var admin = document.getElementById('adminPortal');
+        if (admin) {
+            admin.style.display = 'none';
+            admin.classList.remove('active');
+        }
+        
+        // Hide bottom nav
         var nav = document.querySelector('.bottom-nav');
         if (nav) nav.style.display = 'none';
         
         // Hide all views
-        document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+        document.querySelectorAll('.view').forEach(v => {
+            v.style.display = 'none';
+        });
     },
 
     showApp: function() {
-        document.getElementById('loadingScreen').classList.remove('active');
-        document.getElementById('authPage').style.display = 'none';
-        document.getElementById('mainApp').classList.add('active');
-        document.getElementById('adminPortal').classList.remove('active');
-        document.querySelector('.bottom-nav').style.display = 'flex';
+        // Hide loading screen
+        var loading = document.getElementById('loadingScreen');
+        if (loading) {
+            loading.classList.remove('active');
+            loading.style.display = 'none';
+        }
         
-        // Load data immediately - no delay
+        // Hide auth page
+        var authPage = document.getElementById('authPage');
+        if (authPage) {
+            authPage.style.display = 'none';
+        }
+        
+        // Show main app
+        var mainApp = document.getElementById('mainApp');
+        if (mainApp) {
+            mainApp.style.display = 'block';
+            mainApp.classList.add('active');
+        }
+        
+        // Hide admin portal
+        var admin = document.getElementById('adminPortal');
+        if (admin) {
+            admin.classList.remove('active');
+        }
+        
+        // Show bottom nav
+        var nav = document.querySelector('.bottom-nav');
+        if (nav) nav.style.display = 'flex';
+        
+        // Load data immediately with proper sequencing
         var self = this;
-        self.loadPosts();
-        self.loadUsers();
-        self.loadFollowing();
-        self.trackUnreadMessages();
-        self.switchView('feed');
         
+        // First, ensure feed view is active
+        this.switchView('feed');
+        
+        // Then load all data
+        setTimeout(() => {
+            self.loadPosts();
+            self.loadUsers();
+            self.loadFollowing();
+            self.trackUnreadMessages();
+        }, 0);
     },
 
     loadProfile: function() {
@@ -2517,10 +2649,23 @@ var app = {
     },
 
     switchView: function(view) {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.nav-wrapper > .nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById(view + 'View').classList.add('active');
+        // Hide all views
+        document.querySelectorAll('.view').forEach(v => {
+            v.classList.remove('active');
+            v.style.display = 'none';
+        });
         
+        // Remove active from nav items
+        document.querySelectorAll('.nav-wrapper > .nav-item').forEach(n => n.classList.remove('active'));
+        
+        // Show selected view
+        var viewElement = document.getElementById(view + 'View');
+        if (viewElement) {
+            viewElement.classList.add('active');
+            viewElement.style.display = 'flex';
+        }
+        
+        // Load view-specific data
         if (view === 'profile') {
             this.renderProfile();
         } else if (view === 'feed') {
@@ -2532,6 +2677,7 @@ var app = {
             this.loadExplore();
         }
 
+        // Highlight nav item
         var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
         if (view === 'feed') navItems[0].classList.add('active');
         else if (view === 'explore') navItems[1].classList.add('active');
@@ -3022,6 +3168,17 @@ var app = {
         this.openChat(uid, name);
     },
 
+    handleHeaderToggle: function(e) {
+        var isChecked = e.target.checked;
+        if (isChecked) {
+            // Toggle ON - Open create modal
+            this.showCreateModal();
+        } else {
+            // Toggle OFF - Close create modal
+            this.closeCreateModal();
+        }
+    },
+
     showCreateModal: function() {
         document.getElementById('createModal').classList.add('active');
     },
@@ -3032,6 +3189,9 @@ var app = {
         document.getElementById('captionInput').value = '';
         document.getElementById('photoPreview').style.display = 'none';
         document.getElementById('photoPreview').textContent = '';
+        // Reset toggle to OFF position
+        var toggle = document.getElementById('headerToggle');
+        if (toggle) toggle.checked = false;
     },
 
     previewPhoto: function(e) {
@@ -3100,14 +3260,26 @@ var app = {
                 }
             });
             self.posts = p;
+            // Ensure feed is displayed
+            var feedView = document.getElementById('feedView');
+            if (feedView) {
+                feedView.classList.add('active');
+                feedView.style.display = 'flex';
+            }
             self.renderFeed();
         });
     },
 
     renderFeed: function() {
+        var feedContainer = document.getElementById('feedContainer');
+        if (!feedContainer) {
+            console.error('Feed container not found!');
+            return;
+        }
+        
         var html = '';
         if (this.posts.length === 0) {
-            html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No posts yet</div>';
+            html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No posts yet. Start creating!</div>';
         } else {
             this.posts.forEach(p => {
                 var likes = (p.likes && Object.keys(p.likes).length) || 0;
@@ -3141,7 +3313,10 @@ var app = {
                 `;
             });
         }
-        document.getElementById('feedContainer').innerHTML = html;
+        
+        // Ensure feedContainer is visible
+        feedContainer.style.display = 'block';
+        feedContainer.innerHTML = html;
     },
 
     likePost: function(id) {
@@ -3604,11 +3779,20 @@ var app = {
         var sorted = [];
         for (var uid in this.users) {
             var user = this.users[uid];
-            // Only include VALID users: must have name, email, and not be null
-            if (uid !== this.user.uid && user && user.name && user.email && typeof user === 'object') {
+            // STRICT filter: must have name, email, uid must not be empty, and must be different user
+            if (uid && 
+                uid !== this.user.uid && 
+                user && 
+                user.name && 
+                user.email && 
+                typeof user === 'object' &&
+                user.name.trim().length > 0 &&
+                user.email.trim().length > 0) {
                 sorted.push({ uid: uid, user: user });
             }
         }
+        
+        // Sort by followers (most popular first)
         sorted.sort((a, b) => (b.user.followers || 0) - (a.user.followers || 0));
 
         var html = '';
@@ -3630,7 +3814,11 @@ var app = {
         });
 
         if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No users to explore</div>';
-        document.getElementById('exploreUsersList').innerHTML = html;
+        
+        var container = document.getElementById('exploreUsersList');
+        if (container) {
+            container.innerHTML = html;
+        }
     },
 
     loadMessages: function() {
@@ -3642,8 +3830,15 @@ var app = {
         userIds.forEach(uid => {
             if (uid !== this.user.uid) {
                 var u = this.users[uid];
-                // Skip deleted/null/invalid users
-                if (!u || !u.name || !u.email || typeof u !== 'object') return;
+                // STRICT filter: Skip any deleted/null/invalid users
+                if (!u || 
+                    !u.name || 
+                    !u.email || 
+                    typeof u !== 'object' ||
+                    !u.name.trim() ||
+                    !u.email.trim()) {
+                    return; // Skip this user - they're deleted
+                }
                 
                 var chatKey = [this.user.uid, uid].sort().join('_');
                 var unreadCount = 0;
@@ -4118,9 +4313,107 @@ var app = {
     },
 
     confirmLogout: function() {
+        // Legacy function - redirect to justLogout
+        this.justLogout();
+    },
+
+    justLogout: function() {
         auth.signOut();
         document.getElementById('logoutModal').classList.remove('active');
         this.showAuth();
+        this.toast('Logged out successfully', 'success');
+    },
+
+    deleteAccountPermanently: function() {
+        var self = this;
+        
+        // Confirm deletion
+        if (!confirm('⚠️ WARNING: This will PERMANENTLY DELETE your account and all your data!\n\nAll posts, messages, and profile info will be removed.\nThis CANNOT be undone.\n\nAre you absolutely sure?')) {
+            return;
+        }
+        
+        if (!confirm('Final confirmation: Delete everything? Click OK to proceed.')) {
+            return;
+        }
+        
+        this.toast('Deleting account... Please wait...', 'success');
+        
+        // Delete user data from database FIRST
+        var uid = this.user.uid;
+        var deletionPromises = [];
+        
+        // 1. Delete user profile
+        deletionPromises.push(
+            db.ref('users/' + uid).remove()
+        );
+        
+        // 2. Delete all user's posts
+        deletionPromises.push(
+            db.ref('posts').orderByChild('userId').equalTo(uid).once('value', snapshot => {
+                var deletePromises = [];
+                snapshot.forEach(post => {
+                    deletePromises.push(db.ref('posts/' + post.key).remove());
+                });
+                return Promise.all(deletePromises);
+            })
+        );
+        
+        // 3. Delete all user's chats
+        deletionPromises.push(
+            db.ref('chats').once('value', snapshot => {
+                var deletePromises = [];
+                snapshot.forEach(chat => {
+                    var chatKey = chat.key;
+                    // If chat involves this user, delete it
+                    if (chatKey.includes(uid)) {
+                        deletePromises.push(db.ref('chats/' + chatKey).remove());
+                    }
+                });
+                return Promise.all(deletePromises);
+            })
+        );
+        
+        // 4. Remove user from other users' following lists
+        deletionPromises.push(
+            db.ref('users').once('value', snapshot => {
+                var updatePromises = [];
+                snapshot.forEach(otherUser => {
+                    var otherUid = otherUser.key;
+                    // TODO: Remove uid from followers/following if needed
+                });
+                return Promise.all(updatePromises);
+            })
+        );
+        
+        // Execute all deletions
+        Promise.all(deletionPromises).then(() => {
+            self.toast('Data deleted successfully. Removing account...', 'success');
+            
+            // Then delete Firebase auth account
+            setTimeout(() => {
+                auth.currentUser.delete().then(() => {
+                    self.toast('Account permanently deleted', 'success');
+                    auth.signOut();
+                    document.getElementById('logoutModal').classList.remove('active');
+                    self.showAuth();
+                    setTimeout(() => {
+                        self.toast('Your account has been completely removed', 'success');
+                    }, 500);
+                }).catch(err => {
+                    if (err.code === 'auth/requires-recent-login') {
+                        self.toast('Please log in again before deleting your account', 'error');
+                        // Sign out and ask to re-login
+                        auth.signOut();
+                        self.showAuth();
+                    } else {
+                        self.toast('Error: ' + err.message, 'error');
+                    }
+                });
+            }, 1000);
+            
+        }).catch(err => {
+            self.toast('Error deleting data: ' + err.message, 'error');
+        });
     },
 
     toast: function(msg, type) {
@@ -4364,6 +4657,19 @@ var app = {
 };
 
 app.init();
+
+// Ensure auth page is visible initially (fallback if auth state is slow)
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        var authPage = document.getElementById('authPage');
+        var mainApp = document.getElementById('mainApp');
+        if (authPage && mainApp.style.display === 'none' && authPage.style.display === 'none') {
+            authPage.style.display = 'flex';
+            var loading = document.getElementById('loadingScreen');
+            if (loading) loading.style.display = 'none';
+        }
+    }, 2000);
+});
 
 // Initialize theme on load
 app.initTheme = function() {
