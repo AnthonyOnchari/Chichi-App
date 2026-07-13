@@ -428,12 +428,16 @@
             overflow: hidden;
             background: var(--light);
             position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
         }
 
         .view {
             display: none;
             height: 100%;
             width: 100%;
+            max-width: 480px;
             overflow-y: auto;
             flex-direction: column;
             padding-bottom: 120px;
@@ -441,6 +445,12 @@
         }
 
         .view.active { display: flex; }
+        
+        @media (max-width: 480px) {
+            .view {
+                max-width: 100%;
+            }
+        }
 
         .feed-header {
             padding: 12px 16px;
@@ -501,15 +511,39 @@
         #feedContainer {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
+            padding: 0;
+            background: var(--light);
+        }
+        
+        #feedContainer::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        #feedContainer::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        #feedContainer::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 2px;
         }
 
         .post {
             background: white;
-            margin: 8px 16px;
-            border-radius: 18px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin: 12px 8px;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
             overflow: hidden;
             animation: smoothFadeIn 0.4s ease;
+            transition: all 0.3s ease;
+        }
+        
+        .post:active {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
         }
 
         .post-header {
@@ -559,8 +593,10 @@
         .post-image {
             width: 100%;
             height: auto;
-            max-height: 400px;
+            max-height: 450px;
             object-fit: cover;
+            display: block;
+            background: var(--light);
         }
 
         .post-caption {
@@ -570,41 +606,55 @@
         }
 
         .post-stats {
-            padding: 8px 16px;
-            font-size: 0.8rem;
+            padding: 10px 16px;
+            font-size: 0.75rem;
             color: var(--text-light);
             border-bottom: 1px solid var(--border);
+            font-weight: 500;
         }
 
         .post-actions {
-            padding: 8px 16px;
+            padding: 12px 8px;
             display: flex;
-            gap: 12px;
+            gap: 4px;
+            background: white;
+            border-top: 1px solid var(--border);
+            justify-content: space-around;
         }
 
         .post-action {
             flex: 1;
             text-align: center;
             cursor: pointer;
-            padding: 8px;
+            padding: 12px 8px;
             border: none;
-            background: none;
+            background: transparent;
             color: var(--text-light);
             font-size: 0.75rem;
-            transition: 0.3s;
+            font-weight: 600;
+            transition: all 0.2s;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 4px;
+            border-radius: 10px;
+            touch-action: manipulation;
         }
 
         .post-action:hover {
+            background: rgba(0, 212, 170, 0.1);
             color: var(--primary);
+            transform: scale(1.05);
+        }
+
+        .post-action:active {
+            transform: scale(0.95);
         }
 
         .post-action.liked {
             color: #ff4444;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         .search-modal-overlay {
@@ -975,18 +1025,19 @@
         }
 
         .unread-badge {
-            width: 24px;
-            height: 24px;
-            background: var(--primary);
+            min-width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 0.7rem;
+            font-size: 0.8rem;
             font-weight: 700;
             flex-shrink: 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            border: 2px solid white;
         }
 
         .chat-modal-overlay {
@@ -3358,10 +3409,11 @@ var app = {
                         <div class="post-stats">${likes} likes · ${downloads} saves · ${comments} comments</div>
                         <div class="post-actions">
                             <button class="post-action ${userLiked ? 'liked' : ''}" onclick="app.likePost('${p.id}')">
-                                ${userLiked ? 'Liked' : 'Like'}
+                                ${userLiked ? '❤️ Liked' : '🤍 Like'}
                             </button>
-                            <button class="post-action" onclick="app.downloadPost('${p.photoUrl}', '${p.id}')">Save</button>
-                            <button class="post-action" onclick="app.viewComments('${p.id}')">Comment</button>
+                            <button class="post-action" onclick="app.downloadPost('${p.photoUrl}', '${p.id}')">💾 Save</button>
+                            <button class="post-action" onclick="app.viewComments('${p.id}')">💬 Comment</button>
+                            <button class="post-action" onclick="app.sharePost('${p.id}', '${p.caption.replace(/'/g, "\\'")}')">📤 Share</button>
                         </div>
                     </div>
                 `;
@@ -3405,6 +3457,28 @@ var app = {
         }
     },
 
+    sharePost: function(id, caption) {
+        var shareText = caption || 'Check out this post on CHICHI!';
+        var shareUrl = window.location.href;
+        
+        // Try native share API first (mobile)
+        if (navigator.share) {
+            navigator.share({
+                title: 'CHICHI',
+                text: shareText,
+                url: shareUrl
+            }).catch(err => console.log('Share cancelled'));
+        } else {
+            // Fallback: Copy to clipboard
+            var text = shareText + '\n' + shareUrl;
+            navigator.clipboard.writeText(text).then(() => {
+                this.toast('Post link copied to clipboard! 📋', 'success');
+            }).catch(err => {
+                this.toast('Share link: ' + shareUrl, 'info');
+            });
+        }
+    },
+
     deletePost: function(id) {
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
@@ -3420,14 +3494,43 @@ var app = {
     },
 
     confirmDeletePost: function(id) {
-        db.ref('posts/' + id).remove();
+        var self = this;
         var post = document.getElementById('post-' + id);
+        
+        // Animate removal
         if (post) {
             post.style.opacity = '0';
-            setTimeout(() => post.remove(), 300);
+            post.style.transform = 'translateY(-10px)';
+            post.style.transition = 'all 0.3s ease';
         }
-        document.querySelector('.modal-overlay').remove();
-        this.toast('Post deleted', 'success');
+        
+        // Remove from database (triggers real-time listener)
+        db.ref('posts/' + id).remove().then(() => {
+            // Remove from DOM after animation
+            setTimeout(() => {
+                if (post && post.parentNode) {
+                    post.remove();
+                }
+            }, 300);
+            
+            // Close modal
+            var modal = document.querySelector('.modal-overlay');
+            if (modal) modal.remove();
+            
+            this.toast('Post deleted', 'success');
+            
+            // Trigger feed refresh to ensure consistency
+            setTimeout(() => {
+                self.loadPosts();
+            }, 100);
+        }).catch(err => {
+            // Restore UI on error
+            if (post) {
+                post.style.opacity = '1';
+                post.style.transform = 'translateY(0)';
+            }
+            this.toast('Error deleting post: ' + err.message, 'error');
+        });
     },
 
     viewComments: function(id) {
@@ -4619,52 +4722,11 @@ var app = {
     },
 
     initNotifications: function() {
-        var self = this;
-        
-        // Only initialize if user is authenticated
-        if (!this.user) {
-            setTimeout(() => self.initNotifications(), 1000);
-            return;
-        }
-        
-        try {
-            const messaging = firebase.messaging();
-            
-            // Request notification permission
-            Notification.requestPermission().then(function(permission) {
-                if (permission === 'granted') {
-                    // Get FCM token
-                    messaging.getToken({
-                        vapidKey: 'BAFdptanJv5UUvAEM702UGDSlZ6UrkrZVA5paCzmJzhIyjaGZVumjyecwGzit-1vGmVwOVB45Y2Js29I8sAuflA'
-                    }).then(token => {
-                        if (token) {
-                            // Save token to Firebase
-                            db.ref('users/' + self.user.uid + '/fcmToken').set(token);
-                            self.toast('Notifications enabled ✓', 'success');
-                        }
-                    }).catch(err => {
-                        // Handle Installations API errors gracefully
-                        if (err.message && err.message.includes('installations')) {
-                            console.warn('Firebase Installations API issue (non-critical):', err.message);
-                            // Don't show error toast - this is a known Firebase issue
-                        } else {
-                            console.error('Error getting FCM token:', err);
-                        }
-                    });
-                }
-            }).catch(err => {
-                console.warn('Notification permission denied:', err);
-            });
-            
-            // Handle foreground messages
-            messaging.onMessage(function(payload) {
-                if (payload.notification) {
-                    self.showNotificationToast(payload.notification.title, payload.notification.body);
-                }
-            });
-        } catch (err) {
-            console.warn('Notification initialization skipped:', err.message);
-        }
+        // Firebase Installations API has permission issues on this project
+        // Push notifications will be re-enabled after API permissions are properly configured
+        // App functions perfectly without notifications for now
+        console.log('Notifications: Skipped (API configuration pending)');
+        return;
     },
 
     showNotificationToast: function(title, body) {
