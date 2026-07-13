@@ -802,8 +802,20 @@
             margin-bottom: 4px;
         }
 
-        .message-name { font-weight: 600; font-size: 0.9rem; }
-        .message-time { font-size: 0.75rem; color: var(--text-light); }
+        .message-name { 
+            font-weight: 600; 
+            font-size: 0.9rem;
+        }
+        
+        .message-name.unread-text {
+            color: var(--text);
+            font-weight: 700;
+        }
+        
+        .message-time { 
+            font-size: 0.75rem; 
+            color: var(--text-light);
+        }
 
         .message-preview {
             font-size: 0.8rem;
@@ -813,15 +825,15 @@
             text-overflow: ellipsis;
         }
 
-        .message-preview.unread {
+        .message-preview.unread-text {
             color: var(--text);
             font-weight: 600;
         }
 
         .unread-badge {
-            width: 20px;
-            height: 20px;
-            background: #ff4444;
+            width: 24px;
+            height: 24px;
+            background: var(--primary);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -830,6 +842,7 @@
             font-size: 0.7rem;
             font-weight: 700;
             flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         .chat-modal-overlay {
@@ -970,6 +983,23 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .chat-message.sent .message-time {
+            color: rgba(255,255,255,0.8);
+            text-align: right;
+        }
+
+        .chat-message.received .message-time {
+            color: var(--text-light);
+            text-align: left;
+        }
+
         @keyframes messageBounce {
             from { opacity: 0; transform: scale(0.9); }
             to { opacity: 1; transform: scale(1); }
@@ -1006,27 +1036,42 @@
 
         .chat-modal-send {
             background: var(--primary);
-            color: white;
             border: none;
+            color: white;
             width: 36px;
             height: 36px;
             border-radius: 50%;
             cursor: pointer;
+            font-size: 1.2rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
-            flex-shrink: 0;
             transition: 0.3s;
+            flex-shrink: 0;
         }
 
         .chat-modal-send:hover {
             background: var(--primary-dark);
-            transform: scale(1.1);
+            transform: scale(1.05);
         }
 
-        .chat-modal-send:active {
-            transform: scale(0.95);
+        .chat-modal-icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--primary);
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+            flex-shrink: 0;
+        }
+
+        .chat-modal-icon-btn:hover {
+            transform: scale(1.2);
         }
 
         .bottom-nav {
@@ -2000,6 +2045,8 @@
         </div>
         <div class="chat-modal-messages" id="chatModalMessages"></div>
         <div class="chat-modal-input">
+            <input type="file" id="chatImageInput" style="display: none;" accept="image/*" multiple onchange="app.handleChatImageUpload(event)">
+            <button class="chat-modal-icon-btn" onclick="document.getElementById('chatImageInput').click()" title="Send image">📷</button>
             <input type="text" id="chatModalInput" placeholder="Message...">
             <button class="chat-modal-send" onclick="app.sendChatMessage()">→</button>
         </div>
@@ -3445,32 +3492,88 @@ var app = {
         var self = this;
         var html = '';
         var userIds = Object.keys(this.users);
+        var conversations = [];
         
         userIds.forEach(uid => {
             if (uid !== this.user.uid) {
                 var u = this.users[uid];
-                var isUnread = this.unreadMessages[uid] || false;
+                var chatKey = [this.user.uid, uid].sort().join('_');
+                var unreadCount = 0;
+                var lastMessage = 'Tap to message';
+                var lastTime = 'Now';
                 
-                html += `
-                    <div class="message-item ${isUnread ? 'unread' : ''}" onclick="app.openChat('${uid}', '${u.name}')">
-                        <div class="message-avatar" style="background-image: url(${u.profilePhoto || ''}); position: relative;">
-                            ${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}
-                            <div class="online-dot" style="display: ${Math.random() > 0.5 ? 'block' : 'none'};"></div>
-                        </div>
-                        <div class="message-content">
-                            <div class="message-top">
-                                <div class="message-name">${u.name}</div>
-                                <div class="message-time">Now</div>
-                            </div>
-                            <div class="message-preview ${isUnread ? 'unread' : ''}">Tap to message</div>
-                        </div>
-                        ${isUnread ? '<div class="unread-badge">1</div>' : ''}
-                    </div>
-                `;
+                // Get unread count for this conversation
+                if (this.unreadMessages && this.unreadMessages[chatKey]) {
+                    unreadCount = this.unreadMessages[chatKey].count || 0;
+                }
+                
+                // Get last message preview and time
+                if (this.chatMessages && this.chatMessages[chatKey] && this.chatMessages[chatKey].length > 0) {
+                    var msgs = this.chatMessages[chatKey];
+                    var lastMsg = msgs[msgs.length - 1];
+                    
+                    // Format message preview
+                    if (lastMsg.image) {
+                        lastMessage = '📷 Image';
+                    } else if (lastMsg.text) {
+                        lastMessage = lastMsg.text.substring(0, 50) + (lastMsg.text.length > 50 ? '...' : '');
+                    }
+                    
+                    // Format time
+                    if (lastMsg.timestamp) {
+                        var msgDate = new Date(lastMsg.timestamp);
+                        var now = new Date();
+                        var diff = now - msgDate;
+                        var minutes = Math.floor(diff / 60000);
+                        var hours = Math.floor(diff / 3600000);
+                        var days = Math.floor(diff / 86400000);
+                        
+                        if (minutes < 1) lastTime = 'Now';
+                        else if (minutes < 60) lastTime = minutes + 'm';
+                        else if (hours < 24) lastTime = hours + 'h';
+                        else if (days < 7) lastTime = days + 'd';
+                        else lastTime = msgDate.toLocaleDateString();
+                    }
+                }
+                
+                conversations.push({
+                    uid: uid,
+                    name: u.name,
+                    profilePhoto: u.profilePhoto,
+                    lastMessage: lastMessage,
+                    lastTime: lastTime,
+                    unreadCount: unreadCount,
+                    isUnread: unreadCount > 0
+                });
             }
         });
         
-        if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No messages yet</div>';
+        // Sort by last message time (most recent first)
+        conversations.sort((a, b) => {
+            var timeA = new Date(a.lastTime).getTime() || 0;
+            var timeB = new Date(b.lastTime).getTime() || 0;
+            return timeB - timeA;
+        });
+        
+        conversations.forEach(conv => {
+            html += `
+                <div class="message-item ${conv.isUnread ? 'unread' : ''}" onclick="app.openChat('${conv.uid}', '${conv.name}')">
+                    <div class="message-avatar" style="background-image: url(${conv.profilePhoto || ''});">
+                        ${!conv.profilePhoto ? conv.name.charAt(0).toUpperCase() : ''}
+                    </div>
+                    <div class="message-content">
+                        <div class="message-top">
+                            <div class="message-name ${conv.isUnread ? 'unread-text' : ''}">${conv.name}</div>
+                            <div class="message-time">${conv.lastTime}</div>
+                        </div>
+                        <div class="message-preview ${conv.isUnread ? 'unread-text' : ''}">${conv.lastMessage}</div>
+                    </div>
+                    ${conv.unreadCount > 0 ? '<div class="unread-badge">' + conv.unreadCount + '</div>' : ''}
+                </div>
+            `;
+        });
+        
+        if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No messages yet. Start a conversation!</div>';
         document.getElementById('messageList').innerHTML = html;
     },
 
@@ -3511,16 +3614,71 @@ var app = {
         var self = this;
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
         
+        // Initialize chat messages storage
+        if (!this.chatMessages) this.chatMessages = {};
+        
         db.ref('chats/' + key + '/messages').orderByChild('timestamp').on('value', s => {
             var html = '';
             var hasMessages = false;
+            var messages = [];
             
             s.forEach(c => {
                 hasMessages = true;
                 var m = c.val();
-                if (m && m.text) {
+                if (m) {
+                    messages.push(m);
+                }
+            });
+            
+            // Store messages for preview in list
+            this.chatMessages[key] = messages;
+            
+            messages.forEach(m => {
+                if (m && (m.text || m.image)) {
                     var side = m.sender === self.user.uid ? 'sent' : 'received';
-                    html += `<div class="chat-message ${side}"><div class="chat-message-bubble">${m.text}</div></div>`;
+                    var timestamp = '';
+                    
+                    // Format timestamp
+                    if (m.timestamp) {
+                        var date = new Date(m.timestamp);
+                        timestamp = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                    }
+                    
+                    var content = '';
+                    
+                    // Handle images
+                    if (m.image) {
+                        if (Array.isArray(m.image)) {
+                            // Multiple images - show as gallery
+                            content += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-width: 200px;">';
+                            m.image.forEach((img, idx) => {
+                                if (idx < 4) {
+                                    content += `<img src="${img}" style="width: 100%; border-radius: 8px; cursor: pointer;" onclick="app.viewFullImage('${img}')">`;
+                                } else if (idx === 4) {
+                                    var remaining = m.image.length - 4;
+                                    content += `<div style="width: 100%; border-radius: 8px; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; cursor: pointer;" onclick="app.viewAllImages(${JSON.stringify(m.image)})">+${remaining}</div>`;
+                                }
+                            });
+                            content += '</div>';
+                        } else {
+                            // Single image
+                            content += `<img src="${m.image}" style="max-width: 180px; border-radius: 12px; cursor: pointer;" onclick="app.viewFullImage('${m.image}')">`;
+                        }
+                    }
+                    
+                    // Handle text
+                    if (m.text) {
+                        content += `<div>${m.text}</div>`;
+                    }
+                    
+                    html += `
+                        <div class="chat-message ${side}">
+                            <div class="chat-message-bubble">
+                                ${content}
+                                <div class="message-time">${timestamp}</div>
+                            </div>
+                        </div>
+                    `;
                 }
             });
             
@@ -3574,35 +3732,119 @@ var app = {
         });
     },
 
+    handleChatImageUpload: function(e) {
+        var files = e.target.files;
+        if (!files || files.length === 0) return;
+        
+        var self = this;
+        var uploadPromises = [];
+        
+        for (var i = 0; i < files.length; i++) {
+            uploadPromises.push(self.uploadChatImage(files[i]));
+        }
+        
+        Promise.all(uploadPromises).then(urls => {
+            self.sendChatImages(urls);
+        }).catch(err => {
+            self.toast('Failed to upload images', 'error');
+        });
+        
+        // Reset input
+        document.getElementById('chatImageInput').value = '';
+    },
+
+    uploadChatImage: function(file) {
+        return new Promise((resolve, reject) => {
+            var formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', 'chichi_photos');
+            
+            fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
+                method: 'POST',
+                body: formData
+            }).then(r => r.json()).then(d => {
+                if (d.secure_url) {
+                    resolve(d.secure_url);
+                } else {
+                    reject('Upload failed');
+                }
+            }).catch(reject);
+        });
+    },
+
+    sendChatImages: function(imageUrls) {
+        if (!this.currentChat) {
+            this.toast('No chat selected', 'error');
+            return;
+        }
+        
+        var self = this;
+        var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+        
+        db.ref('chats/' + key + '/messages').push({
+            sender: self.user.uid,
+            image: imageUrls.length === 1 ? imageUrls[0] : imageUrls,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            self.toast('Image sent!', 'success');
+            var messagesDiv = document.getElementById('chatModalMessages');
+            if (messagesDiv) {
+                setTimeout(() => {
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }, 50);
+            }
+        }).catch(err => {
+            self.toast('Failed to send image', 'error');
+        });
+    },
+
     trackUnreadMessages: function() {
         var self = this;
         var userIds = Object.keys(this.users);
         
+        if (!this.unreadMessages) this.unreadMessages = {};
+        
         userIds.forEach(uid => {
             if (uid !== self.user.uid) {
                 var key = [self.user.uid, uid].sort().join('_');
-                db.ref('chats/' + key + '/messages').limitToLast(1).on('value', s => {
-                    var hasUnread = false;
+                db.ref('chats/' + key + '/messages').on('value', s => {
+                    var unreadCount = 0;
                     s.forEach(c => {
                         var m = c.val();
-                        if (m && m.sender !== self.user.uid) {
-                            hasUnread = true;
+                        if (m && m.sender !== self.user.uid && !m.read) {
+                            unreadCount++;
                         }
                     });
-                    self.unreadMessages[uid] = hasUnread;
+                    
+                    if (!self.unreadMessages[key]) {
+                        self.unreadMessages[key] = {};
+                    }
+                    self.unreadMessages[key].count = unreadCount;
+                    
                     self.updateUnreadBadge();
+                    self.loadMessages();
                 });
             }
         });
     },
 
     markAsRead: function(uid) {
-        this.unreadMessages[uid] = false;
+        var key = [this.user.uid, uid].sort().join('_');
+        if (this.unreadMessages && this.unreadMessages[key]) {
+            this.unreadMessages[key].count = 0;
+        }
         this.updateUnreadBadge();
     },
 
     updateUnreadBadge: function() {
-        var unreadCount = Object.values(this.unreadMessages).filter(v => v).length;
+        var unreadCount = 0;
+        if (this.unreadMessages) {
+            Object.values(this.unreadMessages).forEach(msg => {
+                if (msg && msg.count) {
+                    unreadCount += msg.count;
+                }
+            });
+        }
         var badge = document.getElementById('messagesBadge');
         if (unreadCount > 0) {
             badge.textContent = unreadCount;
@@ -3614,6 +3856,32 @@ var app = {
 
     clearUnreadBadge: function() {
         document.getElementById('messagesBadge').style.display = 'none';
+    },
+
+    viewFullImage: function(imageUrl) {
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.zIndex = '2000';
+        modal.innerHTML = `
+            <div style="position: relative; width: 90%; max-width: 500px;">
+                <img src="${imageUrl}" style="width: 100%; border-radius: 12px;">
+                <button onclick="this.closest('.modal-overlay').remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; font-weight: 700;">✕</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    viewAllImages: function(images) {
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.zIndex = '2000';
+        var html = '<div style="width: 90%; max-width: 600px;"><div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">';
+        images.forEach(img => {
+            html += `<img src="${img}" style="width: 100%; border-radius: 8px; cursor: pointer;" onclick="app.viewFullImage('${img}')">`;
+        });
+        html += '</div><button onclick="this.closest(\'.modal-overlay\').remove()" style="width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; margin-top: 12px; cursor: pointer; font-weight: 600;">Close</button></div>';
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
     },
 
     showWithdrawModal: function() {
