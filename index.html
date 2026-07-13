@@ -3885,6 +3885,23 @@ var app = {
             </div>
         </div>`;
         document.body.appendChild(modal);
+        
+        // Auto-log modal info for debugging
+        setTimeout(() => {
+            console.log('%c🎯 Edit Profile Modal Opened', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
+            var editModal = document.querySelector('.modal-overlay.active .modal');
+            if (editModal) {
+                console.log('Height:', editModal.offsetHeight + 'px');
+                console.log('Scroll Height (content):', editModal.scrollHeight + 'px');
+                console.log('Max Height CSS:', window.getComputedStyle(editModal).maxHeight);
+                console.log('Overflow-Y:', window.getComputedStyle(editModal).overflowY);
+                if (editModal.scrollHeight > editModal.offsetHeight) {
+                    console.log('%c✅ Should be scrollable!', 'color: #22c55e;');
+                } else {
+                    console.log('%c❌ Content fits - no scroll needed', 'color: #ff9800;');
+                }
+            }
+        }, 100);
     },
 
     previewEditProfilePhoto: function(event) {
@@ -4931,6 +4948,159 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 2000);
 });
+
+// DEBUG CONSOLE - Check modal scrolling issues
+window.debugModal = function() {
+    console.clear();
+    console.log('%c=== CHICHI MODAL DEBUG CONSOLE ===', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
+    
+    // Check all modals
+    var modals = document.querySelectorAll('.modal');
+    var overlays = document.querySelectorAll('.modal-overlay.active');
+    
+    console.log('%c📊 MODAL COUNT:', 'color: #0099ff; font-weight: bold;');
+    console.log('Total modals found:', modals.length);
+    console.log('Active overlays:', overlays.length);
+    
+    // Check each modal
+    modals.forEach((modal, index) => {
+        var overlay = modal.closest('.modal-overlay');
+        var isActive = overlay && overlay.classList.contains('active');
+        
+        console.log(`%c📍 Modal ${index + 1} (${isActive ? '✅ ACTIVE' : '❌ INACTIVE'})`, 'color: ' + (isActive ? '#22c55e' : '#ff4444') + '; font-weight: bold;');
+        console.log('Height:', modal.offsetHeight + 'px');
+        console.log('Scroll Height:', modal.scrollHeight + 'px');
+        console.log('Scroll Top:', modal.scrollTop);
+        console.log('Max Height:', window.getComputedStyle(modal).maxHeight);
+        console.log('Overflow-Y:', window.getComputedStyle(modal).overflowY);
+        console.log('Overflow-X:', window.getComputedStyle(modal).overflowX);
+        
+        if (modal.scrollHeight > modal.offsetHeight) {
+            console.log('%c✅ SCROLLABLE (Content taller than container)', 'color: #22c55e; font-weight: bold;');
+        } else {
+            console.log('%c❌ NOT SCROLLABLE (Content fits in container)', 'color: #ff4444; font-weight: bold;');
+        }
+        
+        console.group('Styles:');
+        console.log('Display:', window.getComputedStyle(modal).display);
+        console.log('Position:', window.getComputedStyle(modal).position);
+        console.log('Width:', window.getComputedStyle(modal).width);
+        console.groupEnd();
+    });
+    
+    // Check create-modal
+    var createModals = document.querySelectorAll('.create-modal');
+    if (createModals.length > 0) {
+        console.log('%c📝 CREATE-MODAL', 'color: #fbbf24; font-weight: bold;');
+        createModals.forEach((modal, index) => {
+            console.log(`Modal ${index + 1}:`);
+            console.log('Height:', modal.offsetHeight + 'px');
+            console.log('Scroll Height:', modal.scrollHeight + 'px');
+            console.log('Overflow-Y:', window.getComputedStyle(modal).overflowY);
+        });
+    }
+    
+    console.log('%c💡 TIP: If content is NOT taller than container, it won\'t scroll!', 'color: #ff9800; font-weight: bold;');
+    console.log('%c🔧 SOLUTIONS:', 'color: #00D4AA; font-weight: bold;');
+    console.log('1. Make sure modal has max-height (85vh)');
+    console.log('2. Make sure content is taller than modal');
+    console.log('3. Check overflow-y is "scroll" or "auto"');
+    console.log('4. Run debugModal() after opening a modal');
+};
+
+// Debug panel - Shows info in UI
+window.showDebugPanel = function() {
+    var panel = document.createElement('div');
+    panel.id = 'debugPanel';
+    panel.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 320px;
+        max-height: 400px;
+        background: #1f2937;
+        color: #fff;
+        border: 2px solid #00D4AA;
+        border-radius: 12px;
+        padding: 16px;
+        font-size: 12px;
+        font-family: monospace;
+        z-index: 9999;
+        overflow-y: auto;
+        line-height: 1.6;
+    `;
+    
+    var modals = document.querySelectorAll('.modal');
+    var info = '<strong>🔍 MODAL DEBUG INFO</strong><br>';
+    
+    modals.forEach((m, i) => {
+        var overlay = m.closest('.modal-overlay');
+        var isActive = overlay && overlay.classList.contains('active');
+        info += `<br>📍 Modal ${i + 1} (${isActive ? '✅' : '❌'})<br>`;
+        info += `Height: ${m.offsetHeight}px<br>`;
+        info += `Scroll Height: ${m.scrollHeight}px<br>`;
+        info += `Overflow-Y: ${window.getComputedStyle(m).overflowY}<br>`;
+        info += `Scrollable: ${m.scrollHeight > m.offsetHeight ? '✅ YES' : '❌ NO'}<br>`;
+    });
+    
+    info += '<br><button onclick="debugModal()" style="width:100%;padding:8px;background:#00D4AA;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">Run debugModal()</button>';
+    info += '<button onclick="document.getElementById(\'debugPanel\').remove()" style="width:100%;padding:8px;background:#ff4444;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:8px;">Close</button>';
+    
+    panel.innerHTML = info;
+    document.body.appendChild(panel);
+};
+
+// Test modal scrolling
+window.testScrolling = function() {
+    console.clear();
+    console.log('%c🧪 TESTING SCROLLING...', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
+    
+    // Try scrolling on active modal
+    var activeModal = document.querySelector('.modal-overlay.active .modal');
+    if (!activeModal) {
+        console.log('%c❌ No active modal found!', 'color: #ff4444; font-weight: bold;');
+        console.log('Open a modal first, then run testScrolling()');
+        return;
+    }
+    
+    console.log('%c✅ Found active modal', 'color: #22c55e; font-weight: bold;');
+    console.log('Testing scroll...');
+    
+    // Try to scroll
+    activeModal.scrollTop = 10;
+    var scrolled = activeModal.scrollTop > 0;
+    
+    console.log(scrolled ? '%c✅ SCROLL WORKS!' : '%c❌ Scroll not working', scrolled ? 'color: #22c55e;' : 'color: #ff4444;', 'font-weight: bold;');
+    
+    console.log('%cDEBUG INFO:', 'color: #00D4AA; font-weight: bold;');
+    console.log('offsetHeight:', activeModal.offsetHeight + 'px');
+    console.log('scrollHeight:', activeModal.scrollHeight + 'px');
+    console.log('Max Height:', window.getComputedStyle(activeModal).maxHeight);
+    console.log('Overflow-Y:', window.getComputedStyle(activeModal).overflowY);
+    console.log('Display:', window.getComputedStyle(activeModal).display);
+    
+    if (activeModal.scrollHeight <= activeModal.offsetHeight) {
+        console.warn('%c⚠️ Content is NOT taller than container - nothing to scroll!', 'color: #ff9800; font-weight: bold;');
+    }
+};
+
+// Easy access
+console.log('%c🎯 DEBUG COMMANDS:', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
+console.log('debugModal() - Log all modal info');
+console.log('showDebugPanel() - Show UI debug panel');
+console.log('testScrolling() - Test if scrolling works');
+
+// Keyboard shortcut: Ctrl+Shift+D to open debug panel
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        window.showDebugPanel();
+        console.log('%c🎯 Debug panel opened! Press Ctrl+Shift+D again to close', 'color: #00D4AA; font-weight: bold;');
+    }
+});
+
+// Make it easy to access from browser console
+console.log('%c✅ Type debugModal() in console to check modal scrolling!', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
 
 // Initialize theme on load
 app.initTheme = function() {
