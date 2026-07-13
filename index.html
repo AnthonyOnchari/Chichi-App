@@ -2240,13 +2240,32 @@ var app = {
             console.log('Auth state changed:', u ? 'Logged in' : 'Not logged in');
             if (u) {
                 self.user = u;
-                // Wait for profile to load before showing app
+                console.log('User UID:', u.uid);
+                
+                // Try to load profile, but show app regardless
                 db.ref('users/' + u.uid).once('value', s => {
+                    console.log('Profile loaded:', s.exists());
                     if (s.exists()) {
                         self.profile = s.val();
                         self.balance = self.profile.balance || 0;
+                        console.log('Profile data set');
+                    } else {
+                        console.log('Profile does not exist, using defaults');
+                        self.profile = {
+                            name: u.displayName || 'User',
+                            email: u.email,
+                            bio: '',
+                            profilePhoto: u.photoURL || '',
+                            balance: 0,
+                            followers: 0,
+                            following: 0
+                        };
                     }
                     self.loadProfile();
+                    self.showApp();
+                }).catch(err => {
+                    console.error('Error loading profile:', err);
+                    self.profile = { name: 'User', email: u.email, bio: '', profilePhoto: '', balance: 0, followers: 0, following: 0 };
                     self.showApp();
                 });
             } else {
@@ -2286,15 +2305,15 @@ var app = {
         document.getElementById('adminPortal').classList.remove('active');
         document.querySelector('.bottom-nav').style.display = 'flex';
         
-        // Only load after small delay to ensure auth is set
+        // Load data immediately - no delay
         var self = this;
-        setTimeout(() => {
-            self.loadPosts();
-            self.loadUsers();
-            self.loadFollowing();
-            self.trackUnreadMessages();
-            self.switchView('feed');
-        }, 500);
+        self.loadPosts();
+        self.loadUsers();
+        self.loadFollowing();
+        self.trackUnreadMessages();
+        self.switchView('feed');
+        
+        console.log('App shown, data loading...');
     },
 
     loadProfile: function() {
