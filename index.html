@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHICHI - by Onchari Group</title>
+    <title>CHICHI - Social Media</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
     <link rel="icon" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783891757/uovuprr10iynda7njjnc.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -196,6 +196,32 @@
         .btn-submit:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+        }
+
+        .social-btn {
+            flex: 1;
+            padding: 12px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+        }
+
+        .social-btn:hover {
+            background: var(--light);
+            border-color: var(--primary);
+        }
+
+        .social-btn:active {
+            transform: scale(0.98);
         }
 
         .main-app {
@@ -1828,6 +1854,23 @@
                     <input type="password" class="form-input" id="loginPassword" placeholder="••••••" required>
                 </div>
                 <button type="submit" class="btn-submit">Login</button>
+                
+                <div style="margin-top: 20px; text-align: center;">
+                    <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                        <div style="padding: 0 12px; color: var(--text-light); font-size: 0.85rem;">Or continue with</div>
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="social-btn" onclick="app.signInWithGoogle()">
+                        <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
+                    </button>
+                    <button type="button" class="social-btn" onclick="alert('Phone sign-in coming soon')">
+                        <span style="font-size: 1.2rem; margin-right: 8px;">📱</span> Phone
+                    </button>
+                </div>
             </form>
         </div>
 
@@ -1846,6 +1889,23 @@
                     <input type="password" class="form-input" id="signupPassword" placeholder="Min 6 chars" required>
                 </div>
                 <button type="submit" class="btn-submit">Create Account</button>
+                
+                <div style="margin-top: 20px; text-align: center;">
+                    <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                        <div style="padding: 0 12px; color: var(--text-light); font-size: 0.85rem;">Or sign up with</div>
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="social-btn" onclick="app.signInWithGoogle()">
+                        <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
+                    </button>
+                    <button type="button" class="social-btn" onclick="alert('Phone sign-in coming soon')">
+                        <span style="font-size: 1.2rem; margin-right: 8px;">📱</span> Phone
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -2195,6 +2255,7 @@ var app = {
         document.getElementById('authPage').style.display = 'flex';
         document.getElementById('mainApp').style.display = 'none';
         document.getElementById('adminPortal').style.display = 'none';
+        document.querySelector('.bottom-nav').style.display = 'none';
     },
 
     showApp: function() {
@@ -2203,6 +2264,7 @@ var app = {
         document.getElementById('authPage').style.display = 'none';
         document.getElementById('mainApp').classList.add('active');
         document.getElementById('adminPortal').classList.remove('active');
+        document.querySelector('.bottom-nav').style.display = 'flex';
         
         // Only load after small delay to ensure auth is set
         var self = this;
@@ -2305,6 +2367,33 @@ var app = {
         }).catch(err => this.toast(err.message, 'error'));
     },
 
+    signInWithGoogle: function() {
+        var self = this;
+        var provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).then(result => {
+            var user = result.user;
+            // Check if new user
+            db.ref('users/' + user.uid).once('value', snap => {
+                if (!snap.exists()) {
+                    // New user - create profile
+                    db.ref('users/' + user.uid).set({
+                        name: user.displayName || 'User',
+                        email: user.email,
+                        bio: '',
+                        profilePhoto: user.photoURL || '',
+                        balance: 0,
+                        followers: 0,
+                        following: 0,
+                        createdAt: new Date().toLocaleString('en-KE')
+                    });
+                    self.toast('Account created with Google!', 'success');
+                } else {
+                    self.toast('Welcome back!', 'success');
+                }
+            });
+        }).catch(err => this.toast('Google sign-in failed: ' + err.message, 'error'));
+    },
+
     openAdminModal: function() {
         document.getElementById('adminModal').classList.add('active');
         document.getElementById('adminPassword').focus();
@@ -2331,6 +2420,7 @@ var app = {
         this.adminOpen = true;
         document.getElementById('mainApp').classList.remove('active');
         document.getElementById('adminPortal').classList.add('active');
+        document.querySelector('.bottom-nav').style.display = 'none';
         this.loadAdminDashboard();
         this.loadAdminUsers();
         this.loadAdminPosts();
@@ -2341,6 +2431,7 @@ var app = {
         this.adminOpen = false;
         document.getElementById('adminPortal').classList.remove('active');
         document.getElementById('mainApp').classList.add('active');
+        document.querySelector('.bottom-nav').style.display = 'flex';
     },
 
     switchAdminTab: function(tab) {
@@ -3049,7 +3140,7 @@ var app = {
                     <ins class="adsbygoogle"
                          style="display:block"
                          data-ad-client="ca-pub-8335709146055597"
-                         data-ad-slot="xxxxxxxxxxxxxxxx"
+                         data-ad-slot="9340032456"
                          data-ad-format="auto"
                          data-full-width-responsive="true"></ins>
                 </div>
