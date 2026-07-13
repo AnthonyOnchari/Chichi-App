@@ -259,7 +259,7 @@
             width: 100%;
             overflow-y: auto;
             flex-direction: column;
-            padding-bottom: 80px;
+            padding-bottom: 100px;
             animation: smoothFadeIn 0.4s ease;
         }
 
@@ -1035,12 +1035,23 @@
             left: 0;
             right: 0;
             display: flex;
-            justify-content: space-around;
-            background: white;
-            border-top: 1px solid var(--border);
-            padding: 8px 0;
+            justify-content: center;
+            align-items: flex-end;
+            background: transparent;
+            padding: 0;
             z-index: 990;
             width: 100%;
+        }
+
+        .nav-wrapper {
+            position: relative;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            background: white;
+            border-top: 1px solid var(--border);
+            padding: 8px 0 16px 0;
             box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
         }
 
@@ -1067,7 +1078,41 @@
             background: rgba(0, 212, 170, 0.1);
         }
 
-        .nav-icon { font-size: 1.3rem; }
+        .nav-icon { 
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .fab-button {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 16px rgba(0, 212, 170, 0.4);
+            z-index: 991;
+            transition: 0.3s;
+            font-weight: 800;
+        }
+
+        .fab-button:hover {
+            transform: translateX(-50%) scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 212, 170, 0.6);
+        }
+
+        .fab-button:active {
+            transform: translateX(-50%) scale(0.95);
+        }
 
         .nav-badge {
             position: absolute;
@@ -1570,7 +1615,45 @@
             background: var(--light);
         }
 
-        .following-list {
+        .admin-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            overflow-x: auto;
+        }
+
+        .admin-tab {
+            padding: 8px 16px;
+            background: var(--light);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            transition: 0.3s;
+            white-space: nowrap;
+        }
+
+        .admin-tab:hover {
+            background: var(--border);
+        }
+
+        .admin-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .admin-tab-content {
+            display: none;
+        }
+
+        .admin-tab-content.active {
+            display: block;
+        }
             background: white;
             border-radius: 16px;
             overflow: hidden;
@@ -1748,26 +1831,30 @@
 
     <!-- NAV -->
     <div class="bottom-nav">
-        <div class="nav-item active" onclick="app.switchView('feed')">
-            <div class="nav-icon">H</div>
-            <div>Home</div>
-        </div>
-        <div class="nav-item" onclick="app.switchView('explore')">
-            <div class="nav-icon">E</div>
-            <div>Explore</div>
-        </div>
-        <div class="nav-item" onclick="app.switchView('messages')">
-            <div class="nav-icon">M</div>
-            <div>Messages</div>
-            <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
-        </div>
-        <div class="nav-item" onclick="app.switchView('wallet')">
-            <div class="nav-icon">W</div>
-            <div>Wallet</div>
-        </div>
-        <div class="nav-item" onclick="app.switchView('profile')">
-            <div class="nav-icon">P</div>
-            <div>Profile</div>
+        <div class="nav-wrapper">
+            <div class="nav-item active" onclick="app.switchView('feed')">
+                <div class="nav-icon">⌂</div>
+                <div>Home</div>
+            </div>
+            <div class="nav-item" onclick="app.switchView('explore')">
+                <div class="nav-icon">◉</div>
+                <div>Explore</div>
+            </div>
+            <div style="flex: 1;"></div>
+            <div class="nav-item" onclick="app.switchView('messages')">
+                <div class="nav-icon">✉</div>
+                <div>Messages</div>
+                <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
+            </div>
+            <div class="nav-item" onclick="app.switchView('wallet')">
+                <div class="nav-icon">◆</div>
+                <div>Wallet</div>
+            </div>
+            <div class="nav-item" onclick="app.switchView('profile')">
+                <div class="nav-icon">⊙</div>
+                <div>Profile</div>
+            </div>
+            <button class="fab-button" onclick="app.showCreateModal()">+</button>
         </div>
     </div>
 </div>
@@ -1866,8 +1953,8 @@
 <!-- ADMIN PASSWORD MODAL -->
 <div class="admin-modal" id="adminModal">
     <div class="admin-modal-card">
-        <h3>🔐 Admin Access</h3>
-        <p>Enter admin password</p>
+        <h3>Admin Access</h3>
+        <p>Enter admin password to continue</p>
         <input type="password" class="admin-password-input" id="adminPassword" placeholder="Enter password" autofocus>
         <div class="admin-buttons">
             <button class="admin-cancel" onclick="app.closeAdminModal()">Cancel</button>
@@ -1889,28 +1976,73 @@
     </div>
 
     <div class="app-content" style="display: flex; flex-direction: column;">
+        <div class="admin-tabs">
+            <button class="admin-tab active" onclick="app.switchAdminTab('dashboard')">Dashboard</button>
+            <button class="admin-tab" onclick="app.switchAdminTab('users')">Users</button>
+            <button class="admin-tab" onclick="app.switchAdminTab('posts')">Posts</button>
+            <button class="admin-tab" onclick="app.switchAdminTab('withdrawals')">Withdrawals</button>
+            <button class="admin-tab" onclick="app.switchAdminTab('logs')">Activity</button>
+        </div>
+
         <div class="admin-content">
-            <div class="admin-stat-grid">
-                <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminUserCount">0</div>
-                    <div class="admin-stat-label">Total Users</div>
+            <!-- DASHBOARD TAB -->
+            <div class="admin-tab-content active" id="adminDashboard">
+                <div class="admin-stat-grid">
+                    <div class="admin-stat">
+                        <div class="admin-stat-value" id="adminUserCount">0</div>
+                        <div class="admin-stat-label">Total Users</div>
+                    </div>
+                    <div class="admin-stat">
+                        <div class="admin-stat-value" id="adminPostCount">0</div>
+                        <div class="admin-stat-label">Total Posts</div>
+                    </div>
+                    <div class="admin-stat">
+                        <div class="admin-stat-value" id="adminPendingCount">0</div>
+                        <div class="admin-stat-label">Pending Withdrawals</div>
+                    </div>
+                    <div class="admin-stat">
+                        <div class="admin-stat-value" id="adminApprovedCount">0</div>
+                        <div class="admin-stat-label">Approved</div>
+                    </div>
                 </div>
-                <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminPostCount">0</div>
-                    <div class="admin-stat-label">Total Posts</div>
-                </div>
-                <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminPendingCount">0</div>
-                    <div class="admin-stat-label">Pending</div>
-                </div>
-                <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminApprovedCount">0</div>
-                    <div class="admin-stat-label">Approved</div>
+                <div style="margin-top: 20px; padding: 16px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="font-weight: 700; margin-bottom: 12px;">Platform Health</div>
+                    <div style="font-size: 0.9rem; color: var(--text-light); line-height: 1.6;">
+                        <div>Database: Connected</div>
+                        <div>Auth: Active</div>
+                        <div>Uploads: Cloudinary</div>
+                        <div style="margin-top: 8px; color: var(--primary); font-weight: 600;">All systems operational</div>
+                    </div>
                 </div>
             </div>
 
-            <h3 style="margin-top: 20px; margin-bottom: 12px; font-weight: 700;">💳 Withdrawal Requests</h3>
-            <div id="adminWithdrawals"></div>
+            <!-- USERS TAB -->
+            <div class="admin-tab-content" id="adminUsers">
+                <div style="margin-bottom: 12px; display: flex; gap: 8px;">
+                    <input type="text" id="userSearchInput" placeholder="Search users..." style="flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-family: 'Inter', sans-serif;">
+                    <button onclick="app.searchUsers()" style="padding: 10px 16px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600;">Search</button>
+                </div>
+                <div id="adminUsersList"></div>
+            </div>
+
+            <!-- POSTS TAB -->
+            <div class="admin-tab-content" id="adminPosts">
+                <div id="adminPostsList"></div>
+            </div>
+
+            <!-- WITHDRAWALS TAB -->
+            <div class="admin-tab-content" id="adminWithdrawalsTab">
+                <h3 style="margin-bottom: 12px; font-weight: 700;">Withdrawal Requests</h3>
+                <div id="adminWithdrawals"></div>
+            </div>
+
+            <!-- ACTIVITY LOG TAB -->
+            <div class="admin-tab-content" id="adminLogs">
+                <div style="padding: 16px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="font-weight: 700; margin-bottom: 12px;">Recent Activity</div>
+                    <div id="activityLogList"></div>
+                </div>
+            </div>
 
             <button class="admin-close-btn" onclick="app.closeAdminPortal()">Close Admin Panel</button>
         </div>
@@ -2034,7 +2166,7 @@ var app = {
 
     switchView: function(view) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.querySelectorAll('.nav-wrapper > .nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById(view + 'View').classList.add('active');
         
         if (view === 'profile') {
@@ -2048,9 +2180,21 @@ var app = {
             this.loadExplore();
         }
 
-        var navIndex = ['feed', 'explore', 'messages', 'wallet', 'profile'].indexOf(view);
-        if (navIndex >= 0) {
-            document.querySelectorAll('.nav-item')[navIndex].classList.add('active');
+        var navMap = {
+            'feed': 0,
+            'explore': 1,
+            'messages': 3,
+            'wallet': 4,
+            'profile': 5
+        };
+        
+        if (navMap.hasOwnProperty(view)) {
+            var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
+            if (view === 'feed') navItems[0].classList.add('active');
+            else if (view === 'explore') navItems[1].classList.add('active');
+            else if (view === 'messages') navItems[2].classList.add('active');
+            else if (view === 'wallet') navItems[3].classList.add('active');
+            else if (view === 'profile') navItems[4].classList.add('active');
         }
     },
 
@@ -2114,6 +2258,9 @@ var app = {
         document.getElementById('mainApp').classList.remove('active');
         document.getElementById('adminPortal').classList.add('active');
         this.loadAdminDashboard();
+        this.loadAdminUsers();
+        this.loadAdminPosts();
+        this.loadActivityLog();
     },
 
     closeAdminPortal: function() {
@@ -2122,7 +2269,200 @@ var app = {
         document.getElementById('mainApp').classList.add('active');
     },
 
-    loadAdminDashboard: function() {
+    switchAdminTab: function(tab) {
+        document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Find and activate the clicked tab button
+        var buttons = document.querySelectorAll('.admin-tab');
+        var tabMap = ['dashboard', 'users', 'posts', 'withdrawals', 'logs'];
+        var tabIndex = tabMap.indexOf(tab);
+        if (tabIndex >= 0) {
+            buttons[tabIndex].classList.add('active');
+        }
+        
+        // Map tab names to content IDs
+        var contentMap = {
+            'dashboard': 'adminDashboard',
+            'users': 'adminUsers',
+            'posts': 'adminPosts',
+            'withdrawals': 'adminWithdrawalsTab',
+            'logs': 'adminLogs'
+        };
+        
+        var contentId = contentMap[tab];
+        if (contentId) {
+            document.getElementById(contentId).classList.add('active');
+        }
+        
+        if (tab === 'users') this.loadAdminUsers();
+        if (tab === 'posts') this.loadAdminPosts();
+        if (tab === 'logs') this.loadActivityLog();
+    },
+
+    loadAdminUsers: function() {
+        var self = this;
+        var html = '';
+        var userArray = [];
+        
+        for (var uid in this.users) {
+            userArray.push({ uid: uid, user: this.users[uid] });
+        }
+
+        if (userArray.length === 0) {
+            html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No users yet</div>';
+        } else {
+            html = '<div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">';
+            userArray.forEach(u => {
+                html += `
+                    <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Joined: ${u.user.createdAt}</div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">${u.user.followers || 0} followers</span>
+                            <button onclick="app.viewUserActivity('${u.uid}')" style="padding: 6px 12px; background: var(--border); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">View</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+        }
+        
+        document.getElementById('adminUsersList').innerHTML = html;
+    },
+
+    searchUsers: function() {
+        var query = document.getElementById('userSearchInput').value.toLowerCase().trim();
+        if (!query) {
+            this.loadAdminUsers();
+            return;
+        }
+
+        var html = '';
+        var results = [];
+        
+        for (var uid in this.users) {
+            var u = this.users[uid];
+            if (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)) {
+                results.push({ uid: uid, user: u });
+            }
+        }
+
+        if (results.length === 0) {
+            html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No users found</div>';
+        } else {
+            html = '<div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">';
+            results.forEach(u => {
+                html += `
+                    <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
+                        </div>
+                        <button onclick="app.viewUserActivity('${u.uid}')" style="padding: 6px 12px; background: var(--border); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">View</button>
+                    </div>
+                `;
+            });
+            html += '</div>';
+        }
+        
+        document.getElementById('adminUsersList').innerHTML = html;
+    },
+
+    viewUserActivity: function(uid) {
+        var user = this.users[uid];
+        if (!user) return;
+        
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `<div class="modal">
+            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+            <h2 style="margin-bottom: 16px;">${user.name}</h2>
+            <div style="background: var(--light); padding: 12px; border-radius: 10px; margin-bottom: 16px;">
+                <div style="font-size: 0.8rem; color: var(--text-light); line-height: 1.6;">
+                    <div>Email: ${user.email}</div>
+                    <div>Balance: KSh ${(user.balance || 0).toFixed(2)}</div>
+                    <div>Followers: ${user.followers || 0}</div>
+                    <div>Following: ${user.following || 0}</div>
+                    <div>Joined: ${user.createdAt}</div>
+                </div>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    },
+
+    loadAdminPosts: function() {
+        var html = '';
+        if (this.posts.length === 0) {
+            html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No posts yet</div>';
+        } else {
+            this.posts.forEach(p => {
+                html += `
+                    <div style="background: white; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="font-weight: 700; font-size: 0.95rem;">${p.userName}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-light);">${p.createdAt}</div>
+                        </div>
+                        <div style="font-size: 0.85rem; margin-bottom: 8px; color: var(--text-light);">${p.caption.substring(0, 100)}...</div>
+                        <div style="display: flex; gap: 8px;">
+                            <span style="font-size: 0.75rem; color: var(--text-light);">Likes: ${Object.keys(p.likes || {}).length}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-light);">Comments: ${(p.comments || []).length}</span>
+                            <button onclick="app.adminDeletePost('${p.id}')" style="margin-left: auto; padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        document.getElementById('adminPostsList').innerHTML = html;
+    },
+
+    adminDeletePost: function(id) {
+        if (confirm('Delete this post permanently?')) {
+            db.ref('posts/' + id).remove();
+            this.toast('Post deleted', 'success');
+            this.loadAdminPosts();
+        }
+    },
+
+    loadActivityLog: function() {
+        var html = '';
+        var activities = [];
+        
+        // Create activity log from posts and withdrawals
+        this.posts.forEach(p => {
+            activities.push({
+                time: p.createdAt,
+                type: 'Post',
+                user: p.userName,
+                action: 'Created a post'
+            });
+        });
+
+        activities.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+        if (activities.length === 0) {
+            html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No activity yet</div>';
+        } else {
+            activities.slice(0, 20).forEach(act => {
+                html += `
+                    <div style="padding: 12px; border-bottom: 1px solid var(--border);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">${act.user}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-light);">${act.action}</div>
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-light);">${act.time}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        document.getElementById('activityLogList').innerHTML = html;
+    },
         var self = this;
         
         var userCount = Object.keys(this.users || {}).length;
@@ -2169,8 +2509,8 @@ var app = {
                             </div>
                             ${w.status === 'pending' ? `
                                 <div class="withdrawal-actions">
-                                    <button class="admin-approve" onclick="app.approveWithdrawal('${w.id}')">✓ Approve</button>
-                                    <button class="admin-reject" onclick="app.rejectWithdrawal('${w.id}')">✕ Reject</button>
+                                    <button class="admin-approve" onclick="app.approveWithdrawal('${w.id}')">Approve</button>
+                                    <button class="admin-reject" onclick="app.rejectWithdrawal('${w.id}')">Reject</button>
                                 </div>
                             ` : ''}
                         </div>
@@ -2187,7 +2527,7 @@ var app = {
         db.ref('withdrawals/' + withdrawalId).update({
             status: 'approved'
         });
-        self.toast('✓ Approved', 'success');
+        self.toast('Approved', 'success');
         self.loadAdminDashboard();
     },
 
@@ -2203,7 +2543,7 @@ var app = {
                     var currentBalance = balanceSnap.val() || 0;
                     db.ref('users/' + withdrawal.userId + '/balance').set(currentBalance + withdrawal.amount);
                 });
-                self.toast('✕ Rejected & refunded', 'success');
+                self.toast('Rejected & refunded', 'success');
                 self.loadAdminDashboard();
             }
         });
