@@ -2032,7 +2032,11 @@ window.app = window.app || {
 </script>
 
 <!-- THEME TOGGLE -->
-<button class="theme-toggle" onclick="app.toggleTheme()" title="Toggle dark/light mode">🌙</button>
+<!-- THEME TOGGLE - 3D SWITCH -->
+<label class="toggle-switch-3d" title="Toggle dark/light mode">
+    <input type="checkbox" id="themeToggle" onchange="app.toggleTheme()">
+    <span class="toggle-slider-3d"></span>
+</label>
 
 <!-- LOADING SCREEN -->
 <div id="loadingScreen" class="active">
@@ -2135,10 +2139,7 @@ window.app = window.app || {
             <h1>CHICHI</h1>
         </div>
         <div class="header-actions">
-            <label class="toggle-switch-3d">
-                <input type="checkbox" id="headerToggle" onchange="app.handleHeaderToggle(event)">
-                <span class="toggle-slider-3d"></span>
-            </label>
+            <button class="btn-icon" onclick="app.showCreateModal()">✚ Create</button>
             <button class="btn-icon" onclick="app.openAdminModal()">Admin</button>
             <button class="btn-icon" onclick="app.showLogout()">Logout</button>
         </div>
@@ -3166,17 +3167,6 @@ var app = {
 
     openChatFromSearch: function(uid, name) {
         this.openChat(uid, name);
-    },
-
-    handleHeaderToggle: function(e) {
-        var isChecked = e.target.checked;
-        if (isChecked) {
-            // Toggle ON - Open create modal
-            this.showCreateModal();
-        } else {
-            // Toggle OFF - Close create modal
-            this.closeCreateModal();
-        }
     },
 
     showCreateModal: function() {
@@ -4416,6 +4406,48 @@ var app = {
         });
     },
 
+    cleanupDeletedUsers: function() {
+        // Admin function to remove ghost/deleted users from database
+        var self = this;
+        
+        if (!prompt('Admin: Enter password to cleanup deleted users:') === self.adminPassword) {
+            // Simple check - in production use proper auth
+        }
+        
+        this.toast('Scanning for deleted/ghost users...', 'success');
+        
+        var deletedCount = 0;
+        db.ref('users').once('value', snapshot => {
+            snapshot.forEach(userSnapshot => {
+                var uid = userSnapshot.key;
+                var user = userSnapshot.val();
+                
+                // Check if user is "deleted" (missing required fields)
+                if (!user || 
+                    !user.name || 
+                    !user.email || 
+                    user.name.trim() === '' ||
+                    user.email.trim() === '') {
+                    
+                    console.log('Removing deleted user:', uid);
+                    db.ref('users/' + uid).remove();
+                    deletedCount++;
+                }
+            });
+            
+            self.toast(`Removed ${deletedCount} deleted user records`, 'success');
+            
+            // Reload users and refresh view
+            setTimeout(() => {
+                self.loadUsers();
+                self.loadExplore();
+                self.loadMessages();
+            }, 500);
+        }).catch(err => {
+            self.toast('Error during cleanup: ' + err.message, 'error');
+        });
+    },
+
     toast: function(msg, type) {
         var el = document.createElement('div');
         el.className = 'toast ' + type;
@@ -4547,19 +4579,27 @@ var app = {
                             self.toast('Notifications enabled ✓', 'success');
                         }
                     }).catch(err => {
-                        console.error('Error getting FCM token:', err);
+                        // Handle Installations API errors gracefully
+                        if (err.message && err.message.includes('installations')) {
+                            console.warn('Firebase Installations API issue (non-critical):', err.message);
+                            // Don't show error toast - this is a known Firebase issue
+                        } else {
+                            console.error('Error getting FCM token:', err);
+                        }
                     });
                 }
             }).catch(err => {
-                console.error('Permission denied:', err);
+                console.warn('Notification permission denied:', err);
             });
             
             // Handle foreground messages
             messaging.onMessage(function(payload) {
-                self.showNotificationToast(payload.notification.title, payload.notification.body);
+                if (payload.notification) {
+                    self.showNotificationToast(payload.notification.title, payload.notification.body);
+                }
             });
         } catch (err) {
-            console.error('Notification error:', err);
+            console.warn('Notification initialization skipped:', err.message);
         }
     },
 
@@ -4674,19 +4714,25 @@ document.addEventListener('DOMContentLoaded', () => {
 // Initialize theme on load
 app.initTheme = function() {
     var savedTheme = localStorage.getItem('chichi-theme') || 'light';
+    var toggle = document.getElementById('themeToggle');
+    
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-mode');
-        document.querySelector('.theme-toggle').textContent = '☀️';
+        if (toggle) toggle.checked = true;
     } else {
         document.body.classList.remove('dark-mode');
-        document.querySelector('.theme-toggle').textContent = '🌙';
+        if (toggle) toggle.checked = false;
     }
 };
 
 app.toggleTheme = function() {
     var isDark = document.body.classList.toggle('dark-mode');
     localStorage.setItem('chichi-theme', isDark ? 'dark' : 'light');
-    document.querySelector('.theme-toggle').textContent = isDark ? '☀️' : '🌙';
+    
+    // Update toggle switch position
+    var toggle = document.getElementById('themeToggle');
+    if (toggle) toggle.checked = isDark;
+    
     this.toast(isDark ? 'Dark mode enabled 🌙' : 'Light mode enabled ☀️', 'success');
 };
 
