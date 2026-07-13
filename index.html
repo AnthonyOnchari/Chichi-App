@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHICHI - by Onchari Group</title>
+    <title>CHICHI - Social Media</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
     <link rel="icon" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783891757/uovuprr10iynda7njjnc.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -692,35 +692,7 @@
             transition: 0.3s;
         }
 
-        .earn-section {
-            margin-bottom: 20px;
-        }
 
-        .earn-section-title {
-            font-weight: 700;
-            font-size: 0.95rem;
-            margin-bottom: 12px;
-            color: var(--text);
-        }
-
-        .earn-card {
-            background: white;
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: 0.3s;
-            border-left: 4px solid var(--primary);
-        }
-
-        .earn-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .earn-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
-        .earn-amount { font-size: 0.85rem; color: var(--primary); font-weight: 700; }
-        .earn-desc { font-size: 0.8rem; color: var(--text-light); margin-top: 6px; }
 
         #messagesView {
             flex-direction: column;
@@ -1636,7 +1608,7 @@
     <div class="auth-card">
         <div class="auth-header">
             <h1>CHICHI</h1>
-            <p style="color: var(--text-light); margin: 0;">by Onchari Group</p>
+            <p style="color: var(--text-light); margin: 0;">Social Media</p>
         </div>
 
         <div class="tabs">
@@ -1686,8 +1658,8 @@
             <p class="app-subtitle">by Onchari Group</p>
         </div>
         <div class="header-actions">
-            <button class="btn-icon" onclick="app.showCreateModal()">Create</button>
-            <button class="btn-icon" onclick="app.openAdminModal()">Admin</button>
+            <button class="btn-icon" onclick="app.showCreateModal()">✎ Create</button>
+            <button class="btn-icon" onclick="app.openAdminModal()">⚙️ Admin</button>
             <button class="btn-icon" onclick="app.showLogout()">Logout</button>
         </div>
     </div>
@@ -1723,51 +1695,16 @@
         <!-- WALLET -->
         <div class="view" id="walletView">
             <div class="balance-card">
-                <div class="balance-label">Wallet Balance</div>
+                <div class="balance-label">Your Balance</div>
                 <div class="balance-amount" id="balanceDisplay">KSh 0</div>
                 <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
             </div>
 
-            <div class="earn-section">
-                <div class="earn-section-title">💰 Premium Earning Opportunities</div>
-                <div class="earn-card">
-                    <div class="earn-title">📱 Refer Friends</div>
-                    <div class="earn-amount">KSh 100 per friend</div>
-                    <div class="earn-desc">Get KSh 100 when your friend signs up and makes their first post</div>
-                </div>
-                <div class="earn-card">
-                    <div class="earn-title">✨ Sponsored Posts</div>
-                    <div class="earn-amount">KSh 500+</div>
-                    <div class="earn-desc">Create branded content and earn money from businesses</div>
-                </div>
-                <div class="earn-card">
-                    <div class="earn-title">⭐ Verified Badge</div>
-                    <div class="earn-amount">Boost earnings 3x</div>
-                    <div class="earn-desc">Get verified to unlock higher-paying opportunities</div>
-                </div>
-            </div>
-
-            <div class="earn-section">
-                <div class="earn-section-title">💡 Daily Tasks</div>
-                <div class="earn-card">
-                    <div class="earn-title">👍 Like posts</div>
-                    <div class="earn-amount">KSh 0.2</div>
-                    <div class="earn-desc">Once per post</div>
-                </div>
-                <div class="earn-card">
-                    <div class="earn-title">💬 Comment</div>
-                    <div class="earn-amount">KSh 0.5</div>
-                    <div class="earn-desc">Once per post</div>
-                </div>
-                <div class="earn-card">
-                    <div class="earn-title">📸 Create post</div>
-                    <div class="earn-amount">KSh 1</div>
-                    <div class="earn-desc">Per post created</div>
-                </div>
-                <div class="earn-card">
-                    <div class="earn-title">👥 Follow user</div>
-                    <div class="earn-amount">KSh 0.05</div>
-                    <div class="earn-desc">Per user followed</div>
+            <div style="padding: 20px; text-align: center; color: var(--text-light);">
+                <div style="font-size: 1.2rem; margin-bottom: 12px;">💰</div>
+                <div style="font-size: 0.95rem; line-height: 1.6;">
+                    Earn by liking posts, commenting, and following creators.<br>
+                    <span style="font-weight: 600; color: var(--primary);">Earnings accumulate automatically</span>
                 </div>
             </div>
         </div>
@@ -2355,9 +2292,10 @@ var app = {
                 createdAt: new Date().toLocaleString('en-KE'),
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             }).then(() => {
+                // Earn silently for posting
                 self.balance += 1;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
-                self.toast('Post shared!', 'success');
+                self.toast('Post published', 'success');
                 self.closeCreateModal();
                 self.switchView('feed');
             });
@@ -2427,13 +2365,13 @@ var app = {
             var likes = post.likes || {};
             
             if (likes[self.user.uid]) {
+                // Unlike
                 delete likes[self.user.uid];
-                self.toast('Like removed', 'success');
             } else {
+                // Like - earn silently
                 likes[self.user.uid] = true;
                 self.balance += 0.2;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
-                self.toast('+KSh 0.2', 'success');
             }
             
             db.ref('posts/' + id + '/likes').set(likes);
@@ -2447,7 +2385,6 @@ var app = {
             link.href = url;
             link.download = 'photo.jpg';
             link.click();
-            this.toast('Saved!', 'success');
         } catch (err) {
             this.toast('Download failed', 'error');
         }
@@ -2513,7 +2450,7 @@ var app = {
             var commentedUsers = post.commentedUsers || {};
             
             if (commentedUsers[self.user.uid]) {
-                self.toast('Already earned from commenting', 'error');
+                self.toast('Already commented on this post', 'error');
                 return;
             }
 
@@ -2529,10 +2466,11 @@ var app = {
             db.ref('posts/' + id + '/comments').set(comments);
             db.ref('posts/' + id + '/commentedUsers').set(commentedUsers);
             
+            // Earn silently
             self.balance += 0.5;
             db.ref('users/' + self.user.uid + '/balance').set(self.balance);
             document.querySelector('.modal-overlay').remove();
-            self.toast('+KSh 0.5', 'success');
+            self.toast('Comment added', 'success');
             self.renderFeed();
         });
     },
@@ -2580,13 +2518,13 @@ var app = {
         var isFollowing = this.following[uid] || false;
         
         if (isFollowing) {
+            // Unfollow
             delete this.following[uid];
-            this.toast('Unfollowed', 'success');
         } else {
+            // Follow - earn silently
             this.following[uid] = true;
             this.balance += 0.05;
             db.ref('users/' + this.user.uid + '/balance').set(this.balance);
-            this.toast('Following ' + name + '! +KSh 0.05', 'success');
         }
         
         db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
@@ -2683,7 +2621,6 @@ var app = {
             var followers = Math.max(0, (s.val() || 0) - 1);
             db.ref('users/' + uid + '/followers').set(followers);
         });
-        this.toast('Unfollowed ' + name, 'success');
         this.renderProfile();
     },
 
