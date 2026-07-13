@@ -3850,7 +3850,21 @@ var app = {
         var self = this;
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
-        modal.innerHTML = `<div class="modal" style="max-width: 450px;">
+        modal.style.cssText = `
+            display: flex !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: rgba(0,0,0,0.5) !important;
+            z-index: 2000 !important;
+            align-items: flex-end !important;
+            justify-content: center !important;
+            animation: smoothFadeIn 0.3s ease;
+            overflow: hidden !important;
+        `;
+        modal.innerHTML = `<div class="modal" style="max-width: 450px; display: flex; flex-direction: column; max-height: 85vh; overflow-y: scroll !important; overflow-x: hidden; background: white; width: 100%; border-radius: 28px 28px 0 0; padding: 20px; -webkit-overflow-scrolling: touch;">
             <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
             <h2 style="margin-bottom: 24px; font-weight: 700; text-align: center;">Edit Your Profile</h2>
             
@@ -3863,25 +3877,25 @@ var app = {
                 <div style="font-size: 0.8rem; color: var(--text-light); margin-top: 8px;">Tap avatar to change photo</div>
             </div>
             
-            <div class="form-group">
-                <label class="form-label">Name</label>
-                <input type="text" id="editProfileName" class="form-input" value="${this.profile.name || ''}" placeholder="Your full name">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label" style="display: block; font-weight: 600; margin-bottom: 8px; color: var(--text);">Name</label>
+                <input type="text" id="editProfileName" class="form-input" value="${this.profile.name || ''}" placeholder="Your full name" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 1rem;">
             </div>
             
-            <div class="form-group">
-                <label class="form-label">Email</label>
-                <input type="email" id="editProfileEmail" class="form-input" value="${this.user.email || ''}" placeholder="Your email" disabled style="background: #f3f4f6; cursor: not-allowed;">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label" style="display: block; font-weight: 600; margin-bottom: 8px; color: var(--text);">Email</label>
+                <input type="email" id="editProfileEmail" class="form-input" value="${this.user.email || ''}" placeholder="Your email" disabled style="background: #f3f4f6; cursor: not-allowed; width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 1rem;">
                 <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Cannot change email</div>
             </div>
             
-            <div class="form-group">
-                <label class="form-label">Bio</label>
-                <textarea id="editProfileBio" class="form-input" placeholder="Tell us about yourself..." style="min-height: 100px; resize: vertical; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-family: 'Inter', sans-serif;">${this.profile.bio || ''}</textarea>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label" style="display: block; font-weight: 600; margin-bottom: 8px; color: var(--text);">Bio</label>
+                <textarea id="editProfileBio" class="form-input" placeholder="Tell us about yourself..." style="min-height: 100px; resize: vertical; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-family: 'Inter', sans-serif; width: 100%; font-size: 1rem;">${this.profile.bio || ''}</textarea>
             </div>
             
-            <div style="display: flex; gap: 12px; margin-top: 24px;">
-                <button class="logout-cancel" onclick="this.closest('.modal-overlay').remove()" style="flex: 1; padding: 12px;">Cancel</button>
-                <button class="btn-submit" onclick="app.saveProfileChanges()" style="flex: 1;">Save Changes</button>
+            <div style="display: flex; gap: 12px; margin-top: 24px; flex-shrink: 0;">
+                <button class="logout-cancel" onclick="this.closest('.modal-overlay').remove()" style="flex: 1; padding: 12px; background: #e5e7eb; border: none; border-radius: 10px; cursor: pointer; font-weight: 600;">Cancel</button>
+                <button class="btn-submit" onclick="app.saveProfileChanges()" style="flex: 1; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600;">Save Changes</button>
             </div>
         </div>`;
         document.body.appendChild(modal);
@@ -3889,19 +3903,29 @@ var app = {
         // Auto-log modal info for debugging
         setTimeout(() => {
             console.log('%c🎯 Edit Profile Modal Opened', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
-            var editModal = document.querySelector('.modal-overlay.active .modal');
-            if (editModal) {
-                console.log('Height:', editModal.offsetHeight + 'px');
-                console.log('Scroll Height (content):', editModal.scrollHeight + 'px');
-                console.log('Max Height CSS:', window.getComputedStyle(editModal).maxHeight);
-                console.log('Overflow-Y:', window.getComputedStyle(editModal).overflowY);
-                if (editModal.scrollHeight > editModal.offsetHeight) {
-                    console.log('%c✅ Should be scrollable!', 'color: #22c55e;');
-                } else {
-                    console.log('%c❌ Content fits - no scroll needed', 'color: #ff9800;');
+            var allModals = document.querySelectorAll('.modal-overlay');
+            console.log('Total modal overlays on page:', allModals.length);
+            
+            allModals.forEach((overlay, idx) => {
+                var isActive = overlay.classList.contains('active');
+                console.log(`Overlay ${idx + 1}: ${isActive ? '✅ ACTIVE' : '❌ INACTIVE'}`);
+                
+                var editModal = overlay.querySelector('.modal');
+                if (editModal) {
+                    console.log('Height:', editModal.offsetHeight + 'px');
+                    console.log('Scroll Height (content):', editModal.scrollHeight + 'px');
+                    console.log('Max Height CSS:', window.getComputedStyle(editModal).maxHeight);
+                    console.log('Overflow-Y:', window.getComputedStyle(editModal).overflowY);
+                    console.log('Display:', window.getComputedStyle(editModal).display);
+                    console.log('Position:', window.getComputedStyle(editModal).position);
+                    if (editModal.scrollHeight > editModal.offsetHeight) {
+                        console.log('%c✅ Should be scrollable!', 'color: #22c55e;');
+                    } else {
+                        console.log('%c❌ Content fits - no scroll needed', 'color: #ff9800;');
+                    }
                 }
-            }
-        }, 100);
+            });
+        }, 200);
     },
 
     previewEditProfilePhoto: function(event) {
@@ -5089,6 +5113,10 @@ console.log('%c🎯 DEBUG COMMANDS:', 'color: #00D4AA; font-size: 14px; font-wei
 console.log('debugModal() - Log all modal info');
 console.log('showDebugPanel() - Show UI debug panel');
 console.log('testScrolling() - Test if scrolling works');
+console.log('testModal() - Create test modal with scroll content');
+console.log('');
+console.log('%cKeyboard Shortcuts:', 'color: #00D4AA; font-weight: bold;');
+console.log('Ctrl+Shift+D - Open debug panel');
 
 // Keyboard shortcut: Ctrl+Shift+D to open debug panel
 document.addEventListener('keydown', (e) => {
@@ -5098,6 +5126,94 @@ document.addEventListener('keydown', (e) => {
         console.log('%c🎯 Debug panel opened! Press Ctrl+Shift+D again to close', 'color: #00D4AA; font-weight: bold;');
     }
 });
+
+// Test modal - Creates a test modal to verify styling works
+window.testModal = function() {
+    console.log('%c🧪 Creating test modal...', 'color: #00D4AA; font-weight: bold;');
+    
+    var modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.style.cssText = `
+        display: flex !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        background: rgba(0,0,0,0.7) !important;
+        z-index: 9999 !important;
+        align-items: flex-end !important;
+        justify-content: center !important;
+        overflow: hidden !important;
+    `;
+    
+    modal.innerHTML = `<div style="
+        background: white;
+        width: 100%;
+        max-width: 500px;
+        border-radius: 28px 28px 0 0;
+        padding: 20px;
+        max-height: 85vh;
+        overflow-y: scroll !important;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+    ">
+        <h2 style="text-align: center; margin-bottom: 20px;">🧪 TEST MODAL</h2>
+        <p style="margin-bottom: 16px;">This is a test modal to verify scrolling works!</p>
+        <p style="margin-bottom: 16px;">If you can see this modal, the CSS is working!</p>
+        <p style="margin-bottom: 16px;">Try scrolling down...</p>
+        
+        <div style="height: 200px; background: #f3f4f6; border-radius: 10px; padding: 16px; margin-bottom: 16px; text-align: center; display: flex; align-items: center; justify-content: center;">
+            Content Block 1
+        </div>
+        
+        <div style="height: 200px; background: #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; text-align: center; display: flex; align-items: center; justify-content: center;">
+            Content Block 2
+        </div>
+        
+        <div style="height: 200px; background: #d1d5db; border-radius: 10px; padding: 16px; margin-bottom: 16px; text-align: center; display: flex; align-items: center; justify-content: center;">
+            Content Block 3
+        </div>
+        
+        <div style="height: 200px; background: #9ca3af; border-radius: 10px; padding: 16px; margin-bottom: 16px; text-align: center; display: flex; align-items: center; justify-content: center; color: white;">
+            Content Block 4
+        </div>
+        
+        <button onclick="this.closest('.modal-overlay').remove(); console.log('%c✅ Test modal closed', 'color: #22c55e; font-weight: bold;');" style="
+            width: 100%;
+            padding: 12px;
+            background: #00D4AA;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+        ">Close Test Modal</button>
+    </div>`;
+    
+    document.body.appendChild(modal);
+    
+    setTimeout(() => {
+        console.log('%c✅ Test modal created and visible!', 'color: #22c55e; font-weight: bold;');
+        var testModal = document.querySelector('.modal-overlay.active');
+        if (testModal) {
+            console.log('✅ Modal-overlay found and ACTIVE');
+            console.log('Display:', window.getComputedStyle(testModal).display);
+            console.log('Position:', window.getComputedStyle(testModal).position);
+            
+            var innerModal = testModal.querySelector('div');
+            if (innerModal) {
+                console.log('Inner modal found');
+                console.log('Height:', innerModal.offsetHeight + 'px');
+                console.log('Scroll Height:', innerModal.scrollHeight + 'px');
+                if (innerModal.scrollHeight > innerModal.offsetHeight) {
+                    console.log('%c✅ TEST MODAL IS SCROLLABLE!', 'color: #22c55e; font-weight: bold;');
+                }
+            }
+        }
+    }, 100);
+};
 
 // Make it easy to access from browser console
 console.log('%c✅ Type debugModal() in console to check modal scrolling!', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
