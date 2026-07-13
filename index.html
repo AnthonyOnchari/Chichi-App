@@ -3890,9 +3890,11 @@ var app = {
         
         Promise.all(uploadPromises).then(urls => {
             self.sendChatImages(urls);
-        
-        // Reset input
-        document.getElementById('chatImageInput').value = '';
+            // Reset input
+            document.getElementById('chatImageInput').value = '';
+        }).catch(err => {
+            self.toast('Image upload failed', 'error');
+        });
     },
 
     uploadChatImage: function(file) {
