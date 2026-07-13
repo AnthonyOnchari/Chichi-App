@@ -1134,11 +1134,26 @@
         .chat-modal-messages {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
             padding: 16px;
             display: flex;
             flex-direction: column;
             gap: 12px;
             background: linear-gradient(135deg, rgba(0, 212, 170, 0.05) 0%, rgba(255, 255, 255, 0.5) 100%);
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .chat-modal-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .chat-modal-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .chat-modal-messages::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 2px;
         }
 
         .chat-message {
@@ -1426,7 +1441,22 @@
             padding: 20px;
             max-height: 90vh;
             overflow-y: auto;
+            overflow-x: hidden;
             animation: smoothFadeIn 0.3s ease;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .modal::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .modal::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .modal::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
         }
 
         .create-modal {
@@ -1437,7 +1467,22 @@
             padding: 20px;
             max-height: 90vh;
             overflow-y: auto;
+            overflow-x: hidden;
             animation: smoothFadeIn 0.3s ease;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .create-modal::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .create-modal::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .create-modal::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
         }
 
         .modal-close {
@@ -2240,10 +2285,11 @@ window.app = window.app || {
                 <div class="nav-icon">🔍</div>
                 <div>Explore</div>
             </div>
-            <div class="nav-item" onclick="app.switchView('messages')">
+            <div class="nav-item" onclick="app.switchView('messages')" style="position: relative;">
                 <div class="nav-icon">💬</div>
                 <div>Messages</div>
                 <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
+                <div class="unread-indicator" id="messagesUnreadDot" style="display: none; position: absolute; top: 0; right: 0; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);"></div>
             </div>
             <div class="nav-item" onclick="app.switchView('profile')">
                 <div class="nav-icon">👤</div>
@@ -2272,8 +2318,11 @@ window.app = window.app || {
             <button class="chat-modal-back" onclick="app.closeChatModal()">←</button>
             <div class="chat-modal-avatar" id="chatModalAvatar">U</div>
             <div class="chat-modal-header-text">
-                <h3 id="chatModalUserName">Chat</h3>
-                <p>Active now</p>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h3 id="chatModalUserName" style="margin: 0;">Chat</h3>
+                    <div id="chatUnreadDot" style="width: 10px; height: 10px; background: #22c55e; border-radius: 50%; display: none; box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);"></div>
+                </div>
+                <p id="chatModalStatus" style="margin: 4px 0 0 0;">Active now</p>
             </div>
         </div>
         <div class="chat-modal-messages" id="chatModalMessages"></div>
@@ -3402,7 +3451,7 @@ var app = {
                                     <div class="post-time">${p.createdAt}</div>
                                 </div>
                             </div>
-                            ${p.userId === this.user.uid ? `<button class="post-menu" onclick="app.deletePost('${p.id}')">Delete</button>` : ''}
+                            ${p.userId === this.user.uid ? `<button class="post-menu" onclick="app.deletePost('${p.id}')">🗑️</button>` : ''}
                         </div>
                         <img src="${p.photoUrl}" class="post-image">
                         <div class="post-caption">${p.caption}</div>
@@ -3704,22 +3753,14 @@ var app = {
                     <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
                 </div>
                 <div style="padding: 16px; text-align: center; color: var(--text-light); font-size: 0.85rem;">
-                    <div style="font-weight: 600; color: var(--primary); margin-bottom: 8px;">Watch Ads & Earn</div>
+                    <div style="font-weight: 600; color: var(--primary); margin-bottom: 8px;">💰 Earn Money</div>
                     <div style="line-height: 1.6; margin-bottom: 12px;">
-                        Watch advertisements and earn money instantly. Every ad watched adds to your balance!
+                        Exciting earning features coming soon! We're designing the best way for you to earn.
                     </div>
                 </div>
-                <div id="adsContainer" style="padding: 16px; background: white; border-radius: 12px; margin-bottom: 16px; min-height: 250px; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--border);">
-                    <ins class="adsbygoogle"
-                         style="display:block"
-                         data-ad-client="ca-pub-8335709146055597"
-                         data-ad-slot="9340032456"
-                         data-ad-format="auto"
-                         data-full-width-responsive="true"></ins>
-                </div>
-                <button class="btn-submit" id="adButton" onclick="app.watchAd()" style="width: 100%; margin-bottom: 12px;">✓ Ad Watched - Claim KSh 1</button>
+                <button class="btn-submit" style="width: 100%; margin-bottom: 12px; background: #ccc; cursor: not-allowed; opacity: 0.6;" disabled>⏳ Coming Soon</button>
                 <div style="text-align: center; font-size: 0.75rem; color: var(--text-light);">
-                    <span id="adsRemaining">${this.getAdsRemaining()}</span>/10 ads remaining today
+                    Check back soon for new earning opportunities!
                 </div>
             </div>
             </div>
@@ -3748,7 +3789,7 @@ var app = {
                                 <div class="post-time">${p.createdAt}</div>
                             </div>
                         </div>
-                        <button class="post-menu" onclick="app.deletePost('${p.id}')">Delete</button>
+                        <button class="post-menu" onclick="app.deletePost('${p.id}')">🗑️</button>
                     </div>
                     <img src="${p.photoUrl}" class="post-image">
                     <div class="post-caption">${p.caption}</div>
@@ -3808,46 +3849,111 @@ var app = {
         var self = this;
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
-        modal.innerHTML = `<div class="modal" style="max-width: 400px;">
+        modal.innerHTML = `<div class="modal" style="max-width: 450px;">
             <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-            <h2 style="margin-bottom: 20px; font-weight: 700;">Edit Profile</h2>
+            <h2 style="margin-bottom: 24px; font-weight: 700; text-align: center;">Edit Your Profile</h2>
+            
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div class="profile-avatar-large" id="editProfilePhotoPreview" style="background-image: url(${this.profile.profilePhoto || ''}); margin: 0 auto; cursor: pointer; position: relative;" onclick="document.getElementById('editProfilePhotoInput').click()">
+                    ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
+                    <div style="position: absolute; bottom: 0; right: 0; background: var(--primary); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 3px solid white;">📷</div>
+                </div>
+                <input type="file" id="editProfilePhotoInput" accept="image/*" style="display: none;" onchange="app.previewEditProfilePhoto(event)">
+                <div style="font-size: 0.8rem; color: var(--text-light); margin-top: 8px;">Tap avatar to change photo</div>
+            </div>
             
             <div class="form-group">
                 <label class="form-label">Name</label>
-                <input type="text" id="editProfileName" class="form-input" value="${this.profile.name || ''}" placeholder="Your name">
+                <input type="text" id="editProfileName" class="form-input" value="${this.profile.name || ''}" placeholder="Your full name">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" id="editProfileEmail" class="form-input" value="${this.user.email || ''}" placeholder="Your email" disabled style="background: #f3f4f6; cursor: not-allowed;">
+                <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Cannot change email</div>
             </div>
             
             <div class="form-group">
                 <label class="form-label">Bio</label>
-                <textarea id="editProfileBio" class="form-input" placeholder="Tell us about yourself..." style="min-height: 80px; resize: vertical;">${this.profile.bio || ''}</textarea>
+                <textarea id="editProfileBio" class="form-input" placeholder="Tell us about yourself..." style="min-height: 100px; resize: vertical; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-family: 'Inter', sans-serif;">${this.profile.bio || ''}</textarea>
             </div>
             
-            <div style="display: flex; gap: 12px;">
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
                 <button class="logout-cancel" onclick="this.closest('.modal-overlay').remove()" style="flex: 1; padding: 12px;">Cancel</button>
-                <button class="btn-submit" onclick="app.saveProfileChanges()" style="flex: 1;">Save</button>
+                <button class="btn-submit" onclick="app.saveProfileChanges()" style="flex: 1;">Save Changes</button>
             </div>
         </div>`;
         document.body.appendChild(modal);
     },
 
+    previewEditProfilePhoto: function(event) {
+        var file = event.target.files[0];
+        if (!file) return;
+        
+        var reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('editProfilePhotoPreview').style.backgroundImage = 'url(' + e.target.result + ')';
+            this.editProfilePhoto = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    },
+
     saveProfileChanges: function() {
         var name = document.getElementById('editProfileName').value.trim();
         var bio = document.getElementById('editProfileBio').value.trim();
+        var self = this;
         
         if (!name) {
             this.toast('Name cannot be empty', 'error');
             return;
         }
         
-        this.profile.name = name;
-        this.profile.bio = bio;
-        db.ref('users/' + this.user.uid).update({
-            name: name,
-            bio: bio
-        });
-        this.toast('Profile updated!', 'success');
-        document.querySelector('.modal-overlay').remove();
-        this.renderProfile();
+        this.toast('Saving profile...', 'success');
+        
+        // If photo was changed, upload it
+        if (this.editProfilePhoto && this.editProfilePhoto.startsWith('data:')) {
+            // Upload to Cloudinary
+            var formData = new FormData();
+            fetch(this.editProfilePhoto).then(res => res.blob()).then(blob => {
+                formData.append('file', blob);
+                formData.append('upload_preset', 'chichi_photos');
+                formData.append('cloud_name', 'u1uilb6f');
+                
+                fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
+                    method: 'POST',
+                    body: formData
+                }).then(res => res.json()).then(data => {
+                    if (data.secure_url) {
+                        // Save profile with new photo
+                        self.profile.name = name;
+                        self.profile.bio = bio;
+                        self.profile.profilePhoto = data.secure_url;
+                        db.ref('users/' + self.user.uid).update({
+                            name: name,
+                            bio: bio,
+                            profilePhoto: data.secure_url
+                        });
+                        self.toast('Profile updated!', 'success');
+                        self.editProfilePhoto = null;
+                        document.querySelector('.modal-overlay').remove();
+                        self.renderProfile();
+                    }
+                }).catch(err => {
+                    self.toast('Photo upload failed', 'error');
+                });
+            });
+        } else {
+            // Save without photo change
+            this.profile.name = name;
+            this.profile.bio = bio;
+            db.ref('users/' + this.user.uid).update({
+                name: name,
+                bio: bio
+            });
+            this.toast('Profile updated!', 'success');
+            document.querySelector('.modal-overlay').remove();
+            this.renderProfile();
+        }
     },
 
     showProfilePhotoModal: function() {
@@ -4058,8 +4164,11 @@ var app = {
         conversations.forEach(conv => {
             html += `
                 <div class="message-item ${conv.isUnread ? 'unread' : ''}" onclick="app.openChat('${conv.uid}', '${conv.name}')">
-                    <div class="message-avatar" style="background-image: url(${conv.profilePhoto || ''});">
-                        ${!conv.profilePhoto ? conv.name.charAt(0).toUpperCase() : ''}
+                    <div style="position: relative;">
+                        <div class="message-avatar" style="background-image: url(${conv.profilePhoto || ''});">
+                            ${!conv.profilePhoto ? conv.name.charAt(0).toUpperCase() : ''}
+                        </div>
+                        ${conv.unreadCount > 0 ? '<div style="position: absolute; top: -4px; right: -4px; width: 22px; height: 22px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">' + conv.unreadCount + '</div>' : ''}
                     </div>
                     <div class="message-content">
                         <div class="message-top">
@@ -4068,7 +4177,6 @@ var app = {
                         </div>
                         <div class="message-preview ${conv.isUnread ? 'unread-text' : ''}">${conv.lastMessage}</div>
                     </div>
-                    ${conv.unreadCount > 0 ? '<div class="unread-badge">' + conv.unreadCount + '</div>' : ''}
                 </div>
             `;
         });
@@ -4082,6 +4190,14 @@ var app = {
         document.getElementById('chatModalUserName').textContent = name;
         document.getElementById('chatModalMessages').innerHTML = '';
         document.getElementById('chatModalInput').value = '';
+        
+        // Check if there are unread messages and show green dot
+        var chatKey = [this.user.uid, uid].sort().join('_');
+        var unreadCount = (this.unreadMessages && this.unreadMessages[chatKey]) ? this.unreadMessages[chatKey].count : 0;
+        var dot = document.getElementById('chatUnreadDot');
+        if (dot) {
+            dot.style.display = unreadCount > 0 ? 'block' : 'none';
+        }
         
         var avatar = document.getElementById('chatModalAvatar');
         var userPhoto = this.users[uid] && this.users[uid].profilePhoto;
@@ -4100,6 +4216,9 @@ var app = {
             self.loadChatMessages();
             self.markAsRead(uid);
             document.getElementById('chatModalInput').focus();
+            // Hide green dot after loading messages (they're now reading)
+            var dot = document.getElementById('chatUnreadDot');
+            if (dot) dot.style.display = 'none';
         }, 100);
     },
 
@@ -4344,11 +4463,15 @@ var app = {
             });
         }
         var badge = document.getElementById('messagesBadge');
+        var dot = document.getElementById('messagesUnreadDot');
+        
         if (unreadCount > 0) {
             badge.textContent = unreadCount;
             badge.style.display = 'flex';
+            if (dot) dot.style.display = 'block';
         } else {
             badge.style.display = 'none';
+            if (dot) dot.style.display = 'none';
         }
     },
 
@@ -4422,43 +4545,14 @@ var app = {
     },
 
     watchAd: function() {
-        var self = this;
-        var today = new Date().toDateString();
-        var adsWatchedKey = 'adsWatched_' + today + '_' + this.user.uid;
-        var adsWatchedToday = parseInt(localStorage.getItem(adsWatchedKey) || '0');
-        
-        if (adsWatchedToday >= 10) {
-            this.toast('You have reached your daily ad limit (10/10)', 'error');
-            return;
-        }
-
-        // Add earnings
-        this.balance += 1;
-        db.ref('users/' + this.user.uid + '/balance').set(this.balance);
-        
-        // Track ad watch
-        localStorage.setItem(adsWatchedKey, (adsWatchedToday + 1).toString());
-        
-        // Update display
-        document.getElementById('balanceDisplay').textContent = 'KSh ' + this.balance.toFixed(2);
-        var remaining = 10 - (adsWatchedToday + 1);
-        document.getElementById('adsRemaining').textContent = remaining;
-        
-        var button = document.getElementById('adButton');
-        button.disabled = true;
-        
-        this.toast('KSh 1 added to your balance! (' + (adsWatchedToday + 1) + '/10 ads today)', 'success');
-        
-        setTimeout(() => {
-            button.disabled = false;
-        }, 2000);
+        // Earning features disabled until new earning system is implemented
+        this.toast('Earning features coming soon!', 'info');
+        return;
     },
 
     getAdsRemaining: function() {
-        var today = new Date().toDateString();
-        var adsWatchedKey = 'adsWatched_' + today + '_' + this.user.uid;
-        var adsWatchedToday = parseInt(localStorage.getItem(adsWatchedKey) || '0');
-        return Math.max(0, 10 - adsWatchedToday);
+        // Earning features disabled
+        return 0;
     },
 
     showLogout: function() {
