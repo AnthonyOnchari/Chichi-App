@@ -2621,6 +2621,9 @@ var app = {
         auth.sendPasswordResetEmail(email).then(() => {
             self.toast('Password reset link sent to ' + email, 'success');
             self.closeForgotPasswordModal();
+        }).catch(err => {
+            self.toast('Error: ' + err.message, 'error');
+        });
     },
 
     openAdminModal: function() {
