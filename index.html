@@ -3082,6 +3082,8 @@ var app = {
                 self.toast('Post published', 'success');
                 self.closeCreateModal();
                 self.switchView('feed');
+            }).catch(err => {
+                self.toast('Error publishing post', 'error');
             });
         }).catch(err => this.toast('Upload failed', 'error'));
     },
@@ -4242,7 +4244,6 @@ var app = {
             // Request notification permission
             Notification.requestPermission().then(function(permission) {
                 if (permission === 'granted') {
-                    
                     // Get FCM token
                     messaging.getToken({
                         vapidKey: 'BAFdptanJv5UUvAEM702UGDSlZ6UrkrZVA5paCzmJzhIyjaGZVumjyecwGzit-1vGmVwOVB45Y2Js29I8sAuflA'
@@ -4252,14 +4253,20 @@ var app = {
                             db.ref('users/' + self.user.uid + '/fcmToken').set(token);
                             self.toast('Notifications enabled ✓', 'success');
                         }
-                } else {
+                    }).catch(err => {
+                        console.error('Error getting FCM token:', err);
+                    });
                 }
+            }).catch(err => {
+                console.error('Permission denied:', err);
+            });
             
             // Handle foreground messages
             messaging.onMessage(function(payload) {
                 self.showNotificationToast(payload.notification.title, payload.notification.body);
             });
         } catch (err) {
+            console.error('Notification error:', err);
         }
     },
 
