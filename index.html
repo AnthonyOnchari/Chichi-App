@@ -3872,6 +3872,9 @@ var app = {
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 }, 50);
             }
+        }).catch(err => {
+            self.toast('Failed to send message', 'error');
+        });
     },
 
     handleChatImageUpload: function(e) {
@@ -3932,6 +3935,9 @@ var app = {
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 }, 50);
             }
+        }).catch(err => {
+            self.toast('Failed to send image', 'error');
+        });
     },
 
     trackUnreadMessages: function() {
