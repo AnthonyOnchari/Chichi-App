@@ -21,6 +21,79 @@
         }
 
         :root {
+            --primary: #2E5BFF;
+            --primary-dark: #1F3FA3;
+            --text: #1a1a1a;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --light: #f9fafb;
+            --bg: #ffffff;
+        }
+
+        body.dark-mode {
+            --primary: #4E7BFF;
+            --primary-dark: #2E5BFF;
+            --text: #f0f0f0;
+            --text-light: #b0b0b0;
+            --border: #404040;
+            --light: #2a2a2a;
+            --bg: #1a1a1a;
+        }
+
+        body.dark-mode {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        body.dark-mode .auth-card,
+        body.dark-mode .modal,
+        body.dark-mode .card,
+        body.dark-mode input,
+        body.dark-mode textarea,
+        body.dark-mode select,
+        body.dark-mode .message-item,
+        body.dark-mode .search-user,
+        body.dark-mode .post-card,
+        body.dark-mode .balance-card {
+            background: var(--light);
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        body.dark-mode input::placeholder,
+        body.dark-mode textarea::placeholder {
+            color: var(--text-light);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        body.dark-mode .theme-toggle {
+            background: #FFB800;
+        }
+
+        :root {
             --primary: #00D4AA;
             --primary-dark: #00B894;
             --dark: #1f2937;
@@ -1878,6 +1951,8 @@
     </style>
 </head>
 <body>
+<!-- THEME TOGGLE -->
+<button class="theme-toggle" onclick="app.toggleTheme()" title="Toggle dark/light mode">🌙</button>
 
 <!-- LOADING SCREEN -->
 <div id="loadingScreen" class="active">
@@ -2272,14 +2347,11 @@ firebase.initializeApp(firebaseConfig);
 
 firebase.database().ref('.info/connected').on('value', function(snapshot) {
   if (snapshot.val() === true) {
-    console.log('✓ Firebase connected and ready');
   } else {
-    console.log('✗ Firebase disconnected');
   }
 });
 
 var loadingTimeout = setTimeout(() => {
-  console.log('Loading timeout - showing auth/app anyway');
   document.getElementById('loadingScreen').classList.remove('active');
   document.getElementById('authPage').style.display = 'flex';
 }, 3000);  // Reduced from 8000ms to 3000ms
@@ -2311,29 +2383,20 @@ var app = {
         // Register Service Worker for push notifications
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/firebase-messaging-sw.js').then(reg => {
-                console.log('Service Worker registered for notifications');
                 self.initNotifications();
-            }).catch(err => {
-                console.log('Service Worker registration failed:', err);
-            });
         }
         
         auth.onAuthStateChanged(u => {
             clearTimeout(loadingTimeout);
-            console.log('Auth state changed:', u ? 'Logged in' : 'Not logged in');
             if (u) {
                 self.user = u;
-                console.log('User UID:', u.uid);
                 
                 // Try to load profile, but show app regardless
                 db.ref('users/' + u.uid).once('value', s => {
-                    console.log('Profile loaded:', s.exists());
                     if (s.exists()) {
                         self.profile = s.val();
                         self.balance = self.profile.balance || 0;
-                        console.log('Profile data set');
                     } else {
-                        console.log('Profile does not exist, using defaults');
                         self.profile = {
                             name: u.displayName || 'User',
                             email: u.email,
@@ -2346,11 +2409,6 @@ var app = {
                     }
                     self.loadProfile();
                     self.showApp();
-                }).catch(err => {
-                    console.error('Error loading profile:', err);
-                    self.profile = { name: 'User', email: u.email, bio: '', profilePhoto: '', balance: 0, followers: 0, following: 0 };
-                    self.showApp();
-                });
             } else {
                 self.showAuth();
             }
@@ -2372,16 +2430,18 @@ var app = {
     },
 
     showAuth: function() {
-        console.log('Showing auth page');
         document.getElementById('loadingScreen').classList.remove('active');
         document.getElementById('authPage').style.display = 'flex';
         document.getElementById('mainApp').style.display = 'none';
         document.getElementById('adminPortal').style.display = 'none';
-        document.querySelector('.bottom-nav').style.display = 'none';
+        var nav = document.querySelector('.bottom-nav');
+        if (nav) nav.style.display = 'none';
+        
+        // Hide all views
+        document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
     },
 
     showApp: function() {
-        console.log('Showing main app');
         document.getElementById('loadingScreen').classList.remove('active');
         document.getElementById('authPage').style.display = 'none';
         document.getElementById('mainApp').classList.add('active');
@@ -2396,7 +2456,6 @@ var app = {
         self.trackUnreadMessages();
         self.switchView('feed');
         
-        console.log('App shown, data loading...');
     },
 
     loadProfile: function() {
@@ -2538,13 +2597,6 @@ var app = {
         auth.sendPasswordResetEmail(email).then(() => {
             self.toast('Password reset link sent to ' + email, 'success');
             self.closeForgotPasswordModal();
-        }).catch(err => {
-            if (err.code === 'auth/user-not-found') {
-                self.toast('No account found with this email', 'error');
-            } else {
-                self.toast('Error: ' + err.message, 'error');
-            }
-        });
     },
 
     openAdminModal: function() {
@@ -3248,7 +3300,6 @@ var app = {
             db.ref('users/' + uid + '/fcmToken').once('value', snap => {
                 if (snap.val()) {
                     // In a real app, you'd call a Cloud Function to send the notification
-                    console.log('Sending follow notification to', name);
                 }
             });
         }
@@ -3523,9 +3574,10 @@ var app = {
         var self = this;
         var sorted = [];
         for (var uid in this.users) {
-            // Only include valid users (not deleted, has name)
-            if (uid !== this.user.uid && this.users[uid] && this.users[uid].name) {
-                sorted.push({ uid: uid, user: this.users[uid] });
+            var user = this.users[uid];
+            // Only include VALID users: must have name, email, and not be null
+            if (uid !== this.user.uid && user && user.name && user.email && typeof user === 'object') {
+                sorted.push({ uid: uid, user: user });
             }
         }
         sorted.sort((a, b) => (b.user.followers || 0) - (a.user.followers || 0));
@@ -3561,8 +3613,8 @@ var app = {
         userIds.forEach(uid => {
             if (uid !== this.user.uid) {
                 var u = this.users[uid];
-                // Skip deleted/null users
-                if (!u || !u.name) return;
+                // Skip deleted/null/invalid users
+                if (!u || !u.name || !u.email || typeof u !== 'object') return;
                 
                 var chatKey = [this.user.uid, uid].sort().join('_');
                 var unreadCount = 0;
@@ -3793,10 +3845,6 @@ var app = {
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 }, 50);
             }
-        }).catch(err => {
-            self.toast('Failed to send', 'error');
-            input.focus();
-        });
     },
 
     handleChatImageUpload: function(e) {
@@ -3812,9 +3860,6 @@ var app = {
         
         Promise.all(uploadPromises).then(urls => {
             self.sendChatImages(urls);
-        }).catch(err => {
-            self.toast('Failed to upload images', 'error');
-        });
         
         // Reset input
         document.getElementById('chatImageInput').value = '';
@@ -3860,9 +3905,6 @@ var app = {
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 }, 50);
             }
-        }).catch(err => {
-            self.toast('Failed to send image', 'error');
-        });
     },
 
     trackUnreadMessages: function() {
@@ -4165,35 +4207,24 @@ var app = {
             // Request notification permission
             Notification.requestPermission().then(function(permission) {
                 if (permission === 'granted') {
-                    console.log('Notification permission granted');
                     
                     // Get FCM token
                     messaging.getToken({
                         vapidKey: 'BAFdptanJv5UUvAEM702UGDSlZ6UrkrZVA5paCzmJzhIyjaGZVumjyecwGzit-1vGmVwOVB45Y2Js29I8sAuflA'
                     }).then(token => {
                         if (token) {
-                            console.log('FCM Token:', token);
                             // Save token to Firebase
                             db.ref('users/' + self.user.uid + '/fcmToken').set(token);
                             self.toast('Notifications enabled ✓', 'success');
                         }
-                    }).catch(err => {
-                        console.log('Error getting FCM token:', err);
-                    });
                 } else {
-                    console.log('Notification permission denied');
                 }
-            }).catch(err => {
-                console.log('Error requesting notification permission:', err);
-            });
             
             // Handle foreground messages
             messaging.onMessage(function(payload) {
-                console.log('Message received in foreground:', payload);
                 self.showNotificationToast(payload.notification.title, payload.notification.body);
             });
         } catch (err) {
-            console.log('Notification initialization error:', err);
         }
     },
 
@@ -4227,7 +4258,6 @@ var app = {
     sendNotification: function(userId, title, body, data) {
         // This would typically be called from a Cloud Function
         // For now, we're just logging it
-        console.log('Notification to send to', userId, ':', title, body);
     },
 
     showNotificationPreferences: function() {
@@ -4293,9 +4323,30 @@ var app = {
 
 app.init();
 
+// Initialize theme on load
+app.initTheme = function() {
+    var savedTheme = localStorage.getItem('chichi-theme') || 'light';
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.querySelector('.theme-toggle').textContent = '☀️';
+    } else {
+        document.body.classList.remove('dark-mode');
+        document.querySelector('.theme-toggle').textContent = '🌙';
+    }
+};
+
+app.toggleTheme = function() {
+    var isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('chichi-theme', isDark ? 'dark' : 'light');
+    document.querySelector('.theme-toggle').textContent = isDark ? '☀️' : '🌙';
+    this.toast(isDark ? 'Dark mode enabled 🌙' : 'Light mode enabled ☀️', 'success');
+};
+
+// Load saved theme on startup
+app.initTheme();
+
 // Google Funding Choices Consent Popup
 function consentPopup() {
-    console.log('Google Funding Choices popup loaded');
 }
 
 // Initialize Google AdSense
