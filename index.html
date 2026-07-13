@@ -259,7 +259,7 @@
             width: 100%;
             overflow-y: auto;
             flex-direction: column;
-            padding-bottom: 100px;
+            padding-bottom: 110px;
             animation: smoothFadeIn 0.4s ease;
         }
 
@@ -1048,17 +1048,17 @@
             width: 100%;
             display: flex;
             justify-content: space-around;
-            align-items: flex-end;
+            align-items: center;
             background: white;
             border-top: 1px solid var(--border);
-            padding: 8px 0 16px 0;
+            padding: 8px 0 20px 0;
             box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
         }
 
         .nav-item {
             flex: 1;
             text-align: center;
-            padding: 8px;
+            padding: 8px 4px;
             cursor: pointer;
             color: var(--text-light);
             display: flex;
@@ -1066,11 +1066,11 @@
             align-items: center;
             justify-content: center;
             gap: 4px;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             transition: 0.3s;
             border-radius: 12px;
-            margin: 0 4px;
             position: relative;
+            min-width: 50px;
         }
 
         .nav-item.active {
@@ -1079,13 +1079,14 @@
         }
 
         .nav-icon { 
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 700;
+            line-height: 1;
         }
 
         .fab-button {
             position: absolute;
-            bottom: 30px;
+            bottom: 35px;
             left: 50%;
             transform: translateX(-50%);
             width: 56px;
@@ -1098,11 +1099,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             box-shadow: 0 4px 16px rgba(0, 212, 170, 0.4);
             z-index: 991;
             transition: 0.3s;
             font-weight: 800;
+            line-height: 1;
         }
 
         .fab-button:hover {
@@ -1117,7 +1119,7 @@
         .nav-badge {
             position: absolute;
             top: 4px;
-            right: 8px;
+            right: 4px;
             width: 16px;
             height: 16px;
             background: #ff4444;
@@ -1128,6 +1130,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            border: 2px solid white;
         }
 
         .modal-overlay {
@@ -1840,7 +1843,6 @@
                 <div class="nav-icon">◉</div>
                 <div>Explore</div>
             </div>
-            <div style="flex: 1;"></div>
             <div class="nav-item" onclick="app.switchView('messages')">
                 <div class="nav-icon">✉</div>
                 <div>Messages</div>
@@ -2429,11 +2431,24 @@ var app = {
     },
 
     adminDeletePost: function(id) {
-        if (confirm('Delete this post permanently?')) {
-            db.ref('posts/' + id).remove();
-            this.toast('Post deleted', 'success');
-            this.loadAdminPosts();
-        }
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `<div class="logout-card">
+            <h3>Delete Post?</h3>
+            <p>Permanent action</p>
+            <div class="logout-buttons">
+                <button class="logout-cancel" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                <button class="logout-confirm" onclick="app.confirmAdminDeletePost('${id}')">Delete</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    },
+
+    confirmAdminDeletePost: function(id) {
+        db.ref('posts/' + id).remove();
+        document.querySelector('.modal-overlay').remove();
+        this.toast('Post deleted', 'success');
+        this.loadAdminPosts();
     },
 
     loadActivityLog: function() {
@@ -2774,15 +2789,28 @@ var app = {
     },
 
     deletePost: function(id) {
-        if (confirm('Delete this post?')) {
-            db.ref('posts/' + id).remove();
-            var post = document.getElementById('post-' + id);
-            if (post) {
-                post.style.opacity = '0';
-                setTimeout(() => post.remove(), 300);
-            }
-            this.toast('Deleted', 'success');
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `<div class="logout-card">
+            <h3>Delete Post?</h3>
+            <p>This cannot be undone</p>
+            <div class="logout-buttons">
+                <button class="logout-cancel" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                <button class="logout-confirm" onclick="app.confirmDeletePost('${id}')">Delete</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    },
+
+    confirmDeletePost: function(id) {
+        db.ref('posts/' + id).remove();
+        var post = document.getElementById('post-' + id);
+        if (post) {
+            post.style.opacity = '0';
+            setTimeout(() => post.remove(), 300);
         }
+        document.querySelector('.modal-overlay').remove();
+        this.toast('Post deleted', 'success');
     },
 
     viewComments: function(id) {
@@ -3018,20 +3046,49 @@ var app = {
     },
 
     showEditProfileModal: function() {
-        var name = prompt('Edit name:', this.profile.name || '');
-        if (name !== null) {
-            var bio = prompt('Edit bio:', this.profile.bio || '');
-            if (bio !== null) {
-                this.profile.name = name;
-                this.profile.bio = bio;
-                db.ref('users/' + this.user.uid).update({
-                    name: name,
-                    bio: bio
-                });
-                this.toast('Profile updated!', 'success');
-                this.renderProfile();
-            }
+        var self = this;
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `<div class="modal" style="max-width: 400px;">
+            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+            <h2 style="margin-bottom: 20px; font-weight: 700;">Edit Profile</h2>
+            
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" id="editProfileName" class="form-input" value="${this.profile.name || ''}" placeholder="Your name">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Bio</label>
+                <textarea id="editProfileBio" class="form-input" placeholder="Tell us about yourself..." style="min-height: 80px; resize: vertical;">${this.profile.bio || ''}</textarea>
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+                <button class="logout-cancel" onclick="this.closest('.modal-overlay').remove()" style="flex: 1; padding: 12px;">Cancel</button>
+                <button class="btn-submit" onclick="app.saveProfileChanges()" style="flex: 1;">Save</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    },
+
+    saveProfileChanges: function() {
+        var name = document.getElementById('editProfileName').value.trim();
+        var bio = document.getElementById('editProfileBio').value.trim();
+        
+        if (!name) {
+            this.toast('Name cannot be empty', 'error');
+            return;
         }
+        
+        this.profile.name = name;
+        this.profile.bio = bio;
+        db.ref('users/' + this.user.uid).update({
+            name: name,
+            bio: bio
+        });
+        this.toast('Profile updated!', 'success');
+        document.querySelector('.modal-overlay').remove();
+        this.renderProfile();
     },
 
     showProfilePhotoModal: function() {
