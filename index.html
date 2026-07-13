@@ -13,8 +13,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         * {
             margin: 0;
@@ -1953,6 +1951,21 @@
     </style>
 </head>
 <body>
+<!-- APP PLACEHOLDER - Prevents "app is not defined" errors on startup -->
+<script>
+window.app = window.app || {
+    handleSearch: function() {},
+    toggleTheme: function() {},
+    openChatFromSearch: function() {},
+    toggleFollow: function() {},
+    closeSearchModal: function() {},
+    showLogout: function() {},
+    switchView: function() {},
+    showAdmin: function() {},
+    toast: function() {}
+};
+</script>
+
 <!-- THEME TOGGLE -->
 <button class="theme-toggle" onclick="app.toggleTheme()" title="Toggle dark/light mode">🌙</button>
 
@@ -4358,11 +4371,8 @@ app.initTheme();
 function consentPopup() {
 }
 
-// Initialize Google AdSense
-(adsbygoogle = window.adsbygoogle || []).push({
-    google_ad_client: "ca-pub-8335709146055597",
-    enable_page_level_ads: true
-});
+// Note: Google AdSense should initialize automatically with the script tag
+
 </script>
 
 </body>
