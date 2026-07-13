@@ -7,6 +7,7 @@
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
     <link rel="icon" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783891757/uovuprr10iynda7njjnc.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8335709146055597" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -189,6 +190,11 @@
             cursor: pointer;
             font-family: 'Inter', sans-serif;
             transition: 0.3s;
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .main-app {
@@ -428,34 +434,6 @@
         .post-action.liked {
             color: #ff4444;
             font-weight: 600;
-        }
-
-        .explore-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            gap: 20px;
-            padding: 20px;
-        }
-
-        .explore-search-btn {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            border: none;
-            padding: 16px 32px;
-            border-radius: 20px;
-            font-weight: 700;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: 0.3s;
-            box-shadow: 0 4px 12px rgba(0, 212, 170, 0.3);
-        }
-
-        .explore-search-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 212, 170, 0.4);
         }
 
         .search-modal-overlay {
@@ -1044,10 +1022,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 4px;
+            gap: 8px;
             background: white;
             border-radius: 50px;
-            padding: 12px 24px 12px 24px;
+            padding: 10px 16px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
             backdrop-filter: blur(10px);
             width: 100%;
@@ -1087,12 +1065,9 @@
         }
 
         .fab-button {
-            position: absolute;
-            bottom: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 60px;
+            flex: 0 0 auto;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
@@ -1101,21 +1076,22 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-            box-shadow: 0 8px 24px rgba(0, 212, 170, 0.35);
+            font-size: 1.6rem;
+            box-shadow: 0 4px 12px rgba(0, 212, 170, 0.3);
             z-index: 991;
             transition: 0.3s;
             font-weight: 800;
             line-height: 1;
+            margin-left: 4px;
         }
 
         .fab-button:hover {
-            transform: translateX(-50%) scale(1.1);
-            box-shadow: 0 10px 28px rgba(0, 212, 170, 0.45);
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 212, 170, 0.4);
         }
 
         .fab-button:active {
-            transform: translateX(-50%) scale(0.95);
+            transform: scale(0.95);
         }
 
         .nav-badge {
@@ -1799,10 +1775,7 @@
 
         <!-- EXPLORE -->
         <div class="view" id="exploreView">
-            <div class="explore-content">
-                <div style="font-size: 1rem; margin-bottom: 20px;">🌟 Discover Popular Users</div>
-                <button class="explore-search-btn" onclick="app.openSearchModal()">Find Users</button>
-            </div>
+            <div style="padding: 16px; font-weight: 600;">Popular Users</div>
             <div id="exploreUsersList"></div>
         </div>
 
@@ -2957,10 +2930,25 @@ var app = {
                     <div class="balance-amount" id="balanceDisplay">KSh ${this.balance.toFixed(2)}</div>
                     <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
                 </div>
-                <div style="padding: 16px; text-align: center; color: var(--text-light); font-size: 0.85rem; line-height: 1.6;">
-                    Earn by liking posts, commenting, and following creators.<br>
-                    <span style="font-weight: 600; color: var(--primary);">Earnings accumulate automatically</span>
+                <div style="padding: 16px; text-align: center; color: var(--text-light); font-size: 0.85rem;">
+                    <div style="font-weight: 600; color: var(--primary); margin-bottom: 8px;">Watch Ads & Earn</div>
+                    <div style="line-height: 1.6; margin-bottom: 12px;">
+                        Watch advertisements and earn money instantly. Every ad watched adds to your balance!
+                    </div>
                 </div>
+                <div id="adsContainer" style="padding: 16px; background: white; border-radius: 12px; margin-bottom: 16px; min-height: 250px; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--border);">
+                    <ins class="adsbygoogle"
+                         style="display:block"
+                         data-ad-client="ca-pub-8335709146055597"
+                         data-ad-slot="xxxxxxxxxxxxxxxx"
+                         data-ad-format="auto"
+                         data-full-width-responsive="true"></ins>
+                </div>
+                <button class="btn-submit" id="adButton" onclick="app.watchAd()" style="width: 100%; margin-bottom: 12px;">✓ Ad Watched - Claim KSh 1</button>
+                <div style="text-align: center; font-size: 0.75rem; color: var(--text-light);">
+                    <span id="adsRemaining">${this.getAdsRemaining()}</span>/10 ads remaining today
+                </div>
+            </div>
             </div>
             <div style="padding: 16px;">My Posts</div>
             <div id="profilePosts"></div>
@@ -3397,6 +3385,46 @@ var app = {
         document.getElementById('accountNumber').value = '';
     },
 
+    watchAd: function() {
+        var self = this;
+        var today = new Date().toDateString();
+        var adsWatchedKey = 'adsWatched_' + today + '_' + this.user.uid;
+        var adsWatchedToday = parseInt(localStorage.getItem(adsWatchedKey) || '0');
+        
+        if (adsWatchedToday >= 10) {
+            this.toast('You have reached your daily ad limit (10/10)', 'error');
+            return;
+        }
+
+        // Add earnings
+        this.balance += 1;
+        db.ref('users/' + this.user.uid + '/balance').set(this.balance);
+        
+        // Track ad watch
+        localStorage.setItem(adsWatchedKey, (adsWatchedToday + 1).toString());
+        
+        // Update display
+        document.getElementById('balanceDisplay').textContent = 'KSh ' + this.balance.toFixed(2);
+        var remaining = 10 - (adsWatchedToday + 1);
+        document.getElementById('adsRemaining').textContent = remaining;
+        
+        var button = document.getElementById('adButton');
+        button.disabled = true;
+        
+        this.toast('KSh 1 added to your balance! (' + (adsWatchedToday + 1) + '/10 ads today)', 'success');
+        
+        setTimeout(() => {
+            button.disabled = false;
+        }, 2000);
+    },
+
+    getAdsRemaining: function() {
+        var today = new Date().toDateString();
+        var adsWatchedKey = 'adsWatched_' + today + '_' + this.user.uid;
+        var adsWatchedToday = parseInt(localStorage.getItem(adsWatchedKey) || '0');
+        return Math.max(0, 10 - adsWatchedToday);
+    },
+
     showLogout: function() {
         document.getElementById('logoutModal').classList.add('active');
     },
@@ -3421,6 +3449,12 @@ var app = {
 };
 
 app.init();
+
+// Initialize Google AdSense
+(adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-8335709146055597",
+    enable_page_level_ads: true
+});
 </script>
 
 </body>
