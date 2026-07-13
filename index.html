@@ -1855,6 +1855,10 @@
                 </div>
                 <button type="submit" class="btn-submit">Login</button>
                 
+                <div style="text-align: center; margin-top: 12px;">
+                    <a href="#" onclick="app.showForgotPasswordModal(); return false;" style="color: var(--primary); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Forgot Password?</a>
+                </div>
+                
                 <div style="margin-top: 20px; text-align: center;">
                     <div style="display: flex; align-items: center; margin-bottom: 16px;">
                         <div style="flex: 1; height: 1px; background: var(--border);"></div>
@@ -1863,14 +1867,9 @@
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 12px;">
-                    <button type="button" class="social-btn" onclick="app.signInWithGoogle()">
-                        <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
-                    </button>
-                    <button type="button" class="social-btn" onclick="alert('Phone sign-in coming soon')">
-                        <span style="font-size: 1.2rem; margin-right: 8px;">📱</span> Phone
-                    </button>
-                </div>
+                <button type="button" class="social-btn" onclick="app.signInWithGoogle()" style="width: 100%;">
+                    <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
+                </button>
             </form>
         </div>
 
@@ -1898,14 +1897,9 @@
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 12px;">
-                    <button type="button" class="social-btn" onclick="app.signInWithGoogle()">
-                        <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
-                    </button>
-                    <button type="button" class="social-btn" onclick="alert('Phone sign-in coming soon')">
-                        <span style="font-size: 1.2rem; margin-right: 8px;">📱</span> Phone
-                    </button>
-                </div>
+                <button type="button" class="social-btn" onclick="app.signInWithGoogle()" style="width: 100%;">
+                    <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
+                </button>
             </form>
         </div>
     </div>
@@ -2073,6 +2067,25 @@
     </div>
 </div>
 
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="forgotPasswordModal">
+    <div class="modal" style="max-width: 400px;">
+        <div class="modal-close"><button onclick="app.closeForgotPasswordModal()">✕</button></div>
+        <h2 style="margin-bottom: 16px; font-weight: 700;">Reset Password</h2>
+        <p style="color: var(--text-light); margin-bottom: 16px; font-size: 0.9rem;">Enter your email address and we'll send you a link to reset your password.</p>
+        
+        <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="forgotPasswordEmail" class="form-input" placeholder="your@email.com" required>
+        </div>
+        
+        <div style="display: flex; gap: 12px;">
+            <button class="logout-cancel" onclick="app.closeForgotPasswordModal()" style="flex: 1; padding: 12px;">Cancel</button>
+            <button class="btn-submit" onclick="app.sendPasswordReset()" style="flex: 1;">Send Reset Link</button>
+        </div>
+    </div>
+</div>
+
 <!-- ADMIN PASSWORD MODAL -->
 <div class="admin-modal" id="adminModal">
     <div class="admin-modal-card">
@@ -2227,8 +2240,15 @@ var app = {
             console.log('Auth state changed:', u ? 'Logged in' : 'Not logged in');
             if (u) {
                 self.user = u;
-                self.loadProfile();
-                self.showApp();
+                // Wait for profile to load before showing app
+                db.ref('users/' + u.uid).once('value', s => {
+                    if (s.exists()) {
+                        self.profile = s.val();
+                        self.balance = self.profile.balance || 0;
+                    }
+                    self.loadProfile();
+                    self.showApp();
+                });
             } else {
                 self.showAuth();
             }
@@ -2392,6 +2412,37 @@ var app = {
                 }
             });
         }).catch(err => this.toast('Google sign-in failed: ' + err.message, 'error'));
+    },
+
+    showForgotPasswordModal: function() {
+        document.getElementById('forgotPasswordModal').classList.add('active');
+        document.getElementById('forgotPasswordEmail').focus();
+    },
+
+    closeForgotPasswordModal: function() {
+        document.getElementById('forgotPasswordModal').classList.remove('active');
+        document.getElementById('forgotPasswordEmail').value = '';
+    },
+
+    sendPasswordReset: function() {
+        var email = document.getElementById('forgotPasswordEmail').value.trim();
+        
+        if (!email) {
+            this.toast('Please enter your email address', 'error');
+            return;
+        }
+
+        var self = this;
+        auth.sendPasswordResetEmail(email).then(() => {
+            self.toast('Password reset link sent to ' + email, 'success');
+            self.closeForgotPasswordModal();
+        }).catch(err => {
+            if (err.code === 'auth/user-not-found') {
+                self.toast('No account found with this email', 'error');
+            } else {
+                self.toast('Error: ' + err.message, 'error');
+            }
+        });
     },
 
     openAdminModal: function() {
