@@ -37,9 +37,43 @@
             position: fixed;
         }
 
-        /* NO LOADING ANIMATION - SMOOTH TRANSITIONS ONLY */
+        /* LOADING ANIMATION */
         #loadingScreen {
             display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            z-index: 10001;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #loadingScreen.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
 
         .auth-page {
@@ -189,14 +223,6 @@
             font-weight: 800;
             margin: 0;
             letter-spacing: 2px;
-        }
-
-        .app-subtitle {
-            font-family: 'Poppins', sans-serif;
-            font-size: 0.65rem;
-            font-weight: 300;
-            margin: 2px 0 0 0;
-            opacity: 0.9;
         }
 
         .header-actions {
@@ -1603,6 +1629,12 @@
 </head>
 <body>
 
+<!-- LOADING SCREEN -->
+<div id="loadingScreen" class="active">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading...</div>
+</div>
+
 <!-- AUTH -->
 <div class="auth-page" id="authPage">
     <div class="auth-card">
@@ -1655,11 +1687,10 @@
     <div class="app-header">
         <div class="app-logo-container">
             <h1>CHICHI</h1>
-            <p class="app-subtitle">by Onchari Group</p>
         </div>
         <div class="header-actions">
-            <button class="btn-icon" onclick="app.showCreateModal()">✎ Create</button>
-            <button class="btn-icon" onclick="app.openAdminModal()">⚙️ Admin</button>
+            <button class="btn-icon" onclick="app.showCreateModal()">Create</button>
+            <button class="btn-icon" onclick="app.openAdminModal()">Admin</button>
             <button class="btn-icon" onclick="app.showLogout()">Logout</button>
         </div>
     </div>
@@ -1701,8 +1732,7 @@
             </div>
 
             <div style="padding: 20px; text-align: center; color: var(--text-light);">
-                <div style="font-size: 1.2rem; margin-bottom: 12px;">💰</div>
-                <div style="font-size: 0.95rem; line-height: 1.6;">
+                <div style="font-size: 0.9rem; line-height: 1.6;">
                     Earn by liking posts, commenting, and following creators.<br>
                     <span style="font-weight: 600; color: var(--primary);">Earnings accumulate automatically</span>
                 </div>
@@ -1719,24 +1749,24 @@
     <!-- NAV -->
     <div class="bottom-nav">
         <div class="nav-item active" onclick="app.switchView('feed')">
-            <div class="nav-icon">🏠</div>
+            <div class="nav-icon">H</div>
             <div>Home</div>
         </div>
         <div class="nav-item" onclick="app.switchView('explore')">
-            <div class="nav-icon">⭐</div>
+            <div class="nav-icon">E</div>
             <div>Explore</div>
         </div>
         <div class="nav-item" onclick="app.switchView('messages')">
-            <div class="nav-icon">✉</div>
+            <div class="nav-icon">M</div>
             <div>Messages</div>
             <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
         </div>
         <div class="nav-item" onclick="app.switchView('wallet')">
-            <div class="nav-icon">💳</div>
+            <div class="nav-icon">W</div>
             <div>Wallet</div>
         </div>
         <div class="nav-item" onclick="app.switchView('profile')">
-            <div class="nav-icon">👤</div>
+            <div class="nav-icon">P</div>
             <div>Profile</div>
         </div>
     </div>
@@ -1958,12 +1988,14 @@ var app = {
     },
 
     showAuth: function() {
+        document.getElementById('loadingScreen').classList.remove('active');
         document.getElementById('authPage').style.display = 'flex';
         document.getElementById('mainApp').style.display = 'none';
         document.getElementById('adminPortal').style.display = 'none';
     },
 
     showApp: function() {
+        document.getElementById('loadingScreen').classList.remove('active');
         document.getElementById('authPage').style.display = 'none';
         document.getElementById('mainApp').classList.add('active');
         document.getElementById('adminPortal').classList.remove('active');
@@ -2339,17 +2371,17 @@ var app = {
                                     <div class="post-time">${p.createdAt}</div>
                                 </div>
                             </div>
-                            ${p.userId === this.user.uid ? `<button class="post-menu" onclick="app.deletePost('${p.id}')">⋯</button>` : ''}
+                            ${p.userId === this.user.uid ? `<button class="post-menu" onclick="app.deletePost('${p.id}')">Delete</button>` : ''}
                         </div>
                         <img src="${p.photoUrl}" class="post-image">
                         <div class="post-caption">${p.caption}</div>
                         <div class="post-stats">${likes} likes · ${downloads} saves · ${comments} comments</div>
                         <div class="post-actions">
                             <button class="post-action ${userLiked ? 'liked' : ''}" onclick="app.likePost('${p.id}')">
-                                ${userLiked ? '❤️' : '🤍'} Like
+                                ${userLiked ? 'Liked' : 'Like'}
                             </button>
-                            <button class="post-action" onclick="app.downloadPost('${p.photoUrl}', '${p.id}')">💾 Save</button>
-                            <button class="post-action" onclick="app.viewComments('${p.id}')">💬 Comment</button>
+                            <button class="post-action" onclick="app.downloadPost('${p.photoUrl}', '${p.id}')">Save</button>
+                            <button class="post-action" onclick="app.viewComments('${p.id}')">Comment</button>
                         </div>
                     </div>
                 `;
@@ -2538,19 +2570,6 @@ var app = {
 
     renderProfile: function() {
         var userPosts = this.posts.filter(p => p.userId === this.user.uid).length;
-        var followingList = '';
-        for (var uid in this.following) {
-            if (this.users[uid]) {
-                var u = this.users[uid];
-                followingList += `
-                    <div class="following-item">
-                        <div class="following-avatar" style="background-image: url(${u.profilePhoto || ''});">${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}</div>
-                        <div class="following-name">${u.name}</div>
-                        <button class="following-unfollow" onclick="app.unfollowUser('${uid}', '${u.name}')">Unfollow</button>
-                    </div>
-                `;
-            }
-        }
 
         var html = `
             <div class="profile-header">
@@ -2566,18 +2585,12 @@ var app = {
                         </div>
                     </div>
                 </div>
-                <button class="btn-edit" onclick="app.showEditProfileModal()">✏️ Edit Profile</button>
+                <button class="btn-edit" onclick="app.showEditProfileModal()">Edit Profile</button>
             </div>
             <div style="padding: 16px; background: white; border-radius: 16px; margin: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="font-weight: 600; margin-bottom: 8px;">Bio</div>
                 <div style="color: var(--text-light); font-size: 0.9rem;">${this.profile.bio || 'No bio yet'}</div>
             </div>
-            ${followingList ? `
-                <div style="padding: 16px; margin: 0 16px; background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                    <div style="font-weight: 700; margin-bottom: 12px;">Following (${Object.keys(this.following).length})</div>
-                    <div class="following-list">${followingList}</div>
-                </div>
-            ` : ''}
             <div style="padding: 16px;">My Posts</div>
             <div id="profilePosts"></div>
         `;
@@ -2597,14 +2610,14 @@ var app = {
                                 <div class="post-time">${p.createdAt}</div>
                             </div>
                         </div>
-                        <button class="post-menu" onclick="app.deletePost('${p.id}')">⋯</button>
+                        <button class="post-menu" onclick="app.deletePost('${p.id}')">Delete</button>
                     </div>
                     <img src="${p.photoUrl}" class="post-image">
                     <div class="post-caption">${p.caption}</div>
                     <div class="post-stats">${likes} likes</div>
                     <div class="post-actions">
-                        <button class="post-action" onclick="app.likePost('${p.id}')">❤️ Like</button>
-                        <button class="post-action" onclick="app.downloadPost('${p.photoUrl}', '${p.id}')">💾 Save</button>
+                        <button class="post-action" onclick="app.likePost('${p.id}')">Like</button>
+                        <button class="post-action" onclick="app.downloadPost('${p.photoUrl}', '${p.id}')">Save</button>
                     </div>
                 </div>
             `;
