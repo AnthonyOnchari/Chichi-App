@@ -259,7 +259,7 @@
             width: 100%;
             overflow-y: auto;
             flex-direction: column;
-            padding-bottom: 110px;
+            padding-bottom: 120px;
             animation: smoothFadeIn 0.4s ease;
         }
 
@@ -1031,34 +1031,35 @@
 
         .bottom-nav {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            bottom: 16px;
+            left: 16px;
+            right: 16px;
             display: flex;
             justify-content: center;
-            align-items: flex-end;
+            align-items: center;
             background: transparent;
             padding: 0;
             z-index: 990;
-            width: 100%;
+            width: auto;
         }
 
         .nav-wrapper {
             position: relative;
-            width: 100%;
             display: flex;
-            justify-content: space-around;
+            justify-content: center;
             align-items: center;
+            gap: 4px;
             background: white;
-            border-top: 1px solid var(--border);
-            padding: 8px 0 20px 0;
-            box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+            border-radius: 50px;
+            padding: 10px 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            backdrop-filter: blur(10px);
         }
 
         .nav-item {
-            flex: 1;
+            flex: 0 0 auto;
             text-align: center;
-            padding: 8px 4px;
+            padding: 10px 14px;
             cursor: pointer;
             color: var(--text-light);
             display: flex;
@@ -1068,29 +1069,32 @@
             gap: 4px;
             font-size: 0.65rem;
             transition: 0.3s;
-            border-radius: 12px;
+            border-radius: 20px;
             position: relative;
-            min-width: 50px;
+            min-width: auto;
+        }
+
+        .nav-item:hover {
+            background: rgba(0, 212, 170, 0.05);
         }
 
         .nav-item.active {
             color: var(--primary);
-            background: rgba(0, 212, 170, 0.1);
+            background: rgba(0, 212, 170, 0.15);
         }
 
         .nav-icon { 
-            font-size: 1.2rem;
-            font-weight: 700;
+            font-size: 1.4rem;
             line-height: 1;
         }
 
         .fab-button {
             position: absolute;
-            bottom: 35px;
+            bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
-            width: 56px;
-            height: 56px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
@@ -1099,8 +1103,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
-            box-shadow: 0 4px 16px rgba(0, 212, 170, 0.4);
+            font-size: 2rem;
+            box-shadow: 0 8px 24px rgba(0, 212, 170, 0.35);
             z-index: 991;
             transition: 0.3s;
             font-weight: 800;
@@ -1109,7 +1113,7 @@
 
         .fab-button:hover {
             transform: translateX(-50%) scale(1.1);
-            box-shadow: 0 6px 20px rgba(0, 212, 170, 0.6);
+            box-shadow: 0 10px 28px rgba(0, 212, 170, 0.45);
         }
 
         .fab-button:active {
@@ -1118,10 +1122,10 @@
 
         .nav-badge {
             position: absolute;
-            top: 4px;
+            top: -4px;
             right: 4px;
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             background: #ff4444;
             border-radius: 50%;
             color: white;
@@ -1836,27 +1840,27 @@
     <div class="bottom-nav">
         <div class="nav-wrapper">
             <div class="nav-item active" onclick="app.switchView('feed')">
-                <div class="nav-icon">⌂</div>
+                <div class="nav-icon">🏠</div>
                 <div>Home</div>
             </div>
             <div class="nav-item" onclick="app.switchView('explore')">
-                <div class="nav-icon">◉</div>
+                <div class="nav-icon">🔍</div>
                 <div>Explore</div>
             </div>
             <div class="nav-item" onclick="app.switchView('messages')">
-                <div class="nav-icon">✉</div>
+                <div class="nav-icon">💬</div>
                 <div>Messages</div>
                 <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
             </div>
             <div class="nav-item" onclick="app.switchView('wallet')">
-                <div class="nav-icon">◆</div>
+                <div class="nav-icon">💰</div>
                 <div>Wallet</div>
             </div>
             <div class="nav-item" onclick="app.switchView('profile')">
-                <div class="nav-icon">⊙</div>
+                <div class="nav-icon">👤</div>
                 <div>Profile</div>
             </div>
-            <button class="fab-button" onclick="app.showCreateModal()">+</button>
+            <button class="fab-button" onclick="app.showCreateModal()">✚</button>
         </div>
     </div>
 </div>
@@ -2191,22 +2195,12 @@ var app = {
             this.loadExplore();
         }
 
-        var navMap = {
-            'feed': 0,
-            'explore': 1,
-            'messages': 3,
-            'wallet': 4,
-            'profile': 5
-        };
-        
-        if (navMap.hasOwnProperty(view)) {
-            var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
-            if (view === 'feed') navItems[0].classList.add('active');
-            else if (view === 'explore') navItems[1].classList.add('active');
-            else if (view === 'messages') navItems[2].classList.add('active');
-            else if (view === 'wallet') navItems[3].classList.add('active');
-            else if (view === 'profile') navItems[4].classList.add('active');
-        }
+        var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
+        if (view === 'feed') navItems[0].classList.add('active');
+        else if (view === 'explore') navItems[1].classList.add('active');
+        else if (view === 'messages') navItems[2].classList.add('active');
+        else if (view === 'wallet') navItems[3].classList.add('active');
+        else if (view === 'profile') navItems[4].classList.add('active');
     },
 
     handleLogin: function(e) {
