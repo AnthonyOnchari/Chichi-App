@@ -687,11 +687,6 @@
             transition: 0.3s;
         }
 
-        #walletView {
-            flex-direction: column;
-            padding: 16px;
-        }
-
         .balance-card {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
@@ -1815,22 +1810,7 @@
         <div class="view" id="profileView">
             <div id="profileContent"></div>
         </div>
-
-        <!-- WALLET -->
-        <div class="view" id="walletView">
-            <div class="balance-card">
-                <div class="balance-label">Your Balance</div>
-                <div class="balance-amount" id="balanceDisplay">KSh 0</div>
-                <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
-            </div>
-
-            <div style="padding: 20px; text-align: center; color: var(--text-light);">
-                <div style="font-size: 0.9rem; line-height: 1.6;">
-                    Earn by liking posts, commenting, and following creators.<br>
-                    <span style="font-weight: 600; color: var(--primary);">Earnings accumulate automatically</span>
-                </div>
-            </div>
-        </div>
+    </div>
 
         <!-- MESSAGES -->
         <div class="view" id="messagesView">
@@ -1854,10 +1834,6 @@
                 <div class="nav-icon">💬</div>
                 <div>Messages</div>
                 <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
-            </div>
-            <div class="nav-item" onclick="app.switchView('wallet')">
-                <div class="nav-icon">💰</div>
-                <div>Wallet</div>
             </div>
             <div class="nav-item" onclick="app.switchView('profile')">
                 <div class="nav-icon">👤</div>
@@ -2163,13 +2139,22 @@ var app = {
             if (s.exists()) {
                 self.profile = s.val();
                 self.balance = self.profile.balance || 0;
-                document.getElementById('balanceDisplay').textContent = 'KSh ' + self.balance.toFixed(2);
+                
+                // Update balance display if it exists in profile view
+                var balanceDisplay = document.getElementById('balanceDisplay');
+                if (balanceDisplay) {
+                    balanceDisplay.textContent = 'KSh ' + self.balance.toFixed(2);
+                }
+                
+                // Update avatar
                 var avatar = document.getElementById('quickPostAvatar');
-                if (self.profile.profilePhoto) {
-                    avatar.style.backgroundImage = 'url(' + self.profile.profilePhoto + ')';
-                    avatar.textContent = '';
-                } else {
-                    avatar.textContent = self.user.email.charAt(0).toUpperCase();
+                if (avatar) {
+                    if (self.profile.profilePhoto) {
+                        avatar.style.backgroundImage = 'url(' + self.profile.profilePhoto + ')';
+                        avatar.textContent = '';
+                    } else {
+                        avatar.textContent = self.user.email.charAt(0).toUpperCase();
+                    }
                 }
             }
         });
@@ -2202,8 +2187,7 @@ var app = {
         if (view === 'feed') navItems[0].classList.add('active');
         else if (view === 'explore') navItems[1].classList.add('active');
         else if (view === 'messages') navItems[2].classList.add('active');
-        else if (view === 'wallet') navItems[3].classList.add('active');
-        else if (view === 'profile') navItems[4].classList.add('active');
+        else if (view === 'profile') navItems[3].classList.add('active');
     },
 
     handleLogin: function(e) {
@@ -2966,6 +2950,17 @@ var app = {
             <div style="padding: 16px; background: white; border-radius: 16px; margin: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="font-weight: 600; margin-bottom: 8px;">Bio</div>
                 <div style="color: var(--text-light); font-size: 0.9rem;">${this.profile.bio || 'No bio yet'}</div>
+            </div>
+            <div style="margin: 16px;">
+                <div class="balance-card">
+                    <div class="balance-label">Your Balance</div>
+                    <div class="balance-amount" id="balanceDisplay">KSh ${this.balance.toFixed(2)}</div>
+                    <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
+                </div>
+                <div style="padding: 16px; text-align: center; color: var(--text-light); font-size: 0.85rem; line-height: 1.6;">
+                    Earn by liking posts, commenting, and following creators.<br>
+                    <span style="font-weight: 600; color: var(--primary);">Earnings accumulate automatically</span>
+                </div>
             </div>
             <div style="padding: 16px;">My Posts</div>
             <div id="profilePosts"></div>
