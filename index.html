@@ -2031,12 +2031,6 @@ window.app = window.app || {
 // Real app object will be defined below in main script
 </script>
 
-<!-- THEME TOGGLE -->
-<!-- THEME TOGGLE - 3D SWITCH -->
-<label class="toggle-switch-3d" title="Toggle dark/light mode">
-    <input type="checkbox" id="themeToggle" onchange="app.toggleTheme()">
-    <span class="toggle-slider-3d"></span>
-</label>
 
 <!-- LOADING SCREEN -->
 <div id="loadingScreen" class="active">
@@ -2139,7 +2133,10 @@ window.app = window.app || {
             <h1>CHICHI</h1>
         </div>
         <div class="header-actions">
-            <button class="btn-icon" onclick="app.showCreateModal()">✚ Create</button>
+            <label class="toggle-switch-3d" title="Toggle dark/light mode" style="margin-right: 8px;">
+                <input type="checkbox" id="themeToggle" onchange="app.toggleTheme()">
+                <span class="toggle-slider-3d"></span>
+            </label>
             <button class="btn-icon" onclick="app.openAdminModal()">Admin</button>
             <button class="btn-icon" onclick="app.showLogout()">Logout</button>
         </div>
@@ -2865,9 +2862,10 @@ var app = {
                             <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
                             <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Joined: ${u.user.createdAt}</div>
                         </div>
-                        <div style="display: flex; gap: 8px;">
+                        <div style="display: flex; gap: 8px; align-items: center;">
                             <span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">${u.user.followers || 0} followers</span>
                             <button onclick="app.viewUserActivity('${u.uid}')" style="padding: 6px 12px; background: var(--border); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">View</button>
+                            <button onclick="app.deleteUserByAdmin('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🗑️ Delete</button>
                         </div>
                     </div>
                 `;
@@ -2906,7 +2904,10 @@ var app = {
                             <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name}</div>
                             <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
                         </div>
-                        <button onclick="app.viewUserActivity('${u.uid}')" style="padding: 6px 12px; background: var(--border); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">View</button>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="app.viewUserActivity('${u.uid}')" style="padding: 6px 12px; background: var(--border); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">View</button>
+                            <button onclick="app.deleteUserByAdmin('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🗑️ Delete</button>
+                        </div>
                     </div>
                 `;
             });
@@ -2936,6 +2937,69 @@ var app = {
             </div>
         </div>`;
         document.body.appendChild(modal);
+    },
+
+    deleteUserByAdmin: function(uid, userName) {
+        var self = this;
+        
+        // Confirm deletion
+        if (!confirm(`⚠️ Delete user "${userName}"?\n\nAll posts, messages, and data will be removed.\nThis CANNOT be undone.`)) {
+            return;
+        }
+        
+        // Double confirm
+        if (!confirm('Final confirmation: Really delete this user permanently?')) {
+            return;
+        }
+        
+        this.toast('Deleting user ' + userName + '...', 'success');
+        
+        var deletionPromises = [];
+        
+        // 1. Delete user profile
+        deletionPromises.push(
+            db.ref('users/' + uid).remove()
+        );
+        
+        // 2. Delete all user's posts
+        deletionPromises.push(
+            db.ref('posts').orderByChild('userId').equalTo(uid).once('value', snapshot => {
+                var deletePromises = [];
+                snapshot.forEach(post => {
+                    deletePromises.push(db.ref('posts/' + post.key).remove());
+                });
+                return Promise.all(deletePromises);
+            })
+        );
+        
+        // 3. Delete all user's chats/messages
+        deletionPromises.push(
+            db.ref('chats').once('value', snapshot => {
+                var deletePromises = [];
+                snapshot.forEach(chat => {
+                    var chatKey = chat.key;
+                    if (chatKey.includes(uid)) {
+                        deletePromises.push(db.ref('chats/' + chatKey).remove());
+                    }
+                });
+                return Promise.all(deletePromises);
+            })
+        );
+        
+        // Execute all deletions
+        Promise.all(deletionPromises).then(() => {
+            self.toast(`User "${userName}" deleted successfully`, 'success');
+            
+            // Refresh admin users list
+            setTimeout(() => {
+                self.loadAdminUsers();
+                self.loadExplore();
+                self.loadMessages();
+            }, 500);
+            
+        }).catch(err => {
+            self.toast('Error deleting user: ' + err.message, 'error');
+        });
     },
 
     loadAdminPosts: function() {
