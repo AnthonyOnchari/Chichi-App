@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHICHI - Social Media</title>
+    <title>CHICHI - by Onchari Group</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
     <link rel="icon" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783891757/uovuprr10iynda7njjnc.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8335709146055597" crossorigin="anonymous"></script>
+    <script async src="https://fundingchoicesmessages.google.com/i/publish.js?onload=consentPopup" type="text/javascript"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -1194,6 +1195,81 @@
             color: #ff4444;
         }
 
+        .consent-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+            z-index: 10000;
+            border-top: 4px solid var(--primary);
+            display: none;
+        }
+
+        .consent-banner.show {
+            display: block;
+        }
+
+        .consent-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .consent-text {
+            flex: 1;
+            font-size: 0.9rem;
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .consent-text a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .consent-buttons {
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .consent-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: 0.3s;
+            white-space: nowrap;
+        }
+
+        .consent-btn-accept {
+            background: var(--primary);
+            color: white;
+        }
+
+        .consent-btn-accept:hover {
+            background: var(--primary-dark);
+        }
+
+        .consent-btn-manage {
+            background: var(--light);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .consent-btn-manage:hover {
+            background: var(--border);
+        }
+
         .logout-modal {
             display: none;
             position: fixed;
@@ -1689,6 +1765,22 @@
         .following-unfollow:hover {
             background: #dc2626;
         }
+
+        @media (max-width: 768px) {
+            .consent-content {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .consent-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .consent-btn {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1697,6 +1789,19 @@
 <div id="loadingScreen" class="active">
     <div class="loading-spinner"></div>
     <div class="loading-text">Loading...</div>
+</div>
+
+<!-- CONSENT BANNER -->
+<div id="consentBanner" class="consent-banner">
+    <div class="consent-content">
+        <div class="consent-text">
+            We use cookies and similar technologies to enhance your experience on our site. By clicking "Accept", you consent to our use of cookies for analytics, personalization, and advertising. Please review our <a href="#" onclick="alert('Privacy Policy Coming Soon'); return false;">Privacy Policy</a> for more information.
+        </div>
+        <div class="consent-buttons">
+            <button class="consent-btn consent-btn-manage" onclick="app.showConsentOptions()">Manage</button>
+            <button class="consent-btn consent-btn-accept" onclick="app.acceptConsent()">Accept</button>
+        </div>
+    </div>
 </div>
 
 <!-- AUTH -->
@@ -2053,6 +2158,10 @@ var app = {
 
     init: function() {
         var self = this;
+        
+        // Initialize consent management
+        this.initConsent();
+        
         auth.onAuthStateChanged(u => {
             clearTimeout(loadingTimeout);
             console.log('Auth state changed:', u ? 'Logged in' : 'Not logged in');
@@ -3445,10 +3554,113 @@ var app = {
         el.textContent = msg;
         document.body.appendChild(el);
         setTimeout(() => el.remove(), 3000);
+    },
+
+    initConsent: function() {
+        var consentGiven = localStorage.getItem('userConsent');
+        if (!consentGiven) {
+            // Check if user is in EEA, UK, or Switzerland
+            this.checkUserLocation();
+        }
+    },
+
+    checkUserLocation: function() {
+        // Try to detect user location via IP
+        fetch('https://ipapi.co/json/')
+            .then(response => response.json())
+            .then(data => {
+                var eaaCountries = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'];
+                var ukSwissCountries = ['GB', 'CH'];
+                
+                if (eaaCountries.includes(data.country_code) || ukSwissCountries.includes(data.country_code)) {
+                    document.getElementById('consentBanner').classList.add('show');
+                }
+            })
+            .catch(() => {
+                // Fallback: show consent banner anyway
+                document.getElementById('consentBanner').classList.add('show');
+            });
+    },
+
+    acceptConsent: function() {
+        localStorage.setItem('userConsent', 'accepted');
+        localStorage.setItem('userConsentDate', new Date().toISOString());
+        document.getElementById('consentBanner').classList.remove('show');
+        this.toast('Thank you for your consent', 'success');
+    },
+
+    rejectConsent: function() {
+        localStorage.setItem('userConsent', 'rejected');
+        localStorage.setItem('userConsentDate', new Date().toISOString());
+        document.getElementById('consentBanner').classList.remove('show');
+        this.toast('Consent rejected', 'success');
+    },
+
+    showConsentOptions: function() {
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `<div class="modal" style="max-width: 400px;">
+            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+            <h2 style="margin-bottom: 16px; font-weight: 700;">Cookie & Consent Settings</h2>
+            
+            <div style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="font-weight: 600;">Essential Cookies</div>
+                    <input type="checkbox" checked disabled style="cursor: not-allowed;">
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 12px;">
+                    Required for basic site functionality. Always enabled.
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="font-weight: 600;">Analytics Cookies</div>
+                    <input type="checkbox" id="analyticsCookie" checked>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 12px;">
+                    Help us understand how you use our site.
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="font-weight: 600;">Advertising Cookies</div>
+                    <input type="checkbox" id="adsCookie" checked>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 12px;">
+                    Allow personalized ads and ad measurement.
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <button class="logout-cancel" onclick="app.rejectConsent(); this.closest('.modal-overlay').remove();" style="flex: 1; padding: 12px;">Reject All</button>
+                <button class="btn-submit" onclick="app.saveConsentPreferences(); this.closest('.modal-overlay').remove();" style="flex: 1;">Save Settings</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    },
+
+    saveConsentPreferences: function() {
+        var preferences = {
+            essential: true,
+            analytics: document.getElementById('analyticsCookie').checked,
+            advertising: document.getElementById('adsCookie').checked
+        };
+        localStorage.setItem('userConsentPreferences', JSON.stringify(preferences));
+        localStorage.setItem('userConsent', 'accepted');
+        localStorage.setItem('userConsentDate', new Date().toISOString());
+        document.getElementById('consentBanner').classList.remove('show');
+        this.toast('Consent preferences saved', 'success');
     }
 };
 
 app.init();
+
+// Google Funding Choices Consent Popup
+function consentPopup() {
+    console.log('Google Funding Choices popup loaded');
+}
 
 // Initialize Google AdSense
 (adsbygoogle = window.adsbygoogle || []).push({
