@@ -2358,6 +2358,9 @@
             }
         }
     </style>
+    
+    <!-- Audio for dark theme music -->
+    <audio id="themeMusic" style="display: none;"></audio>
 </head>
 <body>
 <!-- APP PLACEHOLDER - Prevents "app is not defined" errors on startup -->
@@ -2507,7 +2510,16 @@ window.app = window.app || {
             <div id="exploreUsersList"></div>
         </div>
 
-        <!-- PROFILE -->
+        <!-- STORIES -->
+        <div class="view" id="storiesView">
+            <div style="padding: 16px;">
+                <div style="font-weight: 600; margin-bottom: 16px;">📖 Stories</div>
+                <button onclick="app.showCreateStoryModal()" style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 16px;">➕ Create Story</button>
+                <div id="storiesList" style="display: grid; gap: 12px;"></div>
+            </div>
+        </div>
+
+
         <div class="view" id="profileView">
             <div id="profileContent"></div>
         </div>
@@ -3139,14 +3151,17 @@ var app = {
             this.clearUnreadBadge();
         } else if (view === 'explore') {
             this.loadExplore();
+        } else if (view === 'stories') {
+            this.loadStories();
         }
 
         // Highlight nav item
         var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
         if (view === 'feed') navItems[0].classList.add('active');
         else if (view === 'explore') navItems[1].classList.add('active');
-        else if (view === 'messages') navItems[2].classList.add('active');
-        else if (view === 'profile') navItems[3].classList.add('active');
+        else if (view === 'stories') navItems[2].classList.add('active');
+        else if (view === 'messages') navItems[3].classList.add('active');
+        else if (view === 'profile') navItems[4].classList.add('active');
     },
 
     // New: Go back navigation function
@@ -4677,6 +4692,153 @@ var app = {
         alert('Conversation muted!');
     },
 
+    // ========== STORIES FEATURE ==========
+    loadStories: function() {
+        var self = this;
+        // Load user's own stories from Firebase
+        db.ref('stories/' + this.user.uid).once('value', snapshot => {
+            var stories = [];
+            if (snapshot.val()) {
+                Object.keys(snapshot.val()).forEach(storyId => {
+                    var story = snapshot.val()[storyId];
+                    stories.push({
+                        id: storyId,
+                        image: story.image,
+                        musicUrl: story.musicUrl || null,
+                        musicName: story.musicName || 'No music',
+                        caption: story.caption || '',
+                        createdAt: story.createdAt,
+                        views: story.views || 0
+                    });
+                });
+            }
+            
+            var html = '';
+            if (stories.length === 0) {
+                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No stories yet. Create one!</div>';
+            } else {
+                stories.forEach(story => {
+                    var createdDate = new Date(story.createdAt);
+                    var timeAgo = self.formatTimeAgo(createdDate);
+                    html += `
+                        <div style="position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 9/16; background: #f3f4f6; cursor: pointer;" onclick="app.viewStory('${story.id}')">
+                            <img src="${story.image}" style="width: 100%; height: 100%; object-fit: cover;">
+                            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); padding: 16px; color: white;">
+                                <div style="font-size: 0.875rem; margin-bottom: 4px;">🎵 ${story.musicName}</div>
+                                <div style="font-size: 0.75rem; opacity: 0.8;">${timeAgo}</div>
+                                <div style="font-size: 0.75rem; margin-top: 4px;">👁️ ${story.views} views</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('storiesList').innerHTML = html;
+        });
+    },
+
+    showCreateStoryModal: function() {
+        var html = `
+            <div class="modal-overlay" id="storyModalOverlay">
+                <div class="modal-box" style="width: 90%; max-width: 400px;">
+                    <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+                        <h2 style="margin: 0;">📖 Create Story</h2>
+                    </div>
+                    <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Story Image</label>
+                            <input type="file" id="storyImageInput" accept="image/*" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Music URL (Cloudinary or external)</label>
+                            <input type="text" id="storyMusicInput" placeholder="https://res.cloudinary.com/..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Music Name</label>
+                            <input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Caption (optional)</label>
+                            <textarea id="storyCaptionInput" placeholder="Add a caption..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; min-height: 60px;"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="app.uploadStory()" style="flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">📤 Upload</button>
+                            <button onclick="app.closeModal('storyModalOverlay')" style="flex: 1; background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('storyModalOverlay').style.display = 'flex';
+    },
+
+    uploadStory: function() {
+        var self = this;
+        var imageInput = document.getElementById('storyImageInput');
+        var musicInput = document.getElementById('storyMusicInput').value.trim();
+        var musicNameInput = document.getElementById('storyMusicNameInput').value.trim() || 'Audio';
+        var captionInput = document.getElementById('storyCaptionInput').value.trim();
+        
+        if (!imageInput.files || !imageInput.files[0]) {
+            this.toast('Please select an image', 'error');
+            return;
+        }
+        
+        this.toast('Uploading story...', 'info');
+        
+        // Upload image to Cloudinary
+        var formData = new FormData();
+        formData.append('file', imageInput.files[0]);
+        formData.append('upload_preset', 'chichi_upload');
+        
+        fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.secure_url) {
+                // Save story to Firebase
+                var storyId = 'story_' + Date.now();
+                var storyData = {
+                    image: data.secure_url,
+                    musicUrl: musicInput || '',
+                    musicName: musicNameInput,
+                    caption: captionInput,
+                    createdAt: new Date().getTime(),
+                    views: 0,
+                    authorUid: self.user.uid,
+                    authorName: self.user.displayName || 'Anonymous'
+                };
+                
+                db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData, err => {
+                    if (err) {
+                        self.toast('Error saving story', 'error');
+                    } else {
+                        self.toast('✅ Story uploaded!', 'success');
+                        var modal = document.getElementById('storyModalOverlay');
+                        if (modal) modal.remove();
+                        self.loadStories();
+                    }
+                });
+            }
+        })
+        .catch(err => {
+            this.toast('Upload failed: ' + err.message, 'error');
+        });
+    },
+
+    viewStory: function(storyId) {
+        this.toast('👁️ Story view recorded', 'info');
+        // Increment view count
+        db.ref('stories/' + this.user.uid + '/' + storyId + '/views').once('value', s => {
+            var views = (s.val() || 0) + 1;
+            db.ref('stories/' + this.user.uid + '/' + storyId + '/views').set(views);
+        });
+    },
+
     // ========== NOTIFICATION SYSTEM ==========
     // Notify user of new incoming message
     notifyNewMessage: function(senderName, messageText) {
@@ -4800,9 +4962,6 @@ var app = {
             this.chatMessages = {};
         }
         
-        console.log('📥 Loading messages...');
-        console.log('   - unreadMessages data:', this.unreadMessages);
-        
         var userIds = Object.keys(this.users);
         var conversations = [];
         
@@ -4827,10 +4986,6 @@ var app = {
                 // Get unread count for this conversation
                 if (this.unreadMessages && this.unreadMessages[chatKey]) {
                     unreadCount = this.unreadMessages[chatKey].count || 0;
-                }
-                
-                if (unreadCount > 0) {
-                    console.log('   - ' + u.name + ': ' + unreadCount + ' unread');
                 }
                 
                 // Get last message preview and time
@@ -4939,9 +5094,6 @@ var app = {
         
         if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No messages yet. Start a conversation!</div>';
         document.getElementById('messageList').innerHTML = html;
-        
-        // Update the top badge with total unread count
-        console.log('✅ Message list rendered');
         this.updateUnreadBadge();
     },
 
@@ -5372,73 +5524,32 @@ var app = {
                     }
                 });
                 
-                // Also listen for value changes (catches deletions, updates, etc)
+                // SIMPLIFIED: Count unread messages
                 messagesRef.on('value', s => {
                     var unreadCount = 0;
                     var messages = [];
-                    var unreadMessagesList = [];
-                    var debugInfo = [];
                     
                     s.forEach(c => {
                         var m = c.val();
                         if (m && (m.text || m.image)) {
                             messages.push(m);
-                            var isFromOther = m.sender !== self.user.uid;
-                            var isNotRead = m.read !== true;
-                            var shouldBeUnread = isFromOther && isNotRead;
-                            
-                            debugInfo.push({
-                                text: (m.text || '📷').substring(0, 20),
-                                sender: m.sender,
-                                isFromOther: isFromOther,
-                                read: m.read,
-                                isNotRead: isNotRead,
-                                shouldBeUnread: shouldBeUnread
-                            });
-                            
-                            // Message is unread if: from other person AND (read is not explicitly true)
-                            if (isFromOther && isNotRead) {
+                            // Count as unread: from other person AND not read yet
+                            if (m.sender !== self.user.uid && !m.read) {
                                 unreadCount++;
-                                unreadMessagesList.push({
-                                    text: m.text || '📷 Image',
-                                    read: m.read,
-                                    timestamp: m.timestamp
-                                });
                             }
                         }
                     });
                     
-                    // Store unread count
+                    // Store in unreadMessages object
                     if (!self.unreadMessages[key]) {
-                        self.unreadMessages[key] = {};
+                        self.unreadMessages[key] = { userName: userName };
                     }
                     self.unreadMessages[key].count = unreadCount;
                     self.unreadMessages[key].messages = messages;
-                    self.unreadMessages[key].unreadList = unreadMessagesList;
-                    self.unreadMessages[key].userName = userName;
                     
-                    console.log('📊 [VALUE-LISTENER] ' + userName + ': Total=' + messages.length + ', Unread=' + unreadCount);
-                    if (debugInfo.length > 0 && debugInfo.length <= 5) {
-                        console.log('   📋 First few messages:');
-                        debugInfo.slice(0, 5).forEach(info => {
-                            console.log('      Text: "' + info.text + '" | Sender=' + info.sender.substring(0, 8) + ' | read=' + info.read + ' | fromOther=' + info.isFromOther + ' | unread=' + info.shouldBeUnread);
-                        });
-                    }
-                    if (unreadMessagesList.length > 0) {
-                        console.log('🔴 WAITING FOR REPLY from ' + userName + '!');
-                        console.log('   Unread count: ' + unreadCount);
-                    }
-                    
-                    // Update UI - ALWAYS
+                    // Update UI
                     self.updateUnreadBadge();
-                    
-                    // ALWAYS reload message list to show badges
                     self.loadMessages();
-                    
-                    // Update browser title if there are unread messages
-                    if (unreadCount > 0) {
-                        self.updateBrowserTitle();
-                    }
                 });
             }
         });
@@ -6447,7 +6558,56 @@ app.toggleTheme = function() {
     var toggle = document.getElementById('themeToggle');
     if (toggle) toggle.checked = isDark;
     
-    this.toast(isDark ? 'Dark mode enabled 🌙' : 'Light mode enabled ☀️', 'success');
+    // Play fade-in music when switching to dark mode
+    if (isDark) {
+        this.playThemeMusic();
+        this.toast('Dark mode enabled 🌙 ♪', 'success');
+    } else {
+        this.stopThemeMusic();
+        this.toast('Light mode enabled ☀️', 'success');
+    }
+};
+
+// Play theme music with fade-in
+app.playThemeMusic = function() {
+    var audio = document.getElementById('themeMusic');
+    // Use a royalty-free dark theme music URL (you can replace with your own)
+    // For now, using a placeholder - see guide below for how to add your own
+    audio.src = localStorage.getItem('chichi-theme-music-url') || '';
+    
+    if (!audio.src) {
+        console.log('No theme music configured. Add music URL in settings.');
+        return;
+    }
+    
+    audio.volume = 0;
+    audio.loop = true;
+    audio.play().then(() => {
+        // Fade in effect
+        var fadeIn = setInterval(() => {
+            if (audio.volume < 0.3) {
+                audio.volume += 0.05;
+            } else {
+                clearInterval(fadeIn);
+            }
+        }, 200);
+    }).catch(err => {
+        console.log('Could not play audio:', err);
+    });
+};
+
+// Stop theme music with fade-out
+app.stopThemeMusic = function() {
+    var audio = document.getElementById('themeMusic');
+    var fadeOut = setInterval(() => {
+        if (audio.volume > 0) {
+            audio.volume -= 0.05;
+        } else {
+            audio.pause();
+            audio.volume = 0;
+            clearInterval(fadeOut);
+        }
+    }, 200);
 };
 
 // Load saved theme on startup
