@@ -4446,18 +4446,27 @@ var app = {
     // ========== NOTIFICATION SYSTEM ==========
     // Notify user of new incoming message
     notifyNewMessage: function(senderName, messageText) {
-        // 1. Browser notification
+        // Clean message text
+        var cleanMessage = messageText ? messageText.substring(0, 150) : '📷 Image';
+        
+        // 1. Browser notification (with preview)
         if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('💬 ' + senderName, {
-                body: messageText.substring(0, 100),
+            new Notification('💬 ' + senderName.toUpperCase(), {
+                body: cleanMessage,
                 icon: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png',
-                tag: 'chichi-message',
-                badge: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png'
+                tag: 'chichi-message-' + senderName,
+                badge: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png',
+                requireInteraction: false,
+                vibrate: [200, 100, 200],
+                actions: [
+                    { action: 'open', title: 'Open' },
+                    { action: 'close', title: 'Close' }
+                ]
             });
         }
         
-        // 2. In-app toast notification
-        this.toast(`📬 ${senderName}: ${messageText.substring(0, 50)}`, 'info', 4000);
+        // 2. In-app toast notification (with preview)
+        this.toast(`📬 ${senderName}: ${cleanMessage}`, 'info', 4000);
         
         // 3. Play notification sound
         this.playNotificationSound();
@@ -4469,6 +4478,8 @@ var app = {
         if (navigator.vibrate) {
             navigator.vibrate([200, 100, 200]);
         }
+        
+        console.log('🔔 Notification: ' + senderName + ' - ' + cleanMessage);
     },
 
     // Request browser notification permission
@@ -4532,6 +4543,10 @@ var app = {
         var userIds = Object.keys(this.users);
         var conversations = [];
         
+        // Track how many we're loading
+        var loadCount = 0;
+        var totalToLoad = Object.keys(this.users).filter(uid => uid !== this.user.uid).length;
+        
         userIds.forEach(uid => {
             if (uid !== this.user.uid) {
                 var u = this.users[uid];
@@ -4549,57 +4564,92 @@ var app = {
                 var unreadCount = 0;
                 var lastMessage = 'Tap to message';
                 var lastTime = 'Now';
+                var lastTimestamp = 0;
                 
                 // Get unread count for this conversation
                 if (this.unreadMessages && this.unreadMessages[chatKey]) {
                     unreadCount = this.unreadMessages[chatKey].count || 0;
                 }
                 
-                // Get last message preview and time
-                var lastTimestamp = 0;
-                if (this.chatMessages && this.chatMessages[chatKey] && this.chatMessages[chatKey].length > 0) {
-                    var msgs = this.chatMessages[chatKey];
-                    var lastMsg = msgs[msgs.length - 1];
+                // Load last message from Firebase (not from cache)
+                db.ref('chats/' + chatKey + '/messages').orderByChild('timestamp').limitToLast(1).once('value', snap => {
+                    var lastMsg = null;
+                    snap.forEach(child => {
+                        lastMsg = child.val();
+                    });
                     
-                    // Format message preview
-                    if (lastMsg.image) {
-                        lastMessage = '📷 Image';
-                    } else if (lastMsg.text) {
-                        lastMessage = lastMsg.text.substring(0, 50) + (lastMsg.text.length > 50 ? '...' : '');
-                    }
-                    
-                    // Get actual timestamp for sorting
-                    if (lastMsg.timestamp) {
-                        lastTimestamp = lastMsg.timestamp;
-                        var msgDate = new Date(lastMsg.timestamp);
-                        var now = new Date();
-                        var diff = now - msgDate;
-                        var minutes = Math.floor(diff / 60000);
-                        var hours = Math.floor(diff / 3600000);
-                        var days = Math.floor(diff / 86400000);
+                    if (lastMsg) {
+                        // Format message preview
+                        if (lastMsg.image) {
+                            lastMessage = '📷 Image';
+                        } else if (lastMsg.text) {
+                            lastMessage = lastMsg.text.substring(0, 50) + (lastMsg.text.length > 50 ? '...' : '');
+                        }
                         
-                        if (minutes < 1) lastTime = 'Now';
-                        else if (minutes < 60) lastTime = minutes + 'm';
-                        else if (hours < 24) lastTime = hours + 'h';
-                        else if (days < 7) lastTime = days + 'd';
-                        else lastTime = msgDate.toLocaleDateString();
+                        // Get timestamp for sorting
+                        if (lastMsg.timestamp) {
+                            lastTimestamp = lastMsg.timestamp;
+                            var msgDate = new Date(lastMsg.timestamp);
+                            var now = new Date();
+                            var diff = now - msgDate;
+                            var minutes = Math.floor(diff / 60000);
+                            var hours = Math.floor(diff / 3600000);
+                            var days = Math.floor(diff / 86400000);
+                            
+                            if (minutes < 1) lastTime = 'Now';
+                            else if (minutes < 60) lastTime = minutes + 'm';
+                            else if (hours < 24) lastTime = hours + 'h';
+                            else if (days < 7) lastTime = days + 'd';
+                            else lastTime = msgDate.toLocaleDateString();
+                        }
                     }
-                }
-                
-                conversations.push({
-                    uid: uid,
-                    name: u.name,
-                    profilePhoto: u.profilePhoto,
-                    lastMessage: lastMessage,
-                    lastTime: lastTime,
-                    lastTimestamp: lastTimestamp,
-                    unreadCount: unreadCount,
-                    isUnread: unreadCount > 0
+                    
+                    // Update conversations and re-render
+                    var convIndex = self.conversations ? self.conversations.findIndex(c => c.uid === uid) : -1;
+                    if (convIndex >= 0) {
+                        self.conversations[convIndex].lastMessage = lastMessage;
+                        self.conversations[convIndex].lastTime = lastTime;
+                        self.conversations[convIndex].lastTimestamp = lastTimestamp;
+                        self.conversations[convIndex].unreadCount = unreadCount;
+                        self.conversations[convIndex].isUnread = unreadCount > 0;
+                    }
+                    
+                    loadCount++;
+                    if (loadCount >= totalToLoad) {
+                        // All messages loaded, now render
+                        self.renderMessagesList();
+                    }
                 });
+                
+                // Store for later reference
+                if (!this.conversations) this.conversations = [];
+                
+                var existingConv = this.conversations.find(c => c.uid === uid);
+                if (!existingConv) {
+                    this.conversations.push({
+                        uid: uid,
+                        name: u.name,
+                        profilePhoto: u.profilePhoto,
+                        lastMessage: lastMessage,
+                        lastTime: lastTime,
+                        lastTimestamp: lastTimestamp,
+                        unreadCount: unreadCount,
+                        isUnread: unreadCount > 0
+                    });
+                }
             }
         });
         
-        // Sort by last message time (most recent first) - use actual timestamp
+        // Initial render with placeholder data
+        setTimeout(() => self.renderMessagesList(), 100);
+    },
+
+    renderMessagesList: function() {
+        var self = this;
+        var html = '';
+        var conversations = this.conversations || [];
+        
+        // Sort by last message time (most recent first)
         conversations.sort((a, b) => {
             return b.lastTimestamp - a.lastTimestamp;
         });
@@ -4638,8 +4688,7 @@ var app = {
         
         // Check for unread messages and trigger notifications
         conversations.forEach(conv => {
-            if (conv.unreadCount > 0 && conv.lastMessage) {
-                // Use proper chatKey format
+            if (conv.unreadCount > 0 && conv.lastMessage && conv.lastMessage !== 'Tap to message') {
                 var chatKey = [this.user.uid, conv.uid].sort().join('_');
                 
                 // Get last message from storage
