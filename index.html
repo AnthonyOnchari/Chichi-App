@@ -212,12 +212,13 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: rgba(0, 0, 0, 0.3);
             z-index: 10001;
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            gap: 20px;
+            gap: 30px;
+            backdrop-filter: blur(2px);
         }
 
         #loadingScreen.active {
@@ -225,22 +226,82 @@
         }
 
         .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(255,255,255,0.2);
-            border-top: 3px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+            width: 60px;
+            height: 60px;
+            position: relative;
         }
 
-        @keyframes spin {
+        /* Animated gradient spinner */
+        .loading-spinner::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: conic-gradient(from 0deg, #2E5BFF, #FFC24B, #2E5BFF);
+            border-radius: 50%;
+            animation: spinGradient 2s linear infinite;
+        }
+
+        .loading-spinner::after {
+            content: '';
+            position: absolute;
+            width: 52px;
+            height: 52px;
+            background: var(--dark-bg);
+            border-radius: 50%;
+            top: 4px;
+            left: 4px;
+            z-index: 1;
+        }
+
+        @keyframes spinGradient {
+            from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
 
         .loading-text {
-            color: white;
-            font-size: 0.9rem;
+            color: var(--text);
+            font-size: 16px;
             font-weight: 500;
+            letter-spacing: 1px;
+        }
+
+        .loading-text::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        .loading-progress {
+            width: 200px;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .loading-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #2E5BFF, #FFC24B);
+            border-radius: 10px;
+            animation: progressPulse 1.5s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(46, 91, 255, 0.6);
+        }
+
+        @keyframes progressPulse {
+            0% { width: 10%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         .auth-page {
@@ -2306,7 +2367,10 @@ window.app = window.app || {
 <!-- LOADING SCREEN -->
 <div id="loadingScreen" class="active">
     <div class="loading-spinner"></div>
-    <div class="loading-text">Loading...</div>
+    <div class="loading-text">Loading CHICHI</div>
+    <div class="loading-progress">
+        <div class="loading-progress-bar"></div>
+    </div>
 </div>
 
 <!-- CONSENT BANNER -->
@@ -2698,7 +2762,7 @@ window.app = window.app || {
 
 <script>
 var firebaseConfig = {
-  apiKey: "AIzaSyAQ75EZ1N-YM7IcL_whowj0OFYPXUwe2f0",
+  apiKey: "AIzaSyAQ75EZ1N-YM7lcL_whowj00FYPXUwe2f0",
   authDomain: "chichi-001.firebaseapp.com",
   projectId: "chichi-001",
   storageBucket: "chichi-001.firebasestorage.app",
@@ -2913,15 +2977,50 @@ var app = {
             self.requestNotificationPermission();
         }, 1500);
         
-        // Load data immediately with proper sequencing
+        // CRITICAL: Proper initialization sequence with guaranteed ordering
+        console.log('🚀 Starting app initialization sequence...');
         
-        // First, load all data
+        // Step 1: Load posts
+        self.loadPosts();
+        
+        // Step 2: Load users FIRST, then wait for completion before notifications
+        console.log('📥 Loading users...');
+        self.loadUsers();
+        
+        // Step 3: Load following
+        self.loadFollowing();
+        
+        // Step 4: START NOTIFICATIONS IMMEDIATELY
+        // Don't wait - set up listeners now so they catch messages in real-time
         setTimeout(() => {
-            self.loadPosts();
-            self.loadUsers();
-            self.loadFollowing();
+            console.log('🔔 Starting notification listeners...');
             self.trackUnreadMessages();
-        }, 0);
+        }, 100);
+        
+        // Step 5: Start polling to catch any messages we might have missed
+        // This is a safety net - fires every 5 seconds to check for new messages
+        self.messagePollingInterval = setInterval(() => {
+            var userIds = Object.keys(self.users || {});
+            userIds.forEach(uid => {
+                if (uid !== self.user.uid) {
+                    var key = [self.user.uid, uid].sort().join('_');
+                    db.ref('chats/' + key + '/messages').orderByChild('timestamp').limitToLast(1).once('value', s => {
+                        s.forEach(c => {
+                            var m = c.val();
+                            if (m && m.sender !== self.user.uid && (m.text || m.image)) {
+                                var notifyKey = key + '_' + m.timestamp;
+                                if (!self.notifiedMessages[notifyKey]) {
+                                    var userName = (self.users[uid] || {}).name || 'User';
+                                    console.log('🔔 [POLL] NEW MESSAGE from ' + userName);
+                                    self.notifyNewMessage(userName, m.text || '📷 Image');
+                                    self.notifiedMessages[notifyKey] = true;
+                                }
+                            }
+                        });
+                    });
+                }
+            });
+        }, 5000);
         
         // Restore to previously viewed page (if refresh)
         setTimeout(() => {
@@ -4714,6 +4813,28 @@ var app = {
         document.getElementById('chatModalOverlay').classList.add('active');
         
         var self = this;
+        
+        // SAFETY CHECK: Verify we notified about all unread messages
+        db.ref('chats/' + chatKey + '/messages').orderByChild('timestamp').once('value', s => {
+            var lastUnreadMessage = null;
+            s.forEach(c => {
+                var m = c.val();
+                if (m && m.sender !== self.user.uid && (m.text || m.image) && !m.read) {
+                    lastUnreadMessage = m;
+                }
+            });
+            
+            // If there's an unread message we haven't notified about, notify now
+            if (lastUnreadMessage) {
+                var notifyKey = chatKey + '_' + lastUnreadMessage.timestamp;
+                if (!self.notifiedMessages[notifyKey]) {
+                    console.log('🔔 [CATCH-UP] Unread message from ' + name);
+                    self.notifyNewMessage(name, lastUnreadMessage.text || '📷 Image');
+                    self.notifiedMessages[notifyKey] = true;
+                }
+            }
+        });
+        
         setTimeout(() => {
             self.loadChatMessages();
             self.markAsRead(uid);
@@ -5030,53 +5151,55 @@ var app = {
 
     trackUnreadMessages: function() {
         var self = this;
-        var userIds = Object.keys(this.users);
+        var userIds = Object.keys(this.users || {});
         
         if (!this.unreadMessages) this.unreadMessages = {};
         if (!this.notifiedMessages) this.notifiedMessages = {};
         if (!this.messageCountTracker) this.messageCountTracker = {};
-        if (!this.initialLoadDone) this.initialLoadDone = {};
+        
+        console.log('📊 Setting up message tracking for ' + userIds.length + ' users');
         
         userIds.forEach(uid => {
             if (uid !== self.user.uid) {
                 var key = [self.user.uid, uid].sort().join('_');
-                var userName = this.users[uid].name || 'User';
+                var userName = (this.users[uid] || {}).name || 'User';
+                var messagesRef = db.ref('chats/' + key + '/messages');
                 
-                // Step 1: Load initial message count
-                db.ref('chats/' + key + '/messages').once('value', s => {
-                    var initialCount = 0;
+                // Fetch initial state to establish baseline
+                messagesRef.orderByChild('timestamp').once('value', s => {
+                    var count = 0;
+                    var lastMessage = null;
                     s.forEach(c => {
                         var m = c.val();
                         if (m && (m.text || m.image)) {
-                            initialCount++;
+                            count++;
+                            lastMessage = m;
                         }
                     });
-                    self.messageCountTracker[key] = initialCount;
-                    self.initialLoadDone[key] = true;
-                    console.log('📊 Initial load - ' + userName + ': ' + initialCount + ' messages');
+                    self.messageCountTracker[key] = count;
+                    console.log('📊 ' + userName + ': ' + count + ' messages (baseline)');
                 });
                 
-                // Step 2: Listen for NEW incoming messages ONLY (child_added)
-                // This fires ONLY for new messages added after listener is set up
-                db.ref('chats/' + key + '/messages').on('child_added', childSnap => {
-                    // Only fire if initial load is done (skip initial load messages)
-                    if (self.initialLoadDone[key]) {
-                        var m = childSnap.val();
-                        if (m && m.sender !== self.user.uid && (m.text || m.image)) {
-                            // NEW MESSAGE FROM OTHER PERSON!
-                            var notifyKey = key + '_' + m.timestamp;
-                            
-                            if (!self.notifiedMessages[notifyKey]) {
-                                console.log('🔔 NEW MESSAGE from ' + userName + ': ' + (m.text || '📷 Image'));
-                                self.notifyNewMessage(userName, m.text || '📷 Image');
-                                self.notifiedMessages[notifyKey] = true;
-                            }
+                // Listen for every single new message (child_added fires for each new child)
+                messagesRef.orderByChild('timestamp').on('child_added', childSnap => {
+                    var m = childSnap.val();
+                    if (!m) return;
+                    
+                    // Only notify if message is from the other person
+                    if (m.sender !== self.user.uid && (m.text || m.image)) {
+                        var notifyKey = key + '_' + m.timestamp;
+                        
+                        // Make absolutely sure we don't duplicate notifications
+                        if (!self.notifiedMessages[notifyKey]) {
+                            console.log('🔔 [REAL-TIME] NEW MESSAGE from ' + userName + ': ' + (m.text || '📷 Image'));
+                            self.notifyNewMessage(userName, m.text || '📷 Image');
+                            self.notifiedMessages[notifyKey] = true;
                         }
                     }
                 });
                 
-                // Step 3: Track unread count with value listener
-                db.ref('chats/' + key + '/messages').on('value', s => {
+                // Also listen for value changes (catches deletions, updates, etc)
+                messagesRef.on('value', s => {
                     var unreadCount = 0;
                     var messages = [];
                     
@@ -5090,14 +5213,17 @@ var app = {
                         }
                     });
                     
+                    // Store unread count
                     if (!self.unreadMessages[key]) {
                         self.unreadMessages[key] = {};
                     }
                     self.unreadMessages[key].count = unreadCount;
+                    self.unreadMessages[key].messages = messages;
                     
+                    // Update UI
                     self.updateUnreadBadge();
                     
-                    // Only update message list display if Messages tab is visible
+                    // Only update message list if on Messages tab
                     var messagesView = document.getElementById('messagesView');
                     if (messagesView && messagesView.style.display !== 'none') {
                         self.loadMessages();
@@ -5478,11 +5604,25 @@ var app = {
     },
 
     initNotifications: function() {
-        // Firebase Installations API has permission issues on this project
-        // Push notifications will be re-enabled after API permissions are properly configured
-        // App functions perfectly without notifications for now
-        console.log('Notifications: Skipped (API configuration pending)');
-        return;
+        // Request notification permission from user
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    console.log('✅ Notification permission granted');
+                } else {
+                    console.log('⚠️ Notification permission denied by user');
+                }
+            });
+        } else if ('Notification' in window && Notification.permission === 'granted') {
+            console.log('✅ Notifications already have permission');
+        }
+        
+        // Start tracking unread messages immediately
+        var self = this;
+        setTimeout(() => {
+            self.trackUnreadMessages();
+            console.log('✅ Notifications configured and tracking started');
+        }, 500);
     },
 
     showNotificationToast: function(title, body) {
