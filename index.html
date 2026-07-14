@@ -3006,20 +3006,26 @@ var app = {
         console.log('🚀 Starting app initialization sequence...');
         
         // Step 1: Load posts
+        console.log('📮 Step 1: Loading posts...');
         self.loadPosts();
         
         // Step 2: Load users FIRST, then wait for completion before notifications
-        console.log('📥 Loading users...');
+        console.log('📥 Step 2: Loading users...');
         self.loadUsers();
         
         // Step 3: Load following
+        console.log('👥 Step 3: Loading following...');
         self.loadFollowing();
         
         // Step 4: START NOTIFICATIONS IMMEDIATELY
         // Don't wait - set up listeners now so they catch messages in real-time
         setTimeout(() => {
-            console.log('🔔 Starting notification listeners...');
-            self.trackUnreadMessages();
+            console.log('🔔 Step 4: Checking if tracking is active...');
+            if (!self.unreadTrackingActive) {
+                console.log('⚠️ WARNING: Unread tracking not active yet! Will start when users load.');
+            } else {
+                console.log('✅ Unread tracking is active.');
+            }
         }, 100);
         
         // Step 5: Start polling to catch any messages we might have missed
@@ -4500,25 +4506,41 @@ var app = {
 
     loadUsers: function() {
         var self = this;
+        console.log('📥 loadUsers() called - Setting up listener on /users');
+        
         db.ref('users').on('value', s => {
+            console.log('📥 Firebase /users callback fired!');
             var allUsers = s.val() || {};
+            var rawCount = Object.keys(allUsers).length;
+            console.log('   Raw users from Firebase:', rawCount);
+            console.log('   Raw data:', allUsers);
+            
             var oldUserCount = Object.keys(self.users).length;
+            console.log('   Old user count:', oldUserCount);
+            
             self.users = {};
             
             // Filter out null, deleted, or invalid users
             for (var uid in allUsers) {
-                if (allUsers[uid] && allUsers[uid].name && allUsers[uid].email) {
-                    self.users[uid] = allUsers[uid];
+                var u = allUsers[uid];
+                if (u && u.name && u.email) {
+                    self.users[uid] = u;
+                    console.log('   ✅ Added user:', u.name);
+                } else {
+                    console.log('   ❌ Filtered out uid ' + uid + ' - missing name/email. Data:', u);
                 }
             }
             
             var newUserCount = Object.keys(self.users).length;
-            console.log('✅ Users loaded: ' + newUserCount + ' users');
+            console.log('✅ Users loaded: ' + newUserCount + ' valid users');
+            if (newUserCount > 0) {
+                console.log('   User list:', Object.keys(self.users).map(uid => self.users[uid].name).join(', '));
+            }
             
             // First time users are loaded - start tracking unread messages
             if (oldUserCount === 0 && newUserCount > 0 && !self.unreadTrackingStarted) {
                 self.unreadTrackingStarted = true;
-                console.log('🔔 Users loaded! Starting unread message tracking...');
+                console.log('🔔 Users loaded for FIRST TIME! Starting unread message tracking...');
                 setTimeout(() => {
                     self.trackUnreadMessages();
                 }, 100);
@@ -4528,6 +4550,9 @@ var app = {
             if (document.getElementById('exploreView').classList.contains('active')) {
                 self.loadExplore();
             }
+        }, err => {
+            console.error('❌ ERROR loading users from Firebase:', err.code, err.message);
+            console.error('   Full error:', err);
         });
     },
 
