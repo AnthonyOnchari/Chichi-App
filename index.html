@@ -2878,8 +2878,13 @@ var app = {
         var nav = document.querySelector('.bottom-nav');
         if (nav) nav.style.display = 'flex';
         
-        // Load data immediately with proper sequencing
+        // Request notification permission
         var self = this;
+        setTimeout(() => {
+            self.requestNotificationPermission();
+        }, 1500);
+        
+        // Load data immediately with proper sequencing
         
         // First, ensure feed view is active
         this.switchView('feed');
@@ -4345,6 +4350,89 @@ var app = {
         alert('Conversation muted!');
     },
 
+    // ========== NOTIFICATION SYSTEM ==========
+    // Notify user of new incoming message
+    notifyNewMessage: function(senderName, messageText) {
+        // 1. Browser notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('💬 ' + senderName, {
+                body: messageText.substring(0, 100),
+                icon: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png',
+                tag: 'chichi-message',
+                badge: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png'
+            });
+        }
+        
+        // 2. In-app toast notification
+        this.toast(`📬 ${senderName}: ${messageText.substring(0, 50)}`, 'info', 4000);
+        
+        // 3. Play notification sound
+        this.playNotificationSound();
+        
+        // 4. Update browser title
+        this.updateBrowserTitle();
+        
+        // 5. Vibrate (mobile)
+        if (navigator.vibrate) {
+            navigator.vibrate([200, 100, 200]);
+        }
+    },
+
+    // Request browser notification permission
+    requestNotificationPermission: function() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    console.log('✅ Notifications enabled!');
+                    this.toast('Notifications enabled! 🔔', 'success');
+                }
+            });
+        }
+    },
+
+    // Play notification sound
+    playNotificationSound: function() {
+        try {
+            var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            var oscillator = audioContext.createOscillator();
+            var gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Pleasant notification sound (ding)
+            oscillator.frequency.value = 800; // Hz
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        } catch (e) {
+            console.log('Audio notification skipped');
+        }
+    },
+
+    // Update browser title with unread count
+    updateBrowserTitle: function() {
+        var totalUnread = 0;
+        var userIds = Object.keys(this.users);
+        
+        userIds.forEach(uid => {
+            if (uid !== this.user.uid) {
+                var chatKey = [this.user.uid, uid].sort().join('_');
+                if (this.unreadMessages && this.unreadMessages[chatKey]) {
+                    totalUnread += this.unreadMessages[chatKey].count || 0;
+                }
+            }
+        });
+        
+        if (totalUnread > 0) {
+            document.title = `💬 (${totalUnread}) CHICHI`;
+        } else {
+            document.title = 'CHICHI';
+        }
+    },
+
     loadMessages: function() {
         var self = this;
         var html = '';
@@ -4508,11 +4596,13 @@ var app = {
         
         // Initialize chat messages storage
         if (!this.chatMessages) this.chatMessages = {};
+        if (!this.lastMessageCount) this.lastMessageCount = {};
         
         db.ref('chats/' + key + '/messages').orderByChild('timestamp').on('value', s => {
             var html = '';
             var hasMessages = false;
             var messages = [];
+            var newMessagesCount = 0;
             
             s.forEach(c => {
                 hasMessages = true;
@@ -4521,6 +4611,25 @@ var app = {
                     messages.push(m);
                 }
             });
+            
+            // Check for new incoming messages
+            var previousCount = this.lastMessageCount[key] || 0;
+            var currentCount = messages.length;
+            
+            if (currentCount > previousCount) {
+                // New messages received!
+                var newMessages = messages.slice(previousCount);
+                newMessages.forEach(m => {
+                    // Only notify if message is from the other person
+                    if (m && m.sender !== self.user.uid && (m.text || m.image)) {
+                        newMessagesCount++;
+                        // Show notification for new message from this person
+                        self.notifyNewMessage(self.currentChat.name, m.text || '📷 Image');
+                    }
+                });
+            }
+            
+            this.lastMessageCount[key] = currentCount;
             
             // Store messages for preview in list
             this.chatMessages[key] = messages;
