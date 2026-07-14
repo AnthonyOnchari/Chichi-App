@@ -5114,6 +5114,8 @@ console.log('debugModal() - Log all modal info');
 console.log('showDebugPanel() - Show UI debug panel');
 console.log('testScrolling() - Test if scrolling works');
 console.log('testModal() - Create test modal with scroll content');
+console.log('inspectDOM() - 🔍 Inspect modal in DOM (detailed)');
+console.log('forceShowModal() - 💪 Force show modal (last resort)');
 console.log('');
 console.log('%cKeyboard Shortcuts:', 'color: #00D4AA; font-weight: bold;');
 console.log('Ctrl+Shift+D - Open debug panel');
@@ -5213,6 +5215,98 @@ window.testModal = function() {
             }
         }
     }, 100);
+};
+
+// Aggressive DOM Inspector
+window.inspectDOM = function() {
+    console.clear();
+    console.log('%c🔍 DOM INSPECTION - CHECKING MODAL VISIBILITY', 'color: #ff4444; font-size: 16px; font-weight: bold; background: #ffe0e0; padding: 8px;');
+    
+    console.log('%cStep 1: Check if modal is in DOM', 'color: #00D4AA; font-weight: bold;');
+    var allDivs = document.querySelectorAll('div');
+    console.log('Total divs on page:', allDivs.length);
+    
+    var modalOverlays = document.querySelectorAll('.modal-overlay');
+    console.log('Modals with class "modal-overlay":', modalOverlays.length);
+    
+    var activeOverlays = document.querySelectorAll('.modal-overlay.active');
+    console.log('Modals with class "modal-overlay.active":', activeOverlays.length);
+    
+    console.log('%cStep 2: Check computed styles', 'color: #00D4AA; font-weight: bold;');
+    activeOverlays.forEach((overlay, idx) => {
+        console.group(`Active Overlay ${idx + 1}:`);
+        var style = window.getComputedStyle(overlay);
+        console.log('Display:', style.display, '(Expected: flex)');
+        console.log('Position:', style.position, '(Expected: fixed)');
+        console.log('Top:', style.top);
+        console.log('Z-index:', style.zIndex);
+        console.log('Visibility:', style.visibility);
+        console.log('Opacity:', style.opacity);
+        console.log('Width:', style.width);
+        console.log('Height:', style.height);
+        console.log('Background:', style.background);
+        console.groupEnd();
+        
+        // Check inner modal
+        var innerModal = overlay.querySelector('div');
+        if (innerModal) {
+            console.group(`Inner Modal Content:`);
+            console.log('Height:', innerModal.offsetHeight + 'px');
+            console.log('Scroll Height:', innerModal.scrollHeight + 'px');
+            console.log('Overflow-Y:', window.getComputedStyle(innerModal).overflowY);
+            console.log('Is Scrollable:', innerModal.scrollHeight > innerModal.offsetHeight);
+            console.groupEnd();
+        }
+    });
+    
+    console.log('%cStep 3: Test visibility', 'color: #00D4AA; font-weight: bold;');
+    if (activeOverlays.length > 0) {
+        console.log('%c✅ Modal found in DOM!', 'color: #22c55e; font-weight: bold;');
+        var overlay = activeOverlays[0];
+        console.log('Is visible on page?', overlay.offsetHeight > 0 ? '✅ YES' : '❌ NO');
+    } else {
+        console.log('%c❌ NO ACTIVE MODAL FOUND IN DOM', 'color: #ff4444; font-weight: bold;');
+        console.log('Try opening Edit Profile first, then run inspectDOM()');
+    }
+    
+    console.log('%cStep 4: CSS Rules Check', 'color: #00D4AA; font-weight: bold;');
+    var stylesheet = document.styleSheets[0];
+    var foundRule = false;
+    for (let i = 0; i < stylesheet.cssRules.length; i++) {
+        if (stylesheet.cssRules[i].selectorText && stylesheet.cssRules[i].selectorText.includes('modal-overlay')) {
+            console.log('Found CSS rule:', stylesheet.cssRules[i].selectorText);
+            foundRule = true;
+        }
+    }
+    if (!foundRule) console.log('Warning: Could not find modal-overlay CSS rules');
+};
+
+// Force show modal - Last resort
+window.forceShowModal = function() {
+    console.log('%c💪 FORCE SHOWING MODAL', 'color: #ff4444; font-weight: bold;');
+    var overlays = document.querySelectorAll('.modal-overlay');
+    overlays.forEach((overlay, idx) => {
+        overlay.style.display = 'flex !important';
+        overlay.style.position = 'fixed !important';
+        overlay.style.top = '0 !important';
+        overlay.style.left = '0 !important';
+        overlay.style.right = '0 !important';
+        overlay.style.bottom = '0 !important';
+        overlay.style.zIndex = '9999 !important';
+        overlay.style.background = 'rgba(0,0,0,0.5) !important';
+        overlay.style.alignItems = 'flex-end !important';
+        overlay.style.justifyContent = 'center !important';
+        overlay.style.overflow = 'hidden !important';
+        
+        var inner = overlay.querySelector('div');
+        if (inner) {
+            inner.style.display = 'block !important';
+            inner.style.maxHeight = '85vh !important';
+            inner.style.overflowY = 'scroll !important';
+        }
+        
+        console.log(`✅ Modal ${idx + 1} forced visible!`);
+    });
 };
 
 // Make it easy to access from browser console
