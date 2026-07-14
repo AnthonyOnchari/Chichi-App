@@ -425,19 +425,23 @@
 
         .app-content {
             flex: 1;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
             background: var(--light);
             position: relative;
             display: flex;
             justify-content: center;
             align-items: flex-start;
+            -webkit-overflow-scrolling: touch;
         }
 
         .view {
             display: none;
             width: 100%;
             max-width: 480px;
-            overflow-y: scroll;
+            height: auto;
+            overflow-y: auto;
+            overflow-x: hidden;
             flex-direction: column;
             padding-bottom: 120px;
             animation: smoothFadeIn 0.4s ease;
@@ -512,11 +516,11 @@
             flex: 0 0 auto;
             overflow-y: visible;
             overflow-x: hidden;
-            scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
             width: 100%;
             padding: 0;
             background: var(--light);
+            display: flex;
+            flex-direction: column;
         }
         
         #feedContainer::-webkit-scrollbar {
