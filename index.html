@@ -2747,6 +2747,11 @@ var app = {
     init: function() {
         var self = this;
         
+        // Initialize data structures
+        this.chatMessages = {};
+        this.unreadMessages = {};
+        this.notifiedMessages = {};
+        
         // Initialize consent management
         this.initConsent();
         
@@ -2865,6 +2870,13 @@ var app = {
     },
 
     showApp: function() {
+        // Initialize data structures
+        if (!this.chatMessages) this.chatMessages = {};
+        if (!this.unreadMessages) this.unreadMessages = {};
+        if (!this.notifiedMessages) this.notifiedMessages = {};
+        if (!this.navigationHistory) this.navigationHistory = [];
+        if (!this.currentView) this.currentView = 'feed';
+        
         // Hide loading screen
         var loading = document.getElementById('loadingScreen');
         if (loading) {
@@ -4456,11 +4468,7 @@ var app = {
                 tag: 'chichi-message-' + senderName,
                 badge: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png',
                 requireInteraction: false,
-                vibrate: [200, 100, 200],
-                actions: [
-                    { action: 'open', title: 'Open' },
-                    { action: 'close', title: 'Close' }
-                ]
+                vibrate: [200, 100, 200]
             });
         }
         
@@ -4539,6 +4547,12 @@ var app = {
     loadMessages: function() {
         var self = this;
         var html = '';
+        
+        // Initialize chatMessages if missing
+        if (!this.chatMessages) {
+            this.chatMessages = {};
+        }
+        
         var userIds = Object.keys(this.users);
         var conversations = [];
         
@@ -4791,6 +4805,13 @@ var app = {
     // Display messages in chat modal
     displayChatMessages: function(messages, key) {
         var self = this;
+        
+        // Store messages in cache
+        if (key) {
+            if (!this.chatMessages) this.chatMessages = {};
+            this.chatMessages[key] = messages;
+        }
+        
         if (!messages || messages.length === 0) {
             var chatMessagesDiv = document.getElementById('chatModalMessages');
             if (chatMessagesDiv) {
