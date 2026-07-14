@@ -2401,7 +2401,6 @@ window.app = window.app || {
 <div class="main-app" id="mainApp">
     <div class="app-header">
         <div class="app-logo-container">
-            <button class="btn-icon" style="margin-right: 12px; opacity: 0.8;" onclick="app.goBack()" title="Go back">← Back</button>
             <h1>CHICHI</h1>
         </div>
         <div class="header-actions">
@@ -4543,10 +4542,6 @@ var app = {
         var userIds = Object.keys(this.users);
         var conversations = [];
         
-        // Track how many we're loading
-        var loadCount = 0;
-        var totalToLoad = Object.keys(this.users).filter(uid => uid !== this.user.uid).length;
-        
         userIds.forEach(uid => {
             if (uid !== this.user.uid) {
                 var u = this.users[uid];
@@ -4564,92 +4559,57 @@ var app = {
                 var unreadCount = 0;
                 var lastMessage = 'Tap to message';
                 var lastTime = 'Now';
-                var lastTimestamp = 0;
                 
                 // Get unread count for this conversation
                 if (this.unreadMessages && this.unreadMessages[chatKey]) {
                     unreadCount = this.unreadMessages[chatKey].count || 0;
                 }
                 
-                // Load last message from Firebase (not from cache)
-                db.ref('chats/' + chatKey + '/messages').orderByChild('timestamp').limitToLast(1).once('value', snap => {
-                    var lastMsg = null;
-                    snap.forEach(child => {
-                        lastMsg = child.val();
-                    });
+                // Get last message preview and time
+                var lastTimestamp = 0;
+                if (this.chatMessages && this.chatMessages[chatKey] && this.chatMessages[chatKey].length > 0) {
+                    var msgs = this.chatMessages[chatKey];
+                    var lastMsg = msgs[msgs.length - 1];
                     
-                    if (lastMsg) {
-                        // Format message preview
-                        if (lastMsg.image) {
-                            lastMessage = '📷 Image';
-                        } else if (lastMsg.text) {
-                            lastMessage = lastMsg.text.substring(0, 50) + (lastMsg.text.length > 50 ? '...' : '');
-                        }
+                    // Format message preview
+                    if (lastMsg.image) {
+                        lastMessage = '📷 Image';
+                    } else if (lastMsg.text) {
+                        lastMessage = lastMsg.text.substring(0, 50) + (lastMsg.text.length > 50 ? '...' : '');
+                    }
+                    
+                    // Get actual timestamp for sorting
+                    if (lastMsg.timestamp) {
+                        lastTimestamp = lastMsg.timestamp;
+                        var msgDate = new Date(lastMsg.timestamp);
+                        var now = new Date();
+                        var diff = now - msgDate;
+                        var minutes = Math.floor(diff / 60000);
+                        var hours = Math.floor(diff / 3600000);
+                        var days = Math.floor(diff / 86400000);
                         
-                        // Get timestamp for sorting
-                        if (lastMsg.timestamp) {
-                            lastTimestamp = lastMsg.timestamp;
-                            var msgDate = new Date(lastMsg.timestamp);
-                            var now = new Date();
-                            var diff = now - msgDate;
-                            var minutes = Math.floor(diff / 60000);
-                            var hours = Math.floor(diff / 3600000);
-                            var days = Math.floor(diff / 86400000);
-                            
-                            if (minutes < 1) lastTime = 'Now';
-                            else if (minutes < 60) lastTime = minutes + 'm';
-                            else if (hours < 24) lastTime = hours + 'h';
-                            else if (days < 7) lastTime = days + 'd';
-                            else lastTime = msgDate.toLocaleDateString();
-                        }
+                        if (minutes < 1) lastTime = 'Now';
+                        else if (minutes < 60) lastTime = minutes + 'm';
+                        else if (hours < 24) lastTime = hours + 'h';
+                        else if (days < 7) lastTime = days + 'd';
+                        else lastTime = msgDate.toLocaleDateString();
                     }
-                    
-                    // Update conversations and re-render
-                    var convIndex = self.conversations ? self.conversations.findIndex(c => c.uid === uid) : -1;
-                    if (convIndex >= 0) {
-                        self.conversations[convIndex].lastMessage = lastMessage;
-                        self.conversations[convIndex].lastTime = lastTime;
-                        self.conversations[convIndex].lastTimestamp = lastTimestamp;
-                        self.conversations[convIndex].unreadCount = unreadCount;
-                        self.conversations[convIndex].isUnread = unreadCount > 0;
-                    }
-                    
-                    loadCount++;
-                    if (loadCount >= totalToLoad) {
-                        // All messages loaded, now render
-                        self.renderMessagesList();
-                    }
-                });
-                
-                // Store for later reference
-                if (!this.conversations) this.conversations = [];
-                
-                var existingConv = this.conversations.find(c => c.uid === uid);
-                if (!existingConv) {
-                    this.conversations.push({
-                        uid: uid,
-                        name: u.name,
-                        profilePhoto: u.profilePhoto,
-                        lastMessage: lastMessage,
-                        lastTime: lastTime,
-                        lastTimestamp: lastTimestamp,
-                        unreadCount: unreadCount,
-                        isUnread: unreadCount > 0
-                    });
                 }
+                
+                conversations.push({
+                    uid: uid,
+                    name: u.name,
+                    profilePhoto: u.profilePhoto,
+                    lastMessage: lastMessage,
+                    lastTime: lastTime,
+                    lastTimestamp: lastTimestamp,
+                    unreadCount: unreadCount,
+                    isUnread: unreadCount > 0
+                });
             }
         });
         
-        // Initial render with placeholder data
-        setTimeout(() => self.renderMessagesList(), 100);
-    },
-
-    renderMessagesList: function() {
-        var self = this;
-        var html = '';
-        var conversations = this.conversations || [];
-        
-        // Sort by last message time (most recent first)
+        // Sort by last message time (most recent first) - use actual timestamp
         conversations.sort((a, b) => {
             return b.lastTimestamp - a.lastTimestamp;
         });
@@ -4688,7 +4648,7 @@ var app = {
         
         // Check for unread messages and trigger notifications
         conversations.forEach(conv => {
-            if (conv.unreadCount > 0 && conv.lastMessage && conv.lastMessage !== 'Tap to message') {
+            if (conv.unreadCount > 0 && conv.lastMessage) {
                 var chatKey = [this.user.uid, conv.uid].sort().join('_');
                 
                 // Get last message from storage
@@ -4708,40 +4668,6 @@ var app = {
                 }
             }
         });
-        
-        // Set up real-time listener for message arrivals to trigger notifications
-        if (!this.messagesListListener) {
-            var self = this;
-            var userIds = Object.keys(this.users);
-            
-            userIds.forEach(uid => {
-                if (uid !== this.user.uid) {
-                    var chatKey = [this.user.uid, uid].sort().join('_');
-                    
-                    // Listen for new messages in this conversation
-                    db.ref('chats/' + chatKey + '/messages').on('child_added', snap => {
-                        var m = snap.val();
-                        if (m && m.sender !== self.user.uid && (m.text || m.image)) {
-                            // NEW MESSAGE ARRIVED!
-                            var senderName = self.users[uid] ? self.users[uid].name : 'User';
-                            
-                            // Only notify if this chat is NOT currently open
-                            if (!self.currentChat || self.currentChat.uid !== uid) {
-                                // Notify about new message
-                                self.notifyNewMessage(senderName, m.text || '📷 Image');
-                                
-                                // Reload messages list to show updated preview
-                                setTimeout(() => {
-                                    self.loadMessages();
-                                }, 100);
-                            }
-                        }
-                    });
-                }
-            });
-            
-            this.messagesListListener = true;
-        }
         
         if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No messages yet. Start a conversation!</div>';
         document.getElementById('messageList').innerHTML = html;
