@@ -178,8 +178,8 @@
             background: var(--light);
             color: var(--text);
             width: 100%;
-            height: 100%;
-            overflow: auto;
+            height: auto;
+            overflow-x: hidden;
             position: relative;
         }
 
@@ -425,14 +425,14 @@
 
         .app-content {
             flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
+            overflow: visible;
             background: var(--light);
             position: relative;
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            -webkit-overflow-scrolling: touch;
+            height: auto;
+            min-height: 100vh;
         }
 
         .view {
@@ -440,12 +440,10 @@
             width: 100%;
             max-width: 480px;
             height: auto;
-            overflow-y: auto;
-            overflow-x: hidden;
+            overflow: visible;
             flex-direction: column;
             padding-bottom: 120px;
             animation: smoothFadeIn 0.4s ease;
-            -webkit-overflow-scrolling: touch;
         }
 
         .view.active { display: flex; }
@@ -514,13 +512,13 @@
 
         #feedContainer {
             flex: 0 0 auto;
-            overflow-y: visible;
-            overflow-x: hidden;
+            overflow: visible;
             width: 100%;
             padding: 0;
             background: var(--light);
             display: flex;
             flex-direction: column;
+            gap: 0;
         }
         
         #feedContainer::-webkit-scrollbar {
