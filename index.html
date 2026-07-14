@@ -3850,20 +3850,6 @@ var app = {
         var self = this;
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
-        modal.style.cssText = `
-            display: flex !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            background: rgba(0,0,0,0.5) !important;
-            z-index: 2000 !important;
-            align-items: flex-end !important;
-            justify-content: center !important;
-            animation: smoothFadeIn 0.3s ease;
-            overflow: hidden !important;
-        `;
         modal.innerHTML = `<div class="modal" style="max-width: 450px; display: flex; flex-direction: column; max-height: 85vh; overflow-y: scroll !important; overflow-x: hidden; background: white; width: 100%; border-radius: 28px 28px 0 0; padding: 20px; -webkit-overflow-scrolling: touch;">
             <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
             <h2 style="margin-bottom: 24px; font-weight: 700; text-align: center;">Edit Your Profile</h2>
@@ -3899,6 +3885,28 @@ var app = {
             </div>
         </div>`;
         document.body.appendChild(modal);
+        
+        // Force inline styles AFTER DOM insertion (more reliable)
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.right = '0';
+        modal.style.bottom = '0';
+        modal.style.background = 'rgba(0,0,0,0.5)';
+        modal.style.zIndex = '2000';
+        modal.style.alignItems = 'flex-end';
+        modal.style.justifyContent = 'center';
+        modal.style.overflow = 'hidden';
+        
+        // Also fix inner modal
+        var innerModal = modal.querySelector('.modal');
+        if (innerModal) {
+            innerModal.style.maxHeight = '85vh';
+            innerModal.style.overflowY = 'scroll';
+            innerModal.style.display = 'flex';
+            innerModal.style.flexDirection = 'column';
+        }
         
         // Auto-log modal info for debugging
         setTimeout(() => {
@@ -5110,12 +5118,12 @@ window.testScrolling = function() {
 
 // Easy access
 console.log('%c🎯 DEBUG COMMANDS:', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
-console.log('debugModal() - Log all modal info');
-console.log('showDebugPanel() - Show UI debug panel');
-console.log('testScrolling() - Test if scrolling works');
 console.log('testModal() - Create test modal with scroll content');
+console.log('simpleScrollTest() - ⭐ Ultra-simple scroll test (NO CSS classes!)');
+console.log('testActualScroll() - Test if scroll actually works');
 console.log('inspectDOM() - 🔍 Inspect modal in DOM (detailed)');
 console.log('forceShowModal() - 💪 Force show modal (last resort)');
+console.log('debugModal() - Log all modal info');
 console.log('');
 console.log('%cKeyboard Shortcuts:', 'color: #00D4AA; font-weight: bold;');
 console.log('Ctrl+Shift+D - Open debug panel');
@@ -5135,19 +5143,6 @@ window.testModal = function() {
     
     var modal = document.createElement('div');
     modal.className = 'modal-overlay active';
-    modal.style.cssText = `
-        display: flex !important;
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        background: rgba(0,0,0,0.7) !important;
-        z-index: 9999 !important;
-        align-items: flex-end !important;
-        justify-content: center !important;
-        overflow: hidden !important;
-    `;
     
     modal.innerHTML = `<div style="
         background: white;
@@ -5196,6 +5191,19 @@ window.testModal = function() {
     
     document.body.appendChild(modal);
     
+    // Force inline styles AFTER DOM insertion
+    modal.style.display = 'flex';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.right = '0';
+    modal.style.bottom = '0';
+    modal.style.background = 'rgba(0,0,0,0.7)';
+    modal.style.zIndex = '9999';
+    modal.style.alignItems = 'flex-end';
+    modal.style.justifyContent = 'center';
+    modal.style.overflow = 'hidden';
+    
     setTimeout(() => {
         console.log('%c✅ Test modal created and visible!', 'color: #22c55e; font-weight: bold;');
         var testModal = document.querySelector('.modal-overlay.active');
@@ -5217,7 +5225,102 @@ window.testModal = function() {
     }, 100);
 };
 
-// Aggressive DOM Inspector
+// Ultra-simple scroll modal - NO CSS classes, pure inline styles
+window.simpleScrollTest = function() {
+    console.log('%c🚀 CREATING ULTRA-SIMPLE SCROLL TEST', 'color: #00D4AA; font-size: 16px; font-weight: bold; background: #e0f7f6; padding: 8px;');
+    
+    var overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        z-index: 99999;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        font-family: Arial, sans-serif;
+    `;
+    
+    var modal = document.createElement('div');
+    modal.style.cssText = `
+        width: 100%;
+        max-width: 500px;
+        height: 80vh;
+        background: white;
+        border-radius: 20px 20px 0 0;
+        overflow-y: scroll;
+        padding: 20px;
+        box-sizing: border-box;
+    `;
+    
+    // Add lots of content
+    var content = '<h2 style="margin: 0 0 20px 0; text-align: center;">🧪 SCROLL TEST</h2>';
+    for (let i = 1; i <= 20; i++) {
+        content += `
+            <div style="
+                background: ${i % 2 === 0 ? '#f0f0f0' : '#e0e0e0'};
+                padding: 20px;
+                margin-bottom: 15px;
+                border-radius: 10px;
+                text-align: center;
+                font-weight: bold;
+                font-size: 18px;
+            ">
+                Content Block ${i}
+            </div>
+        `;
+    }
+    content += '<button onclick="this.closest(\'div\').parentElement.remove();" style="width: 100%; padding: 15px; background: #00D4AA; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer;">Close</button>';
+    
+    modal.innerHTML = content;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    // Detailed logging
+    setTimeout(() => {
+        console.log('%c✅ SCROLL TEST MODAL CREATED', 'color: #22c55e; font-weight: bold;');
+        console.log('Modal Height (viewport):', modal.offsetHeight + 'px');
+        console.log('Modal Scroll Height (content):', modal.scrollHeight + 'px');
+        console.log('Overflow-Y style:', modal.style.overflowY);
+        console.log('Can scroll?', modal.scrollHeight > modal.offsetHeight ? '✅ YES' : '❌ NO');
+        console.log('');
+        console.log('%cNOW TRY SCROLLING THE MODAL!', 'color: #ff4444; font-weight: bold; font-size: 14px;');
+        console.log('If you can scroll the content blocks up/down, scrolling works! ✓');
+        
+        // Add scroll listener to test
+        modal.addEventListener('scroll', (e) => {
+            console.log('%c📜 SCROLL EVENT DETECTED!', 'color: #ff9800; font-weight: bold;');
+            console.log('Current scroll position:', e.target.scrollTop + 'px');
+        });
+    }, 100);
+};
+
+// Simple scroll test with actual scroll
+window.testActualScroll = function() {
+    console.log('%c🧪 TESTING ACTUAL SCROLL MOVEMENT', 'color: #00D4AA; font-weight: bold;');
+    
+    var modal = document.querySelector('.modal-overlay.active .modal');
+    if (!modal) {
+        console.log('%c❌ No active modal found!', 'color: #ff4444; font-weight: bold;');
+        return;
+    }
+    
+    console.log('Current scroll position:', modal.scrollTop);
+    
+    // Try to scroll
+    modal.scrollTop = 100;
+    
+    setTimeout(() => {
+        if (modal.scrollTop === 100) {
+            console.log('%c✅ SCROLL WORKS! Modal scrolled to 100px', 'color: #22c55e; font-weight: bold; font-size: 16px;');
+        } else {
+            console.log('%c❌ Scroll NOT working. scrollTop is still:', modal.scrollTop, 'color: #ff4444; font-weight: bold;');
+        }
+    }, 50);
+};
 window.inspectDOM = function() {
     console.clear();
     console.log('%c🔍 DOM INSPECTION - CHECKING MODAL VISIBILITY', 'color: #ff4444; font-size: 16px; font-weight: bold; background: #ffe0e0; padding: 8px;');
@@ -5286,23 +5389,23 @@ window.forceShowModal = function() {
     console.log('%c💪 FORCE SHOWING MODAL', 'color: #ff4444; font-weight: bold;');
     var overlays = document.querySelectorAll('.modal-overlay');
     overlays.forEach((overlay, idx) => {
-        overlay.style.display = 'flex !important';
-        overlay.style.position = 'fixed !important';
-        overlay.style.top = '0 !important';
-        overlay.style.left = '0 !important';
-        overlay.style.right = '0 !important';
-        overlay.style.bottom = '0 !important';
-        overlay.style.zIndex = '9999 !important';
-        overlay.style.background = 'rgba(0,0,0,0.5) !important';
-        overlay.style.alignItems = 'flex-end !important';
-        overlay.style.justifyContent = 'center !important';
-        overlay.style.overflow = 'hidden !important';
+        overlay.style.display = 'flex';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.right = '0';
+        overlay.style.bottom = '0';
+        overlay.style.zIndex = '9999';
+        overlay.style.background = 'rgba(0,0,0,0.5)';
+        overlay.style.alignItems = 'flex-end';
+        overlay.style.justifyContent = 'center';
+        overlay.style.overflow = 'hidden';
         
         var inner = overlay.querySelector('div');
         if (inner) {
-            inner.style.display = 'block !important';
-            inner.style.maxHeight = '85vh !important';
-            inner.style.overflowY = 'scroll !important';
+            inner.style.display = 'block';
+            inner.style.maxHeight = '85vh';
+            inner.style.overflowY = 'scroll';
         }
         
         console.log(`✅ Modal ${idx + 1} forced visible!`);
