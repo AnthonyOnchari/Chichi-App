@@ -2814,6 +2814,7 @@ var app = {
     unreadMessages: {},
     likedPosts: {},
     adminOpen: false,
+    userHasInteracted: false,  // Track if user has interacted (for audio/vibration)
 
     init: function() {
         var self = this;
@@ -2822,6 +2823,21 @@ var app = {
         this.chatMessages = {};
         this.unreadMessages = {};
         this.notifiedMessages = {};
+        
+        // Track user interaction (needed for audio/vibration in modern browsers)
+        var interactionHandler = function() {
+            if (!self.userHasInteracted) {
+                self.userHasInteracted = true;
+                console.log('👆 User interaction detected - audio/vibration enabled');
+                // Remove listeners after first interaction
+                document.removeEventListener('click', interactionHandler);
+                document.removeEventListener('touch', interactionHandler);
+                document.removeEventListener('keydown', interactionHandler);
+            }
+        };
+        document.addEventListener('click', interactionHandler, { once: false });
+        document.addEventListener('touch', interactionHandler, { once: false });
+        document.addEventListener('keydown', interactionHandler, { once: false });
         
         // Initialize consent management
         this.initConsent();
@@ -4587,9 +4603,16 @@ var app = {
         // 4. Update browser title
         this.updateBrowserTitle();
         
-        // 5. Vibrate (mobile)
-        if (navigator.vibrate) {
-            navigator.vibrate([200, 100, 200]);
+        // 5. Vibrate (mobile) - only if user has interacted
+        if (navigator.vibrate && this.userHasInteracted) {
+            try {
+                navigator.vibrate([200, 100, 200]);
+                console.log('📳 Vibration triggered');
+            } catch (e) {
+                console.log('⏸️ Vibration blocked:', e.message);
+            }
+        } else if (navigator.vibrate && !this.userHasInteracted) {
+            console.log('📳 Vibration disabled (no user interaction yet)');
         }
         
         console.log('🔔 Notification: ' + senderName + ' - ' + cleanMessage);
@@ -4609,8 +4632,23 @@ var app = {
 
     // Play notification sound
     playNotificationSound: function() {
+        // Audio requires user gesture in modern browsers
+        // Only try to play if user has interacted with the page
+        if (!this.userHasInteracted) {
+            console.log('⏸️ Audio disabled (no user interaction yet)');
+            return;
+        }
+        
         try {
             var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Resume if suspended
+            if (audioContext.state === 'suspended') {
+                audioContext.resume().catch(e => {
+                    console.log('⏸️ AudioContext suspended - user must interact first');
+                });
+            }
+            
             var oscillator = audioContext.createOscillator();
             var gainNode = audioContext.createGain();
             
@@ -4624,8 +4662,10 @@ var app = {
             
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + 0.5);
+            
+            console.log('🔊 Notification sound played');
         } catch (e) {
-            console.log('Audio notification skipped');
+            console.log('⏸️ Audio notification skipped:', e.message);
         }
     },
 
