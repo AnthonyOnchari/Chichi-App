@@ -184,6 +184,24 @@
             position: relative;
             margin: 0;
             padding: 0;
+            scrollbar-width: none;
+        }
+
+        html::-webkit-scrollbar, body::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            display: none;
+        }
+        
+        /* Firefox */
+        * {
+            scrollbar-width: none;
+        }
+        
+        /* Chrome, Safari, Edge */
+        *::-webkit-scrollbar {
+            width: 0;
+            height: 0;
         }
 
         /* LOADING ANIMATION */
@@ -524,7 +542,7 @@
         }
         
         #feedContainer::-webkit-scrollbar {
-            width: 4px;
+            width: 0;
         }
         
         #feedContainer::-webkit-scrollbar-track {
@@ -532,8 +550,7 @@
         }
         
         #feedContainer::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 2px;
+            background: transparent;
         }
 
         .post {
@@ -821,6 +838,7 @@
 
         #profileView {
             flex-direction: column;
+            margin: 0 auto;
         }
 
         .profile-header {
@@ -920,6 +938,7 @@
 
         #messagesView {
             flex-direction: column;
+            margin: 0 auto;
         }
 
         .messages-header {
@@ -1452,7 +1471,7 @@
         }
         
         .modal::-webkit-scrollbar {
-            width: 6px;
+            width: 0;
         }
         
         .modal::-webkit-scrollbar-track {
@@ -1460,8 +1479,7 @@
         }
         
         .modal::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 3px;
+            background: transparent;
         }
 
         .create-modal {
@@ -1478,7 +1496,7 @@
         }
         
         .create-modal::-webkit-scrollbar {
-            width: 6px;
+            width: 0;
         }
         
         .create-modal::-webkit-scrollbar-track {
@@ -1486,8 +1504,7 @@
         }
         
         .create-modal::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 3px;
+            background: transparent;
         }
 
         .modal-close {
@@ -5090,17 +5107,18 @@ window.testScrolling = function() {
     }
 };
 
-// Easy access
-console.log('%c🎯 DEBUG COMMANDS:', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
-console.log('testModal() - Create test modal with scroll content');
-console.log('simpleScrollTest() - ⭐ Ultra-simple scroll test (NO CSS classes!)');
-console.log('testActualScroll() - Test if scroll actually works');
-console.log('inspectDOM() - 🔍 Inspect modal in DOM (detailed)');
-console.log('forceShowModal() - 💪 Force show modal (last resort)');
-console.log('debugModal() - Log all modal info');
-console.log('');
-console.log('%cKeyboard Shortcuts:', 'color: #00D4AA; font-weight: bold;');
-console.log('Ctrl+Shift+D - Open debug panel');
+// Debug commands available in console (hidden from startup)
+// Uncomment to enable startup messages
+// console.log('%c🎯 DEBUG COMMANDS:', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
+// console.log('testModal() - Create test modal with scroll content');
+// console.log('simpleScrollTest() - ⭐ Ultra-simple scroll test (NO CSS classes!)');
+// console.log('testActualScroll() - Test if scroll actually works');
+// console.log('inspectDOM() - 🔍 Inspect modal in DOM (detailed)');
+// console.log('forceShowModal() - 💪 Force show modal (last resort)');
+// console.log('debugModal() - Log all modal info');
+// console.log('');
+// console.log('%cKeyboard Shortcuts:', 'color: #00D4AA; font-weight: bold;');
+// console.log('Ctrl+Shift+D - Open debug panel');
 
 // Keyboard shortcut: Ctrl+Shift+D to open debug panel
 document.addEventListener('keydown', (e) => {
