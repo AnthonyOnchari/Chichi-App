@@ -2815,6 +2815,8 @@ var app = {
     likedPosts: {},
     adminOpen: false,
     userHasInteracted: false,  // Track if user has interacted (for audio/vibration)
+    unreadTrackingStarted: false,  // Track if unread tracking has started
+    unreadTrackingActive: false,   // Track if unread tracking is currently running
 
     init: function() {
         var self = this;
@@ -3724,6 +3726,9 @@ var app = {
         } else {
             results.forEach(r => {
                 var isFollowing = this.following[r.uid] || false;
+                var unreadCount = this.getUnreadCountForUser(r.uid);
+                var msgButtonBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">${unreadCount}</span>` : '';
+                
                 html += `
                     <div class="search-user">
                         <div class="search-user-avatar" style="background-image: url(${r.user.profilePhoto || ''});">${!r.user.profilePhoto ? r.user.name.charAt(0).toUpperCase() : ''}</div>
@@ -3733,7 +3738,10 @@ var app = {
                             <div class="search-user-followers">${r.user.followers || 0} followers</div>
                         </div>
                         <div class="search-user-actions">
-                            <button class="search-msg-btn" onclick="app.openChatFromSearch('${r.uid}', '${r.user.name}')">💬</button>
+                            <button class="search-msg-btn" onclick="app.openChatFromSearch('${r.uid}', '${r.user.name}')" style="position: relative;">
+                                💬
+                                ${msgButtonBadge}
+                            </button>
                             <button class="search-view-btn" onclick="app.viewUserProfile('${r.uid}')">${isFollowing ? 'Following' : 'Follow'}</button>
                         </div>
                     </div>
@@ -3742,6 +3750,14 @@ var app = {
         }
         
         document.getElementById('searchResults').innerHTML = html;
+    },
+
+    // Helper function to get unread count for a specific user
+    getUnreadCountForUser: function(uid) {
+        if (!this.unreadMessages) return 0;
+        var key = [this.user.uid, uid].sort().join('_');
+        var data = this.unreadMessages[key];
+        return (data && data.count) ? data.count : 0;
     },
 
     openChatFromSearch: function(uid, name) {
@@ -4083,6 +4099,9 @@ var app = {
                 if (s.exists()) {
                     var user = s.val();
                     var isFollowing = this.following[uid] || false;
+                    var unreadCount = this.getUnreadCountForUser(uid);
+                    var msgBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">${unreadCount}</span>` : '';
+                    
                     var html = `
                         <div class="profile-header">
                             <div class="profile-top">
@@ -4096,7 +4115,13 @@ var app = {
                                     </div>
                                 </div>
                             </div>
-                            <button class="follow-btn" onclick="app.toggleFollow('${uid}', '${user.name}')" style="background: ${isFollowing ? '#ff4444' : 'var(--primary)'}; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; width: 100%; margin-top: 12px;">${isFollowing ? '✕ Unfollow' : '✓ Follow'}</button>
+                            <div style="display: flex; gap: 8px; margin-top: 12px;">
+                                <button class="follow-btn" onclick="app.toggleFollow('${uid}', '${user.name}')" style="background: ${isFollowing ? '#ff4444' : 'var(--primary)'}; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1;">${isFollowing ? '✕ Unfollow' : '✓ Follow'}</button>
+                                <button class="follow-btn" onclick="app.openChatFromSearch('${uid}', '${user.name}')" style="background: #2E5BFF; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1; position: relative;">
+                                    💬 Message
+                                    ${msgBadge}
+                                </button>
+                            </div>
                         </div>
                     `;
                     
@@ -4255,11 +4280,20 @@ var app = {
             for (var uid in this.following) {
                 if (this.users[uid]) {
                     var u = this.users[uid];
+                    var unreadCount = this.getUnreadCountForUser(uid);
+                    var msgBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">${unreadCount}</span>` : '';
+                    
                     html += `
                         <div class="following-item">
                             <div class="following-avatar" style="background-image: url(${u.profilePhoto || ''});">${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}</div>
                             <div class="following-name">${u.name}</div>
-                            <button class="following-unfollow" onclick="app.unfollowUser('${uid}', '${u.name}')">Unfollow</button>
+                            <div style="display: flex; gap: 6px;">
+                                <button class="following-unfollow" onclick="app.openChatFromSearch('${uid}', '${u.name}')" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.3s; position: relative;">
+                                    💬
+                                    ${msgBadge}
+                                </button>
+                                <button class="following-unfollow" onclick="app.unfollowUser('${uid}', '${u.name}')">Unfollow</button>
+                            </div>
                         </div>
                     `;
                 }
@@ -4468,6 +4502,7 @@ var app = {
         var self = this;
         db.ref('users').on('value', s => {
             var allUsers = s.val() || {};
+            var oldUserCount = Object.keys(self.users).length;
             self.users = {};
             
             // Filter out null, deleted, or invalid users
@@ -4475,6 +4510,18 @@ var app = {
                 if (allUsers[uid] && allUsers[uid].name && allUsers[uid].email) {
                     self.users[uid] = allUsers[uid];
                 }
+            }
+            
+            var newUserCount = Object.keys(self.users).length;
+            console.log('✅ Users loaded: ' + newUserCount + ' users');
+            
+            // First time users are loaded - start tracking unread messages
+            if (oldUserCount === 0 && newUserCount > 0 && !self.unreadTrackingStarted) {
+                self.unreadTrackingStarted = true;
+                console.log('🔔 Users loaded! Starting unread message tracking...');
+                setTimeout(() => {
+                    self.trackUnreadMessages();
+                }, 100);
             }
             
             // Re-render explore view if it's active
@@ -4515,6 +4562,9 @@ var app = {
         var html = '';
         sorted.slice(0, 20).forEach(u => {
             var isFollowing = this.following[u.uid] || false;
+            var unreadCount = this.getUnreadCountForUser(u.uid);
+            var msgButtonBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">${unreadCount}</span>` : '';
+            
             html += `
                 <div class="search-user" style="margin: 8px 16px;">
                     <div class="search-user-avatar" style="background-image: url(${u.user.profilePhoto || ''});">${!u.user.profilePhoto ? u.user.name.charAt(0).toUpperCase() : ''}</div>
@@ -4523,7 +4573,10 @@ var app = {
                         <div class="search-user-followers">⭐ ${u.user.followers || 0} followers</div>
                     </div>
                     <div class="search-user-actions">
-                        <button class="search-msg-btn" onclick="app.openChatFromSearch('${u.uid}', '${u.user.name}')">💬</button>
+                        <button class="search-msg-btn" onclick="app.openChatFromSearch('${u.uid}', '${u.user.name}')" style="position: relative;">
+                            💬
+                            ${msgButtonBadge}
+                        </button>
                         <button class="search-view-btn" onclick="app.toggleFollow('${u.uid}', '${u.user.name}')" style="background: ${isFollowing ? '#ff4444' : 'var(--primary)'}; color: white;">${isFollowing ? 'Unfollow' : 'Follow'}</button>
                     </div>
                 </div>
@@ -5233,6 +5286,14 @@ var app = {
 
     trackUnreadMessages: function() {
         var self = this;
+        
+        // Prevent double tracking
+        if (self.unreadTrackingActive) {
+            console.log('ℹ️ Unread tracking already running - skipping');
+            return;
+        }
+        self.unreadTrackingActive = true;
+        
         var userIds = Object.keys(this.users || {});
         
         if (!this.unreadMessages) this.unreadMessages = {};
@@ -5240,6 +5301,12 @@ var app = {
         if (!this.messageCountTracker) this.messageCountTracker = {};
         
         console.log('📊 Setting up message tracking for ' + userIds.length + ' users');
+        
+        if (userIds.length === 0) {
+            console.log('⚠️ No users to track! Skipping setup...');
+            self.unreadTrackingActive = false;
+            return;
+        }
         
         userIds.forEach(uid => {
             if (uid !== self.user.uid) {
