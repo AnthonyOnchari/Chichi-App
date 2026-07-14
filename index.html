@@ -5035,16 +5035,50 @@ var app = {
         if (!this.unreadMessages) this.unreadMessages = {};
         if (!this.notifiedMessages) this.notifiedMessages = {};
         if (!this.messageCountTracker) this.messageCountTracker = {};
+        if (!this.initialLoadDone) this.initialLoadDone = {};
         
         userIds.forEach(uid => {
             if (uid !== self.user.uid) {
                 var key = [self.user.uid, uid].sort().join('_');
                 var userName = this.users[uid].name || 'User';
                 
+                // Step 1: Load initial message count
+                db.ref('chats/' + key + '/messages').once('value', s => {
+                    var initialCount = 0;
+                    s.forEach(c => {
+                        var m = c.val();
+                        if (m && (m.text || m.image)) {
+                            initialCount++;
+                        }
+                    });
+                    self.messageCountTracker[key] = initialCount;
+                    self.initialLoadDone[key] = true;
+                    console.log('📊 Initial load - ' + userName + ': ' + initialCount + ' messages');
+                });
+                
+                // Step 2: Listen for NEW incoming messages ONLY (child_added)
+                // This fires ONLY for new messages added after listener is set up
+                db.ref('chats/' + key + '/messages').on('child_added', childSnap => {
+                    // Only fire if initial load is done (skip initial load messages)
+                    if (self.initialLoadDone[key]) {
+                        var m = childSnap.val();
+                        if (m && m.sender !== self.user.uid && (m.text || m.image)) {
+                            // NEW MESSAGE FROM OTHER PERSON!
+                            var notifyKey = key + '_' + m.timestamp;
+                            
+                            if (!self.notifiedMessages[notifyKey]) {
+                                console.log('🔔 NEW MESSAGE from ' + userName + ': ' + (m.text || '📷 Image'));
+                                self.notifyNewMessage(userName, m.text || '📷 Image');
+                                self.notifiedMessages[notifyKey] = true;
+                            }
+                        }
+                    }
+                });
+                
+                // Step 3: Track unread count with value listener
                 db.ref('chats/' + key + '/messages').on('value', s => {
                     var unreadCount = 0;
                     var messages = [];
-                    var lastMessage = null;
                     
                     s.forEach(c => {
                         var m = c.val();
@@ -5053,30 +5087,8 @@ var app = {
                             if (m.sender !== self.user.uid && !m.read) {
                                 unreadCount++;
                             }
-                            lastMessage = m;
                         }
                     });
-                    
-                    // Track message count to detect new messages
-                    var previousCount = self.messageCountTracker[key] || 0;
-                    var currentCount = messages.length;
-                    self.messageCountTracker[key] = currentCount;
-                    
-                    // NEW MESSAGE DETECTION
-                    if (currentCount > previousCount) {
-                        // We have new messages
-                        if (lastMessage && lastMessage.sender !== self.user.uid && (lastMessage.text || lastMessage.image)) {
-                            // Last message is from other person - notify!
-                            var notifyKey = key + '_' + lastMessage.timestamp;
-                            
-                            // Only notify if we haven't already for this message
-                            if (!self.notifiedMessages[notifyKey]) {
-                                self.notifyNewMessage(userName, lastMessage.text || '📷 Image');
-                                self.notifiedMessages[notifyKey] = true;
-                                console.log('🔔 Notification fired for: ' + userName);
-                            }
-                        }
-                    }
                     
                     if (!self.unreadMessages[key]) {
                         self.unreadMessages[key] = {};
@@ -5085,7 +5097,7 @@ var app = {
                     
                     self.updateUnreadBadge();
                     
-                    // Only load messages list if Messages tab is currently visible
+                    // Only update message list display if Messages tab is visible
                     var messagesView = document.getElementById('messagesView');
                     if (messagesView && messagesView.style.display !== 'none') {
                         self.loadMessages();
