@@ -3555,7 +3555,10 @@ var app = {
 
     confirmAdminDeletePost: function(id) {
         db.ref('posts/' + id).remove();
-        document.querySelector('.modal-overlay').remove();
+        var modal = document.querySelector('.modal-overlay');
+        if (modal) {
+            modal.remove();
+        }
         this.toast('Post deleted', 'success');
         this.loadAdminPosts();
     },
@@ -4061,7 +4064,11 @@ var app = {
             // Earn silently
             self.balance += 0.5;
             db.ref('users/' + self.user.uid + '/balance').set(self.balance);
-            document.querySelector('.modal-overlay').remove();
+            
+            var modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
             self.toast('Comment added', 'success');
             self.renderFeed();
         });
@@ -4132,7 +4139,17 @@ var app = {
             db.ref('users/' + uid + '/followers').set(followers);
         });
         
-        document.querySelector('.modal-overlay').remove();
+        // Close modal safely
+        var modal = document.querySelector('.modal-overlay.active');
+        if (modal) {
+            modal.remove();
+        } else {
+            // Fallback: try to close any modal
+            var anyModal = document.querySelector('.modal-overlay');
+            if (anyModal) {
+                anyModal.remove();
+            }
+        }
     },
 
     renderProfile: function() {
@@ -4366,7 +4383,10 @@ var app = {
                         });
                         self.toast('Profile updated!', 'success');
                         self.editProfilePhoto = null;
-                        document.querySelector('.modal-overlay').remove();
+                        var modal = document.querySelector('.modal-overlay');
+                        if (modal) {
+                            modal.remove();
+                        }
                         self.renderProfile();
                     }
                 }).catch(err => {
@@ -4382,7 +4402,10 @@ var app = {
                 bio: bio
             });
             this.toast('Profile updated!', 'success');
-            document.querySelector('.modal-overlay').remove();
+            var modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
             this.renderProfile();
         }
     },
