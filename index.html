@@ -1050,13 +1050,20 @@
         }
 
         .message-item.unread {
-            border-left-color: var(--primary);
-            background: linear-gradient(135deg, rgba(0, 212, 170, 0.08) 0%, rgba(0, 212, 170, 0.03) 100%);
-            box-shadow: 0 3px 12px rgba(0, 212, 170, 0.1);
+            border-left-color: #ef4444;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.03) 100%);
+            box-shadow: 0 3px 12px rgba(239, 68, 68, 0.15), inset 0 0 0 1px rgba(239, 68, 68, 0.1);
+            border-left-width: 6px;
         }
 
         .message-item.unread:hover {
-            background: linear-gradient(135deg, rgba(0, 212, 170, 0.12) 0%, rgba(0, 212, 170, 0.05) 100%);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.05) 100%);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.2), inset 0 0 0 1px rgba(239, 68, 68, 0.15);
+        }
+
+        .message-avatar.unread {
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3), 0 2px 8px rgba(239, 68, 68, 0.3);
+            border-color: #ef4444;
         }
 
         .message-avatar {
@@ -4652,6 +4659,9 @@ var app = {
             this.chatMessages = {};
         }
         
+        console.log('📥 Loading messages...');
+        console.log('   - unreadMessages data:', this.unreadMessages);
+        
         var userIds = Object.keys(this.users);
         var conversations = [];
         
@@ -4676,6 +4686,10 @@ var app = {
                 // Get unread count for this conversation
                 if (this.unreadMessages && this.unreadMessages[chatKey]) {
                     unreadCount = this.unreadMessages[chatKey].count || 0;
+                }
+                
+                if (unreadCount > 0) {
+                    console.log('   - ' + u.name + ': ' + unreadCount + ' unread');
                 }
                 
                 // Get last message preview and time
@@ -4784,6 +4798,10 @@ var app = {
         
         if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No messages yet. Start a conversation!</div>';
         document.getElementById('messageList').innerHTML = html;
+        
+        // Update the top badge with total unread count
+        console.log('✅ Message list rendered');
+        this.updateUnreadBadge();
     },
 
     openChat: function(uid, name) {
@@ -5207,7 +5225,8 @@ var app = {
                         var m = c.val();
                         if (m && (m.text || m.image)) {
                             messages.push(m);
-                            if (m.sender !== self.user.uid && !m.read) {
+                            // Message is unread if: from other person AND (not marked read OR read property missing)
+                            if (m.sender !== self.user.uid && (m.read !== true)) {
                                 unreadCount++;
                             }
                         }
@@ -5220,24 +5239,42 @@ var app = {
                     self.unreadMessages[key].count = unreadCount;
                     self.unreadMessages[key].messages = messages;
                     
-                    // Update UI
+                    if (unreadCount > 0) {
+                        console.log('📬 ' + userName + ' has ' + unreadCount + ' unread messages');
+                    }
+                    
+                    // Update UI - ALWAYS, not just when visible
                     self.updateUnreadBadge();
                     
-                    // Only update message list if on Messages tab
-                    var messagesView = document.getElementById('messagesView');
-                    if (messagesView && messagesView.style.display !== 'none') {
-                        self.loadMessages();
-                    }
+                    // ALWAYS reload message list (not just when visible)
+                    // This ensures badges show everywhere
+                    self.loadMessages();
                 });
             }
         });
     },
 
     markAsRead: function(uid) {
+        var self = this;
         var key = [this.user.uid, uid].sort().join('_');
+        
+        // Clear local count
         if (this.unreadMessages && this.unreadMessages[key]) {
             this.unreadMessages[key].count = 0;
         }
+        
+        // Mark messages as read in Firebase
+        var messagesRef = db.ref('chats/' + key + '/messages');
+        messagesRef.once('value', snap => {
+            snap.forEach(childSnap => {
+                var m = childSnap.val();
+                // Mark unread messages from other person as read
+                if (m && m.sender !== self.user.uid && !m.read) {
+                    childSnap.ref.update({ read: true });
+                }
+            });
+        });
+        
         this.updateUnreadBadge();
     },
 
@@ -5250,16 +5287,28 @@ var app = {
                 }
             });
         }
+        
+        console.log('🔄 Badge update:', {
+            unreadCount: unreadCount,
+            unreadMessagesData: this.unreadMessages,
+            badgeElement: document.getElementById('messagesBadge')
+        });
+        
         var badge = document.getElementById('messagesBadge');
         var dot = document.getElementById('messagesUnreadDot');
         
-        if (unreadCount > 0) {
-            badge.textContent = unreadCount;
-            badge.style.display = 'flex';
-            if (dot) dot.style.display = 'block';
+        if (badge) {
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount;
+                badge.style.display = 'flex';
+                console.log('✅ Badge shown:', unreadCount);
+                if (dot) dot.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+                if (dot) dot.style.display = 'none';
+            }
         } else {
-            badge.style.display = 'none';
-            if (dot) dot.style.display = 'none';
+            console.log('❌ Badge element not found!');
         }
     },
 
