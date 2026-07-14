@@ -5377,13 +5377,27 @@ var app = {
                     var unreadCount = 0;
                     var messages = [];
                     var unreadMessagesList = [];
+                    var debugInfo = [];
                     
                     s.forEach(c => {
                         var m = c.val();
                         if (m && (m.text || m.image)) {
                             messages.push(m);
+                            var isFromOther = m.sender !== self.user.uid;
+                            var isNotRead = m.read !== true;
+                            var shouldBeUnread = isFromOther && isNotRead;
+                            
+                            debugInfo.push({
+                                text: (m.text || '📷').substring(0, 20),
+                                sender: m.sender,
+                                isFromOther: isFromOther,
+                                read: m.read,
+                                isNotRead: isNotRead,
+                                shouldBeUnread: shouldBeUnread
+                            });
+                            
                             // Message is unread if: from other person AND (read is not explicitly true)
-                            if (m.sender !== self.user.uid && (m.read !== true)) {
+                            if (isFromOther && isNotRead) {
                                 unreadCount++;
                                 unreadMessagesList.push({
                                     text: m.text || '📷 Image',
@@ -5404,9 +5418,15 @@ var app = {
                     self.unreadMessages[key].userName = userName;
                     
                     console.log('📊 [VALUE-LISTENER] ' + userName + ': Total=' + messages.length + ', Unread=' + unreadCount);
+                    if (debugInfo.length > 0 && debugInfo.length <= 5) {
+                        console.log('   📋 First few messages:');
+                        debugInfo.slice(0, 5).forEach(info => {
+                            console.log('      Text: "' + info.text + '" | Sender=' + info.sender.substring(0, 8) + ' | read=' + info.read + ' | fromOther=' + info.isFromOther + ' | unread=' + info.shouldBeUnread);
+                        });
+                    }
                     if (unreadMessagesList.length > 0) {
                         console.log('🔴 WAITING FOR REPLY from ' + userName + '!');
-                        console.log('   Unread messages:', unreadMessagesList);
+                        console.log('   Unread count: ' + unreadCount);
                     }
                     
                     // Update UI - ALWAYS
