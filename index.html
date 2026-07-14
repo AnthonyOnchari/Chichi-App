@@ -4463,6 +4463,7 @@ var app = {
                 }
                 
                 // Get last message preview and time
+                var lastTimestamp = 0;
                 if (this.chatMessages && this.chatMessages[chatKey] && this.chatMessages[chatKey].length > 0) {
                     var msgs = this.chatMessages[chatKey];
                     var lastMsg = msgs[msgs.length - 1];
@@ -4474,8 +4475,9 @@ var app = {
                         lastMessage = lastMsg.text.substring(0, 50) + (lastMsg.text.length > 50 ? '...' : '');
                     }
                     
-                    // Format time
+                    // Get actual timestamp for sorting
                     if (lastMsg.timestamp) {
+                        lastTimestamp = lastMsg.timestamp;
                         var msgDate = new Date(lastMsg.timestamp);
                         var now = new Date();
                         var diff = now - msgDate;
@@ -4497,17 +4499,16 @@ var app = {
                     profilePhoto: u.profilePhoto,
                     lastMessage: lastMessage,
                     lastTime: lastTime,
+                    lastTimestamp: lastTimestamp,
                     unreadCount: unreadCount,
                     isUnread: unreadCount > 0
                 });
             }
         });
         
-        // Sort by last message time (most recent first)
+        // Sort by last message time (most recent first) - use actual timestamp
         conversations.sort((a, b) => {
-            var timeA = new Date(a.lastTime).getTime() || 0;
-            var timeB = new Date(b.lastTime).getTime() || 0;
-            return timeB - timeA;
+            return b.lastTimestamp - a.lastTimestamp;
         });
         
         conversations.forEach(conv => {
@@ -4598,7 +4599,7 @@ var app = {
         if (!this.chatMessages) this.chatMessages = {};
         if (!this.lastMessageCount) this.lastMessageCount = {};
         
-        db.ref('chats/' + key + '/messages').orderByChild('timestamp').on('value', s => {
+        db.ref('chats/' + key + '/messages').on('value', s => {
             var html = '';
             var hasMessages = false;
             var messages = [];
@@ -4610,6 +4611,11 @@ var app = {
                 if (m) {
                     messages.push(m);
                 }
+            });
+            
+            // Sort messages by timestamp (oldest first, will display top to bottom)
+            messages.sort((a, b) => {
+                return (a.timestamp || 0) - (b.timestamp || 0);
             });
             
             // Check for new incoming messages
@@ -4715,9 +4721,16 @@ var app = {
             var chatMessagesDiv = document.getElementById('chatModalMessages');
             if (chatMessagesDiv) {
                 chatMessagesDiv.innerHTML = html;
+                // Scroll to bottom - try multiple times to ensure it works
                 setTimeout(() => {
                     chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
                 }, 50);
+                setTimeout(() => {
+                    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+                }, 100);
+                setTimeout(() => {
+                    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+                }, 200);
             }
         });
     },
@@ -4746,14 +4759,21 @@ var app = {
         }).then(() => {
             input.value = '';
             input.focus();
+            self.loadMessages(); // Reload messages list to update preview
+            
             var messagesDiv = document.getElementById('chatModalMessages');
             if (messagesDiv) {
+                // Aggressive scroll to bottom
                 setTimeout(() => {
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                }, 50);
+                }, 100);
+                setTimeout(() => {
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }, 300);
             }
         }).catch(err => {
-            self.toast('Failed to send message', 'error');
+            self.toast('Failed to send message: ' + err.message, 'error');
+            console.error('Send message error:', err);
         });
     },
 
