@@ -30,12 +30,11 @@ messaging.onBackgroundMessage(function(payload) {
     const notificationTitle = payload.notification?.title || '💬 New Message';
     const notificationBody = payload.notification?.body || 'You have a new notification';
     const notificationIcon = 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png';
-    const notificationBadge = 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png';
     
     const notificationOptions = {
         body: notificationBody,
         icon: notificationIcon,
-        badge: notificationBadge,
+        badge: notificationIcon,
         tag: 'chichi-notification-' + Date.now(),
         requireInteraction: true,
         vibrate: [200, 100, 200],
@@ -91,8 +90,12 @@ self.addEventListener('activate', function(event) {
     console.log('✅ [SW] Activating...');
     event.waitUntil(
         clients.claim()
-            .then(() => console.log('✅ [SW] Clients claimed'))
-            .catch(err => console.warn('⚠️ [SW] Failed to claim clients:', err))
+            .then(function() {
+                console.log('✅ [SW] Clients claimed');
+            })
+            .catch(function(err) {
+                console.warn('⚠️ [SW] Failed to claim clients:', err);
+            })
     );
 });
 
@@ -100,14 +103,14 @@ self.addEventListener('activate', function(event) {
 self.addEventListener('push', function(event) {
     console.log('📨 [SW] Push event:', event);
     
-    let data = {};
+    var data = {};
     try {
         if (event.data) {
             data = event.data.json();
         }
     } catch (e) {
         try {
-            const text = event.data.text();
+            var text = event.data.text();
             data = { notification: { title: 'CHICHI', body: text } };
         } catch (e2) {
             data = { notification: { title: 'CHICHI', body: 'New notification' } };
