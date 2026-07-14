@@ -4585,6 +4585,12 @@ var app = {
     },
 
     closeChatModal: function() {
+        // Clean up Firebase listener
+        if (this.currentChat && this.chatMessagesListener) {
+            var key = [this.user.uid, this.currentChat.uid].sort().join('_');
+            db.ref('chats/' + key + '/messages').off();
+            this.chatMessagesListener = null;
+        }
         this.currentChat = null;
         document.getElementById('chatModalOverlay').classList.remove('active');
     },
@@ -4599,140 +4605,139 @@ var app = {
         if (!this.chatMessages) this.chatMessages = {};
         if (!this.lastMessageCount) this.lastMessageCount = {};
         
-        db.ref('chats/' + key + '/messages').on('value', s => {
-            var html = '';
-            var hasMessages = false;
+        // Remove previous listener to avoid duplicates
+        if (this.chatMessagesListener) {
+            db.ref('chats/' + key + '/messages').off();
+        }
+        
+        // Step 1: Load ALL existing messages first (this is critical for mobile!)
+        db.ref('chats/' + key + '/messages').once('value').then(snapshot => {
             var messages = [];
-            var newMessagesCount = 0;
-            
-            s.forEach(c => {
-                hasMessages = true;
+            snapshot.forEach(c => {
                 var m = c.val();
-                if (m) {
+                if (m && (m.text || m.image)) {
                     messages.push(m);
                 }
             });
             
-            // Sort messages by timestamp (oldest first, will display top to bottom)
+            // Sort by timestamp (oldest first)
             messages.sort((a, b) => {
                 return (a.timestamp || 0) - (b.timestamp || 0);
             });
             
-            // Check for new incoming messages
-            var previousCount = this.lastMessageCount[key] || 0;
-            var currentCount = messages.length;
+            // Store messages
+            self.chatMessages[key] = messages;
+            self.lastMessageCount[key] = messages.length;
             
-            if (currentCount > previousCount) {
-                // New messages received!
-                var newMessages = messages.slice(previousCount);
-                newMessages.forEach(m => {
-                    // Only notify if message is from the other person
-                    if (m && m.sender !== self.user.uid && (m.text || m.image)) {
-                        newMessagesCount++;
-                        // Show notification for new message from this person
-                        self.notifyNewMessage(self.currentChat.name, m.text || '📷 Image');
-                    }
-                });
-            }
+            // Display messages
+            self.displayChatMessages(messages, key);
             
-            this.lastMessageCount[key] = currentCount;
-            
-            // Store messages for preview in list
-            this.chatMessages[key] = messages;
-            
-            messages.forEach((m, idx) => {
-                if (m && (m.text || m.image)) {
-                    var side = m.sender === self.user.uid ? 'sent' : 'received';
-                    var timestamp = '';
+            // Step 2: Set up real-time listener for new incoming messages
+            self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', snap => {
+                var m = snap.val();
+                if (m && (m.text || m.image) && m.sender !== self.user.uid) {
+                    // Notify of new message from other person
+                    self.notifyNewMessage(self.currentChat.name, m.text || '📷 Image');
                     
-                    // Format timestamp
-                    if (m.timestamp) {
-                        var date = new Date(m.timestamp);
-                        timestamp = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-                    }
-                    
-                    // Add date separator if date changed
-                    if (idx === 0 || (messages[idx - 1] && new Date(messages[idx - 1].timestamp).toDateString() !== new Date(m.timestamp).toDateString())) {
-                        var displayDate = new Date(m.timestamp);
-                        var today = new Date();
-                        var dateStr = '';
-                        
-                        if (displayDate.toDateString() === today.toDateString()) {
-                            dateStr = 'Today';
-                        } else {
-                            var yesterday = new Date(today);
-                            yesterday.setDate(yesterday.getDate() - 1);
-                            if (displayDate.toDateString() === yesterday.toDateString()) {
-                                dateStr = 'Yesterday';
-                            } else {
-                                dateStr = displayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: displayDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
+                    // Reload all messages to show new one
+                    db.ref('chats/' + key + '/messages').once('value').then(s => {
+                        var updated = [];
+                        s.forEach(c => {
+                            var msg = c.val();
+                            if (msg && (msg.text || msg.image)) {
+                                updated.push(msg);
                             }
-                        }
-                        
-                        html += `<div style="text-align: center; margin: 16px 0; color: var(--text-light); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${dateStr}</div>`;
-                    }
-                    
-                    var content = '';
-                    
-                    // Handle images
-                    if (m.image) {
-                        if (Array.isArray(m.image)) {
-                            // Multiple images - show as gallery
-                            content += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-width: 200px;">';
-                            m.image.forEach((img, imgIdx) => {
-                                if (imgIdx < 4) {
-                                    content += `<img src="${img}" style="width: 100%; border-radius: 8px; cursor: pointer;" onclick="app.viewFullImage('${img}')">`;
-                                } else if (imgIdx === 4) {
-                                    var remaining = m.image.length - 4;
-                                    content += `<div style="width: 100%; border-radius: 8px; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; cursor: pointer;" onclick="app.viewAllImages(${JSON.stringify(m.image)})">+${remaining}</div>`;
-                                }
-                            });
-                            content += '</div>';
-                        } else {
-                            // Single image
-                            content += `<img src="${m.image}" style="max-width: 180px; border-radius: 12px; cursor: pointer;" onclick="app.viewFullImage('${m.image}')">`;
-                        }
-                    }
-                    
-                    // Handle text
-                    if (m.text) {
-                        content += `<div style="word-wrap: break-word; word-break: break-word;">${m.text}</div>`;
-                    }
-                    
-                    var bubbleStyle = side === 'sent' ? 
-                        'background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border-radius: 18px 18px 4px 18px;' :
-                        'background: linear-gradient(135deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 100%); color: var(--text); border-radius: 18px 18px 18px 4px;';
-                    
-                    html += `
-                        <div class="chat-message ${side}" style="animation: slideInUp 0.3s ease-out;">
-                            <div class="chat-message-bubble" style="${bubbleStyle} padding: 12px 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); max-width: 280px;">
-                                ${content}
-                                <div style="font-size: 0.7rem; margin-top: 4px; opacity: 0.7;">${timestamp}</div>
-                            </div>
-                        </div>
-                    `;
+                        });
+                        updated.sort((a, b) => {
+                            return (a.timestamp || 0) - (b.timestamp || 0);
+                        });
+                        self.chatMessages[key] = updated;
+                        self.displayChatMessages(updated, key);
+                    });
                 }
             });
-            
-            if (!hasMessages) {
-                html = '<div style="text-align: center; color: #6b7280; padding: 20px; flex: 1; display: flex; align-items: center; justify-content: center;">Start a conversation!</div>';
-            }
-            
+        }).catch(err => {
+            console.error('❌ Error loading messages:', err);
+            self.toast('Error: ' + err.message, 'error');
+        });
+    },
+
+    // Display messages in chat modal
+    displayChatMessages: function(messages, key) {
+        var self = this;
+        if (!messages || messages.length === 0) {
             var chatMessagesDiv = document.getElementById('chatModalMessages');
             if (chatMessagesDiv) {
-                chatMessagesDiv.innerHTML = html;
-                // Scroll to bottom - try multiple times to ensure it works
-                setTimeout(() => {
-                    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-                }, 50);
-                setTimeout(() => {
-                    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-                }, 100);
-                setTimeout(() => {
-                    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-                }, 200);
+                chatMessagesDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">Start a conversation!</div>';
             }
+            return;
+        }
+        
+        var html = '';
+        
+        messages.forEach((m, idx) => {
+            if (!m || (!m.text && !m.image)) return;
+            
+            var side = m.sender === self.user.uid ? 'sent' : 'received';
+            var timestamp = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+            
+            // Add date separator
+            if (idx === 0 || (messages[idx-1] && new Date(messages[idx-1].timestamp).toDateString() !== new Date(m.timestamp).toDateString())) {
+                var d = new Date(m.timestamp);
+                var today = new Date();
+                var yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                var dateStr = 'Today';
+                if (d.toDateString() === yesterday.toDateString()) {
+                    dateStr = 'Yesterday';
+                } else if (d.toDateString() !== today.toDateString()) {
+                    dateStr = d.toLocaleDateString();
+                }
+                
+                html += `<div style="text-align: center; margin: 16px 0; color: var(--text-light); font-size: 0.75rem; font-weight: 600;">${dateStr}</div>`;
+            }
+            
+            var content = '';
+            if (m.image) {
+                if (Array.isArray(m.image)) {
+                    content += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">';
+                    m.image.forEach((img, i) => {
+                        if (i < 4) {
+                            content += `<img src="${img}" style="width: 100%; border-radius: 8px; cursor: pointer;" onclick="app.viewFullImage('${img}')">`;
+                        }
+                    });
+                    content += '</div>';
+                } else {
+                    content += `<img src="${m.image}" style="max-width: 180px; border-radius: 12px; cursor: pointer;" onclick="app.viewFullImage('${m.image}')">`;
+                }
+            }
+            if (m.text) {
+                content += `<div>${m.text}</div>`;
+            }
+            
+            var bubbleStyle = side === 'sent' ? 
+                'background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border-radius: 18px 18px 4px 18px;' :
+                'background: linear-gradient(135deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 100%); color: var(--text); border-radius: 18px 18px 18px 4px;';
+            
+            html += `
+                <div class="chat-message ${side}">
+                    <div class="chat-message-bubble" style="${bubbleStyle} padding: 12px 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); max-width: 280px;">
+                        ${content}
+                        <div style="font-size: 0.7rem; margin-top: 4px; opacity: 0.7;">${timestamp}</div>
+                    </div>
+                </div>
+            `;
         });
+        
+        var chatMessagesDiv = document.getElementById('chatModalMessages');
+        if (chatMessagesDiv) {
+            chatMessagesDiv.innerHTML = html;
+            // Aggressive scroll - ensures we see the last message
+            setTimeout(() => chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight, 50);
+            setTimeout(() => chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight, 150);
+            setTimeout(() => chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight, 300);
+        }
     },
 
     sendChatMessage: function() {
