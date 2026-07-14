@@ -3848,14 +3848,17 @@ var app = {
 
     showEditProfileModal: function() {
         var self = this;
+        
+        var overlay = document.createElement('div');
+        overlay.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:flex-end;justify-content:center;`;
+        
         var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = `<div class="modal" style="max-width: 450px; display: flex; flex-direction: column; max-height: 85vh; overflow-y: scroll !important; overflow-x: hidden; background: white; width: 100%; border-radius: 28px 28px 0 0; padding: 20px; -webkit-overflow-scrolling: touch;">
-            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-            <h2 style="margin-bottom: 24px; font-weight: 700; text-align: center;">Edit Your Profile</h2>
+        modal.style.cssText = `width:100%;max-width:450px;max-height:85vh;background:white;border-radius:28px 28px 0 0;overflow-y:scroll;overflow-x:hidden;padding:20px;box-sizing:border-box;-webkit-overflow-scrolling:touch;`;
+        
+        modal.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"><h2 style="margin: 0; font-weight: 700;">Edit Your Profile</h2><button onclick="this.closest('div').closest('div').parentElement.parentElement.remove()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button></div>
             
             <div style="text-align: center; margin-bottom: 24px;">
-                <div class="profile-avatar-large" id="editProfilePhotoPreview" style="background-image: url(${this.profile.profilePhoto || ''}); margin: 0 auto; cursor: pointer; position: relative;" onclick="document.getElementById('editProfilePhotoInput').click()">
+                <div id="editProfilePhotoPreview" style="background-image: url(${this.profile.profilePhoto || ''}); background-size: cover; background-position: center; width: 120px; height: 120px; border-radius: 50%; margin: 0 auto; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; color: white; background-color: var(--primary);" onclick="document.getElementById('editProfilePhotoInput').click()">
                     ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
                     <div style="position: absolute; bottom: 0; right: 0; background: var(--primary); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 3px solid white;">📷</div>
                 </div>
@@ -3863,76 +3866,43 @@ var app = {
                 <div style="font-size: 0.8rem; color: var(--text-light); margin-top: 8px;">Tap avatar to change photo</div>
             </div>
             
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label class="form-label" style="display: block; font-weight: 600; margin-bottom: 8px; color: var(--text);">Name</label>
-                <input type="text" id="editProfileName" class="form-input" value="${this.profile.name || ''}" placeholder="Your full name" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 1rem;">
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Name</label>
+                <input type="text" id="editProfileName" value="${this.profile.name || ''}" placeholder="Your full name" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
             </div>
             
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label class="form-label" style="display: block; font-weight: 600; margin-bottom: 8px; color: var(--text);">Email</label>
-                <input type="email" id="editProfileEmail" class="form-input" value="${this.user.email || ''}" placeholder="Your email" disabled style="background: #f3f4f6; cursor: not-allowed; width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 1rem;">
-                <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Cannot change email</div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Email</label>
+                <input type="email" id="editProfileEmail" value="${this.user.email || ''}" placeholder="Your email" disabled style="background: #f3f4f6; cursor: not-allowed; width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+                <div style="font-size: 0.75rem; color: #999; margin-top: 4px;">Cannot change email</div>
             </div>
             
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label class="form-label" style="display: block; font-weight: 600; margin-bottom: 8px; color: var(--text);">Bio</label>
-                <textarea id="editProfileBio" class="form-input" placeholder="Tell us about yourself..." style="min-height: 100px; resize: vertical; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-family: 'Inter', sans-serif; width: 100%; font-size: 1rem;">${this.profile.bio || ''}</textarea>
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Bio</label>
+                <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-family: inherit; font-size: 1rem; resize: vertical; box-sizing: border-box;">${this.profile.bio || ''}</textarea>
             </div>
             
-            <div style="display: flex; gap: 12px; margin-top: 24px; flex-shrink: 0;">
-                <button class="logout-cancel" onclick="this.closest('.modal-overlay').remove()" style="flex: 1; padding: 12px; background: #e5e7eb; border: none; border-radius: 10px; cursor: pointer; font-weight: 600;">Cancel</button>
-                <button class="btn-submit" onclick="app.saveProfileChanges()" style="flex: 1; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600;">Save Changes</button>
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button onclick="this.closest('div').closest('div').parentElement.parentElement.remove()" style="flex: 1; padding: 12px; background: #e5e7eb; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">Cancel</button>
+                <button onclick="app.saveProfileChanges()" style="flex: 1; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">Save Changes</button>
             </div>
-        </div>`;
-        document.body.appendChild(modal);
+        `;
         
-        // Force inline styles AFTER DOM insertion (more reliable)
-        modal.style.display = 'flex';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.right = '0';
-        modal.style.bottom = '0';
-        modal.style.background = 'rgba(0,0,0,0.5)';
-        modal.style.zIndex = '2000';
-        modal.style.alignItems = 'flex-end';
-        modal.style.justifyContent = 'center';
-        modal.style.overflow = 'hidden';
-        
-        // Also fix inner modal
-        var innerModal = modal.querySelector('.modal');
-        if (innerModal) {
-            innerModal.style.maxHeight = '85vh';
-            innerModal.style.overflowY = 'scroll';
-            innerModal.style.display = 'flex';
-            innerModal.style.flexDirection = 'column';
-        }
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
         
         // Auto-log modal info for debugging
         setTimeout(() => {
             console.log('%c🎯 Edit Profile Modal Opened', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
-            var allModals = document.querySelectorAll('.modal-overlay');
-            console.log('Total modal overlays on page:', allModals.length);
-            
-            allModals.forEach((overlay, idx) => {
-                var isActive = overlay.classList.contains('active');
-                console.log(`Overlay ${idx + 1}: ${isActive ? '✅ ACTIVE' : '❌ INACTIVE'}`);
-                
-                var editModal = overlay.querySelector('.modal');
-                if (editModal) {
-                    console.log('Height:', editModal.offsetHeight + 'px');
-                    console.log('Scroll Height (content):', editModal.scrollHeight + 'px');
-                    console.log('Max Height CSS:', window.getComputedStyle(editModal).maxHeight);
-                    console.log('Overflow-Y:', window.getComputedStyle(editModal).overflowY);
-                    console.log('Display:', window.getComputedStyle(editModal).display);
-                    console.log('Position:', window.getComputedStyle(editModal).position);
-                    if (editModal.scrollHeight > editModal.offsetHeight) {
-                        console.log('%c✅ Should be scrollable!', 'color: #22c55e;');
-                    } else {
-                        console.log('%c❌ Content fits - no scroll needed', 'color: #ff9800;');
-                    }
-                }
-            });
+            console.log('Modal Height:', modal.offsetHeight + 'px');
+            console.log('Modal Scroll Height:', modal.scrollHeight + 'px');
+            console.log('Overflow-Y:', window.getComputedStyle(modal).overflowY);
+            console.log('Position:', window.getComputedStyle(modal).position);
+            if (modal.scrollHeight > modal.offsetHeight) {
+                console.log('%c✅ Modal is scrollable!', 'color: #22c55e; font-weight: bold;');
+            } else {
+                console.log('%c❌ Content fits - no scroll needed', 'color: #ff9800;');
+            }
         }, 200);
     },
 
