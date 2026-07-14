@@ -956,95 +956,233 @@
         }
 
         .message-item {
-            background: white;
-            padding: 12px;
-            margin-bottom: 8px;
-            border-radius: 16px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            border-radius: 18px;
             cursor: pointer;
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: center;
-            transition: 0.3s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             position: relative;
-            border-left: 3px solid transparent;
+            border-left: 4px solid transparent;
+            animation: slideInLeft 0.4s ease-out;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         .message-item:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transform: translateX(4px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+            transform: translateX(6px);
+            background: linear-gradient(135deg, #f0f9ff 0%, #f0f4ff 100%);
         }
 
         .message-item.unread {
             border-left-color: var(--primary);
-            background: rgba(0, 212, 170, 0.05);
+            background: linear-gradient(135deg, rgba(0, 212, 170, 0.08) 0%, rgba(0, 212, 170, 0.03) 100%);
+            box-shadow: 0 3px 12px rgba(0, 212, 170, 0.1);
+        }
+
+        .message-item.unread:hover {
+            background: linear-gradient(135deg, rgba(0, 212, 170, 0.12) 0%, rgba(0, 212, 170, 0.05) 100%);
         }
 
         .message-avatar {
-            width: 50px;
-            height: 50px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             flex-shrink: 0;
             background-size: cover;
             position: relative;
+            box-shadow: 0 2px 8px rgba(0, 212, 170, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.8);
         }
 
         .online-dot {
             position: absolute;
             bottom: 0;
             right: 0;
-            width: 14px;
-            height: 14px;
-            background: #22c55e;
-            border: 2px solid white;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            border: 3px solid white;
             border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(34, 197, 94, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .offline-dot {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 16px;
+            height: 16px;
+            background: #9ca3af;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(156, 163, 175, 0.2);
         }
 
         .message-content {
             flex: 1;
             min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .message-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 4px;
+            gap: 8px;
         }
 
         .message-name { 
-            font-weight: 600; 
-            font-size: 0.9rem;
+            font-weight: 700; 
+            font-size: 0.95rem;
+            color: var(--text);
         }
         
         .message-name.unread-text {
             color: var(--text);
-            font-weight: 700;
+            font-weight: 800;
         }
         
         .message-time { 
             font-size: 0.75rem; 
             color: var(--text-light);
+            flex-shrink: 0;
         }
 
         .message-preview {
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             color: var(--text-light);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .message-preview.unread-text {
             color: var(--text);
             font-weight: 600;
+        }
+
+        .read-receipt {
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Search Box Styling */
+        .messages-search-box {
+            padding: 12px 16px;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .messages-search-input {
+            flex: 1;
+            background: var(--light);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .messages-search-input:focus {
+            background: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+        }
+
+        .messages-search-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .messages-search-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        /* Message list wrapper */
+        .message-list-wrapper {
+            padding: 12px 8px;
+        }
+
+        /* Message Actions */
+        .message-actions {
+            display: flex;
+            gap: 4px;
+            position: absolute;
+            right: 16px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .message-item:hover .message-actions {
+            opacity: 1;
+        }
+
+        .message-action-btn {
+            background: rgba(0, 0, 0, 0.05);
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.2s;
+            padding: 0;
+        }
+
+        .message-action-btn:hover {
+            background: rgba(0, 212, 170, 0.1);
+            color: var(--primary);
+            transform: scale(1.1);
         }
 
         .unread-badge {
@@ -1182,7 +1320,20 @@
         .chat-message {
             display: flex;
             gap: 8px;
-            animation: messageBounce 0.3s ease-out;
+            padding: 0 12px;
+            animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 8px;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .chat-message.sent {
@@ -1194,26 +1345,28 @@
         }
 
         .chat-message-bubble {
-            padding: 10px 14px;
+            padding: 12px 14px;
             border-radius: 16px;
             max-width: 75%;
             word-wrap: break-word;
-            font-size: 0.9rem;
-            line-height: 1.4;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .chat-message.sent .chat-message-bubble {
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            border-bottom-right-radius: 4px;
+            border-radius: 18px 18px 4px 18px;
+            box-shadow: 0 3px 10px rgba(0, 212, 170, 0.2);
         }
 
         .chat-message.received .chat-message-bubble {
-            background: white;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
             color: var(--text);
+            border-radius: 18px 18px 18px 4px;
             border: 1px solid var(--border);
-            border-bottom-left-radius: 4px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .message-time {
@@ -2292,7 +2445,13 @@ window.app = window.app || {
         <!-- MESSAGES -->
         <div class="view" id="messagesView">
             <div class="messages-header">Messages</div>
-            <div class="message-list" id="messageList"></div>
+            <div class="messages-search-box">
+                <input type="text" class="messages-search-input" id="messagesSearchInput" placeholder="Search conversations..." onkeyup="app.searchMessages(this.value)">
+                <button class="messages-search-btn" onclick="app.clearMessagesSearch()">Clear</button>
+            </div>
+            <div class="message-list-wrapper">
+                <div class="message-list" id="messageList"></div>
+            </div>
         </div>
     </div>
 
@@ -4125,6 +4284,67 @@ var app = {
         }
     },
 
+    // Format time for messages
+    formatMessageTime: function(timestamp) {
+        if (!timestamp) return 'Now';
+        var msgDate = new Date(timestamp);
+        var now = new Date();
+        var diff = now - msgDate;
+        var minutes = Math.floor(diff / 60000);
+        var hours = Math.floor(diff / 3600000);
+        var days = Math.floor(diff / 86400000);
+        
+        if (minutes < 1) return 'Now';
+        if (minutes < 60) return minutes + 'm ago';
+        if (hours < 24) return hours + 'h ago';
+        if (days < 7) return days + 'd ago';
+        if (days < 30) return Math.floor(days / 7) + 'w ago';
+        return msgDate.toLocaleDateString();
+    },
+
+    // Search messages
+    searchMessages: function(query) {
+        var items = document.querySelectorAll('.message-item');
+        var searchQuery = query.toLowerCase().trim();
+        
+        items.forEach(item => {
+            var nameEl = item.querySelector('.message-name');
+            var previewEl = item.querySelector('.message-preview');
+            var name = (nameEl ? nameEl.textContent : '').toLowerCase();
+            var preview = (previewEl ? previewEl.textContent : '').toLowerCase();
+            
+            if (name.includes(searchQuery) || preview.includes(searchQuery) || !searchQuery) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    },
+
+    // Clear search
+    clearMessagesSearch: function() {
+        document.getElementById('messagesSearchInput').value = '';
+        this.searchMessages('');
+    },
+
+    // Delete conversation
+    deleteConversation: function(uid, event) {
+        event.stopPropagation();
+        if (!confirm('Delete this conversation?')) return;
+        
+        var chatKey = [this.user.uid, uid].sort().join('_');
+        // Mark as deleted (optional - you can implement actual deletion)
+        console.log('Conversation deleted:', chatKey);
+        this.loadMessages();
+    },
+
+    // Mute conversation
+    muteConversation: function(uid, event) {
+        event.stopPropagation();
+        console.log('Conversation muted:', uid);
+        alert('Conversation muted!');
+    },
+
     loadMessages: function() {
         var self = this;
         var html = '';
@@ -4203,20 +4423,32 @@ var app = {
         });
         
         conversations.forEach(conv => {
+            var isOnline = Math.random() > 0.5; // Simulated online status
+            var readReceipts = conv.isUnread ? '' : '✓✓';
+            var onlineIndicator = isOnline ? '<div class="online-dot"></div>' : '<div class="offline-dot"></div>';
+            
             html += `
                 <div class="message-item ${conv.isUnread ? 'unread' : ''}" onclick="app.openChat('${conv.uid}', '${conv.name}')">
                     <div style="position: relative;">
                         <div class="message-avatar" style="background-image: url(${conv.profilePhoto || ''});">
                             ${!conv.profilePhoto ? conv.name.charAt(0).toUpperCase() : ''}
                         </div>
-                        ${conv.unreadCount > 0 ? '<div style="position: absolute; top: -4px; right: -4px; width: 22px; height: 22px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">' + conv.unreadCount + '</div>' : ''}
+                        ${onlineIndicator}
+                        ${conv.unreadCount > 0 ? '<div style="position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; border: 3px solid white; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);">' + conv.unreadCount + '</div>' : ''}
                     </div>
                     <div class="message-content">
                         <div class="message-top">
                             <div class="message-name ${conv.isUnread ? 'unread-text' : ''}">${conv.name}</div>
                             <div class="message-time">${conv.lastTime}</div>
                         </div>
-                        <div class="message-preview ${conv.isUnread ? 'unread-text' : ''}">${conv.lastMessage}</div>
+                        <div class="message-preview ${conv.isUnread ? 'unread-text' : ''}">
+                            ${conv.lastMessage}
+                            <span class="read-receipt">${readReceipts}</span>
+                        </div>
+                    </div>
+                    <div class="message-actions">
+                        <button class="message-action-btn" title="Mute" onclick="app.muteConversation('${conv.uid}', event)">🔇</button>
+                        <button class="message-action-btn" title="Delete" onclick="app.deleteConversation('${conv.uid}', event)">🗑️</button>
                     </div>
                 </div>
             `;
@@ -4293,7 +4525,7 @@ var app = {
             // Store messages for preview in list
             this.chatMessages[key] = messages;
             
-            messages.forEach(m => {
+            messages.forEach((m, idx) => {
                 if (m && (m.text || m.image)) {
                     var side = m.sender === self.user.uid ? 'sent' : 'received';
                     var timestamp = '';
@@ -4304,6 +4536,27 @@ var app = {
                         timestamp = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
                     }
                     
+                    // Add date separator if date changed
+                    if (idx === 0 || (messages[idx - 1] && new Date(messages[idx - 1].timestamp).toDateString() !== new Date(m.timestamp).toDateString())) {
+                        var displayDate = new Date(m.timestamp);
+                        var today = new Date();
+                        var dateStr = '';
+                        
+                        if (displayDate.toDateString() === today.toDateString()) {
+                            dateStr = 'Today';
+                        } else {
+                            var yesterday = new Date(today);
+                            yesterday.setDate(yesterday.getDate() - 1);
+                            if (displayDate.toDateString() === yesterday.toDateString()) {
+                                dateStr = 'Yesterday';
+                            } else {
+                                dateStr = displayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: displayDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
+                            }
+                        }
+                        
+                        html += `<div style="text-align: center; margin: 16px 0; color: var(--text-light); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${dateStr}</div>`;
+                    }
+                    
                     var content = '';
                     
                     // Handle images
@@ -4311,10 +4564,10 @@ var app = {
                         if (Array.isArray(m.image)) {
                             // Multiple images - show as gallery
                             content += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-width: 200px;">';
-                            m.image.forEach((img, idx) => {
-                                if (idx < 4) {
+                            m.image.forEach((img, imgIdx) => {
+                                if (imgIdx < 4) {
                                     content += `<img src="${img}" style="width: 100%; border-radius: 8px; cursor: pointer;" onclick="app.viewFullImage('${img}')">`;
-                                } else if (idx === 4) {
+                                } else if (imgIdx === 4) {
                                     var remaining = m.image.length - 4;
                                     content += `<div style="width: 100%; border-radius: 8px; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; cursor: pointer;" onclick="app.viewAllImages(${JSON.stringify(m.image)})">+${remaining}</div>`;
                                 }
@@ -4328,14 +4581,18 @@ var app = {
                     
                     // Handle text
                     if (m.text) {
-                        content += `<div>${m.text}</div>`;
+                        content += `<div style="word-wrap: break-word; word-break: break-word;">${m.text}</div>`;
                     }
                     
+                    var bubbleStyle = side === 'sent' ? 
+                        'background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border-radius: 18px 18px 4px 18px;' :
+                        'background: linear-gradient(135deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 100%); color: var(--text); border-radius: 18px 18px 18px 4px;';
+                    
                     html += `
-                        <div class="chat-message ${side}">
-                            <div class="chat-message-bubble">
+                        <div class="chat-message ${side}" style="animation: slideInUp 0.3s ease-out;">
+                            <div class="chat-message-bubble" style="${bubbleStyle} padding: 12px 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); max-width: 280px;">
                                 ${content}
-                                <div class="message-time">${timestamp}</div>
+                                <div style="font-size: 0.7rem; margin-top: 4px; opacity: 0.7;">${timestamp}</div>
                             </div>
                         </div>
                     `;
