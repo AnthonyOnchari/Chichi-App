@@ -4543,6 +4543,23 @@ var app = {
             `;
         });
         
+        // Check for unread messages and trigger notifications
+        conversations.forEach(conv => {
+            if (conv.unreadCount > 0 && conv.lastMessage) {
+                // Fire notification for unread messages
+                var lastMsg = this.chatMessages[conv.uid] && this.chatMessages[conv.uid][this.chatMessages[conv.uid].length - 1];
+                if (lastMsg && lastMsg.sender !== this.user.uid && (lastMsg.text || lastMsg.image)) {
+                    // Only notify if we haven't already
+                    if (!this.notifiedMessages) this.notifiedMessages = {};
+                    var notifyKey = conv.uid + '_' + lastMsg.timestamp;
+                    if (!this.notifiedMessages[notifyKey]) {
+                        this.notifyNewMessage(conv.name, lastMsg.text || '📷 Image');
+                        this.notifiedMessages[notifyKey] = true;
+                    }
+                }
+            }
+        });
+        
         if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No messages yet. Start a conversation!</div>';
         document.getElementById('messageList').innerHTML = html;
     },
@@ -4757,28 +4774,62 @@ var app = {
         var self = this;
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
         
+        // IMMEDIATELY add message to display (optimistic update)
+        var now = new Date().getTime();
+        if (!this.chatMessages[key]) this.chatMessages[key] = [];
+        
+        var tempMessage = {
+            sender: self.user.uid,
+            text: text,
+            timestamp: now,
+            pending: true  // Mark as pending until confirmed
+        };
+        
+        // Add to display immediately
+        this.chatMessages[key].push(tempMessage);
+        this.displayChatMessages(this.chatMessages[key], key);
+        
+        // Clear input field
+        input.value = '';
+        input.focus();
+        
+        // NOW send to Firebase
         db.ref('chats/' + key + '/messages').push({
             sender: self.user.uid,
             text: text,
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        }).then(() => {
-            input.value = '';
-            input.focus();
-            self.loadMessages(); // Reload messages list to update preview
+        }).then((ref) => {
+            // Message sent successfully
+            // Remove pending flag and reload to sync with Firebase
+            self.loadMessages(); // Update preview in list
             
-            var messagesDiv = document.getElementById('chatModalMessages');
-            if (messagesDiv) {
-                // Aggressive scroll to bottom
-                setTimeout(() => {
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                }, 100);
-                setTimeout(() => {
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                }, 300);
-            }
+            // Small delay then reload chat messages to show confirmed message
+            setTimeout(() => {
+                db.ref('chats/' + key + '/messages').once('value').then(s => {
+                    var messages = [];
+                    s.forEach(c => {
+                        var m = c.val();
+                        if (m && (m.text || m.image)) {
+                            messages.push(m);
+                        }
+                    });
+                    messages.sort((a, b) => {
+                        return (a.timestamp || 0) - (b.timestamp || 0);
+                    });
+                    self.chatMessages[key] = messages;
+                    self.displayChatMessages(messages, key);
+                });
+            }, 100);
+            
         }).catch(err => {
             self.toast('Failed to send message: ' + err.message, 'error');
             console.error('Send message error:', err);
+            
+            // Remove the pending message on error
+            if (this.chatMessages[key]) {
+                this.chatMessages[key] = this.chatMessages[key].filter(m => !m.pending);
+                this.displayChatMessages(this.chatMessages[key], key);
+            }
         });
     },
 
