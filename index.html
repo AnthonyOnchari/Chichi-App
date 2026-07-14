@@ -2401,6 +2401,7 @@ window.app = window.app || {
 <div class="main-app" id="mainApp">
     <div class="app-header">
         <div class="app-logo-container">
+            <button class="btn-icon" style="margin-right: 12px; opacity: 0.8;" onclick="app.goBack()" title="Go back">← Back</button>
             <h1>CHICHI</h1>
         </div>
         <div class="header-actions">
@@ -2805,6 +2806,21 @@ var app = {
                 });
             }
         }, 500);
+        
+        // Handle ESC key and hardware back button (Android)
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' || e.key === 'Backspace') {
+                e.preventDefault();
+                self.goBack();
+            }
+        });
+        
+        // Handle hardware back button (Android)
+        if (typeof window.cordova !== 'undefined') {
+            document.addEventListener('backbutton', () => {
+                self.goBack();
+            }, false);
+        }
     },
 
     showAuth: function() {
@@ -2886,16 +2902,18 @@ var app = {
         
         // Load data immediately with proper sequencing
         
-        // First, ensure feed view is active
-        this.switchView('feed');
-        
-        // Then load all data
+        // First, load all data
         setTimeout(() => {
             self.loadPosts();
             self.loadUsers();
             self.loadFollowing();
             self.trackUnreadMessages();
         }, 0);
+        
+        // Restore to previously viewed page (if refresh)
+        setTimeout(() => {
+            self.restoreViewOnRefresh();
+        }, 1000);
     },
 
     loadProfile: function() {
@@ -2933,6 +2951,25 @@ var app = {
     },
 
     switchView: function(view) {
+        // Initialize navigation history
+        if (!this.navigationHistory) this.navigationHistory = [];
+        if (!this.currentView) this.currentView = 'feed';
+        
+        // Add current view to history before switching
+        if (this.currentView !== view) {
+            this.navigationHistory.push(this.currentView);
+        }
+        
+        // Update current view
+        this.currentView = view;
+        
+        // Save to localStorage for refresh persistence
+        try {
+            localStorage.setItem('chichiCurrentView', view);
+        } catch (e) {
+            console.log('localStorage not available');
+        }
+        
         // Hide all views
         document.querySelectorAll('.view').forEach(v => {
             v.classList.remove('active');
@@ -2967,6 +3004,60 @@ var app = {
         else if (view === 'explore') navItems[1].classList.add('active');
         else if (view === 'messages') navItems[2].classList.add('active');
         else if (view === 'profile') navItems[3].classList.add('active');
+    },
+
+    // New: Go back navigation function
+    goBack: function() {
+        if (!this.navigationHistory) this.navigationHistory = [];
+        
+        // Track back button presses
+        if (!this.backButtonPresses) this.backButtonPresses = 0;
+        
+        if (this.navigationHistory.length > 0) {
+            // Go back to previous view
+            var previousView = this.navigationHistory.pop();
+            this.currentView = null;  // Reset to allow navigation
+            this.switchView(previousView);
+            this.backButtonPresses = 0;  // Reset counter
+        } else {
+            // We're at home (feed), next press should reload
+            this.backButtonPresses++;
+            
+            if (this.backButtonPresses === 1) {
+                // First back press on home = reload home
+                this.toast('Press back again to confirm exit', 'info');
+                this.loadPosts();  // Reload feed
+            } else if (this.backButtonPresses === 2) {
+                // Second back press on home = show confirm exit
+                var self = this;
+                var confirmed = confirm('🚪 Exit CHICHI?');
+                if (confirmed) {
+                    // Sign out or navigate away
+                    auth.signOut().then(() => {
+                        window.location.href = '/';  // Or close app
+                    });
+                } else {
+                    // User cancelled, reset counter
+                    this.backButtonPresses = 0;
+                }
+            }
+        }
+    },
+
+    // Restore view on page refresh
+    restoreViewOnRefresh: function() {
+        try {
+            var savedView = localStorage.getItem('chichiCurrentView');
+            if (savedView && (savedView === 'feed' || savedView === 'messages' || savedView === 'explore' || savedView === 'profile')) {
+                // Use the saved view after app loads
+                var self = this;
+                setTimeout(() => {
+                    self.switchView(savedView);
+                }, 500);
+            }
+        } catch (e) {
+            console.log('localStorage not available');
+        }
     },
 
     handleLogin: function(e) {
