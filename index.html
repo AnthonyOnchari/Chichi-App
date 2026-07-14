@@ -2809,7 +2809,9 @@ var app = {
         
         // Handle ESC key and hardware back button (Android)
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' || e.key === 'Backspace') {
+            // Only ESC key triggers back navigation
+            // Backspace should work normally in text inputs
+            if (e.key === 'Escape') {
                 e.preventDefault();
                 self.goBack();
             }
@@ -4637,19 +4639,60 @@ var app = {
         // Check for unread messages and trigger notifications
         conversations.forEach(conv => {
             if (conv.unreadCount > 0 && conv.lastMessage) {
-                // Fire notification for unread messages
-                var lastMsg = this.chatMessages[conv.uid] && this.chatMessages[conv.uid][this.chatMessages[conv.uid].length - 1];
+                // Use proper chatKey format
+                var chatKey = [this.user.uid, conv.uid].sort().join('_');
+                
+                // Get last message from storage
+                var lastMsg = this.chatMessages[chatKey] && this.chatMessages[chatKey][this.chatMessages[chatKey].length - 1];
+                
                 if (lastMsg && lastMsg.sender !== this.user.uid && (lastMsg.text || lastMsg.image)) {
                     // Only notify if we haven't already
                     if (!this.notifiedMessages) this.notifiedMessages = {};
-                    var notifyKey = conv.uid + '_' + lastMsg.timestamp;
+                    var notifyKey = chatKey + '_' + lastMsg.timestamp;
                     if (!this.notifiedMessages[notifyKey]) {
-                        this.notifyNewMessage(conv.name, lastMsg.text || '📷 Image');
-                        this.notifiedMessages[notifyKey] = true;
+                        // Don't notify if this chat is currently open
+                        if (!this.currentChat || this.currentChat.uid !== conv.uid) {
+                            this.notifyNewMessage(conv.name, lastMsg.text || '📷 Image');
+                            this.notifiedMessages[notifyKey] = true;
+                        }
                     }
                 }
             }
         });
+        
+        // Set up real-time listener for message arrivals to trigger notifications
+        if (!this.messagesListListener) {
+            var self = this;
+            var userIds = Object.keys(this.users);
+            
+            userIds.forEach(uid => {
+                if (uid !== this.user.uid) {
+                    var chatKey = [this.user.uid, uid].sort().join('_');
+                    
+                    // Listen for new messages in this conversation
+                    db.ref('chats/' + chatKey + '/messages').on('child_added', snap => {
+                        var m = snap.val();
+                        if (m && m.sender !== self.user.uid && (m.text || m.image)) {
+                            // NEW MESSAGE ARRIVED!
+                            var senderName = self.users[uid] ? self.users[uid].name : 'User';
+                            
+                            // Only notify if this chat is NOT currently open
+                            if (!self.currentChat || self.currentChat.uid !== uid) {
+                                // Notify about new message
+                                self.notifyNewMessage(senderName, m.text || '📷 Image');
+                                
+                                // Reload messages list to show updated preview
+                                setTimeout(() => {
+                                    self.loadMessages();
+                                }, 100);
+                            }
+                        }
+                    });
+                }
+            });
+            
+            this.messagesListListener = true;
+        }
         
         if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No messages yet. Start a conversation!</div>';
         document.getElementById('messageList').innerHTML = html;
@@ -4994,18 +5037,50 @@ var app = {
         var userIds = Object.keys(this.users);
         
         if (!this.unreadMessages) this.unreadMessages = {};
+        if (!this.notifiedMessages) this.notifiedMessages = {};
+        if (!this.messageCountTracker) this.messageCountTracker = {};
         
         userIds.forEach(uid => {
             if (uid !== self.user.uid) {
                 var key = [self.user.uid, uid].sort().join('_');
+                var userName = this.users[uid].name || 'User';
+                
                 db.ref('chats/' + key + '/messages').on('value', s => {
                     var unreadCount = 0;
+                    var messages = [];
+                    var lastMessage = null;
+                    
                     s.forEach(c => {
                         var m = c.val();
-                        if (m && m.sender !== self.user.uid && !m.read) {
-                            unreadCount++;
+                        if (m && (m.text || m.image)) {
+                            messages.push(m);
+                            if (m.sender !== self.user.uid && !m.read) {
+                                unreadCount++;
+                            }
+                            lastMessage = m;
                         }
                     });
+                    
+                    // Track message count to detect new messages
+                    var previousCount = self.messageCountTracker[key] || 0;
+                    var currentCount = messages.length;
+                    self.messageCountTracker[key] = currentCount;
+                    
+                    // NEW MESSAGE DETECTION
+                    if (currentCount > previousCount) {
+                        // We have new messages
+                        if (lastMessage && lastMessage.sender !== self.user.uid && (lastMessage.text || lastMessage.image)) {
+                            // Last message is from other person - notify!
+                            var notifyKey = key + '_' + lastMessage.timestamp;
+                            
+                            // Only notify if we haven't already for this message
+                            if (!self.notifiedMessages[notifyKey]) {
+                                self.notifyNewMessage(userName, lastMessage.text || '📷 Image');
+                                self.notifiedMessages[notifyKey] = true;
+                                console.log('🔔 Notification fired for: ' + userName);
+                            }
+                        }
+                    }
                     
                     if (!self.unreadMessages[key]) {
                         self.unreadMessages[key] = {};
@@ -5013,7 +5088,12 @@ var app = {
                     self.unreadMessages[key].count = unreadCount;
                     
                     self.updateUnreadBadge();
-                    self.loadMessages();
+                    
+                    // Only load messages list if Messages tab is currently visible
+                    var messagesView = document.getElementById('messagesView');
+                    if (messagesView && messagesView.style.display !== 'none') {
+                        self.loadMessages();
+                    }
                 });
             }
         });
