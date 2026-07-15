@@ -3750,6 +3750,16 @@ var app = {
         if (toggle) toggle.checked = false;
     },
 
+    // Generic close modal function
+    closeModal: function(id) {
+        var modal = document.getElementById(id);
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('active');
+            modal.remove ? modal.remove() : null;
+        }
+    },
+
     previewPhoto: function(e) {
         var file = e.target.files[0];
         if (file) {
@@ -4670,6 +4680,12 @@ var app = {
     // ========== STORIES FEATURE ==========
     loadStories: function() {
         var self = this;
+        
+        // Skip loading user stories if guest/no user
+        if (!this.user) {
+            return;
+        }
+        
         // Load user's own stories from Firebase
         db.ref('stories/' + this.user.uid).once('value', snapshot => {
             var stories = [];
