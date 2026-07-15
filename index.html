@@ -3819,7 +3819,8 @@ var app = {
                 var likes = (p.likes && Object.keys(p.likes).length) || 0;
                 var downloads = p.downloads || 0;
                 var comments = (p.comments && p.comments.length) || 0;
-                var userLiked = p.likes && p.likes[this.user.uid];
+                var userLiked = this.user && p.likes && p.likes[this.user.uid];
+                var isOwnPost = this.user && p.userId === this.user.uid;
                
                 html += `
                     <div class="post" id="post-${p.id}">
@@ -3831,7 +3832,7 @@ var app = {
                                     <div class="post-time">${p.createdAt}</div>
                                 </div>
                             </div>
-                            ${p.userId === this.user.uid ? `<button class="post-menu" onclick="app.deletePost('${p.id}')">🗑️</button>` : ''}
+                            ${isOwnPost ? `<button class="post-menu" onclick="app.deletePost('${p.id}')">🗑️</button>` : ''}
                         </div>
                         <img src="${p.photoUrl}" class="post-image">
                         <div class="post-caption">${p.caption}</div>
@@ -4133,6 +4134,19 @@ var app = {
     },
 
     renderProfile: function() {
+        // Redirect guests to login
+        if (!this.user) {
+            document.getElementById('profileView').innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 20px; padding: 20px; text-align: center;">
+                    <div style="font-size: 48px;">👤</div>
+                    <h2 style="margin: 0;">Sign In to Your Profile</h2>
+                    <p style="color: var(--text-light); margin: 0;">Create an account to build your profile, post content, and connect with others.</p>
+                    <button onclick="app.switchTab('login')" style="background: var(--primary); color: white; border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Sign In / Sign Up</button>
+                </div>
+            `;
+            return;
+        }
+        
         var userPosts = this.posts.filter(p => p.userId === this.user.uid).length;
 
         var html = `
@@ -4629,6 +4643,12 @@ var app = {
     // ========== STORIES FEATURE ==========
     loadStories: function() {
         var self = this;
+        
+        // Skip loading user's own stories if guest
+        if (!this.user) {
+            return;
+        }
+        
         // Load user's own stories from Firebase
         db.ref('stories/' + this.user.uid).once('value', snapshot => {
             var stories = [];
