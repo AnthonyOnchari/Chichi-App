@@ -3725,19 +3725,23 @@ var app = {
         var file = e.target.files[0];
         if (file) {
             var preview = document.getElementById('photoPreview');
-            preview.textContent = '✓ ' + file.name + ' selected';
+            preview.textContent = '✓ ' + file.name + ' ready to upload';
             preview.style.display = 'block';
         }
     },
 
-    createPost: function() {
+    createPost: function(e) {
+        e.preventDefault();
         var photoFile = document.getElementById('photoInput').files[0];
         var caption = document.getElementById('captionInput').value.trim();
 
         if (!photoFile || !caption) {
-            this.toast('Add photo and caption', 'error');
+            this.toast('❌ Add photo and caption', 'error');
             return;
         }
+
+        var self = this;
+        this.showLoading('Uploading post...');
 
         var formData = new FormData();
         formData.append('file', photoFile);
@@ -3749,7 +3753,6 @@ var app = {
         })
         .then(r => r.json())
         .then(data => {
-            var self = this;
             db.ref('posts').push({
                 userId: self.user.uid,
                 userName: self.profile.name || 'User',
@@ -3763,16 +3766,22 @@ var app = {
                 createdAt: new Date().toLocaleString('en-KE'),
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             }).then(() => {
+                self.hideLoading();
                 // Earn silently for posting
                 self.balance += 1;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
-                self.toast('Post published', 'success');
+                self.toast('✅ Post published!', 'success');
                 self.closeCreateModal();
                 self.switchView('feed');
+                self.loadPosts();
             }).catch(err => {
-                self.toast('Error publishing post', 'error');
+                self.hideLoading();
+                self.toast('❌ Error publishing post', 'error');
             });
-        }).catch(err => this.toast('Upload failed', 'error'));
+        }).catch(err => {
+            self.hideLoading();
+            self.toast('❌ Upload failed', 'error');
+        });
     },
 
     loadPosts: function() {
