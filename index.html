@@ -2358,10 +2358,10 @@ window.app = window.app || {
             <div style="padding: 8px 16px;">
                 <div style="font-weight: 600; margin-bottom: 12px;">📖 Stories</div>
                 <div id="storiesList" style="display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;"></div>
-                <button onclick="app.showCreateStoryModal()" style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 12px;">➕ Create Story</button>
+                <button id="createStoryBtn" onclick="app.showCreateStoryModal()" style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 12px;">➕ Create Story</button>
             </div>
            
-            <div class="quick-post" onclick="app.showCreateModal()">
+            <div id="quickPostBox" class="quick-post" onclick="app.showCreateModal()" style="cursor: pointer;">
                 <div class="quick-post-avatar" id="quickPostAvatar">U</div>
                 <input type="text" class="quick-post-input" placeholder="Share something..." readonly>
             </div>
@@ -2805,11 +2805,21 @@ var app = {
         history.pushState(null, null, window.location.href);
     },
 
-    // Hide/show logout button based on auth state
+    // Hide/show logout button and post creation UI based on auth state
     updateLogoutButton: function() {
         var logoutBtn = document.querySelector('[onclick="app.showLogout()"]');
+        var createStoryBtn = document.getElementById('createStoryBtn');
+        var quickPostBox = document.getElementById('quickPostBox');
+        
         if (logoutBtn) {
             logoutBtn.style.display = this.isGuest ? 'none' : 'block';
+        }
+        if (createStoryBtn) {
+            createStoryBtn.style.display = this.isGuest ? 'none' : 'block';
+        }
+        if (quickPostBox) {
+            quickPostBox.style.display = this.isGuest ? 'none' : 'flex';
+            quickPostBox.style.pointerEvents = this.isGuest ? 'none' : 'auto';
         }
     },
 
@@ -3793,7 +3803,9 @@ var app = {
         // Load stories first
         this.loadStories();
        
+        console.log('📮 Loading posts from Firebase...');
         db.ref('posts').orderByChild('timestamp').limitToLast(50).on('value', s => {
+            console.log('📮 Posts data received:', s.val() ? Object.keys(s.val()).length + ' posts' : '0 posts');
             var p = [];
             s.forEach(c => {
                 var post = c.val();
@@ -3803,12 +3815,17 @@ var app = {
                 }
             });
             self.posts = p;
+            console.log('✅ Posts loaded:', self.posts.length);
             // Ensure feed is displayed
             var feedView = document.getElementById('feedView');
             if (feedView) {
                 feedView.classList.add('active');
                 feedView.style.display = 'flex';
             }
+            self.renderFeed();
+        }, err => {
+            console.error('❌ Error loading posts:', err.message);
+            self.posts = [];
             self.renderFeed();
         });
     },
@@ -3820,6 +3837,11 @@ var app = {
             return;
         }
        
+        // Initialize posts if not set
+        if (!this.posts) {
+            this.posts = [];
+        }
+        
         var html = '';
         if (this.posts.length === 0) {
             html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No posts yet. Start creating!</div>';
