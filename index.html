@@ -4131,6 +4131,8 @@ var app = {
     },
 
     toggleFollow: function(uid, name) {
+        if (!this.requireAuth('follow users')) return;
+        
         var self = this;
         var isFollowing = this.following[uid] || false;
        
@@ -4557,6 +4559,12 @@ var app = {
     },
 
     loadFollowing: function() {
+        // Skip loading following if guest/no user
+        if (!this.user) {
+            this.following = {};
+            return;
+        }
+        
         var self = this;
         db.ref('users/' + this.user.uid + '/following').once('value', s => {
             var following = s.val() || 0;
@@ -4570,7 +4578,7 @@ var app = {
             var user = this.users[uid];
             // STRICT filter: must have name, email, uid must not be empty, and must be different user
             if (uid &&
-                uid !== this.user.uid &&
+                (!this.user || uid !== this.user.uid) &&  // Skip own profile if logged in
                 user &&
                 user.name &&
                 user.email &&
@@ -5089,6 +5097,8 @@ var app = {
     },
 
     openChat: function(uid, name) {
+        if (!this.requireAuth('message users')) return;
+        
         this.currentChat = { uid: uid, name: name };
         document.getElementById('chatModalUserName').textContent = name;
         document.getElementById('chatModalMessages').innerHTML = '';
