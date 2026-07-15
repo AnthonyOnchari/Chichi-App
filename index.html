@@ -2361,12 +2361,7 @@ window.app = window.app || {
                 <button style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 14px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.3s;" onclick="app.loadPosts()">Refresh</button>
             </div>
            
-            <!-- STORIES -->
-            <div style="padding: 8px 16px;">
-                <div style="font-weight: 600; margin-bottom: 12px;">📖 Stories</div>
-                <div id="storiesList" style="display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;"></div>
-                <button onclick="app.showCreateStoryModal()" style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 12px;">➕ Create Story</button>
-            </div>
+            <!-- IG-STYLE STORIES CAROUSEL (will be populated by loadStories) -->
            
             <div class="quick-post" onclick="app.showCreateModal()">
                 <div class="quick-post-avatar" id="quickPostAvatar">U</div>
@@ -3802,8 +3797,12 @@ var app = {
         }
        
         var html = '';
+        
+        // Add stories carousel at top
+        html += '<div id="storiesList" style="background: white; border-bottom: 1px solid #e5e7eb;"></div>';
+        
         if (this.posts.length === 0) {
-            html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No posts yet. Start creating!</div>';
+            html += '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No posts yet. Start creating!</div>';
         } else {
             this.posts.forEach(p => {
                 var likes = (p.likes && Object.keys(p.likes).length) || 0;
@@ -3842,6 +3841,9 @@ var app = {
         // Ensure feedContainer is visible
         feedContainer.style.display = 'block';
         feedContainer.innerHTML = html;
+        
+        // Load stories carousel
+        this.loadStories();
     },
 
     likePost: function(id) {
@@ -4613,46 +4615,146 @@ var app = {
     // ========== STORIES FEATURE ==========
     loadStories: function() {
         var self = this;
-        // Load user's own stories from Firebase
-        db.ref('stories/' + this.user.uid).once('value', snapshot => {
-            var stories = [];
+        var storiesHtml = '';
+        
+        // Add user's own story with "+" button
+        storiesHtml += `
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0;" onclick="app.showCreateStoryModal()">
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">+</div>
+                <div style="font-size: 0.75rem; font-weight: 600; text-align: center; max-width: 70px;">Your Story</div>
+            </div>
+        `;
+        
+        // Load all users' stories
+        db.ref('stories').once('value', snapshot => {
             if (snapshot.val()) {
+                Object.keys(snapshot.val()).forEach(uid => {
+                    if (uid !== self.user.uid) {
+                        var userStories = snapshot.val()[uid];
+                        var userData = self.users[uid];
+                        
+                        if (userData && userStories) {
+                            var storyKeys = Object.keys(userStories);
+                            var hasUnviewedStories = storyKeys.some(k => !userStories[k].viewed);
+                            
+                            storiesHtml += `
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0;" onclick="app.viewUserStories('${uid}')">
+                                    <div style="width: 64px; height: 64px; border-radius: 50%; background-image: url(${userData.profilePhoto || ''}); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 24px; border: 3px solid ${hasUnviewedStories ? 'var(--primary)' : '#ddd'}; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                                        ${!userData.profilePhoto ? userData.name.charAt(0).toUpperCase() : ''}
+                                    </div>
+                                    <div style="font-size: 0.75rem; font-weight: 600; text-align: center; max-width: 70px; overflow: hidden; text-overflow: ellipsis;">${userData.name}</div>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+            }
+            
+            var storiesContainer = document.getElementById('storiesList');
+            if (storiesContainer) {
+                storiesContainer.innerHTML = `
+                    <div style="display: flex; gap: 12px; overflow-x: auto; padding: 12px 16px; background: white; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
+                        ${storiesHtml}
+                    </div>
+                `;
+                // Hide scrollbar
+                var carousel = storiesContainer.querySelector('div');
+                if (carousel) {
+                    carousel.style.msOverflowStyle = 'none';
+                    carousel.style.scrollbarWidth = 'none';
+                    carousel.style.WebkitScrollbar = 'none';
+                }
+            }
+        });
+    },
+    
+    viewUserStories: function(uid) {
+        var self = this;
+        db.ref('stories/' + uid).once('value', snapshot => {
+            if (snapshot.val()) {
+                var stories = [];
                 Object.keys(snapshot.val()).forEach(storyId => {
                     var story = snapshot.val()[storyId];
                     stories.push({
                         id: storyId,
+                        uid: uid,
                         image: story.image,
                         musicUrl: story.musicUrl || null,
-                        musicName: story.musicName || 'No music',
+                        musicName: story.musicName || 'Audio',
                         caption: story.caption || '',
                         createdAt: story.createdAt,
                         views: story.views || 0
                     });
                 });
+                
+                if (stories.length > 0) {
+                    self.showStoryViewer(stories, 0);
+                }
             }
-           
-            var html = '';
-            if (stories.length === 0) {
-                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No stories yet. Create one!</div>';
-            } else {
-                stories.forEach(story => {
-                    var createdDate = new Date(story.createdAt);
-                    var timeAgo = self.formatTimeAgo(createdDate);
-                    html += `
-                        <div style="position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 9/16; background: #f3f4f6; cursor: pointer;" onclick="app.viewStory('${story.id}')">
-                            <img src="${story.image}" style="width: 100%; height: 100%; object-fit: cover;">
-                            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); padding: 16px; color: white;">
-                                <div style="font-size: 0.875rem; margin-bottom: 4px;">🎵 ${story.musicName}</div>
-                                <div style="font-size: 0.75rem; opacity: 0.8;">${timeAgo}</div>
-                                <div style="font-size: 0.75rem; margin-top: 4px;">👁️ ${story.views} views</div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-           
-            document.getElementById('storiesList').innerHTML = html;
         });
+    },
+    
+    showStoryViewer: function(stories, index) {
+        var self = this;
+        if (index < 0 || index >= stories.length) return;
+        
+        var currentStory = stories[index];
+        var userData = self.users[currentStory.uid];
+        if (!userData) return;
+        
+        var progressPercent = ((index + 1) / stories.length) * 100;
+        
+        var html = `
+            <div id="storyViewerOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: black; z-index: 5000; display: flex; align-items: center; justify-content: center;">
+                <!-- Progress bars -->
+                <div style="position: absolute; top: 0; left: 0; right: 0; display: flex; gap: 4px; padding: 8px; z-index: 5001; background: rgba(0,0,0,0.3);">
+                    ${stories.map((s, i) => `
+                        <div style="flex: 1; height: 2px; background: rgba(255,255,255,0.3); border-radius: 1px; overflow: hidden;">
+                            <div style="height: 100%; background: white; width: ${i < index ? '100%' : (i === index ? progressPercent + '%' : '0%')}; transition: width 0.2s linear;"></div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <!-- Header -->
+                <div style="position: absolute; top: 12px; left: 16px; right: 16px; display: flex; align-items: center; gap: 10px; color: white; z-index: 5001;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background-image: url(${userData.profilePhoto || ''}); background-size: cover; background-position: center; border: 2px solid white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; flex-shrink: 0;">
+                        ${!userData.profilePhoto ? userData.name.charAt(0).toUpperCase() : ''}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9rem;">${userData.name}</div>
+                        <div style="font-size: 0.75rem; opacity: 0.7;">Now</div>
+                    </div>
+                    <div style="margin-left: auto; cursor: pointer; font-size: 1.5rem; font-weight: bold;" onclick="this.closest('#storyViewerOverlay').remove();">✕</div>
+                </div>
+                
+                <!-- Story image -->
+                <img src="${currentStory.image}" style="width: 100%; height: 100%; object-fit: contain;">
+                
+                <!-- Tap areas for navigation -->
+                <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 30%; z-index: 5001; cursor: pointer;" onclick="app.showStoryViewer(window.currentStories, window.currentStoryIndex - 1)"></div>
+                <div style="position: absolute; right: 0; top: 0; bottom: 0; width: 30%; z-index: 5001; cursor: pointer;" onclick="app.showStoryViewer(window.currentStories, window.currentStoryIndex + 1)"></div>
+            </div>
+        `;
+        
+        // Remove old viewer if exists
+        var oldViewer = document.getElementById('storyViewerOverlay');
+        if (oldViewer) oldViewer.remove();
+        
+        document.body.insertAdjacentHTML('beforeend', html);
+        
+        // Store for navigation
+        window.currentStories = stories;
+        window.currentStoryIndex = index;
+        
+        // Auto-advance after 5 seconds
+        setTimeout(() => {
+            if (index + 1 < stories.length) {
+                self.showStoryViewer(stories, index + 1);
+            } else {
+                var viewer = document.getElementById('storyViewerOverlay');
+                if (viewer) viewer.remove();
+            }
+        }, 5000);
     },
 
     showCreateStoryModal: function() {
@@ -5781,6 +5883,19 @@ var app = {
         }).catch(err => {
             self.toast('Error during cleanup: ' + err.message, 'error');
         });
+    },
+    
+    formatTimeAgo: function(date) {
+        if (!date) return 'Now';
+        var now = new Date();
+        var seconds = Math.floor((now - date) / 1000);
+        
+        if (seconds < 60) return 'Now';
+        if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+        if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+        if (seconds < 604800) return Math.floor(seconds / 86400) + 'd ago';
+        
+        return date.toLocaleDateString();
     },
 
     toast: function(msg, type) {
