@@ -25,24 +25,11 @@
             --primary: #0088cc;
             --primary-dark: #006fa3;
             --primary-light: #31a3e0;
-            --primary: #2E5BFF;
-            --primary-dark: #1F3FA3;
-            --text: #1a1a1a;
+            --text: #111827;
             --text-light: #6b7280;
             --border: #e5e7eb;
             --light: #f9fafb;
             --bg: #ffffff;
-        :root {
-            --primary: #0088cc;
-            --primary-dark: #006fa3;
-            --primary-light: #31a3e0;
-            --primary: #00D4AA;
-            --primary-dark: #00B894;
-            --dark: #1f2937;
-            --light: #f9fafb;
-            --border: #e5e7eb;
-            --text: #111827;
-            --text-light: #6b7280;
         }
 
         html, body {
@@ -2472,29 +2459,15 @@ window.app = window.app || {
 </div>
 
 <!-- CREATE POST MODAL -->
-<div class="modal-overlay" id="createModal" style="background: rgba(0,0,0,0.5); display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; align-items: flex-end; justify-content: center;">
-    <div style="background: white; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 24px; max-height: 80vh; overflow-y: auto; box-shadow: 0 -4px 20px rgba(0,0,0,0.1);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--primary);">Create Post</h2>
-            <button onclick="app.closeCreateModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #9ca3af;">✕</button>
-        </div>
-        
-        <!-- Photo Input -->
-        <div style="margin-bottom: 16px;">
-            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #6b7280;">📸 Photo *</label>
-            <div id="photoPreview" style="display: none; padding: 12px; background: #dbeafe; border-radius: 8px; font-size: 13px; color: #0369a1; margin-bottom: 12px; font-weight: 500;"></div>
-            <input type="file" id="photoInput" style="display: none;" accept="image/*">
-            <button type="button" onclick="document.getElementById('photoInput').click()" style="width: 100%; padding: 14px; background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--primary); font-size: 14px; transition: 0.2s;">📷 Choose Photo</button>
-        </div>
-        
-        <!-- Caption Input -->
-        <div style="margin-bottom: 16px;">
-            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #6b7280;">✏️ Caption *</label>
-            <textarea id="captionInput" placeholder="Share your thoughts..." style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box; min-height: 100px; resize: none;"></textarea>
-        </div>
-        
-        <!-- Submit Button -->
-        <button type="button" onclick="app.createPost()" style="width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: 0.3s;">Share Post</button>
+<div class="modal-overlay" id="createModal">
+    <div class="create-modal">
+        <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
+        <h2>Create Post</h2>
+        <div id="photoPreview"></div>
+        <input type="file" id="photoInput" style="display: none;" accept="image/*">
+        <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
+        <textarea id="captionInput" placeholder="Write a caption..."></textarea>
+        <button type="button" class="btn-submit" onclick="app.createPost()">Share Post</button>
     </div>
 </div>
 
@@ -2758,10 +2731,10 @@ var app = {
         auth.onAuthStateChanged(u => {
             clearTimeout(loadingTimeout);
             if (u) {
+                // LOGGED IN USER
                 self.user = u;
                 self.isGuest = false;
                
-                // Try to load profile, but show app regardless
                 db.ref('users/' + u.uid).once('value', s => {
                     if (s.exists()) {
                         self.profile = s.val();
@@ -2779,12 +2752,13 @@ var app = {
                     }
                     self.loadProfile();
                     self.showApp();
-                }); // <- Closing the .once() callback
+                });
             } else {
-                // GUEST MODE - show app with read-only access
+                // GUEST MODE - show app without auth
                 self.user = null;
                 self.isGuest = true;
                 self.profile = { name: 'Guest', balance: 0 };
+                self.updateLogoutButton();
                 self.showApp();
             }
         });
@@ -2831,6 +2805,24 @@ var app = {
         history.pushState(null, null, window.location.href);
     },
 
+    // Hide/show logout button based on auth state
+    updateLogoutButton: function() {
+        var logoutBtn = document.querySelector('[onclick="app.showLogout()"]');
+        if (logoutBtn) {
+            logoutBtn.style.display = this.isGuest ? 'none' : 'block';
+        }
+    },
+
+    // Check if user is authenticated before action
+    requireAuth: function(action) {
+        if (this.isGuest || !this.user) {
+            this.toast('🔐 Sign up to ' + (action || 'access this'), 'info');
+            this.switchTab('login');
+            return false;
+        }
+        return true;
+    },
+
     showAuth: function() {
         // Hide loading screen completely
         var loading = document.getElementById('loadingScreen');
@@ -2869,16 +2861,6 @@ var app = {
         document.querySelectorAll('.view').forEach(v => {
             v.style.display = 'none';
         });
-    },
-
-    // CHECK AUTH BEFORE ACTIONS
-    requireAuth: function(action) {
-        if (this.isGuest || !this.user) {
-            this.toast('🔐 Sign up to ' + (action || 'access this feature'), 'info');
-            this.switchTab('login');
-            return false;
-        }
-        return true;
     },
 
     showApp: function() {
@@ -3750,16 +3732,6 @@ var app = {
         if (toggle) toggle.checked = false;
     },
 
-    // Generic close modal function
-    closeModal: function(id) {
-        var modal = document.getElementById(id);
-        if (modal) {
-            modal.style.display = 'none';
-            modal.classList.remove('active');
-            modal.remove ? modal.remove() : null;
-        }
-    },
-
     previewPhoto: function(e) {
         var file = e.target.files[0];
         if (file) {
@@ -3901,10 +3873,8 @@ var app = {
             var likes = post.likes || {};
            
             if (likes[self.user.uid]) {
-                // Unlike
                 delete likes[self.user.uid];
             } else {
-                // Like - earn silently
                 likes[self.user.uid] = true;
                 self.balance += 0.2;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
@@ -4012,7 +3982,7 @@ var app = {
             var post = s.val();
             var comments = post.comments || [];
             var commentedUsers = post.commentedUsers || {};
-            var userCommented = commentedUsers[this.user.uid];
+            var userCommented = this.user && commentedUsers[this.user.uid];
 
             var html = '';
             if (comments.length === 0) {
@@ -4131,8 +4101,6 @@ var app = {
     },
 
     toggleFollow: function(uid, name) {
-        if (!this.requireAuth('follow users')) return;
-        
         var self = this;
         var isFollowing = this.following[uid] || false;
        
@@ -4173,19 +4141,6 @@ var app = {
     },
 
     renderProfile: function() {
-        // Show login prompt for guests
-        if (!this.user) {
-            document.getElementById('profileView').innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 20px; padding: 20px; text-align: center;">
-                    <div style="font-size: 64px;">👤</div>
-                    <h2 style="margin: 0; color: var(--primary);">Your Profile</h2>
-                    <p style="color: var(--text-light); margin: 0; font-size: 14px; line-height: 1.6;">Sign in to create your profile, track your posts, and earn rewards.</p>
-                    <button onclick="app.switchTab('login')" style="background: var(--primary); color: white; border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; margin-top: 12px;">Sign In / Sign Up</button>
-                </div>
-            `;
-            return;
-        }
-        
         var userPosts = this.posts.filter(p => p.userId === this.user.uid).length;
 
         var html = `
@@ -4559,7 +4514,7 @@ var app = {
     },
 
     loadFollowing: function() {
-        // Skip loading following if guest/no user
+        // Skip if guest/no user
         if (!this.user) {
             this.following = {};
             return;
@@ -4578,7 +4533,7 @@ var app = {
             var user = this.users[uid];
             // STRICT filter: must have name, email, uid must not be empty, and must be different user
             if (uid &&
-                (!this.user || uid !== this.user.uid) &&  // Skip own profile if logged in
+                (!this.user || uid !== this.user.uid) &&
                 user &&
                 user.name &&
                 user.email &&
@@ -4689,7 +4644,7 @@ var app = {
     loadStories: function() {
         var self = this;
         
-        // Skip loading user stories if guest/no user
+        // Skip if guest/no user
         if (!this.user) {
             return;
         }
@@ -5097,8 +5052,6 @@ var app = {
     },
 
     openChat: function(uid, name) {
-        if (!this.requireAuth('message users')) return;
-        
         this.currentChat = { uid: uid, name: name };
         document.getElementById('chatModalUserName').textContent = name;
         document.getElementById('chatModalMessages').innerHTML = '';
@@ -5728,8 +5681,8 @@ var app = {
     justLogout: function() {
         auth.signOut();
         document.getElementById('logoutModal').classList.remove('active');
-        // Don't call showAuth() - let auth state change handler show guest app
-        this.toast('Logged out - now viewing as guest', 'success');
+        this.showAuth();
+        this.toast('Logged out successfully', 'success');
     },
 
     deleteAccountPermanently: function() {
