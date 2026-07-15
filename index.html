@@ -2946,6 +2946,9 @@ var app = {
         // Step 5: Start polling to catch any messages we might have missed
         // This is a safety net - fires every 5 seconds to check for new messages
         self.messagePollingInterval = setInterval(() => {
+            // Skip polling if guest
+            if (!self.user || self.isGuest) return;
+            
             var userIds = Object.keys(self.users || {});
             userIds.forEach(uid => {
                 if (uid !== self.user.uid) {
@@ -3686,7 +3689,8 @@ var app = {
 
         var results = [];
         for (var uid in this.users) {
-            if (uid !== this.user.uid) {
+            // Allow guests to see all users
+            if (!this.user || uid !== this.user.uid) {
                 var u = this.users[uid];
                 if (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)) {
                     results.push({ uid: uid, user: u });
@@ -3730,6 +3734,9 @@ var app = {
 
     // Helper function to get unread count for a specific user
     getUnreadCountForUser: function(uid) {
+        // Guests have no messages
+        if (!this.user || this.isGuest) return 0;
+        
         if (!this.unreadMessages) return 0;
         var key = [this.user.uid, uid].sort().join('_');
         var data = this.unreadMessages[key];
@@ -4600,6 +4607,19 @@ var app = {
         sorted.sort((a, b) => (b.user.followers || 0) - (a.user.followers || 0));
 
         var html = '';
+        
+        // Add guest sign-up banner if not logged in
+        if (!this.user || this.isGuest) {
+            html = `
+                <div style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 24px 16px; margin: 12px 16px; border-radius: 14px; text-align: center; box-shadow: 0 8px 24px rgba(0, 136, 204, 0.25);">
+                    <div style="font-weight: 700; margin-bottom: 10px; font-size: 18px;">✨ Unlock Your Full Experience</div>
+                    <div style="font-size: 14px; margin-bottom: 4px; opacity: 0.95;">Follow amazing creators and stay connected</div>
+                    <div style="font-size: 13px; margin-bottom: 16px; opacity: 0.9;">💬 Chat • ❤️ Engage • 🌟 Discover • 💰 Earn Rewards</div>
+                    <button onclick="app.showLoginPage()" style="background: white; color: var(--primary); border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">🚀 Join Now</button>
+                </div>
+            `;
+        }
+        
         sorted.slice(0, 20).forEach(u => {
             var isFollowing = this.following[u.uid] || false;
             var unreadCount = this.getUnreadCountForUser(u.uid);
@@ -4961,6 +4981,27 @@ var app = {
 
     loadMessages: function() {
         var self = this;
+        
+        // Check if guest - show sign-up prompt
+        if (!this.user || this.isGuest) {
+            var html = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 40px 20px; text-align: center;">
+                    <div style="font-size: 64px; margin-bottom: 16px;">💬</div>
+                    <div style="font-size: 22px; font-weight: 700; margin-bottom: 12px; color: var(--text);">Connect & Chat Now</div>
+                    <div style="font-size: 15px; color: var(--text-light); margin-bottom: 12px; line-height: 1.6; max-width: 280px;">
+                        Join our community to message friends, share ideas, and build real connections!
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-light); margin-bottom: 24px; line-height: 1.5; max-width: 300px;">
+                        ✨ Real-time messaging • 🔔 Instant notifications • 👥 Connect with creators
+                    </div>
+                    <button onclick="app.showLoginPage()" style="background: var(--primary); color: white; border: none; padding: 14px 40px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px; margin-bottom: 12px; width: 100%; max-width: 250px; box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);">🚀 Sign Up / Login</button>
+                    <button onclick="app.switchView('feed')" style="background: white; color: var(--primary); border: 2px solid var(--primary); padding: 12px 40px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; width: 100%; max-width: 250px;">← Back to Feed</button>
+                </div>
+            `;
+            document.getElementById('messagesView').innerHTML = html;
+            return;
+        }
+        
         var html = '';
        
         // Initialize chatMessages if missing
@@ -5469,6 +5510,12 @@ var app = {
 
     trackUnreadMessages: function() {
         var self = this;
+        
+        // Skip if guest - no messages for non-users
+        if (!this.user || this.isGuest) {
+            console.log('ℹ️ Guest mode - skipping message tracking');
+            return;
+        }
        
         // Prevent double tracking
         if (self.unreadTrackingActive) {
