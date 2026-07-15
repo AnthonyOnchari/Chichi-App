@@ -4603,25 +4603,6 @@ var app = {
 
     loadExplore: function() {
         var self = this;
-        var sorted = [];
-        for (var uid in this.users) {
-            var user = this.users[uid];
-            // STRICT filter: must have name, email, uid must not be empty, and must be different user
-            if (uid &&
-                (!this.user || uid !== this.user.uid) &&
-                user &&
-                user.name &&
-                user.email &&
-                typeof user === 'object' &&
-                user.name.trim().length > 0 &&
-                user.email.trim().length > 0) {
-                sorted.push({ uid: uid, user: user });
-            }
-        }
-       
-        // Sort by followers (most popular first)
-        sorted.sort((a, b) => (b.user.followers || 0) - (a.user.followers || 0));
-
         var html = '';
         
         // Add guest sign-up banner if not logged in
@@ -4634,38 +4615,52 @@ var app = {
                     <button onclick="app.showLoginPage()" style="background: white; color: var(--primary); border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">🚀 Join Now</button>
                 </div>
             `;
-        }
-        
-        sorted.slice(0, 20).forEach(u => {
-            var isFollowing = this.following[u.uid] || false;
-            var unreadCount = this.getUnreadCountForUser(u.uid);
-            var msgButtonBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">${unreadCount}</span>` : '';
+        } else {
+            // ONLY show user list for logged-in users
+            var sorted = [];
+            for (var uid in this.users) {
+                var user = this.users[uid];
+                // STRICT filter: must have name, email, uid must not be empty, and must be different user
+                if (uid &&
+                    uid !== this.user.uid &&
+                    user &&
+                    user.name &&
+                    user.email &&
+                    typeof user === 'object' &&
+                    user.name.trim().length > 0 &&
+                    user.email.trim().length > 0) {
+                    sorted.push({ uid: uid, user: user });
+                }
+            }
            
-            // For guests, disable interactive buttons
-            var msgBtn = this.isGuest || !this.user ? 
-                `<button class="search-msg-btn" onclick="app.toast('🔐 Sign up to message users', 'info'); app.showLoginPage();" style="position: relative; opacity: 0.6; cursor: not-allowed;">💬</button>` :
-                `<button class="search-msg-btn" onclick="app.openChatFromSearch('${u.uid}', '${u.user.name}')" style="position: relative;">💬 ${msgButtonBadge}</button>`;
-            
-            var followBtn = this.isGuest || !this.user ?
-                `<button class="search-view-btn" onclick="app.toast('🔐 Sign up to follow users', 'info'); app.showLoginPage();" style="background: #ccc; color: #666; cursor: not-allowed;">Follow</button>` :
-                `<button class="search-view-btn" onclick="app.toggleFollow('${u.uid}', '${u.user.name}')" style="background: ${isFollowing ? '#ff4444' : 'var(--primary)'}; color: white;">${isFollowing ? 'Unfollow' : 'Follow'}</button>`;
-           
-            html += `
-                <div class="search-user" style="margin: 8px 16px;">
-                    <div class="search-user-avatar" style="background-image: url(${u.user.profilePhoto || ''});">${!u.user.profilePhoto ? u.user.name.charAt(0).toUpperCase() : ''}</div>
-                    <div class="search-user-info">
-                        <div class="search-user-name">${u.user.name}</div>
-                        <div class="search-user-followers">⭐ ${u.user.followers || 0} followers</div>
-                    </div>
-                    <div class="search-user-actions">
-                        ${msgBtn}
-                        ${followBtn}
-                    </div>
-                </div>
-            `;
-        });
+            // Sort by followers (most popular first)
+            sorted.sort((a, b) => (b.user.followers || 0) - (a.user.followers || 0));
 
-        if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No users to explore</div>';
+            sorted.slice(0, 20).forEach(u => {
+                var isFollowing = this.following[u.uid] || false;
+                var unreadCount = this.getUnreadCountForUser(u.uid);
+                var msgButtonBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">${unreadCount}</span>` : '';
+               
+                html += `
+                    <div class="search-user" style="margin: 8px 16px;">
+                        <div class="search-user-avatar" style="background-image: url(${u.user.profilePhoto || ''});">${!u.user.profilePhoto ? u.user.name.charAt(0).toUpperCase() : ''}</div>
+                        <div class="search-user-info">
+                            <div class="search-user-name">${u.user.name}</div>
+                            <div class="search-user-followers">⭐ ${u.user.followers || 0} followers</div>
+                        </div>
+                        <div class="search-user-actions">
+                            <button class="search-msg-btn" onclick="app.openChatFromSearch('${u.uid}', '${u.user.name}')" style="position: relative;">
+                                💬
+                                ${msgButtonBadge}
+                            </button>
+                            <button class="search-view-btn" onclick="app.toggleFollow('${u.uid}', '${u.user.name}')" style="background: ${isFollowing ? '#ff4444' : 'var(--primary)'}; color: white;">${isFollowing ? 'Unfollow' : 'Follow'}</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No users to explore</div>';
+        }
        
         var container = document.getElementById('exploreUsersList');
         if (container) {
