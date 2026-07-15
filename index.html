@@ -24,19 +24,12 @@
         :root {
             --primary: #0088cc;
             --primary-dark: #006fa3;
-            --text: #1a1a1a;
+            --primary-light: #31a3e0;
+            --text: #111827;
             --text-light: #6b7280;
             --border: #e5e7eb;
             --light: #f9fafb;
             --bg: #ffffff;
-        :root {
-            --primary: #0088cc;
-            --primary-dark: #006fa3;
-            --dark: #1f2937;
-            --light: #f9fafb;
-            --border: #e5e7eb;
-            --text: #111827;
-            --text-light: #6b7280;
         }
 
         html, body {
@@ -103,7 +96,7 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            background: conic-gradient(from 0deg, #0088cc, #FFC24B, #0088cc);
+            background: conic-gradient(from 0deg, #2E5BFF, #FFC24B, #2E5BFF);
             border-radius: 50%;
             animation: spinGradient 2s linear infinite;
         }
@@ -154,7 +147,7 @@
 
         .loading-progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #0088cc, #FFC24B);
+            background: linear-gradient(90deg, #2E5BFF, #FFC24B);
             border-radius: 10px;
             animation: progressPulse 1.5s ease-in-out infinite;
             box-shadow: 0 0 20px rgba(46, 91, 255, 0.6);
@@ -2739,6 +2732,7 @@ var app = {
             clearTimeout(loadingTimeout);
             if (u) {
                 self.user = u;
+                self.isGuest = false;
                
                 // Try to load profile, but show app regardless
                 db.ref('users/' + u.uid).once('value', s => {
@@ -2760,7 +2754,12 @@ var app = {
                     self.showApp();
                 }); // <- Closing the .once() callback
             } else {
-                self.showAuth();
+                // GUEST MODE - allow viewing posts/stories but block interactions
+                self.user = null;
+                self.isGuest = true;
+                self.profile = { name: 'Guest', balance: 0 };
+                self.showApp();
+                self.toast('👤 Viewing as Guest - Sign up to post/like/comment', 'info');
             }
         });
 
@@ -2844,6 +2843,15 @@ var app = {
         document.querySelectorAll('.view').forEach(v => {
             v.style.display = 'none';
         });
+    },
+
+    requireAuth: function() {
+        if (this.isGuest || !this.user) {
+            this.toast('🔐 Sign up to access this feature', 'info');
+            this.switchTab('login');
+            return false;
+        }
+        return true;
     },
 
     showApp: function() {
@@ -3725,6 +3733,8 @@ var app = {
     },
 
     createPost: function() {
+        if (!this.requireAuth()) return;
+        
         var photoFile = document.getElementById('photoInput').files[0];
         var caption = document.getElementById('captionInput').value.trim();
 
@@ -3845,6 +3855,8 @@ var app = {
     },
 
     likePost: function(id) {
+        if (!this.requireAuth()) return;
+        
         var self = this;
         db.ref('posts/' + id).once('value', s => {
             var post = s.val();
@@ -3877,6 +3889,8 @@ var app = {
     },
 
     sharePost: function(id, caption) {
+        if (!this.requireAuth()) return;
+        
         var shareText = caption || 'Check out this post on CHICHI!';
         var shareUrl = window.location.href;
        
@@ -3953,6 +3967,8 @@ var app = {
     },
 
     viewComments: function(id) {
+        if (!this.requireAuth()) return;
+        
         var self = this;
         db.ref('posts/' + id).once('value', s => {
             var post = s.val();
@@ -4056,7 +4072,7 @@ var app = {
                             </div>
                             <div style="display: flex; gap: 8px; margin-top: 12px;">
                                 <button class="follow-btn" onclick="app.toggleFollow('${uid}', '${user.name}')" style="background: ${isFollowing ? '#ff4444' : 'var(--primary)'}; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1;">${isFollowing ? '✕ Unfollow' : '✓ Follow'}</button>
-                                <button class="follow-btn" onclick="app.openChatFromSearch('${uid}', '${user.name}')" style="background: #0088cc; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1; position: relative;">
+                                <button class="follow-btn" onclick="app.openChatFromSearch('${uid}', '${user.name}')" style="background: #2E5BFF; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1; position: relative;">
                                     💬 Message
                                     ${msgBadge}
                                 </button>
@@ -4294,7 +4310,7 @@ var app = {
        
         // Auto-log modal info for debugging
         setTimeout(() => {
-            console.log('%c🎯 Edit Profile Modal Opened', 'color: #0088cc; font-size: 14px; font-weight: bold;');
+            console.log('%c🎯 Edit Profile Modal Opened', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
             console.log('Modal Height:', modal.offsetHeight + 'px');
             console.log('Modal Scroll Height:', modal.scrollHeight + 'px');
             console.log('Overflow-Y:', window.getComputedStyle(modal).overflowY);
@@ -6022,7 +6038,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // DEBUG CONSOLE - Check modal scrolling issues
 window.debugModal = function() {
     console.clear();
-    console.log('%c=== CHICHI MODAL DEBUG CONSOLE ===', 'color: #0088cc; font-size: 16px; font-weight: bold;');
+    console.log('%c=== CHICHI MODAL DEBUG CONSOLE ===', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
    
     // Check all modals
     var modals = document.querySelectorAll('.modal');
@@ -6071,7 +6087,7 @@ window.debugModal = function() {
     }
    
     console.log('%c💡 TIP: If content is NOT taller than container, it won\'t scroll!', 'color: #ff9800; font-weight: bold;');
-    console.log('%c🔧 SOLUTIONS:', 'color: #0088cc; font-weight: bold;');
+    console.log('%c🔧 SOLUTIONS:', 'color: #00D4AA; font-weight: bold;');
     console.log('1. Make sure modal has max-height (85vh)');
     console.log('2. Make sure content is taller than modal');
     console.log('3. Check overflow-y is "scroll" or "auto"');
@@ -6090,7 +6106,7 @@ window.showDebugPanel = function() {
         max-height: 400px;
         background: #1f2937;
         color: #fff;
-        border: 2px solid #0088cc;
+        border: 2px solid #00D4AA;
         border-radius: 12px;
         padding: 16px;
         font-size: 12px;
@@ -6113,7 +6129,7 @@ window.showDebugPanel = function() {
         info += `Scrollable: ${m.scrollHeight > m.offsetHeight ? '✅ YES' : '❌ NO'}<br>`;
     });
    
-    info += '<br><button onclick="debugModal()" style="width:100%;padding:8px;background:#0088cc;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">Run debugModal()</button>';
+    info += '<br><button onclick="debugModal()" style="width:100%;padding:8px;background:#00D4AA;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">Run debugModal()</button>';
     info += '<button onclick="document.getElementById(\'debugPanel\').remove()" style="width:100%;padding:8px;background:#ff4444;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:8px;">Close</button>';
    
     panel.innerHTML = info;
@@ -6123,7 +6139,7 @@ window.showDebugPanel = function() {
 // Test modal scrolling
 window.testScrolling = function() {
     console.clear();
-    console.log('%c🧪 TESTING SCROLLING...', 'color: #0088cc; font-size: 16px; font-weight: bold;');
+    console.log('%c🧪 TESTING SCROLLING...', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
    
     // Try scrolling on active modal
     var activeModal = document.querySelector('.modal-overlay.active .modal');
@@ -6142,7 +6158,7 @@ window.testScrolling = function() {
    
     console.log(scrolled ? '%c✅ SCROLL WORKS!' : '%c❌ Scroll not working', scrolled ? 'color: #22c55e;' : 'color: #ff4444;', 'font-weight: bold;');
    
-    console.log('%cDEBUG INFO:', 'color: #0088cc; font-weight: bold;');
+    console.log('%cDEBUG INFO:', 'color: #00D4AA; font-weight: bold;');
     console.log('offsetHeight:', activeModal.offsetHeight + 'px');
     console.log('scrollHeight:', activeModal.scrollHeight + 'px');
     console.log('Max Height:', window.getComputedStyle(activeModal).maxHeight);
@@ -6156,7 +6172,7 @@ window.testScrolling = function() {
 
 // Debug commands available in console (hidden from startup)
 // Uncomment to enable startup messages
-// console.log('%c🎯 DEBUG COMMANDS:', 'color: #0088cc; font-size: 14px; font-weight: bold;');
+// console.log('%c🎯 DEBUG COMMANDS:', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
 // console.log('testModal() - Create test modal with scroll content');
 // console.log('simpleScrollTest() - ⭐ Ultra-simple scroll test (NO CSS classes!)');
 // console.log('testActualScroll() - Test if scroll actually works');
@@ -6164,7 +6180,7 @@ window.testScrolling = function() {
 // console.log('forceShowModal() - 💪 Force show modal (last resort)');
 // console.log('debugModal() - Log all modal info');
 // console.log('');
-// console.log('%cKeyboard Shortcuts:', 'color: #0088cc; font-weight: bold;');
+// console.log('%cKeyboard Shortcuts:', 'color: #00D4AA; font-weight: bold;');
 // console.log('Ctrl+Shift+D - Open debug panel');
 
 // Keyboard shortcut: Ctrl+Shift+D to open debug panel
@@ -6172,13 +6188,13 @@ document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
         window.showDebugPanel();
-        console.log('%c🎯 Debug panel opened! Press Ctrl+Shift+D again to close', 'color: #0088cc; font-weight: bold;');
+        console.log('%c🎯 Debug panel opened! Press Ctrl+Shift+D again to close', 'color: #00D4AA; font-weight: bold;');
     }
 });
 
 // Test modal - Creates a test modal to verify styling works
 window.testModal = function() {
-    console.log('%c🧪 Creating test modal...', 'color: #0088cc; font-weight: bold;');
+    console.log('%c🧪 Creating test modal...', 'color: #00D4AA; font-weight: bold;');
    
     var modal = document.createElement('div');
     modal.className = 'modal-overlay active';
@@ -6218,7 +6234,7 @@ window.testModal = function() {
         <button onclick="this.closest('.modal-overlay').remove(); console.log('%c✅ Test modal closed', 'color: #22c55e; font-weight: bold;');" style="
             width: 100%;
             padding: 12px;
-            background: #0088cc;
+            background: #00D4AA;
             color: white;
             border: none;
             border-radius: 10px;
@@ -6266,7 +6282,7 @@ window.testModal = function() {
 
 // Ultra-simple scroll modal - NO CSS classes, pure inline styles
 window.simpleScrollTest = function() {
-    console.log('%c🚀 CREATING ULTRA-SIMPLE SCROLL TEST', 'color: #0088cc; font-size: 16px; font-weight: bold; background: #e0f7f6; padding: 8px;');
+    console.log('%c🚀 CREATING ULTRA-SIMPLE SCROLL TEST', 'color: #00D4AA; font-size: 16px; font-weight: bold; background: #e0f7f6; padding: 8px;');
    
     var overlay = document.createElement('div');
     overlay.style.cssText = `
@@ -6312,7 +6328,7 @@ window.simpleScrollTest = function() {
             </div>
         `;
     }
-    content += '<button onclick="this.closest(\'div\').parentElement.remove();" style="width: 100%; padding: 15px; background: #0088cc; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer;">Close</button>';
+    content += '<button onclick="this.closest(\'div\').parentElement.remove();" style="width: 100%; padding: 15px; background: #00D4AA; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer;">Close</button>';
    
     modal.innerHTML = content;
     overlay.appendChild(modal);
@@ -6339,7 +6355,7 @@ window.simpleScrollTest = function() {
 
 // Simple scroll test with actual scroll
 window.testActualScroll = function() {
-    console.log('%c🧪 TESTING ACTUAL SCROLL MOVEMENT', 'color: #0088cc; font-weight: bold;');
+    console.log('%c🧪 TESTING ACTUAL SCROLL MOVEMENT', 'color: #00D4AA; font-weight: bold;');
    
     var modal = document.querySelector('.modal-overlay.active .modal');
     if (!modal) {
@@ -6364,7 +6380,7 @@ window.inspectDOM = function() {
     console.clear();
     console.log('%c🔍 DOM INSPECTION - CHECKING MODAL VISIBILITY', 'color: #ff4444; font-size: 16px; font-weight: bold; background: #ffe0e0; padding: 8px;');
    
-    console.log('%cStep 1: Check if modal is in DOM', 'color: #0088cc; font-weight: bold;');
+    console.log('%cStep 1: Check if modal is in DOM', 'color: #00D4AA; font-weight: bold;');
     var allDivs = document.querySelectorAll('div');
     console.log('Total divs on page:', allDivs.length);
    
@@ -6374,7 +6390,7 @@ window.inspectDOM = function() {
     var activeOverlays = document.querySelectorAll('.modal-overlay.active');
     console.log('Modals with class "modal-overlay.active":', activeOverlays.length);
    
-    console.log('%cStep 2: Check computed styles', 'color: #0088cc; font-weight: bold;');
+    console.log('%cStep 2: Check computed styles', 'color: #00D4AA; font-weight: bold;');
     activeOverlays.forEach((overlay, idx) => {
         console.group(`Active Overlay ${idx + 1}:`);
         var style = window.getComputedStyle(overlay);
@@ -6401,7 +6417,7 @@ window.inspectDOM = function() {
         }
     });
    
-    console.log('%cStep 3: Test visibility', 'color: #0088cc; font-weight: bold;');
+    console.log('%cStep 3: Test visibility', 'color: #00D4AA; font-weight: bold;');
     if (activeOverlays.length > 0) {
         console.log('%c✅ Modal found in DOM!', 'color: #22c55e; font-weight: bold;');
         var overlay = activeOverlays[0];
@@ -6411,7 +6427,7 @@ window.inspectDOM = function() {
         console.log('Try opening Edit Profile first, then run inspectDOM()');
     }
    
-    console.log('%cStep 4: CSS Rules Check', 'color: #0088cc; font-weight: bold;');
+    console.log('%cStep 4: CSS Rules Check', 'color: #00D4AA; font-weight: bold;');
     var stylesheet = document.styleSheets[0];
     var foundRule = false;
     for (let i = 0; i < stylesheet.cssRules.length; i++) {
@@ -6452,7 +6468,7 @@ window.forceShowModal = function() {
 };
 
 // Make it easy to access from browser console
-console.log('%c✅ Type debugModal() in console to check modal scrolling!', 'color: #0088cc; font-size: 14px; font-weight: bold;');
+console.log('%c✅ Type debugModal() in console to check modal scrolling!', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
 
 // Initialize theme on load
 // Initialize music on startup
