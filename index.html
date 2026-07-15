@@ -25,11 +25,24 @@
             --primary: #0088cc;
             --primary-dark: #006fa3;
             --primary-light: #31a3e0;
-            --text: #111827;
+            --primary: #2E5BFF;
+            --primary-dark: #1F3FA3;
+            --text: #1a1a1a;
             --text-light: #6b7280;
             --border: #e5e7eb;
             --light: #f9fafb;
             --bg: #ffffff;
+        :root {
+            --primary: #0088cc;
+            --primary-dark: #006fa3;
+            --primary-light: #31a3e0;
+            --primary: #00D4AA;
+            --primary-dark: #00B894;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --border: #e5e7eb;
+            --text: #111827;
+            --text-light: #6b7280;
         }
 
         html, body {
@@ -2459,15 +2472,29 @@ window.app = window.app || {
 </div>
 
 <!-- CREATE POST MODAL -->
-<div class="modal-overlay" id="createModal">
-    <div class="create-modal">
-        <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
-        <h2>Create Post</h2>
-        <div id="photoPreview"></div>
-        <input type="file" id="photoInput" style="display: none;" accept="image/*">
-        <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
-        <textarea id="captionInput" placeholder="Write a caption..."></textarea>
-        <button type="button" class="btn-submit" onclick="app.createPost()">Share Post</button>
+<div class="modal-overlay" id="createModal" style="background: rgba(0,0,0,0.5); display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; align-items: flex-end; justify-content: center;">
+    <div style="background: white; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 24px; max-height: 80vh; overflow-y: auto; box-shadow: 0 -4px 20px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--primary);">Create Post</h2>
+            <button onclick="app.closeCreateModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #9ca3af;">✕</button>
+        </div>
+        
+        <!-- Photo Input -->
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #6b7280;">📸 Photo *</label>
+            <div id="photoPreview" style="display: none; padding: 12px; background: #dbeafe; border-radius: 8px; font-size: 13px; color: #0369a1; margin-bottom: 12px; font-weight: 500;"></div>
+            <input type="file" id="photoInput" style="display: none;" accept="image/*">
+            <button type="button" onclick="document.getElementById('photoInput').click()" style="width: 100%; padding: 14px; background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--primary); font-size: 14px; transition: 0.2s;">📷 Choose Photo</button>
+        </div>
+        
+        <!-- Caption Input -->
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #6b7280;">✏️ Caption *</label>
+            <textarea id="captionInput" placeholder="Share your thoughts..." style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box; min-height: 100px; resize: none;"></textarea>
+        </div>
+        
+        <!-- Submit Button -->
+        <button type="button" onclick="app.createPost()" style="width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: 0.3s;">Share Post</button>
     </div>
 </div>
 
@@ -2754,12 +2781,11 @@ var app = {
                     self.showApp();
                 }); // <- Closing the .once() callback
             } else {
-                // GUEST MODE - allow viewing posts/stories but block interactions
+                // GUEST MODE - show app with read-only access
                 self.user = null;
                 self.isGuest = true;
                 self.profile = { name: 'Guest', balance: 0 };
                 self.showApp();
-                self.toast('👤 Viewing as Guest - Sign up to post/like/comment', 'info');
             }
         });
 
@@ -2845,9 +2871,10 @@ var app = {
         });
     },
 
-    requireAuth: function() {
+    // CHECK AUTH BEFORE ACTIONS
+    requireAuth: function(action) {
         if (this.isGuest || !this.user) {
-            this.toast('🔐 Sign up to access this feature', 'info');
+            this.toast('🔐 Sign up to ' + (action || 'access this feature'), 'info');
             this.switchTab('login');
             return false;
         }
@@ -3733,7 +3760,7 @@ var app = {
     },
 
     createPost: function() {
-        if (!this.requireAuth()) return;
+        if (!this.requireAuth('post')) return;
         
         var photoFile = document.getElementById('photoInput').files[0];
         var caption = document.getElementById('captionInput').value.trim();
@@ -3856,7 +3883,7 @@ var app = {
     },
 
     likePost: function(id) {
-        if (!this.requireAuth()) return;
+        if (!this.requireAuth('like posts')) return;
         
         var self = this;
         db.ref('posts/' + id).once('value', s => {
@@ -3890,7 +3917,7 @@ var app = {
     },
 
     sharePost: function(id, caption) {
-        if (!this.requireAuth()) return;
+        if (!this.requireAuth('share posts')) return;
         
         var shareText = caption || 'Check out this post on CHICHI!';
         var shareUrl = window.location.href;
@@ -3968,7 +3995,7 @@ var app = {
     },
 
     viewComments: function(id) {
-        if (!this.requireAuth()) return;
+        if (!this.requireAuth('comment')) return;
         
         var self = this;
         db.ref('posts/' + id).once('value', s => {
@@ -4134,14 +4161,14 @@ var app = {
     },
 
     renderProfile: function() {
-        // Redirect guests to login
+        // Show login prompt for guests
         if (!this.user) {
             document.getElementById('profileView').innerHTML = `
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 20px; padding: 20px; text-align: center;">
-                    <div style="font-size: 48px;">👤</div>
-                    <h2 style="margin: 0;">Sign In to Your Profile</h2>
-                    <p style="color: var(--text-light); margin: 0;">Create an account to build your profile, post content, and connect with others.</p>
-                    <button onclick="app.switchTab('login')" style="background: var(--primary); color: white; border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Sign In / Sign Up</button>
+                    <div style="font-size: 64px;">👤</div>
+                    <h2 style="margin: 0; color: var(--primary);">Your Profile</h2>
+                    <p style="color: var(--text-light); margin: 0; font-size: 14px; line-height: 1.6;">Sign in to create your profile, track your posts, and earn rewards.</p>
+                    <button onclick="app.switchTab('login')" style="background: var(--primary); color: white; border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; margin-top: 12px;">Sign In / Sign Up</button>
                 </div>
             `;
             return;
@@ -4643,12 +4670,6 @@ var app = {
     // ========== STORIES FEATURE ==========
     loadStories: function() {
         var self = this;
-        
-        // Skip loading user's own stories if guest
-        if (!this.user) {
-            return;
-        }
-        
         // Load user's own stories from Firebase
         db.ref('stories/' + this.user.uid).once('value', snapshot => {
             var stories = [];
