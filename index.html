@@ -5718,8 +5718,8 @@ var app = {
     justLogout: function() {
         auth.signOut();
         document.getElementById('logoutModal').classList.remove('active');
-        this.showAuth();
-        this.toast('Logged out successfully', 'success');
+        // Don't call showAuth() - let auth state change handler show guest app
+        this.toast('Logged out - now viewing as guest', 'success');
     },
 
     deleteAccountPermanently: function() {
