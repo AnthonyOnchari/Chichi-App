@@ -2457,14 +2457,30 @@ window.app = window.app || {
 
 <!-- CREATE POST MODAL -->
 <div class="modal-overlay" id="createModal">
-    <div class="create-modal">
-        <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
-        <h2>Create Post</h2>
-        <div id="photoPreview"></div>
-        <input type="file" id="photoInput" style="display: none;" accept="image/*">
-        <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
-        <textarea id="captionInput" placeholder="Write a caption..."></textarea>
-        <button type="button" class="btn-submit" onclick="app.createPost()">Share Post</button>
+    <div class="modal" style="border-radius: 20px 20px 0 0; padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--primary);">Create Post</h2>
+            <button onclick="app.closeCreateModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">✕</button>
+        </div>
+        
+        <form onsubmit="app.createPost(event)" style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- Photo Upload -->
+            <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">📸 Photo *</label>
+                <div id="photoPreview" style="display: none; padding: 12px; background: var(--light); border-radius: 8px; font-size: 14px; color: #34C759; margin-bottom: 12px; font-weight: 500;"></div>
+                <input type="file" id="photoInput" onchange="app.previewPhoto(event)" accept="image/*" required style="display: none;">
+                <button type="button" style="width: 100%; padding: 14px; background: var(--light); border: 2px dashed var(--border); border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--primary); font-size: 14px; transition: 0.3s;" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
+            </div>
+            
+            <!-- Caption -->
+            <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">✏️ Caption *</label>
+                <textarea id="captionInput" placeholder="Say something..." required style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; box-sizing: border-box; min-height: 100px; resize: none; font-family: inherit;"></textarea>
+            </div>
+            
+            <!-- Submit Button -->
+            <button type="submit" style="background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: 0.3s; width: 100%;">Share Post</button>
+        </form>
     </div>
 </div>
 
@@ -4607,10 +4623,7 @@ var app = {
         
         // Add user's own story with "+" button
         storiesHtml += `
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0;" onclick="app.showCreateStoryModal()">
-                <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">➕</div>
-                <div style="font-size: 0.75rem; font-weight: 500; text-align: center; max-width: 70px;">Your Story</div>
-            </div>
+            <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; flex-shrink: 0;" onclick="app.showCreateStoryModal()" title="Your Story">➕</div>
         `;
         
         // Load all users' stories
@@ -4626,11 +4639,8 @@ var app = {
                             var hasUnviewedStories = storyKeys.some(k => !userStories[k].viewed);
                             
                             storiesHtml += `
-                                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0;" onclick="app.viewUserStories('${uid}')">
-                                    <div style="width: 60px; height: 60px; border-radius: 50%; background-image: url(${userData.profilePhoto || ''}); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; border: 3px solid ${hasUnviewedStories ? 'var(--primary)' : '#ddd'}; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                        ${!userData.profilePhoto ? userData.name.charAt(0).toUpperCase() : ''}
-                                    </div>
-                                    <div style="font-size: 0.75rem; font-weight: 500; text-align: center; max-width: 70px; overflow: hidden; text-overflow: ellipsis;">${userData.name}</div>
+                                <div style="width: 60px; height: 60px; border-radius: 50%; background-image: url(${userData.profilePhoto || ''}); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; border: 3px solid ${hasUnviewedStories ? 'var(--primary)' : '#ddd'}; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; flex-shrink: 0;" onclick="app.viewUserStories('${uid}')" title="${userData.name}">
+                                    ${!userData.profilePhoto ? userData.name.charAt(0).toUpperCase() : ''}
                                 </div>
                             `;
                         }
@@ -4641,7 +4651,7 @@ var app = {
             var storiesContainer = document.getElementById('storiesList');
             if (storiesContainer) {
                 storiesContainer.innerHTML = `
-                    <div style="display: flex; gap: 12px; overflow-x: auto; padding: 12px 16px; background: white; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
+                    <div style="display: flex; gap: 12px; overflow-x: auto; padding: 12px 16px; background: white; -webkit-overflow-scrolling: touch; scroll-behavior: smooth;">
                         ${storiesHtml}
                     </div>
                 `;
@@ -4739,33 +4749,41 @@ var app = {
 
     showCreateStoryModal: function() {
         var html = `
-            <div class="modal-overlay" id="storyModalOverlay">
-                <div class="modal-box" style="width: 90%; max-width: 400px;">
-                    <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                        <h2 style="margin: 0;">📖 Create Story</h2>
+            <div class="modal-overlay" id="storyModalOverlay" style="background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center;">
+                <div class="modal" style="width: 100%; max-width: 480px; background: white; border-radius: 20px 20px 0 0; padding: 24px; max-height: 80vh; overflow-y: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--primary);">Create Story</h2>
+                        <button onclick="app.closeModal('storyModalOverlay')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">✕</button>
                     </div>
-                    <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                    
+                    <form onsubmit="app.uploadStory(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                        <!-- Photo Upload -->
                         <div>
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Story Image</label>
-                            <input type="file" id="storyImageInput" accept="image/*" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">📸 Photo *</label>
+                            <input type="file" id="storyImageInput" accept="image/*" required style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; cursor: pointer;">
                         </div>
+                        
+                        <!-- Music URL -->
                         <div>
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Music URL (Cloudinary or external)</label>
-                            <input type="text" id="storyMusicInput" placeholder="https://res.cloudinary.com/..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">🎵 Music URL (optional)</label>
+                            <input type="text" id="storyMusicInput" placeholder="https://..." style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; box-sizing: border-box;">
                         </div>
+                        
+                        <!-- Music Name -->
                         <div>
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Music Name</label>
-                            <input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">🏷️ Music Name</label>
+                            <input type="text" id="storyMusicNameInput" placeholder="e.g., Chill Vibes" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; box-sizing: border-box;">
                         </div>
+                        
+                        <!-- Caption -->
                         <div>
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Caption (optional)</label>
-                            <textarea id="storyCaptionInput" placeholder="Add a caption..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; min-height: 60px;"></textarea>
+                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">✏️ Caption (optional)</label>
+                            <textarea id="storyCaptionInput" placeholder="Say something..." style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; box-sizing: border-box; min-height: 80px; resize: none;"></textarea>
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="app.uploadStory()" style="flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">📤 Upload</button>
-                            <button onclick="app.closeModal('storyModalOverlay')" style="flex: 1; background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
-                        </div>
-                    </div>
+                        
+                        <!-- Upload Button -->
+                        <button type="submit" style="background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: 0.3s; width: 100%;">Upload Story</button>
+                    </form>
                 </div>
             </div>
         `;
@@ -4774,7 +4792,8 @@ var app = {
         document.getElementById('storyModalOverlay').style.display = 'flex';
     },
 
-    uploadStory: function() {
+    uploadStory: function(e) {
+        e.preventDefault();
         var self = this;
         var imageInput = document.getElementById('storyImageInput');
         var musicInput = document.getElementById('storyMusicInput').value.trim();
@@ -4782,11 +4801,12 @@ var app = {
         var captionInput = document.getElementById('storyCaptionInput').value.trim();
        
         if (!imageInput.files || !imageInput.files[0]) {
-            this.toast('Please select an image', 'error');
+            this.toast('❌ Please select an image', 'error');
             return;
         }
        
-        this.toast('Uploading story...', 'info');
+        // Show loading
+        this.showLoading('Uploading story...');
        
         // Upload image to Cloudinary
         var formData = new FormData();
@@ -4804,6 +4824,34 @@ var app = {
                 var storyId = 'story_' + Date.now();
                 var storyData = {
                     image: data.secure_url,
+                    musicUrl: musicInput || '',
+                    musicName: musicNameInput,
+                    caption: captionInput,
+                    createdAt: new Date().toISOString(),
+                    views: 0,
+                    viewed: false
+                };
+               
+                db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData, err => {
+                    self.hideLoading();
+                    if (err) {
+                        self.toast('❌ Error saving story', 'error');
+                    } else {
+                        self.toast('✅ Story uploaded!', 'success');
+                        self.closeModal('storyModalOverlay');
+                        self.loadStories();
+                    }
+                });
+            } else {
+                self.hideLoading();
+                self.toast('❌ Upload failed', 'error');
+            }
+        })
+        .catch(err => {
+            self.hideLoading();
+            self.toast('❌ ' + err.message, 'error');
+        });
+    },
                     musicUrl: musicInput || '',
                     musicName: musicNameInput,
                     caption: captionInput,
@@ -5871,6 +5919,29 @@ var app = {
         el.textContent = msg;
         document.body.appendChild(el);
         setTimeout(() => el.remove(), 3000);
+    },
+
+    showLoading: function(msg) {
+        var existingLoader = document.getElementById('appLoadingOverlay');
+        if (existingLoader) existingLoader.remove();
+        
+        var html = `
+            <div id="appLoadingOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 5000; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px;">
+                <div style="width: 60px; height: 60px; border-radius: 50%; border: 4px solid rgba(0,136,204,0.2); border-top-color: var(--primary); animation: spin 0.8s linear infinite;"></div>
+                <div style="color: white; font-size: 16px; font-weight: 500; text-align: center;">${msg || 'Loading...'}</div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', html);
+    },
+
+    hideLoading: function() {
+        var loader = document.getElementById('appLoadingOverlay');
+        if (loader) loader.remove();
+    },
+
+    closeModal: function(id) {
+        var modal = document.getElementById(id);
+        if (modal) modal.remove();
     },
 
     initConsent: function() {
