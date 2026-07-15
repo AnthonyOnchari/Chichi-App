@@ -2808,11 +2808,15 @@ var app = {
     // Hide/show logout button and post creation UI based on auth state
     updateLogoutButton: function() {
         var logoutBtn = document.querySelector('[onclick="app.showLogout()"]');
+        var adminBtn = document.querySelector('[onclick="app.openAdminModal()"]');
         var createStoryBtn = document.getElementById('createStoryBtn');
         var quickPostBox = document.getElementById('quickPostBox');
         
         if (logoutBtn) {
             logoutBtn.style.display = this.isGuest ? 'none' : 'block';
+        }
+        if (adminBtn) {
+            adminBtn.style.display = this.isGuest ? 'none' : 'block';
         }
         if (createStoryBtn) {
             createStoryBtn.style.display = this.isGuest ? 'none' : 'block';
@@ -3019,6 +3023,11 @@ var app = {
             authPage.style.visibility = 'visible';
             authPage.style.opacity = '1';
         }
+        
+        // Hide bottom nav
+        var nav = document.querySelector('.bottom-nav');
+        if (nav) nav.style.display = 'none';
+        
         this.switchTab('login');
     },
 
@@ -4143,6 +4152,13 @@ var app = {
     },
 
     toggleFollow: function(uid, name) {
+        // Block guests from following
+        if (!this.user || this.isGuest) {
+            this.toast('🔐 Sign up to follow users', 'info');
+            this.showLoginPage();
+            return;
+        }
+        
         var self = this;
         var isFollowing = this.following[uid] || false;
        
@@ -4625,6 +4641,15 @@ var app = {
             var unreadCount = this.getUnreadCountForUser(u.uid);
             var msgButtonBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">${unreadCount}</span>` : '';
            
+            // For guests, disable interactive buttons
+            var msgBtn = this.isGuest || !this.user ? 
+                `<button class="search-msg-btn" onclick="app.toast('🔐 Sign up to message users', 'info'); app.showLoginPage();" style="position: relative; opacity: 0.6; cursor: not-allowed;">💬</button>` :
+                `<button class="search-msg-btn" onclick="app.openChatFromSearch('${u.uid}', '${u.user.name}')" style="position: relative;">💬 ${msgButtonBadge}</button>`;
+            
+            var followBtn = this.isGuest || !this.user ?
+                `<button class="search-view-btn" onclick="app.toast('🔐 Sign up to follow users', 'info'); app.showLoginPage();" style="background: #ccc; color: #666; cursor: not-allowed;">Follow</button>` :
+                `<button class="search-view-btn" onclick="app.toggleFollow('${u.uid}', '${u.user.name}')" style="background: ${isFollowing ? '#ff4444' : 'var(--primary)'}; color: white;">${isFollowing ? 'Unfollow' : 'Follow'}</button>`;
+           
             html += `
                 <div class="search-user" style="margin: 8px 16px;">
                     <div class="search-user-avatar" style="background-image: url(${u.user.profilePhoto || ''});">${!u.user.profilePhoto ? u.user.name.charAt(0).toUpperCase() : ''}</div>
@@ -4633,11 +4658,8 @@ var app = {
                         <div class="search-user-followers">⭐ ${u.user.followers || 0} followers</div>
                     </div>
                     <div class="search-user-actions">
-                        <button class="search-msg-btn" onclick="app.openChatFromSearch('${u.uid}', '${u.user.name}')" style="position: relative;">
-                            💬
-                            ${msgButtonBadge}
-                        </button>
-                        <button class="search-view-btn" onclick="app.toggleFollow('${u.uid}', '${u.user.name}')" style="background: ${isFollowing ? '#ff4444' : 'var(--primary)'}; color: white;">${isFollowing ? 'Unfollow' : 'Follow'}</button>
+                        ${msgBtn}
+                        ${followBtn}
                     </div>
                 </div>
             `;
@@ -5145,6 +5167,13 @@ var app = {
     },
 
     openChat: function(uid, name) {
+        // Block guests from messaging
+        if (!this.user || this.isGuest) {
+            this.toast('🔐 Sign up to message users', 'info');
+            this.showLoginPage();
+            return;
+        }
+        
         this.currentChat = { uid: uid, name: name };
         document.getElementById('chatModalUserName').textContent = name;
         document.getElementById('chatModalMessages').innerHTML = '';
