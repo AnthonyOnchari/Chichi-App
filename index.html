@@ -2827,7 +2827,7 @@ var app = {
     requireAuth: function(action) {
         if (this.isGuest || !this.user) {
             this.toast('🔐 Sign up to ' + (action || 'access this'), 'info');
-            this.switchTab('login');
+            this.showLoginPage();
             return false;
         }
         return true;
@@ -3004,6 +3004,19 @@ var app = {
                 }
             }
         });
+    },
+
+    // Show auth page for guest users to login/signup
+    showLoginPage: function() {
+        var authPage = document.getElementById('authPage');
+        var mainApp = document.getElementById('mainApp');
+        if (authPage && mainApp) {
+            mainApp.style.display = 'none';
+            authPage.style.display = 'flex';
+            authPage.style.visibility = 'visible';
+            authPage.style.opacity = '1';
+        }
+        this.switchTab('login');
     },
 
     switchTab: function(tab) {
@@ -4163,6 +4176,23 @@ var app = {
     },
 
     renderProfile: function() {
+        // Check if guest - show sign-up prompt instead
+        if (!this.user || this.isGuest) {
+            var html = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 40px 20px; text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">👤</div>
+                    <div style="font-size: 20px; font-weight: 600; margin-bottom: 8px; color: var(--text);">No Profile Yet</div>
+                    <div style="font-size: 14px; color: var(--text-light); margin-bottom: 24px; line-height: 1.5;">
+                        Sign up or log in to create your profile, earn rewards, and connect with others.
+                    </div>
+                    <button onclick="app.showLoginPage()" style="background: var(--primary); color: white; border: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px; margin-bottom: 12px;">📝 Sign Up / Login</button>
+                    <button onclick="app.switchView('feed')" style="background: white; color: var(--primary); border: 2px solid var(--primary); padding: 12px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px;">Back to Feed</button>
+                </div>
+            `;
+            document.getElementById('profileView').innerHTML = html;
+            return;
+        }
+        
         var userPosts = this.posts.filter(p => p.userId === this.user.uid).length;
 
         var html = `
