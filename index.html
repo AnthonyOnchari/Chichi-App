@@ -24,16 +24,23 @@
         :root {
             --primary: #0088cc;
             --primary-dark: #006fa3;
-            --primary-light: #31a3e0;
-            --text: #000000;
-            --text-light: #666666;
-            --border: #e0e0e0;
-            --light: #f0f2f5;
+            --text: #1a1a1a;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --light: #f9fafb;
             --bg: #ffffff;
+        :root {
+            --primary: #0088cc;
+            --primary-dark: #006fa3;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --border: #e5e7eb;
+            --text: #111827;
+            --text-light: #6b7280;
         }
 
         html, body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            font-family: 'Inter', sans-serif;
             background: var(--light);
             color: var(--text);
             width: 100%;
@@ -96,7 +103,7 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            background: conic-gradient(from 0deg, var(--primary), var(--primary-light), var(--primary));
+            background: conic-gradient(from 0deg, #0088cc, #FFC24B, #0088cc);
             border-radius: 50%;
             animation: spinGradient 2s linear infinite;
         }
@@ -106,7 +113,7 @@
             position: absolute;
             width: 52px;
             height: 52px;
-            background: var(--light);
+            background: var(--dark-bg);
             border-radius: 50%;
             top: 4px;
             left: 4px;
@@ -147,10 +154,10 @@
 
         .loading-progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            background: linear-gradient(90deg, #0088cc, #FFC24B);
             border-radius: 10px;
             animation: progressPulse 1.5s ease-in-out infinite;
-            box-shadow: 0 0 20px rgba(0, 136, 204, 0.6);
+            box-shadow: 0 0 20px rgba(46, 91, 255, 0.6);
         }
 
         @keyframes progressPulse {
@@ -169,7 +176,7 @@
             justify-content: center;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             padding: 20px;
             transition: opacity 0.3s ease;
         }
@@ -194,7 +201,10 @@
         .auth-header h1 {
             font-size: 1.8rem;
             font-weight: 800;
-            color: var(--primary);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 8px;
         }
 
@@ -2457,30 +2467,14 @@ window.app = window.app || {
 
 <!-- CREATE POST MODAL -->
 <div class="modal-overlay" id="createModal">
-    <div class="modal" style="border-radius: 20px 20px 0 0; padding: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--primary);">Create Post</h2>
-            <button onclick="app.closeCreateModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">✕</button>
-        </div>
-        
-        <form onsubmit="app.createPost(event)" style="display: flex; flex-direction: column; gap: 16px;">
-            <!-- Photo Upload -->
-            <div>
-                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">📸 Photo *</label>
-                <div id="photoPreview" style="display: none; padding: 12px; background: var(--light); border-radius: 8px; font-size: 14px; color: #34C759; margin-bottom: 12px; font-weight: 500;"></div>
-                <input type="file" id="photoInput" onchange="app.previewPhoto(event)" accept="image/*" required style="display: none;">
-                <button type="button" style="width: 100%; padding: 14px; background: var(--light); border: 2px dashed var(--border); border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--primary); font-size: 14px; transition: 0.3s;" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
-            </div>
-            
-            <!-- Caption -->
-            <div>
-                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">✏️ Caption *</label>
-                <textarea id="captionInput" placeholder="Say something..." required style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; box-sizing: border-box; min-height: 100px; resize: none; font-family: inherit;"></textarea>
-            </div>
-            
-            <!-- Submit Button -->
-            <button type="submit" style="background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: 0.3s; width: 100%;">Share Post</button>
-        </form>
+    <div class="create-modal">
+        <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
+        <h2>Create Post</h2>
+        <div id="photoPreview"></div>
+        <input type="file" id="photoInput" style="display: none;" accept="image/*">
+        <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
+        <textarea id="captionInput" placeholder="Write a caption..."></textarea>
+        <button type="button" class="btn-submit" onclick="app.createPost()">Share Post</button>
     </div>
 </div>
 
@@ -3725,23 +3719,19 @@ var app = {
         var file = e.target.files[0];
         if (file) {
             var preview = document.getElementById('photoPreview');
-            preview.textContent = '✓ ' + file.name + ' ready to upload';
+            preview.textContent = '✓ ' + file.name + ' selected';
             preview.style.display = 'block';
         }
     },
 
-    createPost: function(e) {
-        e.preventDefault();
+    createPost: function() {
         var photoFile = document.getElementById('photoInput').files[0];
         var caption = document.getElementById('captionInput').value.trim();
 
         if (!photoFile || !caption) {
-            this.toast('❌ Add photo and caption', 'error');
+            this.toast('Add photo and caption', 'error');
             return;
         }
-
-        var self = this;
-        this.showLoading('Uploading post...');
 
         var formData = new FormData();
         formData.append('file', photoFile);
@@ -3753,6 +3743,7 @@ var app = {
         })
         .then(r => r.json())
         .then(data => {
+            var self = this;
             db.ref('posts').push({
                 userId: self.user.uid,
                 userName: self.profile.name || 'User',
@@ -3766,22 +3757,16 @@ var app = {
                 createdAt: new Date().toLocaleString('en-KE'),
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             }).then(() => {
-                self.hideLoading();
                 // Earn silently for posting
                 self.balance += 1;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
-                self.toast('✅ Post published!', 'success');
+                self.toast('Post published', 'success');
                 self.closeCreateModal();
                 self.switchView('feed');
-                self.loadPosts();
             }).catch(err => {
-                self.hideLoading();
-                self.toast('❌ Error publishing post', 'error');
+                self.toast('Error publishing post', 'error');
             });
-        }).catch(err => {
-            self.hideLoading();
-            self.toast('❌ Upload failed', 'error');
-        });
+        }).catch(err => this.toast('Upload failed', 'error'));
     },
 
     loadPosts: function() {
@@ -4071,7 +4056,7 @@ var app = {
                             </div>
                             <div style="display: flex; gap: 8px; margin-top: 12px;">
                                 <button class="follow-btn" onclick="app.toggleFollow('${uid}', '${user.name}')" style="background: ${isFollowing ? '#ff4444' : 'var(--primary)'}; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1;">${isFollowing ? '✕ Unfollow' : '✓ Follow'}</button>
-                                <button class="follow-btn" onclick="app.openChatFromSearch('${uid}', '${user.name}')" style="background: #2E5BFF; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1; position: relative;">
+                                <button class="follow-btn" onclick="app.openChatFromSearch('${uid}', '${user.name}')" style="background: #0088cc; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1; position: relative;">
                                     💬 Message
                                     ${msgBadge}
                                 </button>
@@ -4309,7 +4294,7 @@ var app = {
        
         // Auto-log modal info for debugging
         setTimeout(() => {
-            console.log('%c🎯 Edit Profile Modal Opened', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
+            console.log('%c🎯 Edit Profile Modal Opened', 'color: #0088cc; font-size: 14px; font-weight: bold;');
             console.log('Modal Height:', modal.offsetHeight + 'px');
             console.log('Modal Scroll Height:', modal.scrollHeight + 'px');
             console.log('Overflow-Y:', window.getComputedStyle(modal).overflowY);
@@ -4628,171 +4613,77 @@ var app = {
     // ========== STORIES FEATURE ==========
     loadStories: function() {
         var self = this;
-        var storiesHtml = '';
-        
-        // Add user's own story with "+" button
-        storiesHtml += `
-            <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; flex-shrink: 0;" onclick="app.showCreateStoryModal()" title="Your Story">➕</div>
-        `;
-        
-        // Load all users' stories
-        db.ref('stories').once('value', snapshot => {
+        // Load user's own stories from Firebase
+        db.ref('stories/' + this.user.uid).once('value', snapshot => {
+            var stories = [];
             if (snapshot.val()) {
-                Object.keys(snapshot.val()).forEach(uid => {
-                    if (uid !== self.user.uid) {
-                        var userStories = snapshot.val()[uid];
-                        var userData = self.users[uid];
-                        
-                        if (userData && userStories) {
-                            var storyKeys = Object.keys(userStories);
-                            var hasUnviewedStories = storyKeys.some(k => !userStories[k].viewed);
-                            
-                            storiesHtml += `
-                                <div style="width: 60px; height: 60px; border-radius: 50%; background-image: url(${userData.profilePhoto || ''}); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; border: 3px solid ${hasUnviewedStories ? 'var(--primary)' : '#ddd'}; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; flex-shrink: 0;" onclick="app.viewUserStories('${uid}')" title="${userData.name}">
-                                    ${!userData.profilePhoto ? userData.name.charAt(0).toUpperCase() : ''}
-                                </div>
-                            `;
-                        }
-                    }
-                });
-            }
-            
-            var storiesContainer = document.getElementById('storiesList');
-            if (storiesContainer) {
-                storiesContainer.innerHTML = `
-                    <div style="display: flex; gap: 12px; overflow-x: auto; padding: 12px 16px; background: white; -webkit-overflow-scrolling: touch; scroll-behavior: smooth;">
-                        ${storiesHtml}
-                    </div>
-                `;
-            }
-        });
-    },
-
-    viewUserStories: function(uid) {
-        var self = this;
-        db.ref('stories/' + uid).once('value', snapshot => {
-            if (snapshot.val()) {
-                var stories = [];
                 Object.keys(snapshot.val()).forEach(storyId => {
                     var story = snapshot.val()[storyId];
                     stories.push({
                         id: storyId,
-                        uid: uid,
                         image: story.image,
                         musicUrl: story.musicUrl || null,
-                        musicName: story.musicName || 'Audio',
+                        musicName: story.musicName || 'No music',
                         caption: story.caption || '',
-                        createdAt: story.createdAt
+                        createdAt: story.createdAt,
+                        views: story.views || 0
                     });
                 });
-                
-                if (stories.length > 0) {
-                    self.showStoryViewer(stories, 0);
-                }
             }
-        });
-    },
-
-    showStoryViewer: function(stories, index) {
-        var self = this;
-        if (index < 0 || index >= stories.length) return;
-        
-        var currentStory = stories[index];
-        var userData = self.users[currentStory.uid];
-        if (!userData) return;
-        
-        var progressPercent = ((index + 1) / stories.length) * 100;
-        
-        var html = `
-            <div id="storyViewerOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: black; z-index: 5000; display: flex; align-items: center; justify-content: center;">
-                <!-- Progress bars -->
-                <div style="position: absolute; top: 0; left: 0; right: 0; display: flex; gap: 4px; padding: 8px; z-index: 5001; background: rgba(0,0,0,0.3);">
-                    ${stories.map((s, i) => `
-                        <div style="flex: 1; height: 2px; background: rgba(255,255,255,0.3); border-radius: 1px; overflow: hidden;">
-                            <div style="height: 100%; background: white; width: ${i < index ? '100%' : (i === index ? progressPercent + '%' : '0%')}; transition: width 0.2s linear;"></div>
-                        </div>
-                    `).join('')}
-                </div>
-                
-                <!-- Header -->
-                <div style="position: absolute; top: 12px; left: 16px; right: 16px; display: flex; align-items: center; gap: 10px; color: white; z-index: 5001;">
-                    <div style="width: 40px; height: 40px; border-radius: 50%; background-image: url(${userData.profilePhoto || ''}); background-size: cover; background-position: center; border: 2px solid white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; flex-shrink: 0;">
-                        ${!userData.profilePhoto ? userData.name.charAt(0).toUpperCase() : ''}
-                    </div>
-                    <div>
-                        <div style="font-weight: 600; font-size: 0.9rem;">${userData.name}</div>
-                        <div style="font-size: 0.75rem; opacity: 0.7;">Now</div>
-                    </div>
-                    <div style="margin-left: auto; cursor: pointer; font-size: 1.5rem; font-weight: bold;" onclick="this.closest('#storyViewerOverlay').remove();">✕</div>
-                </div>
-                
-                <!-- Story image -->
-                <img src="${currentStory.image}" style="width: 100%; height: 100%; object-fit: contain;">
-                
-                <!-- Tap areas for navigation -->
-                <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 30%; z-index: 5001; cursor: pointer;" onclick="app.showStoryViewer(window.currentStories, window.currentStoryIndex - 1)"></div>
-                <div style="position: absolute; right: 0; top: 0; bottom: 0; width: 30%; z-index: 5001; cursor: pointer;" onclick="app.showStoryViewer(window.currentStories, window.currentStoryIndex + 1)"></div>
-            </div>
-        `;
-        
-        // Remove old viewer if exists
-        var oldViewer = document.getElementById('storyViewerOverlay');
-        if (oldViewer) oldViewer.remove();
-        
-        document.body.insertAdjacentHTML('beforeend', html);
-        
-        // Store for navigation
-        window.currentStories = stories;
-        window.currentStoryIndex = index;
-        
-        // Auto-advance after 5 seconds
-        setTimeout(() => {
-            if (index + 1 < stories.length) {
-                self.showStoryViewer(stories, index + 1);
+           
+            var html = '';
+            if (stories.length === 0) {
+                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No stories yet. Create one!</div>';
             } else {
-                var viewer = document.getElementById('storyViewerOverlay');
-                if (viewer) viewer.remove();
+                stories.forEach(story => {
+                    var createdDate = new Date(story.createdAt);
+                    var timeAgo = self.formatTimeAgo(createdDate);
+                    html += `
+                        <div style="position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 9/16; background: #f3f4f6; cursor: pointer;" onclick="app.viewStory('${story.id}')">
+                            <img src="${story.image}" style="width: 100%; height: 100%; object-fit: cover;">
+                            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); padding: 16px; color: white;">
+                                <div style="font-size: 0.875rem; margin-bottom: 4px;">🎵 ${story.musicName}</div>
+                                <div style="font-size: 0.75rem; opacity: 0.8;">${timeAgo}</div>
+                                <div style="font-size: 0.75rem; margin-top: 4px;">👁️ ${story.views} views</div>
+                            </div>
+                        </div>
+                    `;
+                });
             }
-        }, 5000);
+           
+            document.getElementById('storiesList').innerHTML = html;
+        });
     },
 
     showCreateStoryModal: function() {
         var html = `
-            <div class="modal-overlay" id="storyModalOverlay" style="background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center;">
-                <div class="modal" style="width: 100%; max-width: 480px; background: white; border-radius: 20px 20px 0 0; padding: 24px; max-height: 80vh; overflow-y: auto;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--primary);">Create Story</h2>
-                        <button onclick="app.closeModal('storyModalOverlay')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">✕</button>
+            <div class="modal-overlay" id="storyModalOverlay">
+                <div class="modal-box" style="width: 90%; max-width: 400px;">
+                    <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+                        <h2 style="margin: 0;">📖 Create Story</h2>
                     </div>
-                    
-                    <form onsubmit="app.uploadStory(event)" style="display: flex; flex-direction: column; gap: 16px;">
-                        <!-- Photo Upload -->
+                    <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
                         <div>
-                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">📸 Photo *</label>
-                            <input type="file" id="storyImageInput" accept="image/*" required style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; cursor: pointer;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Story Image</label>
+                            <input type="file" id="storyImageInput" accept="image/*" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
                         </div>
-                        
-                        <!-- Music URL -->
                         <div>
-                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">🎵 Music URL (optional)</label>
-                            <input type="text" id="storyMusicInput" placeholder="https://..." style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Music URL (Cloudinary or external)</label>
+                            <input type="text" id="storyMusicInput" placeholder="https://res.cloudinary.com/..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
                         </div>
-                        
-                        <!-- Music Name -->
                         <div>
-                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">🏷️ Music Name</label>
-                            <input type="text" id="storyMusicNameInput" placeholder="e.g., Chill Vibes" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Music Name</label>
+                            <input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
                         </div>
-                        
-                        <!-- Caption -->
                         <div>
-                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-light);">✏️ Caption (optional)</label>
-                            <textarea id="storyCaptionInput" placeholder="Say something..." style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; box-sizing: border-box; min-height: 80px; resize: none;"></textarea>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Caption (optional)</label>
+                            <textarea id="storyCaptionInput" placeholder="Add a caption..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; min-height: 60px;"></textarea>
                         </div>
-                        
-                        <!-- Upload Button -->
-                        <button type="submit" style="background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: 0.3s; width: 100%;">Upload Story</button>
-                    </form>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="app.uploadStory()" style="flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">📤 Upload</button>
+                            <button onclick="app.closeModal('storyModalOverlay')" style="flex: 1; background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -4801,8 +4692,7 @@ var app = {
         document.getElementById('storyModalOverlay').style.display = 'flex';
     },
 
-    uploadStory: function(e) {
-        e.preventDefault();
+    uploadStory: function() {
         var self = this;
         var imageInput = document.getElementById('storyImageInput');
         var musicInput = document.getElementById('storyMusicInput').value.trim();
@@ -4810,12 +4700,11 @@ var app = {
         var captionInput = document.getElementById('storyCaptionInput').value.trim();
        
         if (!imageInput.files || !imageInput.files[0]) {
-            this.toast('❌ Please select an image', 'error');
+            this.toast('Please select an image', 'error');
             return;
         }
        
-        // Show loading
-        this.showLoading('Uploading story...');
+        this.toast('Uploading story...', 'info');
        
         // Upload image to Cloudinary
         var formData = new FormData();
@@ -4833,34 +4722,6 @@ var app = {
                 var storyId = 'story_' + Date.now();
                 var storyData = {
                     image: data.secure_url,
-                    musicUrl: musicInput || '',
-                    musicName: musicNameInput,
-                    caption: captionInput,
-                    createdAt: new Date().toISOString(),
-                    views: 0,
-                    viewed: false
-                };
-               
-                db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData, err => {
-                    self.hideLoading();
-                    if (err) {
-                        self.toast('❌ Error saving story', 'error');
-                    } else {
-                        self.toast('✅ Story uploaded!', 'success');
-                        self.closeModal('storyModalOverlay');
-                        self.loadStories();
-                    }
-                });
-            } else {
-                self.hideLoading();
-                self.toast('❌ Upload failed', 'error');
-            }
-        })
-        .catch(err => {
-            self.hideLoading();
-            self.toast('❌ ' + err.message, 'error');
-        });
-    },
                     musicUrl: musicInput || '',
                     musicName: musicNameInput,
                     caption: captionInput,
@@ -5930,29 +5791,6 @@ var app = {
         setTimeout(() => el.remove(), 3000);
     },
 
-    showLoading: function(msg) {
-        var existingLoader = document.getElementById('appLoadingOverlay');
-        if (existingLoader) existingLoader.remove();
-        
-        var html = `
-            <div id="appLoadingOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 5000; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px;">
-                <div style="width: 60px; height: 60px; border-radius: 50%; border: 4px solid rgba(0,136,204,0.2); border-top-color: var(--primary); animation: spin 0.8s linear infinite;"></div>
-                <div style="color: white; font-size: 16px; font-weight: 500; text-align: center;">${msg || 'Loading...'}</div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', html);
-    },
-
-    hideLoading: function() {
-        var loader = document.getElementById('appLoadingOverlay');
-        if (loader) loader.remove();
-    },
-
-    closeModal: function(id) {
-        var modal = document.getElementById(id);
-        if (modal) modal.remove();
-    },
-
     initConsent: function() {
         var consentGiven = localStorage.getItem('userConsent');
         if (!consentGiven) {
@@ -6184,7 +6022,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // DEBUG CONSOLE - Check modal scrolling issues
 window.debugModal = function() {
     console.clear();
-    console.log('%c=== CHICHI MODAL DEBUG CONSOLE ===', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
+    console.log('%c=== CHICHI MODAL DEBUG CONSOLE ===', 'color: #0088cc; font-size: 16px; font-weight: bold;');
    
     // Check all modals
     var modals = document.querySelectorAll('.modal');
@@ -6233,7 +6071,7 @@ window.debugModal = function() {
     }
    
     console.log('%c💡 TIP: If content is NOT taller than container, it won\'t scroll!', 'color: #ff9800; font-weight: bold;');
-    console.log('%c🔧 SOLUTIONS:', 'color: #00D4AA; font-weight: bold;');
+    console.log('%c🔧 SOLUTIONS:', 'color: #0088cc; font-weight: bold;');
     console.log('1. Make sure modal has max-height (85vh)');
     console.log('2. Make sure content is taller than modal');
     console.log('3. Check overflow-y is "scroll" or "auto"');
@@ -6252,7 +6090,7 @@ window.showDebugPanel = function() {
         max-height: 400px;
         background: #1f2937;
         color: #fff;
-        border: 2px solid #00D4AA;
+        border: 2px solid #0088cc;
         border-radius: 12px;
         padding: 16px;
         font-size: 12px;
@@ -6275,7 +6113,7 @@ window.showDebugPanel = function() {
         info += `Scrollable: ${m.scrollHeight > m.offsetHeight ? '✅ YES' : '❌ NO'}<br>`;
     });
    
-    info += '<br><button onclick="debugModal()" style="width:100%;padding:8px;background:#00D4AA;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">Run debugModal()</button>';
+    info += '<br><button onclick="debugModal()" style="width:100%;padding:8px;background:#0088cc;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">Run debugModal()</button>';
     info += '<button onclick="document.getElementById(\'debugPanel\').remove()" style="width:100%;padding:8px;background:#ff4444;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:8px;">Close</button>';
    
     panel.innerHTML = info;
@@ -6285,7 +6123,7 @@ window.showDebugPanel = function() {
 // Test modal scrolling
 window.testScrolling = function() {
     console.clear();
-    console.log('%c🧪 TESTING SCROLLING...', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
+    console.log('%c🧪 TESTING SCROLLING...', 'color: #0088cc; font-size: 16px; font-weight: bold;');
    
     // Try scrolling on active modal
     var activeModal = document.querySelector('.modal-overlay.active .modal');
@@ -6304,7 +6142,7 @@ window.testScrolling = function() {
    
     console.log(scrolled ? '%c✅ SCROLL WORKS!' : '%c❌ Scroll not working', scrolled ? 'color: #22c55e;' : 'color: #ff4444;', 'font-weight: bold;');
    
-    console.log('%cDEBUG INFO:', 'color: #00D4AA; font-weight: bold;');
+    console.log('%cDEBUG INFO:', 'color: #0088cc; font-weight: bold;');
     console.log('offsetHeight:', activeModal.offsetHeight + 'px');
     console.log('scrollHeight:', activeModal.scrollHeight + 'px');
     console.log('Max Height:', window.getComputedStyle(activeModal).maxHeight);
@@ -6318,7 +6156,7 @@ window.testScrolling = function() {
 
 // Debug commands available in console (hidden from startup)
 // Uncomment to enable startup messages
-// console.log('%c🎯 DEBUG COMMANDS:', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
+// console.log('%c🎯 DEBUG COMMANDS:', 'color: #0088cc; font-size: 14px; font-weight: bold;');
 // console.log('testModal() - Create test modal with scroll content');
 // console.log('simpleScrollTest() - ⭐ Ultra-simple scroll test (NO CSS classes!)');
 // console.log('testActualScroll() - Test if scroll actually works');
@@ -6326,7 +6164,7 @@ window.testScrolling = function() {
 // console.log('forceShowModal() - 💪 Force show modal (last resort)');
 // console.log('debugModal() - Log all modal info');
 // console.log('');
-// console.log('%cKeyboard Shortcuts:', 'color: #00D4AA; font-weight: bold;');
+// console.log('%cKeyboard Shortcuts:', 'color: #0088cc; font-weight: bold;');
 // console.log('Ctrl+Shift+D - Open debug panel');
 
 // Keyboard shortcut: Ctrl+Shift+D to open debug panel
@@ -6334,13 +6172,13 @@ document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
         window.showDebugPanel();
-        console.log('%c🎯 Debug panel opened! Press Ctrl+Shift+D again to close', 'color: #00D4AA; font-weight: bold;');
+        console.log('%c🎯 Debug panel opened! Press Ctrl+Shift+D again to close', 'color: #0088cc; font-weight: bold;');
     }
 });
 
 // Test modal - Creates a test modal to verify styling works
 window.testModal = function() {
-    console.log('%c🧪 Creating test modal...', 'color: #00D4AA; font-weight: bold;');
+    console.log('%c🧪 Creating test modal...', 'color: #0088cc; font-weight: bold;');
    
     var modal = document.createElement('div');
     modal.className = 'modal-overlay active';
@@ -6380,7 +6218,7 @@ window.testModal = function() {
         <button onclick="this.closest('.modal-overlay').remove(); console.log('%c✅ Test modal closed', 'color: #22c55e; font-weight: bold;');" style="
             width: 100%;
             padding: 12px;
-            background: #00D4AA;
+            background: #0088cc;
             color: white;
             border: none;
             border-radius: 10px;
@@ -6428,7 +6266,7 @@ window.testModal = function() {
 
 // Ultra-simple scroll modal - NO CSS classes, pure inline styles
 window.simpleScrollTest = function() {
-    console.log('%c🚀 CREATING ULTRA-SIMPLE SCROLL TEST', 'color: #00D4AA; font-size: 16px; font-weight: bold; background: #e0f7f6; padding: 8px;');
+    console.log('%c🚀 CREATING ULTRA-SIMPLE SCROLL TEST', 'color: #0088cc; font-size: 16px; font-weight: bold; background: #e0f7f6; padding: 8px;');
    
     var overlay = document.createElement('div');
     overlay.style.cssText = `
@@ -6474,7 +6312,7 @@ window.simpleScrollTest = function() {
             </div>
         `;
     }
-    content += '<button onclick="this.closest(\'div\').parentElement.remove();" style="width: 100%; padding: 15px; background: #00D4AA; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer;">Close</button>';
+    content += '<button onclick="this.closest(\'div\').parentElement.remove();" style="width: 100%; padding: 15px; background: #0088cc; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer;">Close</button>';
    
     modal.innerHTML = content;
     overlay.appendChild(modal);
@@ -6501,7 +6339,7 @@ window.simpleScrollTest = function() {
 
 // Simple scroll test with actual scroll
 window.testActualScroll = function() {
-    console.log('%c🧪 TESTING ACTUAL SCROLL MOVEMENT', 'color: #00D4AA; font-weight: bold;');
+    console.log('%c🧪 TESTING ACTUAL SCROLL MOVEMENT', 'color: #0088cc; font-weight: bold;');
    
     var modal = document.querySelector('.modal-overlay.active .modal');
     if (!modal) {
@@ -6526,7 +6364,7 @@ window.inspectDOM = function() {
     console.clear();
     console.log('%c🔍 DOM INSPECTION - CHECKING MODAL VISIBILITY', 'color: #ff4444; font-size: 16px; font-weight: bold; background: #ffe0e0; padding: 8px;');
    
-    console.log('%cStep 1: Check if modal is in DOM', 'color: #00D4AA; font-weight: bold;');
+    console.log('%cStep 1: Check if modal is in DOM', 'color: #0088cc; font-weight: bold;');
     var allDivs = document.querySelectorAll('div');
     console.log('Total divs on page:', allDivs.length);
    
@@ -6536,7 +6374,7 @@ window.inspectDOM = function() {
     var activeOverlays = document.querySelectorAll('.modal-overlay.active');
     console.log('Modals with class "modal-overlay.active":', activeOverlays.length);
    
-    console.log('%cStep 2: Check computed styles', 'color: #00D4AA; font-weight: bold;');
+    console.log('%cStep 2: Check computed styles', 'color: #0088cc; font-weight: bold;');
     activeOverlays.forEach((overlay, idx) => {
         console.group(`Active Overlay ${idx + 1}:`);
         var style = window.getComputedStyle(overlay);
@@ -6563,7 +6401,7 @@ window.inspectDOM = function() {
         }
     });
    
-    console.log('%cStep 3: Test visibility', 'color: #00D4AA; font-weight: bold;');
+    console.log('%cStep 3: Test visibility', 'color: #0088cc; font-weight: bold;');
     if (activeOverlays.length > 0) {
         console.log('%c✅ Modal found in DOM!', 'color: #22c55e; font-weight: bold;');
         var overlay = activeOverlays[0];
@@ -6573,7 +6411,7 @@ window.inspectDOM = function() {
         console.log('Try opening Edit Profile first, then run inspectDOM()');
     }
    
-    console.log('%cStep 4: CSS Rules Check', 'color: #00D4AA; font-weight: bold;');
+    console.log('%cStep 4: CSS Rules Check', 'color: #0088cc; font-weight: bold;');
     var stylesheet = document.styleSheets[0];
     var foundRule = false;
     for (let i = 0; i < stylesheet.cssRules.length; i++) {
@@ -6614,7 +6452,7 @@ window.forceShowModal = function() {
 };
 
 // Make it easy to access from browser console
-console.log('%c✅ Type debugModal() in console to check modal scrolling!', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
+console.log('%c✅ Type debugModal() in console to check modal scrolling!', 'color: #0088cc; font-size: 14px; font-weight: bold;');
 
 // Initialize theme on load
 // Initialize music on startup
