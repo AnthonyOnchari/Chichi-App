@@ -29,140 +29,6 @@
             --border: #e5e7eb;
             --light: #f9fafb;
             --bg: #ffffff;
-        }
-
-        body.dark-mode {
-            --primary: #4E7BFF;
-            --primary-dark: #2E5BFF;
-            --text: #f0f0f0;
-            --text-light: #b0b0b0;
-            --border: #404040;
-            --light: #2a2a2a;
-            --bg: #1a1a1a;
-        }
-
-        body.dark-mode {
-            background: var(--bg);
-            color: var(--text);
-        }
-
-        body.dark-mode .auth-card,
-        body.dark-mode .modal,
-        body.dark-mode .card,
-        body.dark-mode input,
-        body.dark-mode textarea,
-        body.dark-mode select,
-        body.dark-mode .message-item,
-        body.dark-mode .search-user,
-        body.dark-mode .post-card,
-        body.dark-mode .balance-card {
-            background: var(--light);
-            color: var(--text);
-            border-color: var(--border);
-        }
-
-        body.dark-mode input::placeholder,
-        body.dark-mode textarea::placeholder {
-            color: var(--text-light);
-        }
-
-        .theme-toggle {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 1.2rem;
-            z-index: 999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.3s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-
-        .theme-toggle:hover {
-            transform: scale(1.1);
-        }
-
-        body.dark-mode .theme-toggle {
-            background: #FFB800;
-        }
-
-        /* 3D Toggle Switch */
-        .toggle-switch-3d {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            cursor: pointer;
-            width: 60px;
-            height: 32px;
-        }
-
-        .toggle-switch-3d input {
-            display: none;
-        }
-
-        .toggle-slider-3d {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
-            border-radius: 50px;
-            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.15);
-            border: 2px solid #ccc;
-        }
-
-        .toggle-slider-3d::before {
-            content: '';
-            position: absolute;
-            height: 24px;
-            width: 24px;
-            left: 3px;
-            bottom: 2px;
-            background: linear-gradient(145deg, #ffffff, #f3f4f6);
-            border-radius: 50%;
-            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), inset -1px -1px 2px rgba(0, 0, 0, 0.1);
-        }
-
-        .toggle-switch-3d input:checked + .toggle-slider-3d {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 212, 170, 0.3);
-            border-color: var(--primary);
-        }
-
-        .toggle-switch-3d input:checked + .toggle-slider-3d::before {
-            transform: translateX(28px);
-            background: linear-gradient(145deg, #00D4AA, #00B894);
-            box-shadow: 0 4px 12px rgba(0, 212, 170, 0.4), inset -1px -1px 2px rgba(0, 0, 0, 0.1);
-        }
-
-        .toggle-switch-3d:hover .toggle-slider-3d {
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        body.dark-mode .toggle-slider-3d {
-            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
-            border-color: #4b5563;
-        }
-
-        body.dark-mode .toggle-slider-3d::before {
-            background: linear-gradient(145deg, #4b5563, #6b7280);
-        }
-
-        body.dark-mode .toggle-switch-3d input:checked + .toggle-slider-3d {
-            background: linear-gradient(135deg, #00D4AA 0%, #00B894 100%);
-        }
-
         :root {
             --primary: #00D4AA;
             --primary-dark: #00B894;
@@ -2478,8 +2344,8 @@ window.app = window.app || {
             <h1>CHICHI</h1>
         </div>
         <div class="header-actions">
-            <label class="toggle-switch-3d" title="Toggle dark/light mode" style="margin-right: 8px;">
-                <input type="checkbox" id="themeToggle" onchange="app.toggleTheme()">
+            <label class="toggle-switch-3d" title="Toggle music on/off" style="margin-right: 8px;">
+                <input type="checkbox" id="musicToggle" onchange="app.toggleMusic()">
                 <span class="toggle-slider-3d"></span>
             </label>
             <button class="btn-icon" onclick="app.openAdminModal()">Admin</button>
@@ -2494,6 +2360,14 @@ window.app = window.app || {
                 <div class="feed-title">Home</div>
                 <button style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 14px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.3s;" onclick="app.loadPosts()">Refresh</button>
             </div>
+            
+            <!-- STORIES -->
+            <div style="padding: 8px 16px;">
+                <div style="font-weight: 600; margin-bottom: 12px;">📖 Stories</div>
+                <div id="storiesList" style="display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;"></div>
+                <button onclick="app.showCreateStoryModal()" style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 12px;">➕ Create Story</button>
+            </div>
+            
             <div class="quick-post" onclick="app.showCreateModal()">
                 <div class="quick-post-avatar" id="quickPostAvatar">U</div>
                 <input type="text" class="quick-post-input" placeholder="Share something..." readonly>
@@ -2511,15 +2385,7 @@ window.app = window.app || {
         </div>
 
         <!-- STORIES -->
-        <div class="view" id="storiesView">
-            <div style="padding: 16px;">
-                <div style="font-weight: 600; margin-bottom: 16px;">📖 Stories</div>
-                <button onclick="app.showCreateStoryModal()" style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 16px;">➕ Create Story</button>
-                <div id="storiesList" style="display: grid; gap: 12px;"></div>
-            </div>
-        </div>
-
-
+        <!-- PROFILE -->
         <div class="view" id="profileView">
             <div id="profileContent"></div>
         </div>
@@ -2922,12 +2788,22 @@ var app = {
             }
         });
         
-        // Handle hardware back button (Android)
+        // Handle hardware back button (Android/Cordova)
         if (typeof window.cordova !== 'undefined') {
             document.addEventListener('backbutton', () => {
                 self.goBack();
             }, false);
         }
+        
+        // Handle browser back button (Web)
+        window.addEventListener('popstate', () => {
+            // Push state again to prevent browser back
+            history.pushState(null, null, window.location.href);
+            self.goBack();
+        });
+        
+        // Initialize with a state for browser back handling
+        history.pushState(null, null, window.location.href);
     },
 
     showAuth: function() {
@@ -3065,10 +2941,15 @@ var app = {
             });
         }, 5000);
         
-        // Restore to previously viewed page (if refresh)
-        setTimeout(() => {
-            self.restoreViewOnRefresh();
-        }, 1000);
+        // Toggle music
+        var musicEnabled = localStorage.getItem('chichi-music-enabled') === 'true';
+        var toggle = document.getElementById('musicToggle');
+        
+        if (musicEnabled) {
+            if (toggle) toggle.checked = true;
+        } else {
+            if (toggle) toggle.checked = false;
+        }
     },
 
     loadProfile: function() {
@@ -3151,55 +3032,89 @@ var app = {
             this.clearUnreadBadge();
         } else if (view === 'explore') {
             this.loadExplore();
-        } else if (view === 'stories') {
-            this.loadStories();
         }
 
         // Highlight nav item
         var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
         if (view === 'feed') navItems[0].classList.add('active');
         else if (view === 'explore') navItems[1].classList.add('active');
-        else if (view === 'stories') navItems[2].classList.add('active');
-        else if (view === 'messages') navItems[3].classList.add('active');
-        else if (view === 'profile') navItems[4].classList.add('active');
+        else if (view === 'messages') navItems[2].classList.add('active');
+        else if (view === 'profile') navItems[3].classList.add('active');
     },
 
     // New: Go back navigation function
     goBack: function() {
-        if (!this.navigationHistory) this.navigationHistory = [];
+        var self = this;
         
-        // Track back button presses
-        if (!this.backButtonPresses) this.backButtonPresses = 0;
+        // Initialize back press counter if needed
+        if (!this.backPressCount) {
+            this.backPressCount = 0;
+            this.lastBackPressTime = 0;
+        }
         
-        if (this.navigationHistory.length > 0) {
-            // Go back to previous view
-            var previousView = this.navigationHistory.pop();
-            this.currentView = null;  // Reset to allow navigation
-            this.switchView(previousView);
-            this.backButtonPresses = 0;  // Reset counter
-        } else {
-            // We're at home (feed), next press should reload
-            this.backButtonPresses++;
+        var currentTime = Date.now();
+        var currentView = this.getCurrentView();
+        
+        // Check if we're on Home feed
+        var isOnHome = currentView === 'feed' || !currentView;
+        
+        if (!isOnHome) {
+            // Not on home - go to home first
+            this.switchView('feed');
+            this.backPressCount = 0;
+            return;
+        }
+        
+        // We're on home - implement 3-step exit
+        this.backPressCount++;
+        
+        if (this.backPressCount === 1) {
+            // First tap - show message
+            this.toast('Press back again to reload', 'info');
             
-            if (this.backButtonPresses === 1) {
-                // First back press on home = reload home
-                this.toast('Press back again to confirm exit', 'info');
-                this.loadPosts();  // Reload feed
-            } else if (this.backButtonPresses === 2) {
-                // Second back press on home = show confirm exit
-                var self = this;
-                var confirmed = confirm('🚪 Exit CHICHI?');
-                if (confirmed) {
-                    // Sign out or navigate away
-                    auth.signOut().then(() => {
-                        window.location.href = '/';  // Or close app
-                    });
-                } else {
-                    // User cancelled, reset counter
-                    this.backButtonPresses = 0;
+            // Reset counter after 2 seconds if no second tap
+            setTimeout(() => {
+                if (this.backPressCount === 1) {
+                    this.backPressCount = 0;
                 }
+            }, 2000);
+            
+        } else if (this.backPressCount === 2) {
+            // Second tap - reload page
+            this.toast('Press back once more to exit', 'info');
+            location.reload();
+            
+        } else if (this.backPressCount === 3) {
+            // Third tap - confirm exit
+            if (confirm('🚪 Exit CHICHI App?')) {
+                // Exit app (back to browser)
+                if (navigator.app && navigator.app.exitApp) {
+                    navigator.app.exitApp();
+                } else {
+                    // Web fallback
+                    window.history.back();
+                }
+            } else {
+                // Cancel exit, reset counter
+                this.backPressCount = 0;
+                this.toast('Back in CHICHI', 'success');
             }
         }
+    },
+    
+    // Helper to get current view
+    getCurrentView: function() {
+        var views = document.querySelectorAll('.view');
+        for (var i = 0; i < views.length; i++) {
+            if (views[i].classList.contains('active')) {
+                var viewId = views[i].id;
+                if (viewId === 'feedView') return 'feed';
+                if (viewId === 'exploreView') return 'explore';
+                if (viewId === 'messagesView') return 'messages';
+                if (viewId === 'profileView') return 'profile';
+            }
+        }
+        return 'feed';  // Default to feed
     },
 
     // Restore view on page refresh
@@ -3856,6 +3771,9 @@ var app = {
 
     loadPosts: function() {
         var self = this;
+        // Load stories first
+        this.loadStories();
+        
         db.ref('posts').orderByChild('timestamp').limitToLast(50).on('value', s => {
             var p = [];
             s.forEach(c => {
@@ -6537,51 +6455,44 @@ window.forceShowModal = function() {
 console.log('%c✅ Type debugModal() in console to check modal scrolling!', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
 
 // Initialize theme on load
-app.initTheme = function() {
-    var savedTheme = localStorage.getItem('chichi-theme') || 'light';
-    var toggle = document.getElementById('themeToggle');
+// Initialize music on startup
+app.initMusic = function() {
+    var musicEnabled = localStorage.getItem('chichi-music-enabled') === 'true';
+    var toggle = document.getElementById('musicToggle');
     
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
+    if (musicEnabled) {
         if (toggle) toggle.checked = true;
+        this.playBackgroundMusic();
     } else {
-        document.body.classList.remove('dark-mode');
         if (toggle) toggle.checked = false;
     }
 };
 
-app.toggleTheme = function() {
-    var isDark = document.body.classList.toggle('dark-mode');
-    localStorage.setItem('chichi-theme', isDark ? 'dark' : 'light');
+// Toggle music on/off
+app.toggleMusic = function() {
+    var toggle = document.getElementById('musicToggle');
+    var isEnabled = toggle.checked;
     
-    // Update toggle switch position
-    var toggle = document.getElementById('themeToggle');
-    if (toggle) toggle.checked = isDark;
+    localStorage.setItem('chichi-music-enabled', isEnabled ? 'true' : 'false');
     
-    // Play fade-in music when switching to dark mode
-    if (isDark) {
-        this.playThemeMusic();
-        this.toast('Dark mode enabled 🌙 ♪', 'success');
+    if (isEnabled) {
+        this.playBackgroundMusic();
+        this.toast('🎵 Music ON', 'success');
     } else {
-        this.stopThemeMusic();
-        this.toast('Light mode enabled ☀️', 'success');
+        this.stopBackgroundMusic();
+        this.toast('🔇 Music OFF', 'success');
     }
 };
 
-// Play theme music with fade-in
-app.playThemeMusic = function() {
+// Play background music with fade-in
+app.playBackgroundMusic = function() {
     var audio = document.getElementById('themeMusic');
-    // Use a royalty-free dark theme music URL (you can replace with your own)
-    // For now, using a placeholder - see guide below for how to add your own
-    audio.src = localStorage.getItem('chichi-theme-music-url') || '';
+    var musicUrl = localStorage.getItem('chichi-music-url') || 'https://raw.githubusercontent.com/YOUR_USERNAME/chichi/main/public/music/background.mp3';
     
-    if (!audio.src) {
-        console.log('No theme music configured. Add music URL in settings.');
-        return;
-    }
-    
+    audio.src = musicUrl;
     audio.volume = 0;
     audio.loop = true;
+    
     audio.play().then(() => {
         // Fade in effect
         var fadeIn = setInterval(() => {
@@ -6593,11 +6504,12 @@ app.playThemeMusic = function() {
         }, 200);
     }).catch(err => {
         console.log('Could not play audio:', err);
+        this.toast('⚠️ Could not play music. Check URL.', 'error');
     });
 };
 
-// Stop theme music with fade-out
-app.stopThemeMusic = function() {
+// Stop background music with fade-out
+app.stopBackgroundMusic = function() {
     var audio = document.getElementById('themeMusic');
     var fadeOut = setInterval(() => {
         if (audio.volume > 0) {
@@ -6610,8 +6522,8 @@ app.stopThemeMusic = function() {
     }, 200);
 };
 
-// Load saved theme on startup
-app.initTheme();
+// Load saved music preference on startup
+app.initMusic();
 
 // Google Funding Choices Consent Popup
 function consentPopup() {
