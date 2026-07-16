@@ -227,6 +227,228 @@
             color: var(--text);
         }
 
+        /* MODERN STORY MODAL - ADDED */
+        .story-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(8px);
+            animation: fadeInModal 0.3s ease;
+        }
+
+        .story-modal-overlay.active {
+            display: flex;
+        }
+
+        @keyframes fadeInModal {
+            from {
+                opacity: 0;
+                backdrop-filter: blur(0px);
+            }
+            to {
+                opacity: 1;
+                backdrop-filter: blur(8px);
+            }
+        }
+
+        .story-modal {
+            background: white;
+            border-radius: 24px;
+            padding: 0;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            animation: slideUpModal 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes slideUpModal {
+            from {
+                opacity: 0;
+                transform: translateY(60px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .story-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px;
+            border-bottom: 1px solid #f0f0f0;
+            background: linear-gradient(135deg, #2E5BFF 0%, #0088cc 100%);
+            border-radius: 24px 24px 0 0;
+        }
+
+        .story-modal-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+        }
+
+        .story-modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .story-modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .story-modal-content {
+            padding: 28px;
+        }
+
+        .story-form-group {
+            margin-bottom: 20px;
+        }
+
+        .story-form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .story-form-input,
+        .story-form-textarea,
+        .story-file-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .story-form-input:focus,
+        .story-form-textarea:focus {
+            outline: none;
+            border-color: #2E5BFF;
+            box-shadow: 0 0 0 3px rgba(46, 91, 255, 0.1);
+            background: #f8faff;
+        }
+
+        .story-form-textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .story-file-input {
+            padding: 12px;
+            cursor: pointer;
+        }
+
+        .story-file-input:hover {
+            background: #f9fafb;
+            border-color: #2E5BFF;
+        }
+
+        .story-modal-footer {
+            display: flex;
+            gap: 12px;
+            padding: 20px 28px;
+            border-top: 1px solid #f0f0f0;
+            background: #f9fafb;
+            border-radius: 0 0 24px 24px;
+        }
+
+        .story-btn-cancel,
+        .story-btn-upload {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .story-btn-cancel {
+            background: white;
+            color: #666;
+            border: 2px solid #e5e7eb;
+        }
+
+        .story-btn-cancel:hover {
+            border-color: #2E5BFF;
+            color: #2E5BFF;
+            background: #f8faff;
+        }
+
+        .story-btn-upload {
+            background: linear-gradient(135deg, #2E5BFF 0%, #0088cc 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .story-btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(46, 91, 255, 0.3);
+        }
+
+        .story-btn-upload:active {
+            transform: translateY(0);
+        }
+
+        .story-btn-upload.loading {
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        .story-btn-upload .story-spinner {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        .story-btn-upload.loading .story-spinner {
+            display: block;
+        }
+
+        .story-btn-upload.loading .story-btn-text {
+            opacity: 0;
+        }
+
         /* 3D MUSIC TOGGLE STYLES - ADDED */
         .music-toggle-3d {
             position: relative;
@@ -2491,15 +2713,20 @@ window.app = window.app || {
             <h1>CHICHI</h1>
         </div>
         <div class="header-actions">
-            <label class="music-toggle-3d" title="Toggle music on/off - Shuffle Mode" style="margin-right: 8px;">
+            <label class="music-toggle-3d" title="Toggle music on/off - Shuffle Mode">
                 <input type="checkbox" id="musicToggle" onchange="app.toggleMusic()">
                 <div class="toggle-cube">
                     <div class="toggle-face front">🔇</div>
                     <div class="toggle-face back">🎵</div>
                 </div>
             </label>
-            <button class="btn-icon" onclick="app.openAdminModal()">Admin</button>
-            <button class="btn-icon" onclick="app.showLogout()">Logout</button>
+            <button class="btn-icon" onclick="app.showHeaderMenu()" style="font-size: 1.5rem;">⋯</button>
+        </div>
+        
+        <!-- HEADER MENU DROPDOWN -->
+        <div id="headerMenu" style="display: none; position: fixed; top: 55px; right: 16px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 150px;">
+            <button onclick="app.openAdminModal(); app.closeHeaderMenu();" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f0f0f0;">⚙️ Admin</button>
+            <button onclick="app.showLogout(); app.closeHeaderMenu();" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #ef4444;">🚪 Logout</button>
         </div>
     </div>
 
@@ -2513,9 +2740,7 @@ window.app = window.app || {
            
             <!-- STORIES -->
             <div style="padding: 8px 16px;">
-                <div style="font-weight: 600; margin-bottom: 12px;">📖 Stories</div>
                 <div id="storiesList" style="display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 8px 0; min-height: 95px; align-items: flex-start;"></div>
-                <button id="createStoryBtn" onclick="app.showCreateStoryModal()" style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 12px;">➕ Create Story</button>
             </div>
            
             <div id="quickPostBox" class="quick-post" onclick="app.showCreateModal()" style="cursor: pointer;">
@@ -5072,40 +5297,55 @@ var app = {
     },
 
     showCreateStoryModal: function() {
+        // Remove any existing modals first
+        var existing = document.getElementById('storyModalOverlay');
+        if (existing) existing.remove();
+        
         var html = `
-            <div class="modal-overlay" id="storyModalOverlay">
-                <div class="modal-box" style="width: 90%; max-width: 400px;">
-                    <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                        <h2 style="margin: 0;">📖 Create Story</h2>
+            <div class="story-modal-overlay" id="storyModalOverlay">
+                <div class="story-modal">
+                    <div class="story-modal-header">
+                        <h2>📖 Create Story</h2>
+                        <button class="story-modal-close" onclick="document.getElementById('storyModalOverlay').remove()">✕</button>
                     </div>
-                    <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
-                        <div>
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Story Image</label>
-                            <input type="file" id="storyImageInput" accept="image/*" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                    <div class="story-modal-content">
+                        <div class="story-form-group">
+                            <label class="story-form-label">Story Image *</label>
+                            <input type="file" id="storyImageInput" accept="image/*" class="story-file-input">
                         </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Music URL (Cloudinary or external)</label>
-                            <input type="text" id="storyMusicInput" placeholder="https://res.cloudinary.com/..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                        <div class="story-form-group">
+                            <label class="story-form-label">Music URL (Cloudinary)</label>
+                            <input type="text" id="storyMusicInput" placeholder="https://res.cloudinary.com/..." class="story-form-input">
                         </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Music Name</label>
-                            <input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                        <div class="story-form-group">
+                            <label class="story-form-label">Music Name</label>
+                            <input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" class="story-form-input">
                         </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem;">Caption (optional)</label>
-                            <textarea id="storyCaptionInput" placeholder="Add a caption..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; min-height: 60px;"></textarea>
+                        <div class="story-form-group">
+                            <label class="story-form-label">Caption</label>
+                            <textarea id="storyCaptionInput" placeholder="Add a caption..." class="story-form-textarea"></textarea>
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="app.uploadStory()" style="flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">📤 Upload</button>
-                            <button onclick="app.closeModal('storyModalOverlay')" style="flex: 1; background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
-                        </div>
+                    </div>
+                    <div class="story-modal-footer">
+                        <button class="story-btn-cancel" onclick="document.getElementById('storyModalOverlay').remove()">Cancel</button>
+                        <button class="story-btn-upload" id="storyUploadBtn" onclick="app.uploadStory()">
+                            <span class="story-btn-text">📤 Upload Story</span>
+                            <div class="story-spinner"></div>
+                        </button>
                     </div>
                 </div>
             </div>
         `;
        
         document.body.insertAdjacentHTML('beforeend', html);
-        document.getElementById('storyModalOverlay').style.display = 'flex';
+        document.getElementById('storyModalOverlay').classList.add('active');
+        
+        // Close on background click
+        document.getElementById('storyModalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.remove();
+            }
+        });
     },
 
     uploadStory: function() {
@@ -5114,12 +5354,16 @@ var app = {
         var musicInput = document.getElementById('storyMusicInput').value.trim();
         var musicNameInput = document.getElementById('storyMusicNameInput').value.trim() || 'Audio';
         var captionInput = document.getElementById('storyCaptionInput').value.trim();
+        var uploadBtn = document.getElementById('storyUploadBtn');
        
         if (!imageInput.files || !imageInput.files[0]) {
             this.toast('Please select an image', 'error');
             return;
         }
        
+        // Show spinner
+        if (uploadBtn) uploadBtn.classList.add('loading');
+        
         this.toast('Uploading story...', 'info');
        
         // Upload image to Cloudinary
@@ -5144,23 +5388,29 @@ var app = {
                     createdAt: new Date().getTime(),
                     views: 0,
                     authorUid: self.user.uid,
-                    authorName: self.user.displayName || 'Anonymous'
+                    authorName: self.user.displayName || 'Anonymous',
+                    userName: self.profile.name || 'User',
+                    userPhoto: self.profile.profilePhoto || ''
                 };
                
                 db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData, err => {
                     if (err) {
                         self.toast('Error saving story', 'error');
+                        if (uploadBtn) uploadBtn.classList.remove('loading');
                     } else {
                         self.toast('✅ Story uploaded!', 'success');
-                        var modal = document.getElementById('storyModalOverlay');
-                        if (modal) modal.remove();
-                        self.loadStories();
+                        setTimeout(() => {
+                            var modal = document.getElementById('storyModalOverlay');
+                            if (modal) modal.remove();
+                            self.loadStories();
+                        }, 300);
                     }
                 });
             }
         })
         .catch(err => {
             this.toast('Upload failed: ' + err.message, 'error');
+            if (uploadBtn) uploadBtn.classList.remove('loading');
         });
     },
 
@@ -6080,6 +6330,20 @@ var app = {
     getAdsRemaining: function() {
         // Earning features disabled
         return 0;
+    },
+
+    showHeaderMenu: function() {
+        var menu = document.getElementById('headerMenu');
+        if (menu) {
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+    },
+    
+    closeHeaderMenu: function() {
+        var menu = document.getElementById('headerMenu');
+        if (menu) {
+            menu.style.display = 'none';
+        }
     },
 
     showLogout: function() {
