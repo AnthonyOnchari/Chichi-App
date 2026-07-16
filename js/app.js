@@ -1,5 +1,12 @@
 // Firebase config loaded from config.js
-firebase.initializeApp(FIREBASE_CONFIG);
+// Firebase config loaded from config.js
+// Safety check: only initialize if not already initialized
+if (!firebase.apps.length) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    console.log('✅ Firebase initialized');
+} else {
+    console.log('⚠️ Firebase already initialized, skipping init');
+}
 
 firebase.database().ref('.info/connected').on('value', function(snapshot) {
   if (snapshot.val() === true) {
