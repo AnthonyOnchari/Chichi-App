@@ -72,22 +72,6 @@ const app = {
         });
     },
 
-var firebaseConfig = {
-  apiKey: "AIzaSyD_tSXJCOLffm4ZMtM8gXOCH5CXFOKdqWM",
-  authDomain: "chichi-001.firebaseapp.com",
-  projectId: "chichi-001",
-  storageBucket: "chichi-001.firebasestorage.app",
-  messagingSenderId: "219736252899",
-  appId: "1:219736252899:web:626efc2fe5040efb7500d6"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-firebase.database().ref('.info/connected').on('value', function(snapshot) {
-  if (snapshot.val() === true) {
-  } else {
-  }
-});
 
 var loadingTimeout = setTimeout(() => {
   var loading = document.getElementById('loadingScreen');
