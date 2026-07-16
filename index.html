@@ -133,11 +133,14 @@ window.app = window.app || {
 <div class="main-app" id="mainApp">
     <!-- HEADER -->
     <div class="app-header">
-        <div class="app-logo-container">
-            <h1>CHICHI</h1>
-            <!-- STORIES BESIDE TITLE (TELEGRAM STYLE) -->
-            <div id="storiesList" style="display: flex; gap: 10px; margin-left: 20px; overflow-x: auto; flex: 1; align-items: center; padding: 0 10px;"></div>
+        <!-- STORIES ON LEFT (TELEGRAM STYLE) -->
+        <div id="storiesList" style="display: flex; gap: 10px; overflow-x: auto; flex: 1; align-items: center; padding: 0 16px;"></div>
+        
+        <!-- CHICHI TITLE ON RIGHT -->
+        <div class="app-logo-container" style="margin-left: auto; margin-right: 16px;">
+            <h1 style="margin: 0;">CHICHI</h1>
         </div>
+        
         <div class="header-actions">
             <label class="music-toggle-3d" title="Toggle music">
                 <input type="checkbox" id="musicToggle" onchange="app.toggleMusic()">
