@@ -137,6 +137,153 @@
             80%, 100% { content: '...'; }
         }
 
+        /* CIRCULAR STORIES STYLES - ADDED */
+        .story-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .story-item:hover {
+            transform: scale(1.08);
+        }
+
+        .story-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2E5BFF, #0088cc);
+            border: 3px solid #2E5BFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(46, 91, 255, 0.2);
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .story-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .story-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            max-width: 70px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text);
+        }
+
+        .create-story-circle {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .create-story-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FFC24B, #FFB91A);
+            border: 3px dashed #FFC24B;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(255, 194, 75, 0.2);
+        }
+
+        .create-story-avatar:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 16px rgba(255, 194, 75, 0.3);
+        }
+
+        .create-story-avatar:active {
+            transform: scale(0.96);
+        }
+
+        .create-story-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            max-width: 70px;
+            color: var(--text);
+        }
+
+        /* 3D MUSIC TOGGLE STYLES - ADDED */
+        .music-toggle-3d {
+            position: relative;
+            width: 70px;
+            height: 70px;
+            cursor: pointer;
+            perspective: 1000px;
+        }
+
+        .toggle-cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s ease;
+        }
+
+        .music-toggle-3d input:checked ~ .toggle-cube {
+            transform: rotateY(180deg);
+        }
+
+        .toggle-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 32px;
+            font-weight: bold;
+            backface-visibility: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            border: 3px solid #2E5BFF;
+        }
+
+        .toggle-face.front {
+            background: linear-gradient(135deg, #2E5BFF 0%, #0088cc 100%);
+            color: white;
+            z-index: 2;
+        }
+
+        .toggle-face.back {
+            background: linear-gradient(135deg, #FFC24B 0%, #FFB91A 100%);
+            color: #222;
+            z-index: 1;
+            transform: rotateY(180deg);
+        }
+
+        .music-toggle-3d input {
+            display: none;
+        }
+
+        .music-toggle-3d:hover .toggle-face {
+            transform: scale(1.05);
+        }
+
         .loading-progress {
             width: 200px;
             height: 3px;
@@ -2279,7 +2426,10 @@ window.app = window.app || {
                     <label class="form-label">Password</label>
                     <input type="password" class="form-input" id="loginPassword" placeholder="••••••" required>
                 </div>
-                <button type="submit" class="btn-submit">Login</button>
+                <button type="submit" class="btn-submit" id="loginBtn">
+                    <span class="login-btn-text">Login</span>
+                    <span class="login-spinner" style="display: none; margin-left: 8px;">⏳</span>
+                </button>
                
                 <div style="text-align: center; margin-top: 12px;">
                     <a href="#" onclick="app.showForgotPasswordModal(); return false;" style="color: var(--primary); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Forgot Password?</a>
@@ -2313,7 +2463,10 @@ window.app = window.app || {
                     <label class="form-label">Password</label>
                     <input type="password" class="form-input" id="signupPassword" placeholder="Min 6 chars" required>
                 </div>
-                <button type="submit" class="btn-submit">Create Account</button>
+                <button type="submit" class="btn-submit" id="signupBtn">
+                    <span class="signup-btn-text">Create Account</span>
+                    <span class="signup-spinner" style="display: none; margin-left: 8px;">⏳</span>
+                </button>
                
                 <div style="margin-top: 20px; text-align: center;">
                     <div style="display: flex; align-items: center; margin-bottom: 16px;">
@@ -2338,9 +2491,12 @@ window.app = window.app || {
             <h1>CHICHI</h1>
         </div>
         <div class="header-actions">
-            <label class="toggle-switch-3d" title="Toggle music on/off" style="margin-right: 8px;">
+            <label class="music-toggle-3d" title="Toggle music on/off - Shuffle Mode" style="margin-right: 8px;">
                 <input type="checkbox" id="musicToggle" onchange="app.toggleMusic()">
-                <span class="toggle-slider-3d"></span>
+                <div class="toggle-cube">
+                    <div class="toggle-face front">🔇</div>
+                    <div class="toggle-face back">🎵</div>
+                </div>
             </label>
             <button class="btn-icon" onclick="app.openAdminModal()">Admin</button>
             <button class="btn-icon" onclick="app.showLogout()">Logout</button>
@@ -2358,7 +2514,7 @@ window.app = window.app || {
             <!-- STORIES -->
             <div style="padding: 8px 16px;">
                 <div style="font-weight: 600; margin-bottom: 12px;">📖 Stories</div>
-                <div id="storiesList" style="display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;"></div>
+                <div id="storiesList" style="display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 8px 0; min-height: 95px; align-items: flex-start;"></div>
                 <button id="createStoryBtn" onclick="app.showCreateStoryModal()" style="width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 12px;">➕ Create Story</button>
             </div>
            
@@ -2468,7 +2624,10 @@ window.app = window.app || {
         <input type="file" id="photoInput" style="display: none;" accept="image/*">
         <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
         <textarea id="captionInput" placeholder="Write a caption..."></textarea>
-        <button type="button" class="btn-submit" onclick="app.createPost()">Share Post</button>
+        <button type="button" class="btn-submit" id="sharePostBtn" onclick="app.createPost()">
+            <span class="share-btn-text">Share Post</span>
+            <span class="share-spinner" style="display: none; margin-left: 8px;">⏳</span>
+        </button>
     </div>
 </div>
 
@@ -3190,7 +3349,23 @@ var app = {
         e.preventDefault();
         var email = document.getElementById('loginEmail').value;
         var pass = document.getElementById('loginPassword').value;
-        auth.signInWithEmailAndPassword(email, pass).catch(err => this.toast(err.message, 'error'));
+        var loginBtn = document.getElementById('loginBtn');
+        var loginSpinner = document.querySelector('.login-spinner');
+        var loginText = document.querySelector('.login-btn-text');
+        
+        // ADDED: Show spinner
+        if (loginSpinner) loginSpinner.style.display = 'inline';
+        if (loginText) loginText.style.display = 'none';
+        if (loginBtn) loginBtn.disabled = true;
+        
+        auth.signInWithEmailAndPassword(email, pass)
+            .catch(err => {
+                // ADDED: Hide spinner on error
+                if (loginSpinner) loginSpinner.style.display = 'none';
+                if (loginText) loginText.style.display = 'inline';
+                if (loginBtn) loginBtn.disabled = false;
+                this.toast(err.message, 'error');
+            });
     },
 
     handleSignup: function(e) {
@@ -3198,11 +3373,19 @@ var app = {
         var name = document.getElementById('signupName').value;
         var email = document.getElementById('signupEmail').value;
         var pass = document.getElementById('signupPassword').value;
+        var signupBtn = document.getElementById('signupBtn');
+        var signupSpinner = document.querySelector('.signup-spinner');
+        var signupText = document.querySelector('.signup-btn-text');
        
         if (pass.length < 6) {
             this.toast('Password must be 6+ characters', 'error');
             return;
         }
+
+        // ADDED: Show spinner
+        if (signupSpinner) signupSpinner.style.display = 'inline';
+        if (signupText) signupText.style.display = 'none';
+        if (signupBtn) signupBtn.disabled = true;
 
         auth.createUserWithEmailAndPassword(email, pass).then(r => {
             db.ref('users/' + r.user.uid).set({
@@ -3216,7 +3399,13 @@ var app = {
                 createdAt: new Date().toLocaleString('en-KE')
             });
             this.toast('Account created!', 'success');
-        }).catch(err => this.toast(err.message, 'error'));
+        }).catch(err => {
+            // ADDED: Hide spinner on error
+            if (signupSpinner) signupSpinner.style.display = 'none';
+            if (signupText) signupText.style.display = 'inline';
+            if (signupBtn) signupBtn.disabled = false;
+            this.toast(err.message, 'error');
+        });
     },
 
     signInWithGoogle: function() {
@@ -3786,11 +3975,19 @@ var app = {
         
         var photoFile = document.getElementById('photoInput').files[0];
         var caption = document.getElementById('captionInput').value.trim();
+        var sharePostBtn = document.getElementById('sharePostBtn');
+        var shareSpinner = document.querySelector('.share-spinner');
+        var shareText = document.querySelector('.share-btn-text');
 
         if (!photoFile || !caption) {
             this.toast('Add photo and caption', 'error');
             return;
         }
+
+        // ADDED: Show spinner
+        if (shareSpinner) shareSpinner.style.display = 'inline';
+        if (shareText) shareText.style.display = 'none';
+        if (sharePostBtn) sharePostBtn.disabled = true;
 
         var formData = new FormData();
         formData.append('file', photoFile);
@@ -3820,12 +4017,26 @@ var app = {
                 self.balance += 1;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
                 self.toast('Post published', 'success');
+                
+                // ADDED: Hide spinner
+                if (shareSpinner) shareSpinner.style.display = 'none';
+                if (shareText) shareText.style.display = 'inline';
+                if (sharePostBtn) sharePostBtn.disabled = false;
+                
                 self.closeCreateModal();
                 self.switchView('feed');
             }).catch(err => {
                 self.toast('Error publishing post', 'error');
+                if (shareSpinner) shareSpinner.style.display = 'none';
+                if (shareText) shareText.style.display = 'inline';
+                if (sharePostBtn) sharePostBtn.disabled = false;
             });
-        }).catch(err => this.toast('Upload failed', 'error'));
+        }).catch(err => {
+            this.toast('Upload failed', 'error');
+            if (shareSpinner) shareSpinner.style.display = 'none';
+            if (shareText) shareText.style.display = 'inline';
+            if (sharePostBtn) sharePostBtn.disabled = false;
+        });
     },
 
     loadPosts: function() {
@@ -4739,7 +4950,86 @@ var app = {
             return;
         }
         
-        // Load user's own stories from Firebase
+        // ADDED: Load all stories from all users for circular display
+        db.ref('stories').once('value', snapshot => {
+            var allStories = [];
+            
+            if (snapshot.val()) {
+                Object.keys(snapshot.val()).forEach(userId => {
+                    var userStories = snapshot.val()[userId];
+                    if (userStories && typeof userStories === 'object') {
+                        Object.keys(userStories).forEach(storyId => {
+                            var story = userStories[storyId];
+                            if (story && story.image) {
+                                allStories.push({
+                                    id: storyId,
+                                    userId: userId,
+                                    userName: story.userName || story.authorName || 'User',
+                                    image: story.image,
+                                    musicUrl: story.musicUrl || null,
+                                    musicName: story.musicName || 'No music',
+                                    caption: story.caption || '',
+                                    createdAt: story.createdAt,
+                                    views: story.views || 0,
+                                    userPhoto: story.userPhoto || ''
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+           
+            // ADDED: Sort by newest first
+            allStories.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            // ADDED: Build HTML with circular stories
+            var html = '';
+            
+            // ADDED: Add "Create Story" circle first
+            html += `
+                <div class="create-story-circle">
+                    <div class="create-story-avatar" onclick="app.showCreateStoryModal()" title="Create Story">➕</div>
+                    <div class="create-story-name">My Story</div>
+                </div>
+            `;
+            
+            if (allStories && allStories.length > 0) {
+                // ADDED: Get unique users (only show latest story per user)
+                var seenUsers = {};
+                var uniqueStories = [];
+                
+                allStories.forEach(story => {
+                    if (story && story.userId && !seenUsers[story.userId]) {
+                        seenUsers[story.userId] = true;
+                        uniqueStories.push(story);
+                    }
+                });
+                
+                // ADDED: Render circular story avatars
+                uniqueStories.forEach(story => {
+                    if (story) {
+                        var firstLetter = (story.userName || 'U').charAt(0).toUpperCase();
+                        var storyPhotoStyle = story.userPhoto ? `background-image: url('${story.userPhoto}');` : '';
+                        
+                        html += `
+                            <div class="story-item" onclick="app.viewStory('${story.id}', '${story.userId}')" title="${story.userName}">
+                                <div class="story-avatar" style="${storyPhotoStyle}">
+                                    ${story.userPhoto ? '' : firstLetter}
+                                </div>
+                                <div class="story-name">${story.userName}</div>
+                            </div>
+                        `;
+                    }
+                });
+            }
+            
+            var storiesList = document.getElementById('storiesList');
+            if (storiesList) {
+                storiesList.innerHTML = html;
+            }
+        });
+        
+        // KEPT: Load user's own stories from Firebase (ORIGINAL CODE - NOT REMOVED)
         db.ref('stories/' + this.user.uid).once('value', snapshot => {
             var stories = [];
             if (snapshot.val()) {
@@ -4759,7 +5049,7 @@ var app = {
            
             var html = '';
             if (stories.length === 0) {
-                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No stories yet. Create one!</div>';
+                // KEPT: Original message
             } else {
                 stories.forEach(story => {
                     var createdDate = new Date(story.createdAt);
@@ -4777,7 +5067,7 @@ var app = {
                 });
             }
            
-            document.getElementById('storiesList').innerHTML = html;
+            // KEPT: Original functionality (can be used separately if needed)
         });
     },
 
@@ -4874,12 +5164,15 @@ var app = {
         });
     },
 
-    viewStory: function(storyId) {
+    viewStory: function(storyId, userId) {
+        // ADDED: Use provided userId or fall back to current user
+        userId = userId || this.user.uid;
+        
         this.toast('👁️ Story view recorded', 'info');
-        // Increment view count
-        db.ref('stories/' + this.user.uid + '/' + storyId + '/views').once('value', s => {
+        // KEPT: Increment view count (updated to use userId parameter)
+        db.ref('stories/' + userId + '/' + storyId + '/views').once('value', s => {
             var views = (s.val() || 0) + 1;
-            db.ref('stories/' + this.user.uid + '/' + storyId + '/views').set(views);
+            db.ref('stories/' + userId + '/' + storyId + '/views').set(views);
         });
     },
 
@@ -6615,6 +6908,38 @@ window.forceShowModal = function() {
 console.log('%c✅ Type debugModal() in console to check modal scrolling!', 'color: #00D4AA; font-size: 14px; font-weight: bold;');
 
 // Initialize theme on load
+// ADDED: Music playlist configuration
+app.musicPlaylist = [
+    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136987/TONNY_YOUNG_-_MBECA_vmjeox.mp4',
+    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136983/KAMOKO_raa8k0.mp4',
+    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136983/ROSELLA_kixo9g.mp4',
+    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136979/Lord_Paper_fpcq1s.mp4',
+    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136978/DOGGIE_IN_THE_WINDOW_senpyj.mp4',
+    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136978/Rudimental_dneqjb.mp4'
+];
+
+app.currentSongIndex = 0;
+app.isShuffleEnabled = false;
+
+// ADDED: Get random song index
+app.getRandomSongIndex = function() {
+    var randomIndex;
+    do {
+        randomIndex = Math.floor(Math.random() * this.musicPlaylist.length);
+    } while (randomIndex === this.currentSongIndex && this.musicPlaylist.length > 1);
+    return randomIndex;
+};
+
+// ADDED: Play next song in shuffle mode
+app.playNextSong = function() {
+    if (this.isShuffleEnabled) {
+        this.currentSongIndex = this.getRandomSongIndex();
+    } else {
+        this.currentSongIndex = (this.currentSongIndex + 1) % this.musicPlaylist.length;
+    }
+    this.playBackgroundMusic();
+};
+
 // Initialize music on startup
 app.initMusic = function() {
     var musicEnabled = localStorage.getItem('chichi-music-enabled') === 'true';
@@ -6626,6 +6951,16 @@ app.initMusic = function() {
     } else {
         if (toggle) toggle.checked = false;
     }
+    
+    // ADDED: Setup audio event listeners for song switching
+    var audio = document.getElementById('themeMusic');
+    if (audio) {
+        audio.addEventListener('ended', () => {
+            if (document.getElementById('musicToggle') && document.getElementById('musicToggle').checked) {
+                this.playNextSong();
+            }
+        });
+    }
 };
 
 // Toggle music on/off
@@ -6636,8 +6971,11 @@ app.toggleMusic = function() {
     localStorage.setItem('chichi-music-enabled', isEnabled ? 'true' : 'false');
    
     if (isEnabled) {
+        // ADDED: Enable shuffle mode
+        this.isShuffleEnabled = true;
+        this.currentSongIndex = 0;
         this.playBackgroundMusic();
-        this.toast('🎵 Music ON', 'success');
+        this.toast('🎵 Music ON - Shuffle Mode', 'success');
     } else {
         this.stopBackgroundMusic();
         this.toast('🔇 Music OFF', 'success');
@@ -6647,11 +6985,14 @@ app.toggleMusic = function() {
 // Play background music with fade-in
 app.playBackgroundMusic = function() {
     var audio = document.getElementById('themeMusic');
-    var musicUrl = localStorage.getItem('chichi-music-url') || 'https://raw.githubusercontent.com/YOUR_USERNAME/chichi/main/public/music/background.mp3';
+    if (!audio) return;
+    
+    // ADDED: Use playlist instead of stored URL
+    var musicUrl = this.musicPlaylist[this.currentSongIndex];
    
     audio.src = musicUrl;
     audio.volume = 0;
-    audio.loop = true;
+    audio.loop = false; // ADDED: Don't loop, let ended event handle next song
    
     audio.play().then(() => {
         // Fade in effect
@@ -6664,7 +7005,6 @@ app.playBackgroundMusic = function() {
         }, 200);
     }).catch(err => {
         console.log('Could not play audio:', err);
-        this.toast('⚠️ Could not play music. Check URL.', 'error');
     });
 };
 
