@@ -452,8 +452,8 @@
         /* 3D MUSIC TOGGLE STYLES - ADDED */
         .music-toggle-3d {
             position: relative;
-            width: 70px;
-            height: 70px;
+            width: 40px;
+            height: 40px;
             cursor: pointer;
             perspective: 1000px;
         }
@@ -478,11 +478,11 @@
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            font-size: 32px;
+            font-size: 18px;
             font-weight: bold;
             backface-visibility: hidden;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-            border: 3px solid #2E5BFF;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 2px solid #2E5BFF;
         }
 
         .toggle-face.front {
@@ -2720,7 +2720,7 @@ window.app = window.app || {
                     <div class="toggle-face back">🎵</div>
                 </div>
             </label>
-            <button class="btn-icon" onclick="app.showHeaderMenu()" style="font-size: 1.5rem;">⋯</button>
+            <button class="btn-icon" onclick="app.showHeaderMenu()" style="font-size: 1rem; padding: 4px 8px;">⋯</button>
         </div>
         
         <!-- HEADER MENU DROPDOWN -->
@@ -5351,20 +5351,27 @@ var app = {
     uploadStory: function() {
         var self = this;
         var imageInput = document.getElementById('storyImageInput');
-        var musicInput = document.getElementById('storyMusicInput').value.trim();
-        var musicNameInput = document.getElementById('storyMusicNameInput').value.trim() || 'Audio';
-        var captionInput = document.getElementById('storyCaptionInput').value.trim();
+        var musicInput = document.getElementById('storyMusicInput');
+        var musicNameInput = document.getElementById('storyMusicNameInput');
+        var captionInput = document.getElementById('storyCaptionInput');
         var uploadBtn = document.getElementById('storyUploadBtn');
        
-        if (!imageInput.files || !imageInput.files[0]) {
-            this.toast('Please select an image', 'error');
+        // Validate image
+        if (!imageInput || !imageInput.files || !imageInput.files[0]) {
+            this.toast('⚠️ Please select an image', 'error');
+            return;
+        }
+        
+        // Validate user is logged in
+        if (!this.user || !this.user.uid) {
+            this.toast('⚠️ Please login first', 'error');
             return;
         }
        
         // Show spinner
         if (uploadBtn) uploadBtn.classList.add('loading');
         
-        this.toast('Uploading story...', 'info');
+        this.toast('📤 Uploading story...', 'info');
        
         // Upload image to Cloudinary
         var formData = new FormData();
@@ -5375,41 +5382,56 @@ var app = {
             method: 'POST',
             body: formData
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error('Upload failed: ' + r.status);
+            return r.json();
+        })
         .then(data => {
-            if (data.secure_url) {
-                // Save story to Firebase
-                var storyId = 'story_' + Date.now();
-                var storyData = {
-                    image: data.secure_url,
-                    musicUrl: musicInput || '',
-                    musicName: musicNameInput,
-                    caption: captionInput,
-                    createdAt: new Date().getTime(),
-                    views: 0,
-                    authorUid: self.user.uid,
-                    authorName: self.user.displayName || 'Anonymous',
-                    userName: self.profile.name || 'User',
-                    userPhoto: self.profile.profilePhoto || ''
-                };
-               
-                db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData, err => {
-                    if (err) {
-                        self.toast('Error saving story', 'error');
-                        if (uploadBtn) uploadBtn.classList.remove('loading');
-                    } else {
-                        self.toast('✅ Story uploaded!', 'success');
-                        setTimeout(() => {
-                            var modal = document.getElementById('storyModalOverlay');
-                            if (modal) modal.remove();
-                            self.loadStories();
-                        }, 300);
-                    }
-                });
+            if (!data.secure_url) {
+                throw new Error('No image URL returned');
             }
+            
+            // Get safe values
+            var musicUrl = musicInput ? musicInput.value.trim() : '';
+            var musicName = musicNameInput ? musicNameInput.value.trim() : 'Audio';
+            var caption = captionInput ? captionInput.value.trim() : '';
+            
+            // Save story to Firebase
+            var storyId = 'story_' + Date.now();
+            var storyData = {
+                image: data.secure_url,
+                musicUrl: musicUrl || '',
+                musicName: musicName || 'Audio',
+                caption: caption || '',
+                createdAt: new Date().getTime(),
+                views: 0,
+                authorUid: self.user.uid,
+                authorName: self.user.displayName || 'Anonymous',
+                userName: self.profile ? (self.profile.name || 'User') : 'User',
+                userPhoto: self.profile ? (self.profile.profilePhoto || '') : ''
+            };
+            
+            // Save to Firebase
+            if (!db) throw new Error('Database not initialized');
+            
+            db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData, function(err) {
+                if (err) {
+                    console.error('Firebase error:', err);
+                    self.toast('❌ Error saving story: ' + err.message, 'error');
+                    if (uploadBtn) uploadBtn.classList.remove('loading');
+                } else {
+                    self.toast('✅ Story uploaded successfully!', 'success');
+                    setTimeout(() => {
+                        var modal = document.getElementById('storyModalOverlay');
+                        if (modal) modal.remove();
+                        self.loadStories();
+                    }, 500);
+                }
+            });
         })
         .catch(err => {
-            this.toast('Upload failed: ' + err.message, 'error');
+            console.error('Upload error:', err);
+            this.toast('❌ Upload failed: ' + err.message, 'error');
             if (uploadBtn) uploadBtn.classList.remove('loading');
         });
     },
