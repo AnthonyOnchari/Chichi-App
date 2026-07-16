@@ -446,22 +446,8 @@ window.app = window.app || {
 </div>
 
 <script>
-var firebaseConfig = {
-  apiKey: "AIzaSyD_tSXJCOLffm4ZMtM8gXOCH5CXFOKdqWM",
-  authDomain: "chichi-001.firebaseapp.com",
-  projectId: "chichi-001",
-  storageBucket: "chichi-001.firebasestorage.app",
-  messagingSenderId: "219736252899",
-  appId: "1:219736252899:web:626efc2fe5040efb7500d6"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-firebase.database().ref('.info/connected').on('value', function(snapshot) {
-  if (snapshot.val() === true) {
-  } else {
-  }
-});
+// Firebase is initialized in app.js using config.js
+// No need to initialize twice!
 
 var loadingTimeout = setTimeout(() => {
   var loading = document.getElementById('loadingScreen');
@@ -1042,9 +1028,16 @@ var app = {
                 balance: 0,
                 followers: 0,
                 following: 0,
+                hashtags: [], // ADDED: Initialize empty hashtags
                 createdAt: new Date().toLocaleString('en-KE')
             });
-            this.toast('Account created!', 'success');
+            this.toast('Account created! Now choose your interests...', 'success');
+            
+            // ADDED: Show hashtag modal after signup for Phase 1
+            var self = this;
+            setTimeout(() => {
+                self.showHashtagModal();
+            }, 800);
         }).catch(err => {
             // ADDED: Hide spinner on error
             if (signupSpinner) signupSpinner.style.display = 'none';
@@ -2480,7 +2473,13 @@ var app = {
             `;
         } else {
             // ONLY show user list for logged-in users
-            var sorted = [];
+            
+            // CHECK if users still loading
+            if (!this.users || Object.keys(this.users).length === 0) {
+                html = '<div style="text-align: center; padding: 40px 20px;"><div style="font-size: 32px; margin-bottom: 12px;">⏳</div><div style="color: #6b7280; font-size: 16px; font-weight: 500;">Loading users...</div><div style="color: #9ca3af; font-size: 14px; margin-top: 8px;">This takes a few seconds on first load</div></div>';
+            } else {
+                // Users loaded - show explore list
+                var sorted = [];
             for (var uid in this.users) {
                 var user = this.users[uid];
                 // STRICT filter: must have name, email, uid must not be empty, and must be different user
@@ -2523,6 +2522,7 @@ var app = {
             });
 
             if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No users to explore</div>';
+            } // END: users loaded check
         }
        
         var container = document.getElementById('exploreUsersList');
@@ -3013,6 +3013,12 @@ var app = {
         
         // ADDED: Load blocked users first
         this.loadBlockedUsers();
+        
+        // CHECK: if users not loaded yet, show loading indicator
+        if (!this.users || Object.keys(this.users).length === 0) {
+            document.getElementById('messageList').innerHTML = '<div style="text-align: center; padding: 40px 20px;"><div style="font-size: 32px; margin-bottom: 12px;">⏳</div><div style="color: #6b7280; font-size: 16px; font-weight: 500;">Loading messages...</div><div style="color: #9ca3af; font-size: 14px; margin-top: 8px;">This takes a few seconds on first load</div></div>';
+            return;
+        }
         
         var html = '';
         
@@ -4764,12 +4770,16 @@ app.playBackgroundMusic = function() {
 // Stop background music with fade-out
 app.stopBackgroundMusic = function() {
     var audio = document.getElementById('themeMusic');
+    if (!audio) return; // Safety check - audio element not found
+    
     var fadeOut = setInterval(() => {
-        if (audio.volume > 0) {
+        if (audio && audio.volume > 0) {
             audio.volume -= 0.05;
         } else {
-            audio.pause();
-            audio.volume = 0;
+            if (audio) {
+                audio.pause();
+                audio.volume = 0;
+            }
             clearInterval(fadeOut);
         }
     }, 200);
