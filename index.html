@@ -175,8 +175,12 @@ window.app = window.app || {
         <!-- EXPLORE -->
         <div class="view" id="exploreView">
             <div style="padding: 16px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-weight: 600;">Popular Users</div>
+                <h3 style="margin: 0;">🔍 Discover</h3>
                 <button style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 14px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.3s;" onclick="app.loadExplore()">🔄 Refresh</button>
+            </div>
+            <!-- [PHASE 2] Trending section auto-inserts here -->
+            <div style="padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 600;">Popular Users</div>
             </div>
             <div id="exploreUsersList"></div>
         </div>
@@ -199,6 +203,16 @@ window.app = window.app || {
                 <div class="message-list" id="messageList"></div>
             </div>
         </div>
+
+        <!-- [PHASE 2] NEW: GROUPS TAB VIEW -->
+        <div class="view" id="groupsView">
+            <!-- Groups list will render here -->
+        </div>
+
+        <!-- [PHASE 2] NEW: GROUP DETAIL VIEW -->
+        <div class="view" id="groupDetailView" style="display: none;">
+            <!-- Individual group detail will render here -->
+        </div>
     </div>
 
     <!-- NAV -->
@@ -217,6 +231,11 @@ window.app = window.app || {
                 <div>Messages</div>
                 <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
                 <div class="unread-indicator" id="messagesUnreadDot" style="display: none; position: absolute; top: 0; right: 0; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);"></div>
+            </div>
+            <!-- [PHASE 2] NEW: GROUPS TAB -->
+            <div class="nav-item" onclick="app.switchView('groups')">
+                <div class="nav-icon">👥</div>
+                <div>Groups</div>
             </div>
             <div class="nav-item" onclick="app.switchView('profile')">
                 <div class="nav-icon">👤</div>
@@ -253,10 +272,13 @@ window.app = window.app || {
             </div>
         </div>
         <div class="chat-modal-messages" id="chatModalMessages"></div>
+        <!-- [PHASE 2] NEW: TYPING INDICATOR -->
+        <div id="typingIndicator" style="display: none; padding: 8px 16px; background: #f9fafb; border-top: 1px solid #eee; font-size: 14px; color: #6b7280; font-style: italic;"></div>
         <div class="chat-modal-input">
             <input type="file" id="chatImageInput" style="display: none;" accept="image/*" multiple onchange="app.handleChatImageUpload(event)">
             <button class="chat-modal-icon-btn" onclick="document.getElementById('chatImageInput').click()" title="Send image">📷</button>
-            <input type="text" id="chatModalInput" placeholder="Message...">
+            <!-- [PHASE 2] UPDATED: Added oninput for typing detection -->
+            <input type="text" id="chatModalInput" placeholder="Message..." oninput="app.onChatInputChange(event, window.currentChatUid)">
             <button class="chat-modal-send" onclick="app.sendChatMessage()">→</button>
         </div>
     </div>

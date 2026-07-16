@@ -297,6 +297,12 @@ var app = {
         // Step 3: Load following
         console.log('👥 Step 3: Loading following...');
         self.loadFollowing();
+        
+        // [PHASE 2] Step 3.5: Load Phase 2 Features
+        console.log('👥 Step 3.5: Loading Phase 2 features...');
+        self.loadGroups();
+        self.setupTypingCleanup();
+        self.calculateTrendingHashtags();
        
         // Step 4: START NOTIFICATIONS IMMEDIATELY
         // Don't wait - set up listeners now so they catch messages in real-time
@@ -446,6 +452,9 @@ var app = {
             this.clearUnreadBadge();
         } else if (view === 'explore') {
             this.loadExplore();
+        } else if (view === 'groups') {
+            // [PHASE 2] Load groups view
+            this.renderGroups();
         }
 
         // Highlight nav item
@@ -453,7 +462,8 @@ var app = {
         if (view === 'feed') navItems[0].classList.add('active');
         else if (view === 'explore') navItems[1].classList.add('active');
         else if (view === 'messages') navItems[2].classList.add('active');
-        else if (view === 'profile') navItems[3].classList.add('active');
+        else if (view === 'groups') navItems[3].classList.add('active');  // [PHASE 2] Groups nav position
+        else if (view === 'profile') navItems[4].classList.add('active');
     },
 
     // New: Go back navigation function
@@ -2121,6 +2131,10 @@ var app = {
         if (container) {
             container.innerHTML = html;
         }
+        
+        // [PHASE 2] Set up trending hashtags
+        this.renderTrendingInExplore();
+        this.setupTrendingRefresh();
     },
 
     // Format time for messages
@@ -3765,6 +3779,691 @@ var app = {
         };
         localStorage.setItem('notificationSettings', JSON.stringify(settings));
         this.toast('Notification preferences updated ✓', 'success');
+    },
+
+    // ============================================
+    // PHASE 2: GROUPS FEATURE
+    // ============================================
+
+    groups: {},
+    userGroups: [],
+    currentGroup: null,
+
+    loadGroups: function() {
+        if (!this.user || this.isGuest) return;
+        
+        var self = this;
+        console.log('📁 Loading groups...');
+        
+        db.ref('groups').on('value', snapshot => {
+            self.groups = snapshot.val() || {};
+            console.log('✅ Groups loaded:', Object.keys(self.groups).length);
+            
+            self.userGroups = [];
+            for (var groupId in self.groups) {
+                var group = self.groups[groupId];
+                if (group.members && group.members[self.user.uid]) {
+                    self.userGroups.push({
+                        id: groupId,
+                        name: group.name,
+                        photo: group.photo,
+                        memberCount: Object.keys(group.members || {}).length
+                    });
+                }
+            }
+            
+            console.log('👥 User is in', self.userGroups.length, 'groups');
+            
+            if (document.getElementById('groupsView') && 
+                document.getElementById('groupsView').classList.contains('active')) {
+                self.renderGroups();
+            }
+        });
+    },
+
+    renderGroups: function() {
+        console.log('🎨 Rendering groups view...');
+        
+        var html = `
+            <div class="groups-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: white; border-bottom: 1px solid #eee;">
+                <h2 style="margin: 0;">My Groups</h2>
+                <button class="btn-primary" onclick="app.showCreateGroupModal()" style="padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">+ Create Group</button>
+            </div>
+            
+            <div class="groups-list" style="padding: 16px;">
+        `;
+        
+        if (this.userGroups.length === 0) {
+            html += `
+                <div style="text-align: center; padding: 40px 20px;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">👥</div>
+                    <div style="font-weight: 600; margin-bottom: 8px; color: var(--text);">No Groups Yet</div>
+                    <div style="color: #6b7280; margin-bottom: 20px;">Join or create a group to connect</div>
+                    <button class="btn-primary" onclick="app.showCreateGroupModal()" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Create Your First Group</button>
+                </div>
+            `;
+        } else {
+            this.userGroups.forEach(group => {
+                html += `
+                    <div class="group-card" onclick="app.openGroup('${group.id}')" style="display: flex; align-items: center; padding: 12px; background: white; border-radius: 12px; margin-bottom: 12px; cursor: pointer; border: 1px solid #eee; transition: 0.2s;">
+                        <div class="group-photo" style="width: 50px; height: 50px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 12px; font-size: 20px;">
+                            ${group.name.charAt(0)}
+                        </div>
+                        <div class="group-info" style="flex: 1;">
+                            <div class="group-name" style="font-weight: 600;">${group.name}</div>
+                            <div class="group-members" style="font-size: 12px; color: #6b7280;">${group.memberCount} members</div>
+                        </div>
+                        <div class="group-arrow" style="color: #9ca3af;">→</div>
+                    </div>
+                `;
+            });
+        }
+        
+        html += `</div>`;
+        
+        var groupsView = document.getElementById('groupsView');
+        if (groupsView) {
+            groupsView.innerHTML = html;
+        }
+    },
+
+    showCreateGroupModal: function() {
+        console.log('📝 Opening create group modal...');
+        
+        var modalHTML = `
+            <div class="modal-overlay" id="createGroupModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 9999;">
+                <div class="modal-box" style="max-width: 500px; width: 90%; background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid #eee;">
+                        <h3 style="margin: 0;">Create Group</h3>
+                        <button onclick="document.getElementById('createGroupModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button>
+                    </div>
+                    
+                    <div style="padding: 16px;">
+                        <input type="text" id="groupName" placeholder="Group name" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; font-size: 16px; box-sizing: border-box;">
+                        
+                        <textarea id="groupDescription" placeholder="Group description" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; font-size: 16px; min-height: 80px; box-sizing: border-box;"></textarea>
+                        
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Group Type</label>
+                            <label style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <input type="radio" name="groupType" value="public" checked style="margin-right: 8px;"> Public (Anyone can join)
+                            </label>
+                            <label style="display: flex; align-items: center;">
+                                <input type="radio" name="groupType" value="private" style="margin-right: 8px;"> Private (Invite only)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; justify-content: flex-end; padding: 16px; border-top: 1px solid #eee;">
+                        <button onclick="document.getElementById('createGroupModal').remove()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: white;">Cancel</button>
+                        <button onclick="app.createGroup()" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Create</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    },
+
+    createGroup: function() {
+        var name = document.getElementById('groupName').value.trim();
+        var description = document.getElementById('groupDescription').value.trim();
+        var type = document.querySelector('input[name="groupType"]:checked').value;
+        
+        if (!name) {
+            this.toast('Enter group name', 'error');
+            return;
+        }
+        
+        console.log('📝 Creating group:', name);
+        
+        var groupId = db.ref('groups').push().key;
+        var self = this;
+        
+        db.ref('groups/' + groupId).set({
+            name: name,
+            description: description,
+            type: type,
+            photo: '',
+            createdBy: this.user.uid,
+            members: {
+                [this.user.uid]: true
+            },
+            posts: {},
+            createdAt: new Date().toLocaleString('en-KE'),
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            console.log('✅ Group created:', groupId);
+            self.toast('Group created! 🎉', 'success');
+            document.getElementById('createGroupModal').remove();
+            self.loadGroups();
+        }).catch(err => {
+            console.error('❌ Error creating group:', err);
+            self.toast('Error creating group', 'error');
+        });
+    },
+
+    openGroup: function(groupId) {
+        console.log('📂 Opening group:', groupId);
+        
+        this.currentGroup = this.groups[groupId];
+        if (!this.currentGroup) {
+            this.toast('Group not found', 'error');
+            return;
+        }
+        
+        var memberCount = Object.keys(this.currentGroup.members || {}).length;
+        
+        var html = `
+            <div style="padding: 16px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px;">
+                <button onclick="app.renderGroups(); app.switchView('groups')" style="background: none; border: none; font-size: 24px; cursor: pointer;">←</button>
+                <div>
+                    <h2 style="margin: 0;">${this.currentGroup.name}</h2>
+                    <div style="color: #6b7280; font-size: 14px;">👥 ${memberCount} members</div>
+                </div>
+            </div>
+            
+            <div style="padding: 16px; background: white; margin-bottom: 16px;">
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">👥</div>
+                    <div style="font-size: 18px; font-weight: 600;">${this.currentGroup.name}</div>
+                    <div style="color: #6b7280; margin-bottom: 12px;">${this.currentGroup.description || 'No description'}</div>
+                </div>
+                
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="app.toast('Coming soon', 'info')" class="btn-primary" style="flex: 1; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">📧 Invite</button>
+                    <button onclick="app.showGroupMembers('${groupId}')" class="btn-secondary" style="flex: 1; padding: 10px; background: #f3f4f6; color: #374151; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">👥 Members</button>
+                </div>
+            </div>
+            
+            <div class="group-posts" id="groupPosts">
+                <!-- Group posts will load here -->
+            </div>
+        `;
+        
+        var groupView = document.getElementById('groupsView');
+        if (groupView) {
+            groupView.innerHTML = html;
+            this.loadGroupPosts(groupId);
+        }
+    },
+
+    loadGroupPosts: function(groupId) {
+        var self = this;
+        db.ref('posts').orderByChild('timestamp').on('value', snapshot => {
+            var postsHtml = '';
+            
+            snapshot.forEach(postSnapshot => {
+                var post = postSnapshot.val();
+                post.id = postSnapshot.key;
+                
+                if (post.groupId === groupId) {
+                    var likes = (post.likes && Object.keys(post.likes).length) || 0;
+                    postsHtml += `
+                        <div class="post" id="post-${post.id}" style="background: white; border-radius: 12px; margin-bottom: 16px; overflow: hidden; border: 1px solid #eee;">
+                            <div class="post-header" style="padding: 12px 16px; border-bottom: 1px solid #eee;">
+                                <div style="display: flex; align-items: center;">
+                                    <div class="post-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 12px;">${!post.userPhoto ? post.userName.charAt(0) : ''}</div>
+                                    <div>
+                                        <div class="post-name" style="font-weight: 600;">${post.userName}</div>
+                                        <div class="post-time" style="font-size: 12px; color: #6b7280;">${post.createdAt}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <img src="${post.photoUrl}" class="post-image" style="width: 100%; display: block;">
+                            <div style="padding: 12px 16px;">
+                                <div class="post-caption" style="margin-bottom: 8px;">${post.caption}</div>
+                                <div class="post-stats" style="color: #6b7280; font-size: 14px; margin-bottom: 12px;">${likes} likes</div>
+                                <div class="post-actions" style="display: flex; gap: 12px;">
+                                    <button class="post-action" onclick="app.likePost('${post.id}')" style="flex: 1; padding: 8px; background: #f3f4f6; border: none; border-radius: 8px; cursor: pointer;">❤️ Like</button>
+                                    <button class="post-action" onclick="app.toast('Coming soon', 'info')" style="flex: 1; padding: 8px; background: #f3f4f6; border: none; border-radius: 8px; cursor: pointer;">💬 Comment</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            if (postsHtml === '') {
+                postsHtml = '<div style="text-align: center; padding: 40px; color: #6b7280;">No posts yet. Be the first to post!</div>';
+            }
+            
+            var groupPosts = document.getElementById('groupPosts');
+            if (groupPosts) {
+                groupPosts.innerHTML = postsHtml;
+            }
+        });
+    },
+
+    showGroupMembers: function(groupId) {
+        console.log('👥 Showing group members...');
+        
+        var group = this.groups[groupId];
+        if (!group || !group.members) return;
+        
+        var membersHtml = '<div style="padding: 20px;"><h3>Group Members</h3><div style="margin-top: 16px;">';
+        
+        for (var uid in group.members) {
+            var member = this.users[uid];
+            if (member) {
+                membersHtml += `
+                    <div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee;">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 12px;">
+                            ${member.name.charAt(0)}
+                        </div>
+                        <div>
+                            <div style="font-weight: 600;">${member.name}</div>
+                            <div style="font-size: 12px; color: #6b7280;">${member.email}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        membersHtml += '</div></div>';
+        
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 9999;';
+        modal.innerHTML = `
+            <div class="modal-box" style="max-width: 500px; width: 90%; background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); position: relative; max-height: 80vh; overflow-y: auto;">
+                <button onclick="this.closest('.modal-overlay').remove()" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 24px; cursor: pointer; z-index: 10;">✕</button>
+                ${membersHtml}
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    // ============================================
+    // PHASE 2: TYPING INDICATORS
+    // ============================================
+
+    typingTimeout: null,
+    isTyping: false,
+    currentChatUid: null,
+
+    startTyping: function(chatUid) {
+        if (!this.user || !chatUid) return;
+        
+        var self = this;
+        var chatKey = [this.user.uid, chatUid].sort().join('_');
+        
+        if (this.isTyping) return;
+        
+        this.isTyping = true;
+        console.log('✏️ User started typing...');
+        
+        db.ref('messages/' + chatKey + '/typing/' + this.user.uid).set({
+            typing: true,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+        
+        if (this.typingTimeout) {
+            clearTimeout(this.typingTimeout);
+        }
+        
+        this.typingTimeout = setTimeout(() => {
+            self.stopTyping(chatUid);
+        }, 2000);
+    },
+
+    stopTyping: function(chatUid) {
+        if (!this.user || !chatUid) return;
+        
+        var chatKey = [this.user.uid, chatUid].sort().join('_');
+        
+        console.log('⏸️ User stopped typing');
+        
+        db.ref('messages/' + chatKey + '/typing/' + this.user.uid).remove();
+        this.isTyping = false;
+    },
+
+    listenForTyping: function(chatUid) {
+        if (!this.user || !chatUid) return;
+        
+        var self = this;
+        var chatKey = [this.user.uid, chatUid].sort().join('_');
+        
+        db.ref('messages/' + chatKey + '/typing').on('value', snapshot => {
+            var typingUsers = [];
+            
+            if (snapshot.val()) {
+                for (var uid in snapshot.val()) {
+                    if (uid !== self.user.uid) {
+                        var typingData = snapshot.val()[uid];
+                        var timeSinceTyping = Date.now() - (typingData.timestamp || 0);
+                        
+                        if (timeSinceTyping < 3000) {
+                            var user = self.users[uid];
+                            if (user) {
+                                typingUsers.push(user.name);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            var typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                if (typingUsers.length > 0) {
+                    var names = typingUsers.slice(0, 2).join(', ');
+                    if (typingUsers.length > 2) {
+                        names += ' +' + (typingUsers.length - 2);
+                    }
+                    typingIndicator.innerHTML = `<div style="color: #6b7280; font-size: 14px; font-style: italic; padding: 8px;">${names} ${typingUsers.length === 1 ? 'is' : 'are'} typing...</div>`;
+                    typingIndicator.style.display = 'block';
+                } else {
+                    typingIndicator.style.display = 'none';
+                }
+            }
+        });
+    },
+
+    stopListeningForTyping: function(chatUid) {
+        if (!this.user || !chatUid) return;
+        
+        var chatKey = [this.user.uid, chatUid].sort().join('_');
+        db.ref('messages/' + chatKey + '/typing').off();
+    },
+
+    onChatInputChange: function(event, chatUid) {
+        if (event.target.value.length > 0) {
+            this.startTyping(chatUid);
+        } else {
+            this.stopTyping(chatUid);
+        }
+    },
+
+    setupTypingCleanup: function() {
+        if (!this.user) return;
+        var userTypingRef = db.ref('messages/.info/connected');
+        userTypingRef.on('value', snapshot => {
+            if (snapshot.val() === false) {
+                console.log('⚠️ User going offline');
+            }
+        });
+    },
+
+    // ============================================
+    // PHASE 2: ADVANCED SEARCH
+    // ============================================
+
+    searchHistory: [],
+    searchResults: [],
+
+    showAdvancedSearch: function() {
+        console.log('🔍 Opening advanced search...');
+        
+        var modalHTML = `
+            <div class="search-modal-overlay" id="advancedSearchModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 9999;">
+                <div class="search-modal-box" style="max-width: 600px; width: 90%; background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); max-height: 80vh; overflow-y: auto;">
+                    <div class="search-modal-header" style="padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; gap: 8px;">
+                        <input 
+                            type="text" 
+                            class="search-box-input" 
+                            id="advSearchQuery" 
+                            placeholder="Search users, hashtags, locations..." 
+                            oninput="app.performAdvancedSearch()"
+                            autofocus
+                            style="flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px;"
+                        >
+                        <button class="search-modal-close" onclick="document.getElementById('advancedSearchModal').remove()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280;">✕</button>
+                    </div>
+                    
+                    <div style="padding: 16px;">
+                        <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+                            <button onclick="app.performAdvancedSearch()" class="search-filter-btn active" data-filter="all" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 12px;">All</button>
+                            <button onclick="app.performAdvancedSearch()" class="search-filter-btn" data-filter="users" style="background: #f3f4f6; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 12px;">Users</button>
+                            <button onclick="app.performAdvancedSearch()" class="search-filter-btn" data-filter="hashtags" style="background: #f3f4f6; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 12px;">Hashtags</button>
+                        </div>
+                        
+                        <div id="searchHistorySection" style="margin-bottom: 16px; display: none;">
+                            <div style="font-weight: 600; margin-bottom: 8px;">🕐 Recent Searches</div>
+                            <div id="searchHistoryList" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                        </div>
+                        
+                        <div id="searchResults" style="min-height: 200px;">
+                            <div style="text-align: center; color: #6b7280; padding: 20px;">Start searching...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        this.renderSearchHistory();
+    },
+
+    performAdvancedSearch: function() {
+        var query = document.getElementById('advSearchQuery').value.trim().toLowerCase();
+        
+        if (!query || query.length < 2) {
+            document.getElementById('searchResults').innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">Type to search...</div>';
+            return;
+        }
+        
+        console.log('🔎 Searching for:', query);
+        
+        var results = [];
+        
+        for (var uid in this.users) {
+            var user = this.users[uid];
+            var userPosts = this.posts.filter(p => p.userId === uid).length;
+            var followers = user.followers || 0;
+            
+            if (user.name.toLowerCase().includes(query) || 
+                user.email.toLowerCase().includes(query) ||
+                (user.bio && user.bio.toLowerCase().includes(query))) {
+                
+                results.push({
+                    type: 'user',
+                    id: uid,
+                    name: user.name,
+                    email: user.email,
+                    photo: user.profilePhoto,
+                    followers: followers,
+                    posts: userPosts,
+                    isFollowing: this.following[uid] || false
+                });
+            }
+        }
+        
+        var hashtagMatches = new Set();
+        this.posts.forEach(post => {
+            if (post.hashtags) {
+                post.hashtags.forEach(tag => {
+                    if (tag.toLowerCase().includes(query)) {
+                        hashtagMatches.add(tag);
+                    }
+                });
+            }
+        });
+        
+        hashtagMatches.forEach(tag => {
+            var count = this.posts.filter(p => p.hashtags && p.hashtags.includes(tag)).length;
+            results.push({
+                type: 'hashtag',
+                name: tag,
+                count: count
+            });
+        });
+        
+        this.searchResults = results;
+        this.renderSearchResults(results);
+        this.addSearchHistory(query);
+    },
+
+    renderSearchResults: function(results) {
+        if (results.length === 0) {
+            document.getElementById('searchResults').innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No results found</div>';
+            return;
+        }
+        
+        var html = '';
+        
+        results.forEach(result => {
+            if (result.type === 'user') {
+                html += `
+                    <div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer;" onclick="app.switchView('feed')">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 12px;">
+                            ${result.name.charAt(0)}
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600;">${result.name}</div>
+                            <div style="font-size: 12px; color: #6b7280;">${result.followers} followers • ${result.posts} posts</div>
+                        </div>
+                        <button onclick="event.stopPropagation(); app.followUser('${result.id}')" style="background: ${result.isFollowing ? '#e5e7eb' : 'var(--primary)'}; color: ${result.isFollowing ? '#374151' : 'white'}; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                            ${result.isFollowing ? 'Following' : 'Follow'}
+                        </button>
+                    </div>
+                `;
+            } else if (result.type === 'hashtag') {
+                html += `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer;" onclick="app.toast('View hashtag posts coming soon', 'info')">
+                        <div>
+                            <div style="font-weight: 600;">${result.name}</div>
+                            <div style="font-size: 12px; color: #6b7280;">${result.count} posts</div>
+                        </div>
+                        <div style="color: #9ca3af;">→</div>
+                    </div>
+                `;
+            }
+        });
+        
+        document.getElementById('searchResults').innerHTML = html;
+    },
+
+    addSearchHistory: function(query) {
+        this.searchHistory = this.searchHistory.filter(q => q !== query);
+        this.searchHistory.unshift(query);
+        this.searchHistory = this.searchHistory.slice(0, 10);
+        localStorage.setItem('chichi-search-history', JSON.stringify(this.searchHistory));
+    },
+
+    renderSearchHistory: function() {
+        var history = JSON.parse(localStorage.getItem('chichi-search-history')) || [];
+        
+        if (history.length === 0) {
+            document.getElementById('searchHistorySection').style.display = 'none';
+            return;
+        }
+        
+        document.getElementById('searchHistorySection').style.display = 'block';
+        
+        var html = '';
+        history.slice(0, 5).forEach(query => {
+            html += `
+                <button onclick="document.getElementById('advSearchQuery').value='${query}'; app.performAdvancedSearch()" style="background: #f3f4f6; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 12px;">
+                    ${query}
+                </button>
+            `;
+        });
+        
+        document.getElementById('searchHistoryList').innerHTML = html;
+    },
+
+    // ============================================
+    // PHASE 2: TRENDING HASHTAGS
+    // ============================================
+
+    trendingHashtags: [],
+
+    calculateTrendingHashtags: function() {
+        console.log('📈 Calculating trending hashtags...');
+        
+        var hashtagCount = {};
+        var now = new Date();
+        var weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        this.posts.forEach(post => {
+            var postDate = new Date(post.timestamp || post.createdAt);
+            if (postDate >= weekAgo) {
+                if (post.hashtags) {
+                    post.hashtags.forEach(tag => {
+                        hashtagCount[tag] = (hashtagCount[tag] || 0) + 1;
+                    });
+                }
+            }
+        });
+        
+        this.trendingHashtags = Object.keys(hashtagCount)
+            .map(tag => ({
+                name: tag,
+                count: hashtagCount[tag],
+                posts: this.posts.filter(p => p.hashtags && p.hashtags.includes(tag)).length
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 15);
+        
+        console.log('✅ Trending hashtags calculated:', this.trendingHashtags.length);
+    },
+
+    renderTrendingInExplore: function() {
+        if (this.trendingHashtags.length === 0) {
+            this.calculateTrendingHashtags();
+        }
+        
+        var html = `
+            <div style="padding: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="margin: 0;">🔥 Trending Now</h3>
+                    <button onclick="app.calculateTrendingHashtags(); app.renderTrendingList();" style="background: var(--primary); color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 12px;">Refresh</button>
+                </div>
+                
+                <div id="trendingList" style="display: grid; gap: 12px;"></div>
+            </div>
+        `;
+        
+        var exploreView = document.getElementById('exploreView');
+        if (exploreView) {
+            exploreView.insertAdjacentHTML('afterbegin', html);
+            this.renderTrendingList();
+        }
+    },
+
+    renderTrendingList: function() {
+        if (this.trendingHashtags.length === 0) {
+            this.calculateTrendingHashtags();
+            return;
+        }
+        
+        var html = '';
+        
+        this.trendingHashtags.forEach((trend, index) => {
+            var rankEmoji = ['🥇', '🥈', '🥉'][index] || '•';
+            
+            html += `
+                <div style="display: flex; align-items: center; padding: 12px; background: white; border-radius: 12px; cursor: pointer; transition: 0.2s; border: 1px solid #eee;" onclick="app.toast('View hashtag posts coming soon', 'info')" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                    <div style="font-size: 20px; margin-right: 12px; width: 30px; text-align: center;">
+                        ${rankEmoji}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: var(--primary);">${trend.name}</div>
+                        <div style="font-size: 12px; color: #6b7280;">${trend.posts} posts • ${trend.count} mentions</div>
+                    </div>
+                    <div style="color: #9ca3af; font-size: 18px;">→</div>
+                </div>
+            `;
+        });
+        
+        var trendingList = document.getElementById('trendingList');
+        if (trendingList) {
+            trendingList.innerHTML = html;
+        }
+    },
+
+    setupTrendingRefresh: function() {
+        var self = this;
+        
+        this.calculateTrendingHashtags();
+        
+        setInterval(() => {
+            console.log('🔄 Auto-refreshing trending hashtags...');
+            self.calculateTrendingHashtags();
+            if (document.getElementById('trendingList')) {
+                self.renderTrendingList();
+            }
+        }, 60 * 60 * 1000);
     }
 
 };
