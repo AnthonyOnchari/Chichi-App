@@ -289,6 +289,7 @@ var app = {
         // Step 1: Load posts
         console.log('📮 Step 1: Loading posts...');
         self.loadPosts();
+        self.loadStories();  // Load Telegram-style stories
        
         // Step 2: Load users FIRST, then wait for completion before notifications
         console.log('📥 Step 2: Loading users...');
@@ -447,6 +448,7 @@ var app = {
             this.renderProfile();
         } else if (view === 'feed') {
             this.loadPosts();
+            this.loadStories();  // Reload stories when viewing feed
         } else if (view === 'messages') {
             this.loadMessages();
             this.clearUnreadBadge();
@@ -1292,6 +1294,55 @@ var app = {
         });
     },
 
+    // ===== STORIES (TELEGRAM STYLE) =====
+    loadStories: function() {
+        if (!this.user || this.isGuest) return;
+        
+        var self = this;
+        var html = '';
+        
+        // Add "My Story" first
+        html += `
+            <div class="story-item" onclick="app.toast('Create story coming soon', 'info')" style="display: flex; flex-direction: column; align-items: center; cursor: pointer; min-width: 70px;">
+                <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; border: 2px solid #ddd; margin-bottom: 6px;">➕</div>
+                <div style="font-size: 11px; text-align: center; font-weight: 600;">Your story</div>
+            </div>
+        `;
+        
+        // Add followed users' stories
+        for (var uid in this.following) {
+            if (this.following[uid]) {
+                var user = this.users[uid];
+                if (user) {
+                    var hasStory = Math.random() > 0.5; // Simulate some users have stories
+                    var borderStyle = hasStory ? '2px solid var(--primary)' : '2px solid #ddd';
+                    
+                    html += `
+                        <div class="story-item" onclick="app.openStory('${uid}')" style="display: flex; flex-direction: column; align-items: center; cursor: pointer; min-width: 70px;">
+                            <div style="width: 60px; height: 60px; border-radius: 50%; background: url('${user.profilePhoto || ''}'); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; border: ${borderStyle}; margin-bottom: 6px; ${!user.profilePhoto ? 'background: var(--primary); color: white;' : ''}">
+                                ${!user.profilePhoto ? user.name.charAt(0).toUpperCase() : ''}
+                            </div>
+                            <div style="font-size: 11px; text-align: center; font-weight: 600; max-width: 60px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${user.name.split(' ')[0]}</div>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        var storiesList = document.getElementById('storiesList');
+        if (storiesList) {
+            storiesList.innerHTML = html;
+        }
+    },
+
+    openStory: function(uid) {
+        var user = this.users[uid];
+        if (!user) return;
+        
+        this.toast(`📖 Story from ${user.name}`, 'info');
+        console.log('Opening story from:', user.name);
+    },
+
     loadPosts: function() {
         var self = this;
         // Load stories first
@@ -2063,6 +2114,8 @@ var app = {
         var self = this;
         db.ref('users/' + this.user.uid + '/following').once('value', s => {
             var following = s.val() || 0;
+            self.following = following || {};
+            self.loadStories();  // Reload stories when following changes
         });
     },
 
