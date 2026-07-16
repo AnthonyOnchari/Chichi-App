@@ -470,6 +470,20 @@
             transform: rotateY(180deg);
         }
 
+        /* ADDED: Playing animation */
+        .music-toggle-3d.playing .toggle-cube {
+            animation: musicPulse 0.6s ease-in-out infinite;
+        }
+
+        @keyframes musicPulse {
+            0%, 100% {
+                transform: rotateY(180deg) scale(1);
+            }
+            50% {
+                transform: rotateY(180deg) scale(1.15);
+            }
+        }
+
         .toggle-face {
             position: absolute;
             width: 100%;
@@ -496,6 +510,12 @@
             color: #222;
             z-index: 1;
             transform: rotateY(180deg);
+            /* ADDED: Glow effect when playing */
+            box-shadow: 0 4px 12px rgba(255, 194, 75, 0.3), 0 0 20px rgba(255, 194, 75, 0.2);
+        }
+
+        .music-toggle-3d.playing .toggle-face.back {
+            box-shadow: 0 4px 12px rgba(255, 194, 75, 0.5), 0 0 30px rgba(255, 194, 75, 0.4);
         }
 
         .music-toggle-3d input {
@@ -7230,12 +7250,17 @@ app.playNextSong = function() {
 app.initMusic = function() {
     var musicEnabled = localStorage.getItem('chichi-music-enabled') === 'true';
     var toggle = document.getElementById('musicToggle');
+    var toggleLabel = toggle ? toggle.parentElement : null;
    
     if (musicEnabled) {
         if (toggle) toggle.checked = true;
         this.playBackgroundMusic();
+        // ADDED: Show playing animation on startup
+        if (toggleLabel) toggleLabel.classList.add('playing');
     } else {
         if (toggle) toggle.checked = false;
+        // ADDED: Remove animation if not playing
+        if (toggleLabel) toggleLabel.classList.remove('playing');
     }
     
     // ADDED: Setup audio event listeners for song switching
@@ -7253,6 +7278,7 @@ app.initMusic = function() {
 app.toggleMusic = function() {
     var toggle = document.getElementById('musicToggle');
     var isEnabled = toggle.checked;
+    var toggleLabel = toggle.parentElement; // Get the label element
    
     localStorage.setItem('chichi-music-enabled', isEnabled ? 'true' : 'false');
    
@@ -7261,9 +7287,13 @@ app.toggleMusic = function() {
         this.isShuffleEnabled = true;
         this.currentSongIndex = 0;
         this.playBackgroundMusic();
+        // ADDED: Add playing animation
+        if (toggleLabel) toggleLabel.classList.add('playing');
         this.toast('🎵 Music ON - Shuffle Mode', 'success');
     } else {
         this.stopBackgroundMusic();
+        // ADDED: Remove playing animation
+        if (toggleLabel) toggleLabel.classList.remove('playing');
         this.toast('🔇 Music OFF', 'success');
     }
 };
