@@ -1011,22 +1011,6 @@
         }
 
         /* ADDED: Stories Header Section */
-        .stories-section {
-            background: white;
-            border-bottom: 1px solid #f0f0f0;
-            padding: 12px 0;
-        }
-
-        .stories-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-light);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 0 16px 8px 16px;
-            display: block;
-        }
-
         #storiesList {
             display: flex !important;
             gap: 14px !important;
@@ -2910,11 +2894,8 @@ window.app = window.app || {
             </div>
            
             <!-- STORIES SECTION -->
-            <div class="stories-section">
-                <span class="stories-label">📖 Stories</span>
-                <div id="storiesList" style="display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 8px 16px; min-height: 95px; align-items: flex-start;"></div>
-            </div>
-           
+            <div id="storiesList" style="display: flex; gap: 14px; overflow-x: auto; overflow-y: hidden; padding: 12px 16px; min-height: 105px; align-items: flex-start; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(255,255,255,0)); border-bottom: 1px solid rgba(0,0,0,0.05);"></div>
+            
             <div id="quickPostBox" class="quick-post" onclick="app.showCreateModal()" style="cursor: pointer;">
                 <div class="quick-post-avatar" id="quickPostAvatar">U</div>
                 <input type="text" class="quick-post-input" placeholder="Share something..." readonly>
