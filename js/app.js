@@ -1212,16 +1212,32 @@ var app = {
         if (shareText) shareText.style.display = 'none';
         if (sharePostBtn) sharePostBtn.disabled = true;
 
+        console.log('📤 Uploading post...');
+        console.log('   File:', photoFile.name, '|', photoFile.size, 'bytes');
+        console.log('   Cloud:', CLOUD_NAME, '| Preset:', UPLOAD_PRESET);
+
         var formData = new FormData();
         formData.append('file', photoFile);
         formData.append('upload_preset', UPLOAD_PRESET);
 
+        console.log('🚀 Sending to Cloudinary...');
+        
         fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
             method: 'POST',
             body: formData
         })
-        .then(r => r.json())
+        .then(r => {
+            console.log('📡 Cloudinary response status:', r.status);
+            if (!r.ok) {
+                console.error('❌ Cloudinary error status:', r.status);
+                return r.json().then(data => {
+                    throw new Error(data.error ? data.error.message : 'Upload failed');
+                });
+            }
+            return r.json();
+        })
         .then(data => {
+            console.log('✅ Cloudinary success! URL:', data.secure_url);
             var self = this;
             db.ref('posts').push({
                 userId: self.user.uid,
@@ -1237,6 +1253,7 @@ var app = {
                 createdAt: new Date().toLocaleString('en-KE'),
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             }).then(() => {
+                console.log('✅ Post saved to Firebase');
                 // Earn silently for posting
                 self.balance += 1;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
@@ -1250,13 +1267,15 @@ var app = {
                 self.closeCreateModal();
                 self.switchView('feed');
             }).catch(err => {
-                self.toast('Error publishing post', 'error');
+                console.error('❌ Firebase error:', err);
+                self.toast('Error publishing post: ' + err.message, 'error');
                 if (shareSpinner) shareSpinner.style.display = 'none';
                 if (shareText) shareText.style.display = 'inline';
                 if (sharePostBtn) sharePostBtn.disabled = false;
             });
         }).catch(err => {
-            this.toast('Upload failed', 'error');
+            console.error('❌ Cloudinary error:', err);
+            this.toast('Upload failed: ' + err.message, 'error');
             if (shareSpinner) shareSpinner.style.display = 'none';
             if (shareText) shareText.style.display = 'inline';
             if (sharePostBtn) sharePostBtn.disabled = false;

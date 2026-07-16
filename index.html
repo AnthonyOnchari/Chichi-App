@@ -3071,86 +3071,106 @@ var app = {
         var conversations = [];
         
         // ADDED: Load message history to get only users with text messages
+        console.log('🔍 Querying Firebase /messages...');
         db.ref('messages').once('value', snapshot => {
-            if (snapshot.val()) {
-                Object.keys(snapshot.val()).forEach(chatKey => {
-                    // Check if this chatKey involves current user
-                    if (chatKey.includes(self.user.uid)) {
-                        // Extract the other user's ID
-                        var parts = chatKey.split('_');
-                        var otherUserId = parts[0] === self.user.uid ? parts[1] : parts[0];
-                        
-                        // ADDED: Skip if user is blocked
-                        if (self.blockedUsers[otherUserId]) {
-                            return;
-                        }
-                        
-                        var messages = snapshot.val()[chatKey];
-                        var hasTextMessages = false;
-                        var lastMessage = 'Tap to message';
-                        var lastTime = 'Now';
-                        var lastTimestamp = 0;
-                        var unreadCount = 0;
-                        
-                        // Filter for text messages only and count unread
-                        if (messages && typeof messages === 'object') {
-                            Object.keys(messages).forEach(msgId => {
-                                var msg = messages[msgId];
-                                
-                                // Only count non-deleted messages
-                                if (msg && !msg.deleted) {
-                                    if (msg.text) {
-                                        hasTextMessages = true;
+            console.log('📊 /messages snapshot received');
+            if (!snapshot.val()) {
+                console.log('⚠️ No messages found in Firebase (/messages is empty)');
+                if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No messages yet. Go to someone\'s profile to start a chat!</div>';
+                var messageList = document.getElementById('messageList');
+                if (messageList) {
+                    messageList.innerHTML = html;
+                }
+                self.updateUnreadBadge();
+                return;
+            }
+            
+            console.log('✅ Found messages in Firebase:', Object.keys(snapshot.val()).length, 'chat keys');
+            Object.keys(snapshot.val()).forEach(chatKey => {
+                // Check if this chatKey involves current user
+                if (chatKey.includes(self.user.uid)) {
+                    console.log('   📨 Chat key:', chatKey);
+                    // Extract the other user's ID
+                    var parts = chatKey.split('_');
+                    var otherUserId = parts[0] === self.user.uid ? parts[1] : parts[0];
+                    
+                    // ADDED: Skip if user is blocked
+                    if (self.blockedUsers[otherUserId]) {
+                        console.log('   ❌ User blocked:', otherUserId);
+                        return;
+                    }
+                    
+                    var messages = snapshot.val()[chatKey];
+                    var hasTextMessages = false;
+                    var lastMessage = 'Tap to message';
+                    var lastTime = 'Now';
+                    var lastTimestamp = 0;
+                    var unreadCount = 0;
+                    
+                    // Filter for text messages only and count unread
+                    if (messages && typeof messages === 'object') {
+                        Object.keys(messages).forEach(msgId => {
+                            var msg = messages[msgId];
+                            
+                            // Only count non-deleted messages
+                            if (msg && !msg.deleted) {
+                                if (msg.text) {
+                                    hasTextMessages = true;
+                                    
+                                    // Count unread from other user
+                                    if (msg.senderId !== self.user.uid && !msg.read) {
+                                        unreadCount++;
+                                    }
+                                    
+                                    // Get last message
+                                    if (!lastTimestamp || msg.timestamp > lastTimestamp) {
+                                        lastTimestamp = msg.timestamp;
+                                        lastMessage = (msg.senderId === self.user.uid ? 'You: ' : '') + msg.text.substring(0, 40) + (msg.text.length > 40 ? '...' : '');
                                         
-                                        // Count unread from other user
-                                        if (msg.senderId !== self.user.uid && !msg.read) {
-                                            unreadCount++;
-                                        }
-                                        
-                                        // Get last message
-                                        if (!lastTimestamp || msg.timestamp > lastTimestamp) {
-                                            lastTimestamp = msg.timestamp;
-                                            lastMessage = (msg.senderId === self.user.uid ? 'You: ' : '') + msg.text.substring(0, 40) + (msg.text.length > 40 ? '...' : '');
+                                        // Format time
+                                        if (msg.timestamp) {
+                                            var msgDate = new Date(msg.timestamp);
+                                            var now = new Date();
+                                            var diff = now - msgDate;
+                                            var minutes = Math.floor(diff / 60000);
+                                            var hours = Math.floor(diff / 3600000);
+                                            var days = Math.floor(diff / 86400000);
                                             
-                                            // Format time
-                                            if (msg.timestamp) {
-                                                var msgDate = new Date(msg.timestamp);
-                                                var now = new Date();
-                                                var diff = now - msgDate;
-                                                var minutes = Math.floor(diff / 60000);
-                                                var hours = Math.floor(diff / 3600000);
-                                                var days = Math.floor(diff / 86400000);
-                                                
-                                                if (minutes < 1) lastTime = 'Now';
-                                                else if (minutes < 60) lastTime = minutes + 'm';
-                                                else if (hours < 24) lastTime = hours + 'h';
-                                                else if (days < 7) lastTime = days + 'd';
-                                                else lastTime = msgDate.toLocaleDateString();
-                                            }
+                                            if (minutes < 1) lastTime = 'Now';
+                                            else if (minutes < 60) lastTime = minutes + 'm';
+                                            else if (hours < 24) lastTime = hours + 'h';
+                                            else if (days < 7) lastTime = days + 'd';
+                                            else lastTime = msgDate.toLocaleDateString();
                                         }
                                     }
                                 }
-                            });
-                        }
-                        
-                        // ADDED: Only add to conversations if there are text messages
-                        if (hasTextMessages) {
-                            var otherUser = self.users[otherUserId];
-                            if (otherUser && otherUser.name) {
-                                conversations.push({
-                                    uid: otherUserId,
-                                    name: otherUser.name,
-                                    profilePhoto: otherUser.profilePhoto,
-                                    lastMessage: lastMessage,
-                                    lastTime: lastTime,
-                                    lastTimestamp: lastTimestamp,
-                                    unreadCount: unreadCount,
-                                    isUnread: unreadCount > 0
-                                });
                             }
-                        }
+                        });
                     }
-                });
+                    
+                    // ADDED: Only add to conversations if there are text messages
+                    if (hasTextMessages) {
+                        var otherUser = self.users[otherUserId];
+                        if (otherUser && otherUser.name) {
+                            console.log('   ✅ Added conversation:', otherUser.name, '| Unread:', unreadCount);
+                            conversations.push({
+                                uid: otherUserId,
+                                name: otherUser.name,
+                                profilePhoto: otherUser.profilePhoto,
+                                lastMessage: lastMessage,
+                                lastTime: lastTime,
+                                lastTimestamp: lastTimestamp,
+                                unreadCount: unreadCount,
+                                isUnread: unreadCount > 0
+                            });
+                        } else {
+                            console.log('   ⚠️ Other user not found:', otherUserId);
+                        }
+                    } else {
+                        console.log('   ⚠️ No text messages in chat:', chatKey);
+                    }
+                }
+            });
             }
             
             // Sort by last message time (most recent first)
@@ -3200,9 +3220,14 @@ var app = {
             if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No messages yet. Go to someone\'s profile to start a chat!</div>';
             
             // Render NOW (after HTML is built)
+            console.log('📋 Total conversations found:', conversations.length);
+            console.log('📝 Rendering messages list...');
             var messageList = document.getElementById('messageList');
             if (messageList) {
                 messageList.innerHTML = html;
+                console.log('✅ Messages rendered to DOM');
+            } else {
+                console.error('❌ messageList element not found!');
             }
             
             self.updateUnreadBadge();

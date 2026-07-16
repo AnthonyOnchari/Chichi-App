@@ -11,7 +11,7 @@ const FIREBASE_CONFIG = {
 
 // Cloudinary Configuration
 const CLOUD_NAME = 'u1uilb6f';
-const UPLOAD_PRESET = 'chichi_upload';
+const UPLOAD_PRESET = 'chichi_photos';  // ✅ Matches actual Cloudinary preset
 
 // Music Playlist
 const MUSIC_PLAYLIST = [
