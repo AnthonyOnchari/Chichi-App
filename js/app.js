@@ -1149,15 +1149,32 @@ var app = {
     },
 
     showCreateModal: function() {
-        document.getElementById('createModal').classList.add('active');
+        var modal = document.getElementById('createModal');
+        if (!modal) {
+            console.error('❌ createModal not found - checking fallback');
+            return;
+        }
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+        modal.style.zIndex = '9999';
     },
 
     closeCreateModal: function() {
-        document.getElementById('createModal').classList.remove('active');
-        document.getElementById('photoInput').value = '';
-        document.getElementById('captionInput').value = '';
-        document.getElementById('photoPreview').style.display = 'none';
-        document.getElementById('photoPreview').textContent = '';
+        var modal = document.getElementById('createModal');
+        if (!modal) return;
+        modal.classList.remove('active');
+        
+        var photoInput = document.getElementById('photoInput');
+        if (photoInput) photoInput.value = '';
+        
+        var captionInput = document.getElementById('captionInput');
+        if (captionInput) captionInput.value = '';
+        
+        var photoPreview = document.getElementById('photoPreview');
+        if (photoPreview) {
+            photoPreview.style.display = 'none';
+            photoPreview.textContent = '';
+        }
         // Reset toggle to OFF position
         var toggle = document.getElementById('headerToggle');
         if (toggle) toggle.checked = false;

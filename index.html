@@ -2130,7 +2130,7 @@ var app = {
 
         // Load and display user hashtags
         var self = this;
-        if (this.user && this.user.uid) {
+        if (this.user && this.user.uid && typeof db !== 'undefined') {
             db.ref('users/' + this.user.uid + '/hashtags').once('value', snapshot => {
                 var hashtags = snapshot.val() || [];
                 var hashtagsHtml = '';
@@ -2144,8 +2144,19 @@ var app = {
                 var hashtagsEl = document.getElementById('profileHashtags');
                 if (hashtagsEl) {
                     hashtagsEl.innerHTML = hashtagsHtml;
+                    console.log('✅ Hashtags loaded and displayed for profile');
+                }
+            }).catch(err => {
+                console.error('❌ Error loading hashtags:', err);
+                var hashtagsEl = document.getElementById('profileHashtags');
+                if (hashtagsEl) {
+                    hashtagsEl.innerHTML = '<div style="color: #666;">Click Edit to add interests</div>';
                 }
             });
+        } else if (!this.user || !this.user.uid) {
+            console.log('⚠️ No user logged in - skipping hashtag load');
+        } else if (typeof db === 'undefined') {
+            console.log('⚠️ Firebase db not initialized yet - skipping hashtag load');
         }
 
         var postsHtml = '';
@@ -2461,6 +2472,12 @@ var app = {
             // Re-render explore view if it's active
             if (document.getElementById('exploreView').classList.contains('active')) {
                 self.loadExplore();
+            }
+            
+            // CRITICAL FIX: Re-render messages view if it's active
+            if (document.getElementById('messagesView') && document.getElementById('messagesView').classList.contains('active')) {
+                console.log('📬 Messages view is active - reloading messages after users loaded');
+                self.loadMessages();
             }
         }, err => {
             console.error('❌ ERROR loading users from Firebase:', err.code, err.message);
