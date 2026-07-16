@@ -3141,7 +3141,7 @@ var app = {
                 return b.lastTimestamp - a.lastTimestamp;
             });
             
-            // Sort by: Pinned first, Unread second, then by time
+            // Sort by: Unread first, then by time
             conversations.sort((a, b) => {
                 if (b.isUnread !== a.isUnread) {
                     return b.isUnread ? 1 : -1; // Unread first
@@ -3149,44 +3149,45 @@ var app = {
                 return b.lastTimestamp - a.lastTimestamp;
             });
             
-            // ADDED: Build HTML with online status
+            // Build HTML synchronously (NO async callbacks!)
+            var html = '';
             conversations.forEach(conv => {
-                self.loadOnlineStatus(conv.uid, function(status) {
-                    var isOnline = status.online;
-                    var lastSeen = status.lastSeen ? new Date(status.lastSeen).toLocaleTimeString('en-KE', {hour: '2-digit', minute:'2-digit'}) : 'offline';
-                    var onlineIndicator = isOnline ? '<div class="online-dot" title="Online"></div>' : '<div class="offline-dot" title="Offline - Last seen ' + lastSeen + '"></div>';
-                    var readReceipts = conv.isUnread ? '' : '✓✓';
-                    
-                    html += `
-                        <div class="message-item ${conv.isUnread ? 'unread' : ''}" onclick="app.openChat('${conv.uid}', '${conv.name}')">
-                            <div style="position: relative;">
-                                <div class="message-avatar" style="background-image: url(${conv.profilePhoto || ''});">
-                                    ${!conv.profilePhoto ? conv.name.charAt(0).toUpperCase() : ''}
-                                </div>
-                                ${onlineIndicator}
-                                ${conv.unreadCount > 0 ? '<div style="position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; border: 3px solid white; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);">' + conv.unreadCount + '</div>' : ''}
+                var readReceipts = conv.isUnread ? '' : '✓✓';
+                
+                html += `
+                    <div class="message-item ${conv.isUnread ? 'unread' : ''}" onclick="app.openChat('${conv.uid}', '${conv.name}')">
+                        <div style="position: relative;">
+                            <div class="message-avatar" style="background-image: url(${conv.profilePhoto || ''});">
+                                ${!conv.profilePhoto ? conv.name.charAt(0).toUpperCase() : ''}
                             </div>
-                            <div class="message-content">
-                                <div class="message-top">
-                                    <div class="message-name ${conv.isUnread ? 'unread-text' : ''}">${conv.name}</div>
-                                    <div class="message-time">${conv.lastTime}</div>
-                                </div>
-                                <div class="message-preview ${conv.isUnread ? 'unread-text' : ''}">
-                                    ${conv.lastMessage}
-                                    <span class="read-receipt">${readReceipts}</span>
-                                </div>
+                            <div class="offline-dot"></div>
+                            ${conv.unreadCount > 0 ? '<div style="position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; border: 3px solid white; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);">' + conv.unreadCount + '</div>' : ''}
+                        </div>
+                        <div class="message-content">
+                            <div class="message-top">
+                                <div class="message-name ${conv.isUnread ? 'unread-text' : ''}">${conv.name}</div>
+                                <div class="message-time">${conv.lastTime}</div>
                             </div>
-                            <div class="message-actions">
-                                <button class="message-action-btn" title="Mute" onclick="app.muteConversation('${conv.uid}', event)">🔇</button>
-                                <button class="message-action-btn" title="Delete" onclick="app.deleteConversation('${conv.uid}', event)">🗑️</button>
+                            <div class="message-preview ${conv.isUnread ? 'unread-text' : ''}">
+                                ${conv.lastMessage}
+                                <span class="read-receipt">${readReceipts}</span>
                             </div>
                         </div>
-                    `;
-                });
+                        <div class="message-actions">
+                            <button class="message-action-btn" title="Delete" onclick="app.deleteConversation('${conv.uid}', event)">🗑️</button>
+                        </div>
+                    </div>
+                `;
             });
             
             if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No messages yet. Go to someone\'s profile to start a chat!</div>';
-            document.getElementById('messageList').innerHTML = html;
+            
+            // Render NOW (after HTML is built)
+            var messageList = document.getElementById('messageList');
+            if (messageList) {
+                messageList.innerHTML = html;
+            }
+            
             self.updateUnreadBadge();
         });
     },
