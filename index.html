@@ -475,11 +475,10 @@ var loadingTimeout = setTimeout(() => {
   }
 }, 3000);  // 3 second fallback
 
+
 var auth = firebase.auth();
 var db = firebase.database();
-const CLOUD_NAME = 'u1uilb6f';
-const UPLOAD_PRESET = 'chichi_photos';
-const ADMIN_PASSWORD = 'CHICHI26303@Admin';
+// Constants loaded from config.js: CLOUD_NAME, UPLOAD_PRESET, ADMIN_PASSWORD
 
 var app = {
     user: null,
