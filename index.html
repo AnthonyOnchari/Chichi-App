@@ -457,7 +457,7 @@ var loadingTimeout = setTimeout(() => {
   }
   var authPage = document.getElementById('authPage');
   if (authPage) {
-    authPage.style.display = 'flex';
+    authPage.classList.remove('hidden');
   }
 }, 3000);  // 3 second fallback
 
@@ -636,12 +636,10 @@ var app = {
             loading.style.display = 'none';
         }
        
-        // Show auth page
+        // Show auth page using CSS class
         var authPage = document.getElementById('authPage');
         if (authPage) {
-            authPage.style.display = 'flex';
-            authPage.style.visibility = 'visible';
-            authPage.style.opacity = '1';
+            authPage.classList.remove('hidden');
         }
        
         // Hide main app
@@ -683,10 +681,10 @@ var app = {
             loading.style.display = 'none';
         }
        
-        // Hide auth page
+        // Hide auth page using CSS class
         var authPage = document.getElementById('authPage');
         if (authPage) {
-            authPage.style.display = 'none';
+            authPage.classList.add('hidden');
         }
        
         // Show main app
@@ -810,9 +808,7 @@ var app = {
         var mainApp = document.getElementById('mainApp');
         if (authPage && mainApp) {
             mainApp.style.display = 'none';
-            authPage.style.display = 'flex';
-            authPage.style.visibility = 'visible';
-            authPage.style.opacity = '1';
+            authPage.classList.remove('hidden');
         }
         
         // Hide bottom nav
@@ -4189,8 +4185,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         var authPage = document.getElementById('authPage');
         var mainApp = document.getElementById('mainApp');
-        if (authPage && mainApp.style.display === 'none' && authPage.style.display === 'none') {
-            authPage.style.display = 'flex';
+        if (authPage && mainApp.style.display === 'none' && authPage.classList.contains('hidden')) {
+            authPage.classList.remove('hidden');
             var loading = document.getElementById('loadingScreen');
             if (loading) loading.style.display = 'none';
         }
