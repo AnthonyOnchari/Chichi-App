@@ -462,8 +462,7 @@ var loadingTimeout = setTimeout(() => {
 }, 3000);  // 3 second fallback
 
 
-var auth = firebase.auth();
-var db = firebase.database();
+// Firebase variables (auth, db) are now initialized in app.js AFTER firebase.initializeApp()
 // Constants loaded from config.js: CLOUD_NAME, UPLOAD_PRESET, ADMIN_PASSWORD
 
 var app = {
