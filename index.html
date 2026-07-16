@@ -153,15 +153,15 @@
         }
 
         .story-avatar {
-            width: 70px;
-            height: 70px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             background: linear-gradient(135deg, #2E5BFF, #0088cc);
             border: 3px solid #2E5BFF;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 20px;
             color: white;
             font-weight: bold;
             box-shadow: 0 4px 12px rgba(46, 91, 255, 0.3), 0 0 0 2px white;
@@ -189,35 +189,35 @@
         }
 
         .story-name {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: 600;
             text-align: center;
-            max-width: 75px;
+            max-width: 65px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             color: #1f2937;
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
         .create-story-circle {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-shrink: 0;
         }
 
         .create-story-avatar {
-            width: 70px;
-            height: 70px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             background: linear-gradient(135deg, #FFC24B, #FFB91A);
             border: 3px dashed #FFC24B;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
+            font-size: 28px;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 12px rgba(255, 194, 75, 0.3), 0 0 0 2px white;
@@ -239,33 +239,33 @@
             position: absolute;
             bottom: 0;
             right: 0;
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             background: #2E5BFF;
             color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
             border: 2px solid white;
         }
 
         .create-story-name {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: 600;
             text-align: center;
-            max-width: 75px;
+            max-width: 65px;
             color: #1f2937;
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
         .story-item {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-shrink: 0;
             cursor: pointer;
             transition: transform 0.3s ease;
@@ -1013,11 +1013,11 @@
         /* ADDED: Stories Header Section */
         #storiesList {
             display: flex !important;
-            gap: 14px !important;
+            gap: 12px !important;
             overflow-x: auto !important;
             overflow-y: hidden !important;
             padding: 8px 16px !important;
-            min-height: 90px !important;
+            min-height: 75px !important;
             align-items: center !important;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
@@ -2875,6 +2875,7 @@ window.app = window.app || {
                     <div class="toggle-face back">🎵</div>
                 </div>
             </label>
+            <button style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 14px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.3s;" onclick="app.loadPosts()" id="refreshFeedBtn">Refresh</button>
             <button class="btn-icon" onclick="app.showHeaderMenu()" style="font-size: 1rem; padding: 4px 8px;">⋯</button>
         </div>
         
@@ -2888,11 +2889,7 @@ window.app = window.app || {
     <div class="app-content">
         <!-- FEED -->
         <div class="view active" id="feedView">
-            <div class="feed-header">
-                <button style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 14px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.3s;" onclick="app.loadPosts()">Refresh</button>
-            </div>
-           
-            <!-- STORIES SECTION - Compact -->
+            <!-- STORIES SECTION -->
             <div id="storiesList" style="display: flex; gap: 14px; overflow-x: auto; overflow-y: hidden; padding: 8px 16px; min-height: 90px; align-items: center; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0)); border-bottom: 1px solid rgba(0,0,0,0.05);"></div>
             
             <div id="quickPostBox" class="quick-post" onclick="app.showCreateModal()" style="cursor: pointer;">
