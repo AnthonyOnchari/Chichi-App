@@ -4205,14 +4205,8 @@ app.onlineUsers = {}; // Track online status
 app.unreadCounts = {}; // Count unread per conversation
 app.blockedUsers = {}; // Track blocked users
 app.messageHistory = {}; // Cache message history
-    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136987/TONNY_YOUNG_-_MBECA_vmjeox.mp4',
-    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136983/KAMOKO_raa8k0.mp4',
-    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136983/ROSELLA_kixo9g.mp4',
-    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136979/Lord_Paper_fpcq1s.mp4',
-    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136978/DOGGIE_IN_THE_WINDOW_senpyj.mp4',
-    'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136978/Rudimental_dneqjb.mp4'
-];
 
+// Music system (loaded from config.js)
 app.currentSongIndex = 0;
 app.isShuffleEnabled = false;
 
