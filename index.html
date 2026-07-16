@@ -2089,6 +2089,15 @@ var app = {
                 <div style="font-weight: 600; margin-bottom: 8px;">Bio</div>
                 <div style="color: var(--text-light); font-size: 0.9rem;">${this.profile.bio || 'No bio yet'}</div>
             </div>
+            <div style="padding: 16px; background: white; border-radius: 16px; margin: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-weight: 600;">🏷️ Interests</div>
+                    <button onclick="app.showHashtagModal()" style="background: var(--primary); color: white; border: none; padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-weight: 600;">Edit</button>
+                </div>
+                <div id="profileHashtags" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    <!-- Hashtags will load here -->
+                </div>
+            </div>
             <div style="margin: 16px;">
                 <div class="balance-card">
                     <div class="balance-label">Your Balance</div>
@@ -2118,6 +2127,26 @@ var app = {
         `;
 
         document.getElementById('profileContent').innerHTML = html;
+
+        // Load and display user hashtags
+        var self = this;
+        if (this.user && this.user.uid) {
+            db.ref('users/' + this.user.uid + '/hashtags').once('value', snapshot => {
+                var hashtags = snapshot.val() || [];
+                var hashtagsHtml = '';
+                if (hashtags && hashtags.length > 0) {
+                    hashtags.forEach(tag => {
+                        hashtagsHtml += `<span style="background: var(--primary); color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">#${tag}</span>`;
+                    });
+                } else {
+                    hashtagsHtml = '<div style="color: var(--text-light); font-size: 0.9rem;">No interests yet. Click Edit to add some!</div>';
+                }
+                var hashtagsEl = document.getElementById('profileHashtags');
+                if (hashtagsEl) {
+                    hashtagsEl.innerHTML = hashtagsHtml;
+                }
+            });
+        }
 
         var postsHtml = '';
         this.posts.filter(p => p.userId === this.user.uid).forEach(p => {
