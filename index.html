@@ -931,9 +931,79 @@
         }
 
         .post-caption {
-            padding: 12px 16px;
-            font-size: 0.9rem;
-            line-height: 1.4;
+            padding: 14px 16px;
+            font-size: 1rem;
+            line-height: 1.7;
+            font-family: 'Inter', -apple-system, sans-serif;
+            font-weight: 500;
+            color: #1f2937;
+            letter-spacing: 0.4px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(46, 91, 255, 0.03));
+            border-radius: 12px;
+            word-spacing: 1px;
+        }
+
+        .post-caption strong {
+            font-weight: 700;
+            background: linear-gradient(135deg, #2E5BFF, #0088cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .post-caption a {
+            color: #2E5BFF;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .post-caption a:hover {
+            color: #0088cc;
+            text-decoration: underline;
+        }
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        /* ADDED: Stories Header Section */
+        .stories-section {
+            background: white;
+            border-bottom: 1px solid #f0f0f0;
+            padding: 12px 0;
+        }
+
+        .stories-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0 16px 8px 16px;
+            display: block;
+        }
+
+        #storiesList {
+            display: flex !important;
+            gap: 12px !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            padding: 8px 16px !important;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #storiesList::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        #storiesList::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #storiesList::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 2px;
         }
 
         .post-stats {
@@ -1252,11 +1322,13 @@
         }
 
         .messages-header {
-            padding: 12px 16px;
+            padding: 16px;
             background: white;
-            border-bottom: none;
-            font-weight: 600;
+            border-bottom: 1px solid #f0f0f0;
+            font-weight: 700;
+            font-size: 1.3rem;
             flex-shrink: 0;
+            color: var(--text);
         }
 
         .message-list {
@@ -1266,19 +1338,38 @@
         }
 
         .message-item {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            padding: 14px 16px;
-            margin-bottom: 12px;
-            border-radius: 18px;
+            background: white;
+            padding: 12px 16px;
+            margin-bottom: 1px;
+            border-radius: 0;
             cursor: pointer;
             display: flex;
             gap: 12px;
             align-items: center;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: none;
+            border-bottom: 1px solid #f0f0f0;
             position: relative;
-            border-left: 4px solid transparent;
+            border-left: none;
             animation: slideInLeft 0.4s ease-out;
+        }
+
+        .message-item:hover {
+            background: #f9f9f9;
+        }
+
+        .message-item-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2E5BFF, #0088cc);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+            font-size: 18px;
         }
 
         @keyframes slideInLeft {
@@ -1379,20 +1470,25 @@
         }
 
         .message-name {
-            font-weight: 700;
+            font-weight: 600;
             font-size: 0.95rem;
             color: var(--text);
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
        
         .message-name.unread-text {
             color: var(--text);
-            font-weight: 800;
+            font-weight: 700;
         }
        
         .message-time {
             font-size: 0.75rem;
             color: var(--text-light);
             flex-shrink: 0;
+            text-align: right;
         }
 
         .message-preview {
@@ -1404,6 +1500,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            flex: 1;
         }
 
         .message-preview.unread-text {
@@ -2194,15 +2291,17 @@
 
         #captionInput {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             border: 1px solid var(--border);
             border-radius: 14px;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9rem;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.95rem;
             resize: vertical;
             min-height: 80px;
             margin-bottom: 12px;
             transition: 0.3s;
+            color: var(--text);
+            line-height: 1.5;
         }
 
         #captionInput:focus {
@@ -2758,9 +2857,10 @@ window.app = window.app || {
                 <button style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 14px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.3s;" onclick="app.loadPosts()">Refresh</button>
             </div>
            
-            <!-- STORIES -->
-            <div style="padding: 8px 16px;">
-                <div id="storiesList" style="display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 8px 0; min-height: 95px; align-items: flex-start;"></div>
+            <!-- STORIES SECTION -->
+            <div class="stories-section">
+                <span class="stories-label">📖 Stories</span>
+                <div id="storiesList" style="display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 8px 16px; min-height: 95px; align-items: flex-start;"></div>
             </div>
            
             <div id="quickPostBox" class="quick-post" onclick="app.showCreateModal()" style="cursor: pointer;">
@@ -3951,7 +4051,7 @@ var app = {
                             <div style="font-weight: 700; font-size: 0.95rem;">${p.userName}</div>
                             <div style="font-size: 0.75rem; color: var(--text-light);">${p.createdAt}</div>
                         </div>
-                        <div style="font-size: 0.85rem; margin-bottom: 8px; color: var(--text-light);">${p.caption.substring(0, 100)}...</div>
+                        <div style="font-size: 0.9rem; margin-bottom: 8px; color: var(--text-light); font-family: 'Poppins', sans-serif;">${p.caption.substring(0, 100)}...</div>
                         <div style="display: flex; gap: 8px;">
                             <span style="font-size: 0.75rem; color: var(--text-light);">Likes: ${Object.keys(p.likes || {}).length}</span>
                             <span style="font-size: 0.75rem; color: var(--text-light);">Comments: ${(p.comments || []).length}</span>
