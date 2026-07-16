@@ -1994,26 +1994,72 @@
             color: white;
             border: none;
             cursor: pointer;
+            font-size: 1.4rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.6rem;
-            box-shadow: 0 4px 12px rgba(0, 212, 170, 0.3);
-            z-index: 991;
             transition: 0.3s;
-            font-weight: 800;
-            line-height: 1;
-            margin-left: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* MOBILE: Reduce bottom nav icon sizes on phones */
+        @media (max-width: 640px) {
+            .nav-item {
+                padding: 6px 8px;
+                font-size: 0.55rem;
+                gap: 2px;
+            }
+
+            .nav-icon {
+                font-size: 1rem;
+            }
+
+            .fab-button {
+                width: 44px;
+                height: 44px;
+                font-size: 1.2rem;
+            }
+
+            .nav-wrapper {
+                padding: 8px 12px;
+                gap: 6px;
+            }
+        }
+
+        /* EXTRA SMALL PHONES: Even more compact */
+        @media (max-width: 480px) {
+            .nav-item {
+                padding: 5px 6px;
+                font-size: 0.5rem;
+                gap: 1px;
+            }
+
+            .nav-icon {
+                font-size: 0.9rem;
+            }
+
+            .fab-button {
+                width: 40px;
+                height: 40px;
+                font-size: 1.1rem;
+            }
+
+            .nav-wrapper {
+                padding: 6px 10px;
+                gap: 4px;
+            }
         }
 
         .fab-button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 16px rgba(0, 212, 170, 0.4);
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         }
 
         .fab-button:active {
             transform: scale(0.95);
         }
+
+        /* Rest of fab-button styles continue below */
 
         .nav-badge {
             position: absolute;
