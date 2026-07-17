@@ -4,156 +4,452 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CHICHI - Social Media</title>
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-    <div id="mainApp">
-        <div id="mainContent">
-            <!-- FEED VIEW -->
-            <div class="view active" id="feedView">
-                <div class="view-header">
-                    <h1>CHICHI</h1>
-                    <div class="view-header-actions">
-                        <button class="header-btn" onclick="alert('Notifications')">🔔</button>
-                    </div>
-                </div>
-                
-                <!-- Stories Container -->
-                <div class="stories-container" id="storiesContainer"></div>
-                
-                <!-- Feed Content -->
-                <div id="feedContainer"></div>
-            </div>
-
-            <!-- MESSAGES VIEW -->
-            <div class="view" id="messagesView">
-                <div class="messages-header">
-                    <h2>Messages</h2>
-                    <div class="search-bar">
-                        <span style="font-size: 18px; margin-right: 8px;">🔍</span>
-                        <input type="text" placeholder="Search conversations..." id="messagesSearchInput" onkeyup="app.searchMessages(this.value)">
-                    </div>
-                    <div class="filter-tabs" id="messagesFilterTabs">
-                        <div class="filter-tab active" onclick="app.filterMessages('all')">All</div>
-                        <div class="filter-tab" onclick="app.filterMessages('unread')">Unread</div>
-                        <div class="filter-tab" onclick="app.filterMessages('favorites')">Favorites</div>
-                    </div>
-                </div>
-                <div class="messages-container" id="messageList"></div>
-            </div>
-
-            <!-- CHAT VIEW -->
-            <div class="view" id="chatView">
-                <div id="chatHeader">
-                    <button onclick="app.closeChatView()">←</button>
-                    <div id="chatHeaderAvatar"></div>
-                    <div style="flex: 1;">
-                        <div id="chatHeaderName" style="color: white; font-weight: 700;"></div>
-                        <div id="chatHeaderStatus"></div>
-                    </div>
-                    <button onclick="alert('Call')">📹</button>
-                    <button onclick="alert('Call')">☎️</button>
-                    <button onclick="app.showChatMenu()">⋯</button>
-                </div>
-                <div id="chatMessages"></div>
-                <div id="chatInput">
-                    <button onclick="alert('Attach')">📎</button>
-                    <input type="text" id="chatMessageInput" placeholder="Type a message...">
-                    <button onclick="app.sendChatMessage()">📤</button>
-                </div>
-            </div>
-
-            <!-- EXPLORE VIEW -->
-            <div class="view" id="exploreView">
-                <div class="view-header">
-                    <h2>🔍 Discover</h2>
-                    <button class="header-btn" onclick="app.loadExplore()">🔄</button>
-                </div>
-                
-                <div class="explore-search">
-                    <div class="explore-search-input">
-                        <span style="font-size: 20px;">🔍</span>
-                        <input type="text" id="exploreSearchInput" placeholder="Search for a user..." onkeyup="app.searchExploreUsers(this.value)">
-                    </div>
-                </div>
-                
-                <div style="flex: 1; overflow-y: auto;">
-                    <div id="signupMapContainer" style="height: 350px; margin: 16px; border-radius: 12px; overflow: hidden; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
-                    <div id="trendingSection"></div>
-                    <div id="exploreSearchResults" style="display: none; padding: 16px;"></div>
-                </div>
-            </div>
-
-            <!-- GROUPS VIEW -->
-            <div class="view" id="groupsView">
-                <div class="view-header">
-                    <h2>Groups</h2>
-                    <button class="header-btn" onclick="app.showCreateGroupModal()">➕</button>
-                </div>
-                <div id="groupsList"></div>
-            </div>
-
-            <!-- PROFILE VIEW -->
-            <div class="view" id="profileView">
-                <div id="profileContent"></div>
-            </div>
-
-            <!-- AUTH PAGE -->
-            <div id="authPage" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 150; background: white; padding: 20px;"></div>
-
-            <!-- LOADING SCREEN -->
-            <div id="loadingScreen" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; background: white; display: flex; align-items: center; justify-content: center;">
-                <div style="text-align: center;">
-                    <div style="font-size: 48px; animation: spin 1s linear infinite;">⚙️</div>
-                    <div style="margin-top: 16px; color: #666;">Loading...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- BOTTOM NAVIGATION -->
-        <div class="bottom-nav">
-            <div class="nav-wrapper">
-                <div class="nav-item active" onclick="app.switchView('feed')">
-                    <div class="nav-icon">🏠</div>
-                    <div>Home</div>
-                </div>
-                <div class="nav-item" onclick="app.switchView('explore')">
-                    <div class="nav-icon">🔍</div>
-                    <div>Explore</div>
-                </div>
-                <div class="nav-item-fab" onclick="app.showCreatePostModal()" style="position: absolute; bottom: 20px;">
-                    ➕
-                </div>
-                <div class="nav-item" onclick="app.switchView('messages')">
-                    <div class="nav-icon">💬</div>
-                    <div>Messages</div>
-                </div>
-                <div class="nav-item" onclick="app.switchView('profile')">
-                    <div class="nav-icon">👤</div>
-                    <div>Profile</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TOASTS -->
-        <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 2000; max-width: 300px;"></div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="config.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://upload-widget.cloudinary.com/latest/global/loader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="js/app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+    
+    <!-- LEAFLET MAP LIBRARY (For interactive map) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    
+    <script src="config.js"></script>
+</head>
+<body>
+
+<script>
+window.app = window.app || {
+    handleSearch: function() {},
+    toggleTheme: function() {},
+};
+</script>
+
+<!-- LOADING SCREEN -->
+<div id="loadingScreen" class="active">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading CHICHI</div>
+    <div class="loading-progress">
+        <div class="loading-progress-bar"></div>
+    </div>
+</div>
+
+<!-- CONSENT BANNER -->
+<div id="consentBanner" class="consent-banner">
+    <div class="consent-content">
+        <div class="consent-text">
+            We use cookies for analytics. By clicking "Accept", you consent to our use of cookies.
+        </div>
+        <div class="consent-buttons">
+            <button class="consent-btn consent-btn-manage" onclick="app.showConsentOptions()">Manage</button>
+            <button class="consent-btn consent-btn-accept" onclick="app.acceptConsent()">Accept</button>
+        </div>
+    </div>
+</div>
+
+<!-- AUTH PAGE -->
+<div class="auth-page" id="authPage">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>CHICHI</h1>
+            <p style="color: var(--text-light); margin: 0;">Social Media</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="app.switchTab('login')">Login</button>
+            <button class="tab" onclick="app.switchTab('signup')">Sign Up</button>
+        </div>
+
+        <!-- LOGIN TAB -->
+        <div class="tab-content active" id="loginTab">
+            <form onsubmit="app.handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="loginEmail" placeholder="your@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="loginPassword" placeholder="••••••" required>
+                </div>
+                <button type="submit" class="btn-submit" id="loginBtn">
+                    <span class="login-btn-text">Login</span>
+                    <span class="login-spinner" style="display: none; margin-left: 8px;">⏳</span>
+                </button>
+                <div style="text-align: center; margin-top: 12px;">
+                    <a href="#" onclick="app.showForgotPasswordModal(); return false;" style="color: var(--primary); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Forgot Password?</a>
+                </div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                        <div style="padding: 0 12px; color: var(--text-light); font-size: 0.85rem;">Or continue with</div>
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                    </div>
+                </div>
+                <button type="button" class="social-btn" onclick="app.signInWithGoogle()" style="width: 100%;">
+                    <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
+                </button>
+            </form>
+        </div>
+
+        <!-- SIGNUP TAB -->
+        <div class="tab-content" id="signupTab">
+            <form onsubmit="app.handleSignup(event)">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-input" id="signupName" placeholder="Your Name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="signupEmail" placeholder="your@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="signupPassword" placeholder="Min 6 chars" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Select Interests (Hashtags)</label>
+                    <div id="hashtagSelect" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 150px; overflow-y: auto;"></div>
+                </div>
+                
+                <!-- LOCATION AUTO-DETECT -->
+                <div class="form-group">
+                    <label class="form-label">📍 Location (Auto-Detected)</label>
+                    <div id="locationStatus" style="padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: center; color: #666; font-size: 14px; margin-bottom: 8px;">
+                        🔄 Detecting your location...
+                    </div>
+                    <input type="hidden" id="signupLocation">
+                </div>
+                
+                <button type="submit" class="btn-submit" id="signupBtn">
+                    <span class="signup-btn-text">Create Account</span>
+                    <span class="signup-spinner" style="display: none; margin-left: 8px;">⏳</span>
+                </button>
+                <div style="margin-top: 20px; text-align: center;">
+                    <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                        <div style="padding: 0 12px; color: var(--text-light); font-size: 0.85rem;">Or sign up with</div>
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                    </div>
+                </div>
+                <button type="button" class="social-btn" onclick="app.signInWithGoogle()" style="width: 100%;">
+                    <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="main-app" id="mainApp">
+    <!-- HEADER -->
+    <div class="app-header">
+        <!-- STORIES OVERLAPPED (TELEGRAM STYLE) + CHICHI TITLE BESIDE -->
+        <div style="display: flex; align-items: center; flex: 1; gap: 8px;">
+            <!-- Overlapped Stories Container -->
+            <div id="storiesList" style="display: flex; align-items: center; position: relative; width: 80px; height: 60px;"></div>
+            
+            <!-- CHICHI Title (RIGHT BESIDE STORIES) -->
+            <h1 style="margin: 0; font-size: 1.3rem; font-weight: 800; letter-spacing: 2px; white-space: nowrap;">CHICHI</h1>
+        </div>
+        
+        <div class="header-actions">
+            <label class="music-toggle-3d" title="Toggle music">
+                <input type="checkbox" id="musicToggle" onchange="app.toggleMusic()">
+                <div class="toggle-cube">
+                    <div class="toggle-face front">🔇</div>
+                    <div class="toggle-face back">🎵</div>
+                </div>
+            </label>
+            <button style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 14px; cursor: pointer; font-size: 0.75rem; font-weight: 600;" onclick="app.loadPosts()" id="refreshFeedBtn">Refresh</button>
+            <button class="btn-icon" onclick="app.showHeaderMenu()" style="font-size: 1rem; padding: 4px 8px;">⋯</button>
+        </div>
+        
+        <!-- HEADER MENU -->
+        <div id="headerMenu" style="display: none; position: fixed; top: 55px; right: 16px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 150px;">
+            <button onclick="app.openAdminModal(); app.closeHeaderMenu();" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f0f0f0;">⚙️ Admin</button>
+            <button onclick="app.showLogout(); app.closeHeaderMenu();" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #ef4444;">🚪 Logout</button>
+        </div>
+    </div>
+
+    <!-- APP CONTENT -->
+    <div class="app-content">
+        <!-- FEED VIEW -->
+        <div class="view active" id="feedView">
+            <div id="quickPostBox" class="quick-post" onclick="app.showCreateModal()" style="cursor: pointer;">
+                <div class="quick-post-avatar" id="quickPostAvatar">U</div>
+                <input type="text" class="quick-post-input" placeholder="Share something..." readonly>
+            </div>
+            <div id="feedContainer"></div>
+        </div>
+
+        <!-- EXPLORE VIEW -->
+        <div class="view" id="exploreView">
+            <!-- STICKY HEADER -->
+            <div style="position: sticky; top: 0; z-index: 30; background: white; border-bottom: 1px solid #e0e0e0; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">🔍 Discover</h3>
+                <button style="background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 600;" onclick="app.loadExplore()">🔄 Refresh</button>
+            </div>
+            
+            <!-- SEARCH BAR -->
+            <div style="padding: 16px; background: white; border-bottom: 1px solid #f0f0f0;">
+                <div style="display: flex; gap: 8px; background: #f5f5f5; border-radius: 24px; padding: 10px 16px; align-items: center;">
+                    <span style="font-size: 20px;">🔍</span>
+                    <input type="text" id="exploreSearchInput" placeholder="Search for a user..." style="background: none; border: none; flex: 1; font-size: 15px; outline: none;" onkeyup="app.searchExploreUsers(this.value)">
+                </div>
+            </div>
+            
+            <!-- SIGNUP HEATMAP (MAP ONLY) -->
+            <div style="padding: 0 16px;">
+                <h4 style="margin: 16px 0 12px 0; font-size: 14px; font-weight: 700; color: #333;">📍 Global Signups</h4>
+            </div>
+            <div id="signupMapContainer" style="margin: 0 16px 16px 16px; height: 350px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: white;">
+                <div id="leafletMap" style="width: 100%; height: 100%;"></div>
+            </div>
+            
+            <!-- TRENDING ONLY (NO USER LIST) -->
+            <div id="trendingSection"></div>
+            
+            <!-- SEARCH RESULTS (Hidden by default, shown when searching) -->
+            <div id="exploreSearchResults" style="display: none; padding: 16px; border-top: 1px solid #f0f0f0;">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700;">Search Results</h4>
+                <div id="exploreSearchResultsList"></div>
+            </div>
+        </div>
+
+        <!-- PROFILE VIEW -->
+        <div class="view" id="profileView">
+            <div id="profileContent"></div>
+        </div>
+
+        <!-- MESSAGES VIEW -->
+        <div class="view" id="messagesView">
+            <!-- STICKY HEADER - STAYS ON TOP -->
+            <div class="messages-header">
+                <h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 700;">Messages</h2>
+                
+                <!-- SEARCH -->
+                <div style="display: flex; background: #f0f0f0; border-radius: 24px; padding: 8px 12px; margin-bottom: 12px;">
+                    <span style="font-size: 18px; margin-right: 8px;">🔍</span>
+                    <input type="text" placeholder="Search conversations..." id="messagesSearchInput" onkeyup="app.searchMessages(this.value)" style="background: none; border: none; flex: 1; font-size: 14px; outline: none;">
+                </div>
+                
+                <!-- FILTER TABS -->
+                <div id="messagesFilterTabs" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;">
+                    <button class="message-filter-tab active" onclick="app.filterMessages('all')" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #ddd; background: white; cursor: pointer; font-weight: 600; font-size: 13px;">All</button>
+                    <button class="message-filter-tab" onclick="app.filterMessages('unread')" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #ddd; background: white; cursor: pointer; font-weight: 600; font-size: 13px;">Unread</button>
+                    <button class="message-filter-tab" onclick="app.filterMessages('favorites')" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #ddd; background: white; cursor: pointer; font-weight: 600; font-size: 13px;">Favorites</button>
+                    <button class="message-filter-tab" onclick="app.filterMessages('groups')" style="padding: 8px 16px; border-radius: 20px; border: 1px solid #ddd; background: white; cursor: pointer; font-weight: 600; font-size: 13px;">Groups</button>
+                </div>
+            </div>
+            
+            <!-- CONVERSATION LIST - Scrollable -->
+            <div class="messages-container" id="messageList"></div>
+        </div>
+
+        <!-- CHAT VIEW (NEW - Not Modal) -->
+        <div class="view" id="chatView" style="display: flex; flex-direction: column; background: white;">
+            <!-- Chat Header -->
+            <div id="chatHeader" style="background: white; border-bottom: 1px solid #e0e0e0; padding: 12px 16px; display: flex; align-items: center; gap: 12px;">
+                <button onclick="app.closeChatView()" style="background: none; border: none; font-size: 24px; cursor: pointer;">←</button>
+                <div id="chatHeaderAvatar" style="width: 40px; height: 40px; border-radius: 50%; background: #2E5BFF; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;"></div>
+                <div style="flex: 1;">
+                    <div id="chatHeaderName" style="font-weight: 600; font-size: 16px;"></div>
+                    <div id="chatHeaderStatus" style="font-size: 12px; color: #999;"></div>
+                </div>
+                <button onclick="alert('Call')" style="background: none; border: none; font-size: 20px; cursor: pointer;">📹</button>
+                <button onclick="alert('Call')" style="background: none; border: none; font-size: 20px; cursor: pointer;">☎️</button>
+                <button onclick="app.showChatMenu()" style="background: none; border: none; font-size: 20px; cursor: pointer;">⋯</button>
+            </div>
+            
+            <!-- Messages Container -->
+            <div id="chatMessages" style="flex: 1; overflow-y: auto; padding: 16px; background: #f5f5f5; display: flex; flex-direction: column; gap: 8px;"></div>
+            
+            <!-- Message Input -->
+            <div id="chatInput" style="background: white; border-top: 1px solid #e0e0e0; padding: 12px 16px; display: flex; gap: 8px; align-items: flex-end;">
+                <button onclick="alert('Attach')" style="background: none; border: none; font-size: 20px; cursor: pointer;">📎</button>
+                <input type="text" id="chatMessageInput" placeholder="Type a message..." style="flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 20px; font-size: 14px; outline: none;">
+                <button onclick="app.sendChatMessage()" style="background: none; border: none; font-size: 20px; cursor: pointer;">📤</button>
+            </div>
+        </div>
+
+        <!-- GROUPS VIEW -->
+        <div class="view" id="groupsView"></div>
+        <div class="view" id="groupDetailView" style="display: none;"></div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <div class="bottom-nav">
+        <div class="nav-wrapper" style="display: flex; justify-content: space-around; align-items: center;">
+            <div class="nav-item active" onclick="app.switchView('feed')">
+                <div class="nav-icon">🏠</div>
+                <div>Home</div>
+            </div>
+            <div class="nav-item" onclick="app.switchView('explore')">
+                <div class="nav-icon">🔍</div>
+                <div>Explore</div>
+            </div>
+            <div class="nav-item" onclick="app.switchView('messages')" style="position: relative;">
+                <div class="nav-icon">💬</div>
+                <div>Messages</div>
+                <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
+            </div>
+            
+            <!-- FAB BUTTON (CENTERED) -->
+            <button class="fab-button" onclick="app.showCreateModal()">✚</button>
+            
+            <div class="nav-item" onclick="app.switchView('groups')">
+                <div class="nav-icon">👥</div>
+                <div>Groups</div>
+            </div>
+            <div class="nav-item" onclick="app.switchView('profile')">
+                <div class="nav-icon">👤</div>
+                <div>Profile</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CHAT MODAL -->
+<div class="chat-modal-overlay" id="chatModalOverlay">
+    <div class="chat-modal-box">
+        <div class="chat-modal-header">
+            <button class="chat-modal-back" onclick="app.closeChatModal()">←</button>
+            <div class="chat-modal-avatar" id="chatModalAvatar">U</div>
+            <div class="chat-modal-header-text">
+                <h3 id="chatModalUserName" style="margin: 0;">Chat</h3>
+                <p id="chatModalStatus" style="margin: 4px 0 0 0;">Active now</p>
+            </div>
+        </div>
+        <div class="chat-modal-messages" id="chatModalMessages"></div>
+        <div id="typingIndicator" style="display: none; padding: 8px 16px; background: #f9fafb; border-top: 1px solid #eee; font-size: 14px; color: #6b7280; font-style: italic;"></div>
+        <div class="chat-modal-input">
+            <input type="file" id="chatImageInput" style="display: none;" accept="image/*" multiple onchange="app.handleChatImageUpload(event)">
+            <button class="chat-modal-icon-btn" onclick="document.getElementById('chatImageInput').click()" title="Send image">📷</button>
+            <input type="text" id="chatModalInput" placeholder="Message..." oninput="app.onChatInputChange(event, window.currentChatUid)">
+            <button class="chat-modal-send" onclick="app.sendChatMessage()">→</button>
+        </div>
+    </div>
+</div>
+
+<!-- CREATE POST MODAL -->
+<div class="modal-overlay" id="createModal">
+    <div class="create-modal">
+        <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
+        <h2>Create Post</h2>
+        <div id="photoPreview"></div>
+        <input type="file" id="photoInput" style="display: none;" accept="image/*">
+        <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
+        <textarea id="captionInput" placeholder="Write a caption..."></textarea>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;" id="hashtagButtons"></div>
+        <button type="button" class="btn-submit" id="sharePostBtn" onclick="app.createPost()">
+            <span class="share-btn-text">Share Post</span>
+            <span class="share-spinner" style="display: none; margin-left: 8px;">⏳</span>
+        </button>
+    </div>
+</div>
+
+<!-- WITHDRAW MODAL -->
+<div class="modal-overlay" id="withdrawModal">
+    <div class="modal">
+        <div class="modal-close"><button onclick="app.closeWithdrawModal()">✕</button></div>
+        <h2 style="font-weight: 700; margin-bottom: 16px;">Withdraw</h2>
+        <div class="form-group">
+            <label class="form-label">Amount (KSh)</label>
+            <input type="number" class="form-input" id="withdrawAmount" placeholder="Minimum 20" min="20" step="0.1">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Method</label>
+            <select class="form-input" id="paymentMethod">
+                <option>M-Pesa</option>
+                <option>Airtel Money</option>
+                <option>Bank</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Account/Phone</label>
+            <input type="text" class="form-input" id="accountNumber" placeholder="0712345678">
+        </div>
+        <button type="button" class="btn-submit" onclick="app.processWithdrawal()">Withdraw</button>
+    </div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div class="modal-overlay" id="adminModal">
+    <div class="modal" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+        <div class="modal-close"><button onclick="app.closeAdminModal()">✕</button></div>
+        <h2>Admin Panel</h2>
+        
+        <div style="margin-bottom: 20px;">
+            <label class="form-label">Admin Password</label>
+            <input type="password" id="adminPassword" class="form-input" placeholder="Enter password">
+            <button type="button" class="btn-submit" onclick="app.verifyAdminPassword()" style="margin-top: 8px;">Verify</button>
+        </div>
+
+        <div id="adminContent" style="display: none;">
+            <div style="margin-bottom: 20px;">
+                <h3>User Management</h3>
+                <div id="usersList"></div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <h3>System Status</h3>
+                <div id="systemStatus"></div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <h3>Database Stats</h3>
+                <div id="dbStats"></div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <h3>Actions</h3>
+                <button class="btn-submit" onclick="app.clearAllData()" style="background: #ef4444; margin-right: 8px;">Clear Data (BE CAREFUL)</button>
+                <button class="btn-submit" onclick="app.exportData()">Export Data</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="forgotPasswordModal">
+    <div class="modal">
+        <div class="modal-close"><button onclick="app.closeForgotPasswordModal()">✕</button></div>
+        <h2>Reset Password</h2>
+        <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="resetEmail" class="form-input" placeholder="your@email.com">
+        </div>
+        <button type="button" class="btn-submit" onclick="app.sendPasswordReset()">Send Reset Link</button>
+    </div>
+</div>
+
+<!-- SEARCH MODAL -->
+<div class="search-modal-overlay" id="searchModalOverlay">
+    <div class="search-modal-box">
+        <div class="search-modal-header">
+            <input type="text" class="search-box-input" id="searchInput" placeholder="Search users..." oninput="app.handleSearch()">
+            <button class="search-modal-close" onclick="app.closeSearchModal()">✕</button>
+        </div>
+        <div class="search-results-container" id="searchResults"></div>
+    </div>
+</div>
+
+<!-- NOTIFICATION CENTER -->
+<div id="notificationCenter" style="position: fixed; top: 80px; right: 20px; max-width: 400px; z-index: 9999;"></div>
+
+<!-- SCRIPTS -->
+<script src="js/app.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof app !== 'undefined' && app.init) { 
+            app.init(); 
+        }
+    });
+</script>
+
 </body>
 </html>
-
-<style>
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-</style>
