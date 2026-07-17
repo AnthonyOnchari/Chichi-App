@@ -2412,73 +2412,31 @@ var app = {
 
     loadExplore: function() {
         var self = this;
-        var html = '';
+        console.log('🔍 Explore: Loading heatmap and trending');
         
-        // Add guest sign-up banner if not logged in
-        if (!this.user || this.isGuest) {
-            html = `
-                <div style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 24px 16px; margin: 12px 16px; border-radius: 14px; text-align: center; box-shadow: 0 8px 24px rgba(0, 136, 204, 0.25);">
-                    <div style="font-weight: 700; margin-bottom: 10px; font-size: 18px;">✨ Unlock Your Full Experience</div>
-                    <div style="font-size: 14px; margin-bottom: 4px; opacity: 0.95;">Follow amazing creators and stay connected</div>
-                    <button onclick="app.showLoginPage()" style="background: white; color: var(--primary); border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">🚀 Join Now</button>
-                </div>
-            `;
-        } else {
-            console.log('🔍 Explore: Loading all users');
-            console.log('📌 Your hashtags:', this.profile.hashtags);
-            
-            var sorted = [];
-            for (var uid in this.users) {
-                var user = this.users[uid];
-                
-                // Basic validation
-                if (uid && uid !== this.user.uid && user && user.name && user.email) {
-                    sorted.push({ uid: uid, user: user });
-                }
-            }
-           
-            // Sort by followers (most popular first)
-            sorted.sort((a, b) => (b.user.followers || 0) - (a.user.followers || 0));
-
-            sorted.slice(0, 20).forEach(u => {
-                var isFollowing = this.following[u.uid] || false;
-                var unreadCount = this.getUnreadCountForUser(u.uid);
-                var msgButtonBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white;">${unreadCount}</span>` : '';
-                
-                // Show user's actual hashtags
-                var userTags = (u.user.hashtags || []).slice(0, 2);
-                var tagsDisplay = userTags.length > 0 ? userTags.join(' ') : '📝 No interests set';
-               
-                html += `
-                    <div class="search-user" style="margin: 8px 16px;">
-                        <div class="search-user-avatar" style="background-image: url(${u.user.profilePhoto || ''});">${!u.user.profilePhoto ? u.user.name.charAt(0).toUpperCase() : ''}</div>
-                        <div class="search-user-info">
-                            <div class="search-user-name">${u.user.name}</div>
-                            <div class="search-user-followers" style="font-size: 12px; color: #2E5BFF;">🏷️ ${tagsDisplay}</div>
-                            <div class="search-user-followers" style="font-size: 11px; color: #6b7280;">⭐ ${u.user.followers || 0} followers</div>
-                        </div>
-                        <div class="search-user-actions">
-                            <button class="search-msg-btn" onclick="app.openChatFromSearch('${u.uid}', '${u.user.name}')" style="position: relative;">
-                                💬
-                                ${msgButtonBadge}
-                            </button>
-                            <button class="search-view-btn" onclick="app.toggleFollow('${u.uid}', '${u.user.name}')" style="background: ${isFollowing ? '#ff4444' : 'var(--primary)'}; color: white;">${isFollowing ? 'Unfollow' : 'Follow'}</button>
-                        </div>
-                    </div>
-                `;
-            });
-
-            if (html === '') {
-                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No users found. Check back soon! 👥</div>';
-            }
-        }
-       
+        // HIDE user list container
         var container = document.getElementById('exploreUsersList');
         if (container) {
-            container.innerHTML = html;
+            container.innerHTML = '';
+            container.style.display = 'none';
         }
         
-        // [PHASE 2] Set up trending hashtags
+        // Hide search results by default
+        var resultsSection = document.getElementById('exploreSearchResults');
+        if (resultsSection) {
+            resultsSection.style.display = 'none';
+        }
+        
+        // Clear search input
+        var searchInput = document.getElementById('exploreSearchInput');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        
+        // Load map
+        this.loadSignupHeatmap();
+        
+        // Load trending hashtags
         this.renderTrendingInExplore();
         this.setupTrendingRefresh();
         
@@ -6108,3 +6066,63 @@ function consentPopup() {
 
 // Note: Google AdSense should initialize automatically with the script tag
 
+
+// ═════════════════════════════════════════════════════════════════════════════
+// EXPLORE SEARCH - Find users without showing everyone
+// ═════════════════════════════════════════════════════════════════════════════
+
+app.searchExploreUsers = function(query) {
+    var resultsContainer = document.getElementById('exploreSearchResultsList');
+    var resultsSection = document.getElementById('exploreSearchResults');
+    
+    if (!query || query.trim() === '') {
+        resultsSection.style.display = 'none';
+        return;
+    }
+    
+    var searchQuery = query.toLowerCase().trim();
+    var results = [];
+    
+    // Search through all users
+    for (var uid in this.users) {
+        var user = this.users[uid];
+        if (uid !== this.user.uid && user && user.name) {
+            // Match by name or email
+            if (user.name.toLowerCase().includes(searchQuery) || (user.email && user.email.toLowerCase().includes(searchQuery))) {
+                results.push({ uid: uid, user: user });
+            }
+        }
+    }
+    
+    // Sort by followers
+    results.sort((a, b) => (b.user.followers || 0) - (a.user.followers || 0));
+    
+    // Render results
+    var html = '';
+    if (results.length === 0) {
+        html = '<div style="text-align: center; color: #999; padding: 20px;">No users found</div>';
+    } else {
+        results.slice(0, 10).forEach(u => {
+            var isFollowing = this.following[u.uid] || false;
+            var userTags = (u.user.hashtags || []).slice(0, 2);
+            var tagsDisplay = userTags.length > 0 ? userTags.join(' ') : '📝 No interests';
+            
+            html += `
+                <div class="explore-search-user">
+                    <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; flex-shrink: 0;">
+                        ${u.user.profilePhoto ? `<img src="${u.user.profilePhoto}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : u.user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 15px;">${u.user.name}</div>
+                        <div style="font-size: 12px; color: #2E5BFF;">🏷️ ${tagsDisplay}</div>
+                        <div style="font-size: 11px; color: #999;">⭐ ${u.user.followers || 0} followers</div>
+                    </div>
+                    <button onclick="app.openChatFromSearch('${u.uid}', '${u.user.name}')" style="background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">Message</button>
+                </div>
+            `;
+        });
+    }
+    
+    resultsContainer.innerHTML = html;
+    resultsSection.style.display = 'block';
+};
