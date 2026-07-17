@@ -168,7 +168,7 @@ var app = {
         
         // Setup real-time signup heatmap updates
         setTimeout(() => {
-            self.setupSignupMapListener();
+            self.setupHeatmapListener();
         }, 1000);
     },
 
@@ -1536,15 +1536,15 @@ var app = {
         var htmlOptions = '';
         for (var category in hashtagCategories) {
             htmlOptions += `
-                <div style="margin-bottom: 16px;">
-                    <div style="font-weight: 600; margin-bottom: 8px;">${category}</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div style="margin-bottom: 20px;">
+                    <div style="font-weight: 600; margin-bottom: 12px; font-size: 16px;">${category}</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             `;
             hashtagCategories[category].forEach(tag => {
                 htmlOptions += `
-                    <label style="display: flex; align-items: center; padding: 8px; background: #f3f4f6; border-radius: 8px; cursor: pointer;">
-                        <input type="checkbox" class="hashtag-option" value="${tag}" style="margin-right: 8px;">
-                        <span>${tag}</span>
+                    <label style="display: flex; align-items: center; padding: 10px 12px; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.borderColor='var(--primary)'; this.style.background='rgba(46,91,255,0.05)'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='#f9fafb'">
+                        <input type="checkbox" class="hashtag-checkbox" value="${tag}" style="width: 18px; height: 18px; cursor: pointer; margin-right: 10px; accent-color: var(--primary);">
+                        <span style="font-size: 14px;">${tag}</span>
                     </label>
                 `;
             });
@@ -1554,32 +1554,38 @@ var app = {
             `;
         }
         
+        // Create modal using professional system
         var modalHTML = `
-            <div class="modal-overlay" id="hashtagPopupModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 9999;">
-                <div class="modal-box" style="max-width: 500px; width: 90%; background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto;">
-                    <div style="padding: 20px; border-bottom: 1px solid #eee; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white;">
-                        <h3 style="margin: 0; font-size: 18px;">🏷️ Choose Your Interests</h3>
-                        <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">Select topics you care about to see relevant creators and content</p>
+            <div class="modal-overlay" id="hashtagModal">
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <h2>🏷️ Choose Your Interests</h2>
+                        <p>Select topics you care about to see relevant creators and content</p>
                     </div>
                     
-                    <div style="padding: 20px; max-height: calc(80vh - 200px); overflow-y: auto;">
+                    <div class="modal-body">
                         ${htmlOptions}
                     </div>
                     
-                    <div style="display: flex; gap: 12px; justify-content: flex-end; padding: 16px; border-top: 1px solid #eee;">
-                        <button onclick="document.getElementById('hashtagPopupModal').remove()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: white;">Skip</button>
-                        <button onclick="app.saveSelectedHashtags()" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Save Interests</button>
+                    <div class="modal-footer">
+                        <button class="modal-footer btn-cancel" onclick="document.getElementById('hashtagModal').remove(); return false;">Skip for Now</button>
+                        <button class="modal-footer btn-primary" onclick="app.saveSelectedHashtags(); return false;">Save My Interests</button>
                     </div>
                 </div>
             </div>
         `;
         
+        // Remove any existing hashtag modal
+        var existing = document.getElementById('hashtagModal');
+        if (existing) existing.remove();
+        
         document.body.insertAdjacentHTML('beforeend', modalHTML);
     },
 
     saveSelectedHashtags: function() {
-        var checkboxes = document.querySelectorAll('.hashtag-option:checked');
+        var checkboxes = document.querySelectorAll('.hashtag-checkbox:checked');
         var selected = [];
+        
         checkboxes.forEach(cb => {
             selected.push(cb.value);
         });
@@ -1592,15 +1598,30 @@ var app = {
         console.log('💾 Saving hashtags:', selected);
         
         var self = this;
-        db.ref('users/' + this.user.uid + '/hashtags').set(selected).then(() => {
-            console.log('✅ Hashtags saved');
+        
+        // Save to Firebase using update() to merge with existing data
+        var updateData = {};
+        updateData['hashtags'] = selected;
+        
+        db.ref('users/' + this.user.uid).update(updateData).then(() => {
+            console.log('✅ Hashtags saved successfully:', selected);
+            
+            // UPDATE LOCAL PROFILE IMMEDIATELY
             self.profile.hashtags = selected;
+            if (!self.userHashtags) self.userHashtags = {};
+            self.userHashtags[self.user.uid] = selected;
+            
             self.toast('✅ Interests saved!', 'success');
             
-            var modal = document.getElementById('hashtagPopupModal');
+            // Remove modal
+            var modal = document.getElementById('hashtagModal');
             if (modal) modal.remove();
             
-            self.loadExplore();
+            // Refresh explore to show matches
+            setTimeout(() => {
+                self.loadExplore();
+            }, 500);
+            
         }).catch(err => {
             console.error('❌ Error saving hashtags:', err);
             self.toast('Error saving interests', 'error');
@@ -5886,52 +5907,45 @@ app.updateUserHashtags = function(hashtags) {
 // SIGNUP HEATMAP - World Map with Blinking Lights
 // ═════════════════════════════════════════════════════════════════════════
 
-// SIGNUP HEATMAP - Static World Map with Blinking Dots (Modern Design)
-// ═════════════════════════════════════════════════════════════════════════
-
 app.loadSignupHeatmap = function() {
     console.log('🗺️ Loading signup heatmap...');
     
     var mapContainer = document.getElementById('signupMapContainer');
     if (!mapContainer) return;
     
-    // Build heatmap HTML with dark background + blinking dots
+    // Build professional heatmap HTML
     var html = `
-        <div style="position: relative; width: 100%; height: 100%; background: linear-gradient(135deg, #1a1f3a 0%, #0f1d2e 100%); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
-            <!-- Simple World Map Background -->
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.2; font-size: 9px; color: #00D4FF; padding: 12px; line-height: 1.2;">
-                🌍 New York 🌎 London ✈️ Tokyo 🏙️ Sydney 🌏
-            </div>
+        <div style="position: relative; width: 100%; height: 100%; background: linear-gradient(135deg, #0f1419 0%, #1a202c 100%); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
             
-            <!-- Blinking Dots Overlay -->
-            <div id="heatmapDots" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+            <!-- World Map Background SVG -->
+            <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 65%; opacity: 0.15;" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
+                <rect width="1000" height="500" fill="none"/>
+                <g stroke="#00D4FF" stroke-width="0.5" fill="none">
+                    <circle cx="80" cy="150" r="40"/>   <!-- Americas -->
+                    <circle cx="350" cy="120" r="35"/>  <!-- Europe/Africa -->
+                    <circle cx="650" cy="100" r="50"/>  <!-- Middle East/Asia -->
+                    <circle cx="850" cy="150" r="40"/>  <!-- East Asia -->
+                    <circle cx="900" cy="380" r="30"/>  <!-- Australia -->
+                </g>
+            </svg>
             
-            <!-- Real-time Signups List (Bottom) -->
-            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.7)); color: white; padding: 16px; max-height: 45%; overflow-y: auto;">
-                <div id="heatmapSignups" style="display: flex; flex-direction: column; gap: 10px; font-size: 12px;"></div>
+            <!-- Blinking Dots Layer -->
+            <div id="heatmapDots" style="position: absolute; top: 0; left: 0; width: 100%; height: 65%;"></div>
+            
+            <!-- Signup Stats at Bottom -->
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.3)); padding: 16px; max-height: 35%; display: flex; flex-direction: column;">
+                <div style="color: #00D4FF; font-size: 12px; font-weight: 600; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">📍 Recent Signups</div>
+                <div id="heatmapSignups" style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;"></div>
             </div>
         </div>
     `;
     
     mapContainer.innerHTML = html;
     
-    // Add CSS animation for blinking
-    if (!document.getElementById('heatmapStyle')) {
-        var style = document.createElement('style');
-        style.id = 'heatmapStyle';
-        style.innerHTML = `
-            @keyframes heatmapBlink {
-                0%, 100% { opacity: 1; box-shadow: 0 0 8px #00D4FF, 0 0 16px rgba(0, 212, 255, 0.5); }
-                50% { opacity: 0.4; box-shadow: 0 0 4px #00D4FF; }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    // Render heatmap dots
+    // Render heatmap dots and signups
     app.renderHeatmapDots();
     
-    // Setup real-time listener
+    // Setup real-time listener if not already done
     if (!app.heatmapListenerSetup) {
         app.setupHeatmapListener();
         app.heatmapListenerSetup = true;
@@ -5939,29 +5953,31 @@ app.loadSignupHeatmap = function() {
 };
 
 app.getLocationCoordinates = function(location) {
-    // Major cities with approximate percentages
+    // Professional city locations mapped to percentages
     var locations = {
-        'New York': { x: 15, y: 30 },
-        'London': { x: 42, y: 22 },
-        'Tokyo': { x: 85, y: 25 },
-        'Sydney': { x: 88, y: 70 },
-        'Dubai': { x: 58, y: 40 },
-        'Singapore': { x: 72, y: 50 },
-        'Nairobi': { x: 55, y: 55 },
-        'Lagos': { x: 48, y: 60 },
-        'São Paulo': { x: 28, y: 65 },
-        'Toronto': { x: 20, y: 18 },
-        'Paris': { x: 42, y: 20 },
-        'Berlin': { x: 45, y: 18 },
+        'New York': { x: 12, y: 25 },
+        'London': { x: 42, y: 18 },
+        'Paris': { x: 43, y: 17 },
+        'Berlin': { x: 48, y: 16 },
         'Moscow': { x: 58, y: 12 },
-        'Bangkok': { x: 70, y: 42 },
-        'Mumbai': { x: 62, y: 32 },
-        'Los Angeles': { x: 12, y: 35 },
-        'Mexico City': { x: 18, y: 45 },
-        'Istanbul': { x: 50, y: 28 }
+        'Istanbul': { x: 52, y: 28 },
+        'Dubai': { x: 62, y: 35 },
+        'Mumbai': { x: 68, y: 38 },
+        'Bangkok': { x: 75, y: 42 },
+        'Singapore': { x: 78, y: 48 },
+        'Hong Kong': { x: 82, y: 38 },
+        'Tokyo': { x: 88, y: 28 },
+        'Sydney': { x: 85, y: 72 },
+        'Nairobi': { x: 58, y: 55 },
+        'Lagos': { x: 48, y: 58 },
+        'Cairo': { x: 55, y: 42 },
+        'São Paulo': { x: 28, y: 62 },
+        'Mexico City': { x: 18, y: 48 },
+        'Los Angeles': { x: 8, y: 32 },
+        'Toronto': { x: 18, y: 20 }
     };
     
-    return locations[location] || { x: 50 + (Math.random() - 0.5) * 40, y: 50 + (Math.random() - 0.5) * 40 };
+    return locations[location] || { x: 50 + (Math.random() - 0.5) * 60, y: 50 + (Math.random() - 0.5) * 40 };
 };
 
 app.renderHeatmapDots = function() {
@@ -5982,7 +5998,7 @@ app.renderHeatmapDots = function() {
             if (user && user.location && user.location !== 'Unknown') {
                 var location = user.location;
                 locationCounts[location] = (locationCounts[location] || 0) + 1;
-                locationTimes[location] = user.createdAt || Date.now();
+                locationTimes[location] = Math.max(locationTimes[location] || 0, user.createdAt || Date.now());
             }
         }
     }
@@ -5998,49 +6014,55 @@ app.renderHeatmapDots = function() {
         var coords = app.getLocationCoordinates(location);
         
         var dot = document.createElement('div');
+        dot.className = 'heatmap-dot';
         dot.style.cssText = `
             position: absolute;
             left: ${coords.x}%;
             top: ${coords.y}%;
             transform: translate(-50%, -50%);
-            width: 12px;
-            height: 12px;
+            width: 14px;
+            height: 14px;
             background: #00D4FF;
             border-radius: 50%;
-            box-shadow: 0 0 8px #00D4FF, 0 0 16px rgba(0, 212, 255, 0.5);
-            animation: heatmapBlink 1.5s infinite;
+            box-shadow: 0 0 12px #00D4FF, 0 0 24px rgba(0, 212, 255, 0.6);
+            animation: heatmapBlink 2s infinite;
             z-index: 10;
             cursor: pointer;
-            animation-delay: ${dotIndex * 0.1}s;
+            animation-delay: ${dotIndex * 0.15}s;
         `;
         
-        dot.onclick = () => app.toast(location + ': ' + locationCounts[location] + ' active signup' + (locationCounts[location] !== 1 ? 's' : ''), 'info');
+        dot.onclick = (e) => {
+            e.stopPropagation();
+            app.toast(`🌍 ${location}: ${locationCounts[location]} signup${locationCounts[location] !== 1 ? 's' : ''}`, 'info');
+        };
+        
         dotsContainer.appendChild(dot);
         dotIndex++;
     }
     
-    // Render signup list
+    // Render signup list at bottom
     var html = '';
     var sortedLocations = Object.keys(locationCounts).sort((a, b) => locationCounts[b] - locationCounts[a]);
     
-    sortedLocations.slice(0, 6).forEach((location, idx) => {
+    sortedLocations.slice(0, 5).forEach((location, idx) => {
         var count = locationCounts[location];
         var timeAgo = app.getTimeAgo(locationTimes[location]);
+        var pulse = idx === 0 ? 'style="animation: pulse 1.5s infinite;"' : '';
         
         html += `
-            <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0, 212, 255, 0.08); border-radius: 8px; border-left: 3px solid #00D4FF; transition: 0.2s;" onmouseover="this.style.background='rgba(0, 212, 255, 0.15)'" onmouseout="this.style.background='rgba(0, 212, 255, 0.08)'">
-                <div style="width: 8px; height: 8px; background: #00D4FF; border-radius: 50%; animation: heatmapBlink 1.5s infinite;"></div>
-                <div style="flex: 1;">
-                    <div style="font-weight: 600; font-size: 13px;">${location}</div>
-                    <div style="font-size: 11px; color: #00D4FF; opacity: 0.9;">Active Signup: ${timeAgo}</div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(0, 212, 255, 0.08); border-left: 3px solid #00D4FF; border-radius: 6px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='rgba(0, 212, 255, 0.15)'" onmouseout="this.style.background='rgba(0, 212, 255, 0.08)'" onclick="app.toast('${location}: ${count} active signup${count !== 1 ? 's' : ''}', 'info')">
+                <div style="width: 8px; height: 8px; background: #00D4FF; border-radius: 50%; flex-shrink: 0; ${pulse}"></div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="color: white; font-weight: 600; font-size: 13px;">${location}</div>
+                    <div style="color: #00D4FF; font-size: 11px; opacity: 0.85;">Active Signup: ${timeAgo}</div>
                 </div>
-                <div style="background: #00D4FF; color: #1a1f3a; padding: 3px 9px; border-radius: 12px; font-weight: 700; font-size: 12px;">${count}</div>
+                <div style="background: #00D4FF; color: #0f1419; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 12px; flex-shrink: 0;">${count}</div>
             </div>
         `;
     });
     
     if (html === '') {
-        html = '<div style="text-align: center; color: #00D4FF; padding: 20px; font-size: 12px;">⏳ Waiting for first signup...</div>';
+        html = '<div style="text-align: center; color: #00D4FF; padding: 20px 16px; font-size: 12px; opacity: 0.7;">⏳ Waiting for signups...</div>';
     }
     
     signupsContainer.innerHTML = html;
@@ -6050,9 +6072,11 @@ app.renderHeatmapDots = function() {
 app.getTimeAgo = function(timestamp) {
     if (!timestamp) return 'Just now';
     
-    var createdDate = new Date(timestamp);
+    var createdDate = typeof timestamp === 'string' ? new Date(timestamp) : new Date(timestamp);
     var now = new Date();
     var diff = now - createdDate;
+    
+    if (diff < 0) return 'Just now';
     
     var seconds = Math.floor(diff / 1000);
     var minutes = Math.floor(seconds / 60);
@@ -6063,7 +6087,7 @@ app.getTimeAgo = function(timestamp) {
     if (minutes < 60) return minutes + 'm ago';
     if (hours < 24) return hours + 'h ago';
     if (days < 7) return days + 'd ago';
-    return createdDate.toLocaleDateString();
+    return 'Long time ago';
 };
 
 app.setupHeatmapListener = function() {
@@ -6077,8 +6101,10 @@ app.setupHeatmapListener = function() {
             app.users[child.key] = child.val();
         });
         
-        // Re-render heatmap
+        // Re-render heatmap when users update
         app.renderHeatmapDots();
+    }, err => {
+        console.error('Error listening to users:', err);
     });
 };
 
