@@ -133,12 +133,13 @@ window.app = window.app || {
 <div class="main-app" id="mainApp">
     <!-- HEADER -->
     <div class="app-header">
-        <!-- STORIES ON LEFT (TELEGRAM STYLE) -->
-        <div id="storiesList" style="display: flex; gap: 10px; overflow-x: auto; flex: 1; align-items: center; padding: 0 16px;"></div>
-        
-        <!-- CHICHI TITLE ON RIGHT -->
-        <div class="app-logo-container" style="margin-left: auto; margin-right: 16px;">
-            <h1 style="margin: 0;">CHICHI</h1>
+        <!-- STORIES OVERLAPPED (TELEGRAM STYLE) + CHICHI TITLE BESIDE -->
+        <div style="display: flex; align-items: center; flex: 1; gap: 8px;">
+            <!-- Overlapped Stories Container -->
+            <div id="storiesList" style="display: flex; align-items: center; position: relative; width: 80px; height: 60px;"></div>
+            
+            <!-- CHICHI Title (RIGHT BESIDE STORIES) -->
+            <h1 style="margin: 0; font-size: 1.3rem; font-weight: 800; letter-spacing: 2px; white-space: nowrap;">CHICHI</h1>
         </div>
         
         <div class="header-actions">
@@ -208,7 +209,7 @@ window.app = window.app || {
 
     <!-- BOTTOM NAVIGATION -->
     <div class="bottom-nav">
-        <div class="nav-wrapper">
+        <div class="nav-wrapper" style="display: flex; justify-content: space-around; align-items: center;">
             <div class="nav-item active" onclick="app.switchView('feed')">
                 <div class="nav-icon">🏠</div>
                 <div>Home</div>
@@ -222,6 +223,10 @@ window.app = window.app || {
                 <div>Messages</div>
                 <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
             </div>
+            
+            <!-- FAB BUTTON (CENTERED) -->
+            <button class="fab-button" onclick="app.showCreateModal()">✚</button>
+            
             <div class="nav-item" onclick="app.switchView('groups')">
                 <div class="nav-icon">👥</div>
                 <div>Groups</div>
@@ -230,7 +235,6 @@ window.app = window.app || {
                 <div class="nav-icon">👤</div>
                 <div>Profile</div>
             </div>
-            <button class="fab-button" onclick="app.showCreateModal()">✚</button>
         </div>
     </div>
 </div>
