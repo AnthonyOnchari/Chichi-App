@@ -3164,7 +3164,7 @@ uploadStory: function() {
         });
     },
 
-    // ============================================
+// ============================================
 // ABOUT US - Anthony Onchari (Personal & Human)
 // ============================================
 
@@ -3185,16 +3185,16 @@ showAbout: function() {
                 
                 <!-- Name & Version -->
                 <h2 style="margin-bottom: 2px; font-weight: 800; font-size: 22px; color: #1a202c;">Anthony Onchari</h2>
-                <p style="color: #0088cc; font-size: 13px; font-weight: 600; margin-bottom: 4px;">👨‍💻 Simple Developer</p>
+                <p style="color: #0088cc; font-size: 13px; font-weight: 600; margin-bottom: 4px;">👨‍💻 Developer & Digital Media Specialist</p>
                 <p style="color: #6b7280; font-size: 11px; background: #f0f0f0; display: inline-block; padding: 2px 12px; border-radius: 12px; margin-bottom: 16px;">
                     📱 Version V01A.01
                 </p>
                 
-                <!-- Bio - Human & Personal -->
+                <!-- Bio -->
                 <div style="background: #f7fafc; padding: 16px 18px; border-radius: 16px; text-align: left; border: 1px solid #e2e8f0; margin-bottom: 16px;">
                     <p style="font-size: 14px; line-height: 1.8; color: #2d3748; margin: 0;">
                         Hey there! 👋 I'm <strong style="color: #0088cc;">Anthony</strong>, 
-                        a Developer and Digital Media Specialist who loves building things that bring people and Community together. 
+                        a Developer and Digital Media Specialist who loves building things that bring people and community together. 
                         I created <strong style="color: #0088cc;">CHICHI</strong> because I believe 
                         social media should feel like home — warm, real, and human.
                     </p>
@@ -3204,31 +3204,31 @@ showAbout: function() {
                     </p>
                 </div>
                 
-                <!-- Quick Facts -->
+                <!-- Skills / What I Do -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;">
                     <div style="background: #ebf8ff; padding: 10px 6px; border-radius: 12px;">
-                        <div style="font-size: 20px;">❤️</div>
-                        <div style="font-size: 11px; color: #2b6cb0; font-weight: 600;">Built with Love</div>
+                        <div style="font-size: 20px;">💻</div>
+                        <div style="font-size: 11px; color: #2b6cb0; font-weight: 600;">Web Developer</div>
                     </div>
                     <div style="background: #f0fff4; padding: 10px 6px; border-radius: 12px;">
-                        <div style="font-size: 20px;">🌍</div>
-                        <div style="font-size: 11px; color: #276749; font-weight: 600;">Global Community</div>
+                        <div style="font-size: 20px;">📱</div>
+                        <div style="font-size: 11px; color: #276749; font-weight: 600;">Digital Media</div>
                     </div>
                     <div style="background: #faf5ff; padding: 10px 6px; border-radius: 12px;">
-                        <div style="font-size: 20px;">✨</div>
-                        <div style="font-size: 11px; color: #6b46c1; font-weight: 600;">Always Evolving</div>
+                        <div style="font-size: 20px;">🤝</div>
+                        <div style="font-size: 11px; color: #6b46c1; font-weight: 600;">Community Builder</div>
                     </div>
                 </div>
                 
-                <!-- Social Links -->
+                <!-- Social Links - Updated -->
                 <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button onclick="window.open('https://github.com/antonychari', '_blank')" style="padding: 10px 18px; background: #24292e; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                        🐙 GitHub
+                    <button onclick="window.open('https://wa.me/254701807001', '_blank')" style="padding: 10px 18px; background: #25D366; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        💬 WhatsApp
                     </button>
-                    <button onclick="window.open('https://twitter.com/antonychari', '_blank')" style="padding: 10px 18px; background: #1DA1F2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                        🐦 Twitter
+                    <button onclick="window.open('https://www.facebook.com/profile.php?id=100088002065441', '_blank')" style="padding: 10px 18px; background: #1877F2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        📘 Facebook
                     </button>
-                    <button onclick="window.open('https://linkedin.com/in/antonychari', '_blank')" style="padding: 10px 18px; background: #0A66C2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    <button onclick="window.open('https://www.linkedin.com/in/anthony-onchari-a3b87b270/', '_blank')" style="padding: 10px 18px; background: #0A66C2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                         💼 LinkedIn
                     </button>
                 </div>
@@ -3248,7 +3248,6 @@ showAbout: function() {
         }
     });
 },
-
     // ============================================
     // MUSIC SYSTEM
     // ============================================
