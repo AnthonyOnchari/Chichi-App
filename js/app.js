@@ -3346,125 +3346,154 @@ var app = {
     },
 
     // ============================================
-    // MANDATORY HASHTAG SELECTION
-    // ============================================
+// MANDATORY HASHTAG SELECTION - FIXED
+// ============================================
 
-    showMandatoryHashtagSelection: function() {
-        var self = this;
-        var hashtagCategories = {
-            '🎬 Entertainment': ['Movies', 'Music', 'Comedy', 'Gaming', 'Animation'],
-            '🎨 Creative': ['Photography', 'Art', 'Design', 'Fashion', 'Illustration'],
-            '⚽ Sports': ['Football', 'Basketball', 'Tennis', 'Fitness', 'Yoga'],
-            '🍔 Lifestyle': ['Food', 'Travel', 'Health', 'Beauty', 'DIY'],
-            '💻 Tech': ['Programming', 'AI', 'Web Dev', 'Apps', 'Gadgets'],
-            '📚 Education': ['Learning', 'Science', 'History', 'Language', 'Books'],
-            '💰 Business': ['Entrepreneurship', 'Marketing', 'Investing', 'Startups', 'Finance'],
-            '🌍 Social': ['Environment', 'Charity', 'Community', 'Activism', 'Culture']
-        };
-        
-        var htmlOptions = '';
-        for (var category in hashtagCategories) {
+showMandatoryHashtagSelection: function() {
+    var self = this;
+    var hashtagCategories = {
+        '🎬 Entertainment': ['Movies', 'Music', 'Comedy', 'Gaming', 'Animation'],
+        '🎨 Creative': ['Photography', 'Art', 'Design', 'Fashion', 'Illustration'],
+        '⚽ Sports': ['Football', 'Basketball', 'Tennis', 'Fitness', 'Yoga'],
+        '🍔 Lifestyle': ['Food', 'Travel', 'Health', 'Beauty', 'DIY'],
+        '💻 Tech': ['Programming', 'AI', 'Web Dev', 'Apps', 'Gadgets'],
+        '📚 Education': ['Learning', 'Science', 'History', 'Language', 'Books'],
+        '💰 Business': ['Entrepreneurship', 'Marketing', 'Investing', 'Startups', 'Finance'],
+        '🌍 Social': ['Environment', 'Charity', 'Community', 'Activism', 'Culture']
+    };
+    
+    var htmlOptions = '';
+    for (var category in hashtagCategories) {
+        htmlOptions += `
+            <div style="margin-bottom: 12px;">
+                <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: #1a202c;">${category}</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+        `;
+        hashtagCategories[category].forEach(function(tag) {
             htmlOptions += `
-                <div style="margin-bottom: 20px;">
-                    <div style="font-weight: 600; margin-bottom: 12px; font-size: 16px; color: #1a202c;">${category}</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <label style="display: inline-flex; align-items: center; padding: 4px 10px; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 20px; cursor: pointer; transition: 0.2s; font-size: 12px;" 
+                       onmouseover="this.style.borderColor='#0088cc'; this.style.background='rgba(0,136,204,0.05)'" 
+                       onmouseout="if(!this.querySelector('input').checked){this.style.borderColor='#e5e7eb'; this.style.background='#f9fafb'}">
+                    <input type="checkbox" class="hashtag-checkbox" value="${tag}" style="width: 14px; height: 14px; cursor: pointer; margin-right: 5px; accent-color: #0088cc;" 
+                           onchange="this.parentElement.style.borderColor=this.checked ? '#0088cc' : '#e5e7eb'; this.parentElement.style.background=this.checked ? 'rgba(0,136,204,0.1)' : '#f9fafb'">
+                    <span style="font-size: 11px; color: #1a202c;">${tag}</span>
+                </label>
             `;
-            hashtagCategories[category].forEach(function(tag) {
-                htmlOptions += `
-                    <label style="display: flex; align-items: center; padding: 10px 12px; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: 0.2s;" 
-                           onmouseover="this.style.borderColor='#0088cc'; this.style.background='rgba(0,136,204,0.05)'" 
-                           onmouseout="if(!this.querySelector('input').checked){this.style.borderColor='#e5e7eb'; this.style.background='#f9fafb'}">
-                        <input type="checkbox" class="hashtag-checkbox" value="${tag}" style="width: 18px; height: 18px; cursor: pointer; margin-right: 10px; accent-color: #0088cc;" 
-                               onchange="this.parentElement.style.borderColor=this.checked ? '#0088cc' : '#e5e7eb'; this.parentElement.style.background=this.checked ? 'rgba(0,136,204,0.1)' : '#f9fafb'">
-                        <span style="font-size: 14px; color: #1a202c;">${tag}</span>
-                    </label>
-                `;
-            });
-            htmlOptions += `
-                    </div>
-                </div>
-            `;
-        }
-        
-        var modalHTML = `
-            <div class="modal-overlay" id="mandatoryHashtagModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 10001; backdrop-filter: blur(4px);">
-                <div style="background: white; border-radius: 24px; max-width: 500px; width: 92%; max-height: 85vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: smoothFadeIn 0.3s ease;">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <div style="font-size: 40px; margin-bottom: 8px;">🏷️</div>
-                        <h2 style="margin-bottom: 4px; font-weight: 700; color: #1a202c;">Choose Your Interests</h2>
-                        <p style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">Select at least 3 topics you care about</p>
-                        <p style="color: #ef4444; font-size: 12px; font-weight: 600;" id="hashtagError"></p>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        ${htmlOptions}
-                    </div>
-                    
-                    <div style="display: flex; gap: 12px; border-top: 1px solid #e5e7eb; padding-top: 16px;">
-                        <button onclick="app.saveMandatoryHashtags()" style="flex: 1; padding: 14px; background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                            ✅ Save & Continue
-                        </button>
-                    </div>
+        });
+        htmlOptions += `
                 </div>
             </div>
         `;
-        
-        var existing = document.getElementById('mandatoryHashtagModal');
-        if (existing) existing.remove();
-        
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-    },
+    }
+    
+    var modalHTML = `
+        <div class="modal-overlay" id="mandatoryHashtagModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 10001; backdrop-filter: blur(4px);">
+            <div style="background: white; border-radius: 24px; max-width: 480px; width: 92%; max-height: 80vh; overflow-y: auto; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: smoothFadeIn 0.3s ease;">
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <div style="font-size: 36px; margin-bottom: 4px;">🏷️</div>
+                    <h2 style="margin-bottom: 2px; font-weight: 700; color: #1a202c; font-size: 20px;">Choose Your Interests</h2>
+                    <p style="color: #6b7280; font-size: 13px; margin-bottom: 4px;">Select at least <strong style="color: #0088cc;">3</strong> topics you care about</p>
+                    <p style="color: #ef4444; font-size: 11px; font-weight: 600; min-height: 18px;" id="hashtagError"></p>
+                </div>
+                
+                <div style="margin-bottom: 16px; max-height: 50vh; overflow-y: auto; padding-right: 4px;">
+                    ${htmlOptions}
+                </div>
+                
+                <div style="display: flex; gap: 10px; border-top: 1px solid #e5e7eb; padding-top: 14px;">
+                    <button onclick="app.saveMandatoryHashtags()" id="saveHashtagBtn" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                        ✅ Save & Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    var existing = document.getElementById('mandatoryHashtagModal');
+    if (existing) existing.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+},
 
-    saveMandatoryHashtags: function() {
-        var checkboxes = document.querySelectorAll('#mandatoryHashtagModal .hashtag-checkbox:checked');
-        var selected = [];
-        
-        checkboxes.forEach(function(cb) {
-            selected.push(cb.value);
-        });
-        
-        if (selected.length < 3) {
-            document.getElementById('hashtagError').textContent = '⚠️ Please select at least 3 interests';
-            this.toast('Select at least 3 interests', 'error');
-            return;
-        }
-        
-        if (selected.length > 5) {
-            document.getElementById('hashtagError').textContent = '⚠️ Maximum 5 interests allowed';
-            this.toast('Maximum 5 interests allowed', 'error');
-            return;
-        }
-        
-        console.log('💾 Saving mandatory hashtags:', selected);
-        
-        var self = this;
-        var uid = this.user ? this.user.uid : null;
-        
-        if (!uid) {
-            this.toast('User not found', 'error');
-            return;
-        }
-        
-        db.ref('users/' + uid + '/hashtags').set(selected).then(function() {
-            console.log('✅ Hashtags saved successfully:', selected);
-            self.profile.hashtags = selected;
-            self.toast('✅ Interests saved! You\'ll now see relevant content.', 'success');
-            
-            var modal = document.getElementById('mandatoryHashtagModal');
-            if (modal) modal.remove();
-            
-            setTimeout(function() {
-                self.switchView('explore');
-                self.toast('🔍 Discover people with similar interests!', 'info');
-            }, 500);
-            
-        }).catch(function(err) {
-            console.error('❌ Error saving hashtags:', err);
-            self.toast('Error saving interests', 'error');
-        });
-    },
+// ============================================
+// SAVE MANDATORY HASHTAGS - FIXED
+// ============================================
 
-    // ============================================
+saveMandatoryHashtags: function() {
+    console.log('🔥 saveMandatoryHashtags called!');
+    
+    var checkboxes = document.querySelectorAll('#mandatoryHashtagModal .hashtag-checkbox:checked');
+    var selected = [];
+    
+    checkboxes.forEach(function(cb) {
+        selected.push(cb.value);
+    });
+    
+    console.log('📋 Selected hashtags:', selected);
+    
+    var errorEl = document.getElementById('hashtagError');
+    
+    if (selected.length < 3) {
+        if (errorEl) errorEl.textContent = '⚠️ Please select at least 3 interests';
+        this.toast('Select at least 3 interests', 'error');
+        return;
+    }
+    
+    if (selected.length > 5) {
+        if (errorEl) errorEl.textContent = '⚠️ Maximum 5 interests allowed';
+        this.toast('Maximum 5 interests allowed', 'error');
+        return;
+    }
+    
+    if (errorEl) errorEl.textContent = '';
+    
+    console.log('💾 Saving mandatory hashtags:', selected);
+    
+    var self = this;
+    var uid = this.user ? this.user.uid : null;
+    
+    if (!uid) {
+        this.toast('User not found. Please login again.', 'error');
+        return;
+    }
+    
+    // Disable button to prevent double clicks
+    var btn = document.getElementById('saveHashtagBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Saving...';
+        btn.style.opacity = '0.6';
+    }
+    
+    db.ref('users/' + uid + '/hashtags').set(selected).then(function() {
+        console.log('✅ Hashtags saved successfully to Firebase!');
+        self.profile.hashtags = selected;
+        self.toast('✅ Interests saved! You\'ll now see relevant content.', 'success');
+        
+        var modal = document.getElementById('mandatoryHashtagModal');
+        if (modal) modal.remove();
+        
+        // Refresh the page data
+        setTimeout(function() {
+            self.switchView('explore');
+            self.toast('🔍 Discover people with similar interests!', 'info');
+            self.loadExplore();
+        }, 500);
+        
+    }).catch(function(err) {
+        console.error('❌ Error saving hashtags:', err);
+        self.toast('❌ Error saving interests: ' + err.message, 'error');
+        
+        // Re-enable button
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '✅ Save & Continue';
+            btn.style.opacity = '1';
+        }
+    });
+},
+
+// ============================================
     // LOAD EXPLORE
     // ============================================
 
