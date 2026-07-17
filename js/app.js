@@ -252,17 +252,25 @@ var app = {
         if (!this.navigationHistory) this.navigationHistory = [];
         if (!this.currentView) this.currentView = 'feed';
        
-        // Hide loading screen
+        // Hide loading screen COMPLETELY
         var loading = document.getElementById('loadingScreen');
         if (loading) {
             loading.classList.remove('active');
+            loading.classList.add('hidden');
             loading.style.display = 'none';
+            loading.style.visibility = 'hidden';
+            loading.style.opacity = '0';
+            loading.style.zIndex = '-1';
         }
        
-        // Hide auth page
+        // Hide auth page COMPLETELY
         var authPage = document.getElementById('authPage');
         if (authPage) {
+            authPage.classList.remove('show');
+            authPage.classList.add('hidden');
             authPage.style.display = 'none';
+            authPage.style.visibility = 'hidden';
+            authPage.style.opacity = '0';
         }
        
         // Show main app
@@ -392,13 +400,25 @@ var app = {
 
     // Show auth page for guest users to login/signup
     showLoginPage: function() {
+        // Hide loading screen
+        var loading = document.getElementById('loadingScreen');
+        if (loading) {
+            loading.classList.remove('active');
+            loading.classList.add('hidden');
+            loading.style.visibility = 'hidden';
+            loading.style.zIndex = '-1';
+        }
+        
         var authPage = document.getElementById('authPage');
         var mainApp = document.getElementById('mainApp');
         if (authPage && mainApp) {
             mainApp.style.display = 'none';
+            authPage.classList.add('show');
+            authPage.classList.remove('hidden');
             authPage.style.display = 'flex';
             authPage.style.visibility = 'visible';
             authPage.style.opacity = '1';
+            authPage.style.zIndex = '9998';
         }
         
         // Hide bottom nav

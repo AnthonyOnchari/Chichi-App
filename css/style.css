@@ -48,23 +48,34 @@
 
         /* LOADING ANIMATION */
         #loadingScreen {
-            display: none;
+            display: flex;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.3);
+            background: var(--dark-bg);
             z-index: 10001;
             align-items: center;
             justify-content: center;
             flex-direction: column;
             gap: 30px;
-            backdrop-filter: blur(2px);
+            visibility: visible;
+            opacity: 1;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
         }
 
         #loadingScreen.active {
             display: flex;
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #loadingScreen.hidden {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            z-index: -1 !important;
         }
 
         .loading-spinner {
@@ -580,7 +591,7 @@
         }
 
         .auth-page {
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             position: fixed;
@@ -592,6 +603,14 @@
             padding: 20px;
             transition: opacity 0.3s ease;
             z-index: 9998;
+            visibility: hidden;
+            opacity: 0;
+        }
+
+        .auth-page.show {
+            display: flex;
+            visibility: visible;
+            opacity: 1;
         }
 
         .auth-page.hidden {
