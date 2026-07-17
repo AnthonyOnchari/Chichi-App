@@ -1923,6 +1923,179 @@
             transform: scale(1.2);
         }
 
+        /* ===== WHATSAPP-STYLE MESSAGES ===== */
+        
+        /* Conversation List Items */
+        .whatsapp-conversation {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+            background: white;
+        }
+
+        .whatsapp-conversation:hover {
+            background: #f5f5f5;
+        }
+
+        .whatsapp-conv-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            margin-right: 12px;
+            flex-shrink: 0;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .whatsapp-conv-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .whatsapp-conv-name {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 4px;
+            color: #000;
+        }
+
+        .whatsapp-conv-message {
+            font-size: 13px;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .whatsapp-conv-time {
+            font-size: 12px;
+            color: #999;
+            text-align: right;
+            margin-left: 8px;
+        }
+
+        .whatsapp-unread-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            margin-left: 8px;
+        }
+
+        /* Message Bubbles */
+        .message-bubble {
+            display: flex;
+            margin-bottom: 8px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .message-bubble.own {
+            justify-content: flex-end;
+        }
+
+        .message-bubble.other {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 8px 12px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        .message-bubble.own .message-content {
+            background: #DCF8C6;
+            color: #000;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-bubble.other .message-content {
+            background: white;
+            color: #000;
+            border: 1px solid #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .message-bubble.own .message-time {
+            text-align: right;
+            padding-right: 12px;
+        }
+
+        .message-bubble.other .message-time {
+            text-align: left;
+            padding-left: 12px;
+        }
+
+        /* Message Date Divider */
+        .message-date-divider {
+            text-align: center;
+            margin: 12px 0;
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* Filter Tabs */
+        .message-filter-tab {
+            transition: all 0.3s;
+        }
+
+        .message-filter-tab.active {
+            background: var(--primary) !important;
+            color: white !important;
+            border-color: var(--primary) !important;
+        }
+
+        /* Chat View */
+        #chatView {
+            display: none;
+        }
+
+        #chatView.active {
+            display: flex !important;
+        }
+
+        #chatMessages {
+            scrollbar-width: thin;
+        }
+
+        #chatMessages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #chatMessages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #chatMessages::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -2002,51 +2175,54 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
-        /* MOBILE: Reduce bottom nav icon sizes on phones */
+        /* MOBILE: Adjust bottom nav icon sizes on phones */
         @media (max-width: 640px) {
             .nav-item {
+                padding: 8px 10px;
+                font-size: 0.65rem;
+                gap: 3px;
+            }
+
+            .nav-icon {
+                font-size: 1.2rem;  /* Increased from 1rem */
+            }
+
+            .fab-button {
+                width: 48px;
+                height: 48px;
+                font-size: 1.4rem;
+                order: 6;  /* Put it at the end visually but centered */
+            }
+
+            .nav-wrapper {
+                padding: 10px 12px;
+                gap: 8px;
+            }
+        }
+
+        /* EXTRA SMALL PHONES: More readable */
+        @media (max-width: 480px) {
+            .nav-item {
                 padding: 6px 8px;
-                font-size: 0.55rem;
+                font-size: 0.6rem;
                 gap: 2px;
             }
 
             .nav-icon {
-                font-size: 1rem;
+                font-size: 1.1rem;  /* Increased from 0.9rem */
             }
 
             .fab-button {
-                width: 44px;
-                height: 44px;
-                font-size: 1.2rem;
+                width: 48px;
+                height: 48px;
+                font-size: 1.3rem;
+                order: 6;
+                margin: 0 auto;  /* Center the button */
             }
 
             .nav-wrapper {
-                padding: 8px 12px;
+                padding: 8px 10px;
                 gap: 6px;
-            }
-        }
-
-        /* EXTRA SMALL PHONES: Even more compact */
-        @media (max-width: 480px) {
-            .nav-item {
-                padding: 5px 6px;
-                font-size: 0.5rem;
-                gap: 1px;
-            }
-
-            .nav-icon {
-                font-size: 0.9rem;
-            }
-
-            .fab-button {
-                width: 40px;
-                height: 40px;
-                font-size: 1.1rem;
-            }
-
-            .nav-wrapper {
-                padding: 6px 10px;
-                gap: 4px;
             }
         }
 
@@ -3119,4 +3295,76 @@
 .trending-hashtag,
 .search-filter-btn {
     animation: slideIn 0.3s ease-out;
+}
+
+/* ============================================
+   SIGNUP HEATMAP - BLINKING LIGHTS
+   ============================================ */
+
+@keyframes blink-light {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.8), 0 0 20px rgba(255, 0, 0, 0.5);
+    }
+    50% {
+        opacity: 0.4;
+        box-shadow: 0 0 5px rgba(255, 0, 0, 0.4), 0 0 10px rgba(255, 0, 0, 0.2);
+    }
+}
+
+@keyframes blink-light-fast {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 12px rgba(255, 0, 0, 0.9), 0 0 24px rgba(255, 0, 0, 0.6);
+    }
+    50% {
+        opacity: 0.3;
+        box-shadow: 0 0 6px rgba(255, 0, 0, 0.4), 0 0 12px rgba(255, 0, 0, 0.2);
+    }
+}
+
+.signup-light {
+    width: 16px;
+    height: 16px;
+    background: #FF0000;
+    border-radius: 50%;
+    animation: blink-light 1.5s infinite;
+    cursor: pointer;
+    border: 2px solid #FFF;
+    z-index: 500;
+}
+
+.signup-light.high-count {
+    width: 20px;
+    height: 20px;
+    animation: blink-light-fast 1s infinite;
+}
+
+.signup-light-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #FF0000;
+    text-align: center;
+    margin-top: 4px;
+    background: white;
+    padding: 2px 4px;
+    border-radius: 4px;
+    min-width: 30px;
+}
+
+.leaflet-container {
+    background: #f5f5f5 !important;
+}
+
+.leaflet-popup-content {
+    font-size: 12px;
+    padding: 8px !important;
+}
+
+.leaflet-popup-content-wrapper {
+    border-radius: 8px;
+}
+
+#leafletMap {
+    z-index: 10 !important;
 }

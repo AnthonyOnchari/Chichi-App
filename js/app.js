@@ -165,6 +165,11 @@ var app = {
        
         // Initialize with a state for browser back handling
         history.pushState(null, null, window.location.href);
+        
+        // Setup real-time signup heatmap updates
+        setTimeout(() => {
+            self.setupSignupMapListener();
+        }, 1000);
     },
 
     // Hide/show logout button and post creation UI based on auth state
@@ -378,6 +383,9 @@ var app = {
                         avatar.textContent = self.user.email.charAt(0).toUpperCase();
                     }
                 }
+                
+                // Check if user needs to add hashtags
+                self.checkAndShowHashtagPopup();
             }
         });
     },
@@ -567,18 +575,30 @@ var app = {
         var loginSpinner = document.querySelector('.login-spinner');
         var loginText = document.querySelector('.login-btn-text');
         
-        // ADDED: Show spinner
+        if (!email || !pass) {
+            this.toast('Email and password required', 'error');
+            return;
+        }
+        
+        // Show spinner
         if (loginSpinner) loginSpinner.style.display = 'inline';
         if (loginText) loginText.style.display = 'none';
         if (loginBtn) loginBtn.disabled = true;
         
+        var self = this;
         auth.signInWithEmailAndPassword(email, pass)
+            .then(result => {
+                console.log('✅ Login successful:', result.user.email);
+                self.toast('✅ Login successful!', 'success');
+                // Login will trigger auth state change, which calls init()
+            })
             .catch(err => {
-                // ADDED: Hide spinner on error
+                console.error('❌ Login error:', err.message);
+                // Hide spinner on error
                 if (loginSpinner) loginSpinner.style.display = 'none';
                 if (loginText) loginText.style.display = 'inline';
                 if (loginBtn) loginBtn.disabled = false;
-                this.toast(err.message, 'error');
+                self.toast('❌ ' + err.message, 'error');
             });
     },
 
@@ -601,24 +621,138 @@ var app = {
         if (signupText) signupText.style.display = 'none';
         if (signupBtn) signupBtn.disabled = true;
 
-        auth.createUserWithEmailAndPassword(email, pass).then(r => {
-            db.ref('users/' + r.user.uid).set({
-                name: name,
-                email: email,
-                bio: '',
-                profilePhoto: '',
-                balance: 0,
-                followers: 0,
-                following: 0,
-                createdAt: new Date().toLocaleString('en-KE')
+        var self = this;
+        
+        // GET LOCATION FIRST (Geolocation + Reverse Geocoding)
+        this.detectUserLocation().then(location => {
+            auth.createUserWithEmailAndPassword(email, pass).then(r => {
+                db.ref('users/' + r.user.uid).set({
+                    name: name,
+                    email: email,
+                    bio: '',
+                    profilePhoto: '',
+                    balance: 0,
+                    followers: 0,
+                    following: 0,
+                    location: location.city || 'Unknown',
+                    coordinates: {
+                        latitude: location.lat,
+                        longitude: location.lng
+                    },
+                    createdAt: new Date().toLocaleString('en-KE')
+                });
+                self.toast('Account created!', 'success');
+                // Update map after new signup
+                setTimeout(() => self.loadSignupHeatmap(), 1000);
+            }).catch(err => {
+                // ADDED: Hide spinner on error
+                if (signupSpinner) signupSpinner.style.display = 'none';
+                if (signupText) signupText.style.display = 'inline';
+                if (signupBtn) signupBtn.disabled = false;
+                self.toast(err.message, 'error');
             });
-            this.toast('Account created!', 'success');
         }).catch(err => {
-            // ADDED: Hide spinner on error
-            if (signupSpinner) signupSpinner.style.display = 'none';
-            if (signupText) signupText.style.display = 'inline';
-            if (signupBtn) signupBtn.disabled = false;
-            this.toast(err.message, 'error');
+            // Location detection failed, but allow signup anyway
+            console.warn('Location detection failed:', err);
+            auth.createUserWithEmailAndPassword(email, pass).then(r => {
+                db.ref('users/' + r.user.uid).set({
+                    name: name,
+                    email: email,
+                    bio: '',
+                    profilePhoto: '',
+                    balance: 0,
+                    followers: 0,
+                    following: 0,
+                    location: 'Unknown',
+                    coordinates: { latitude: 0, longitude: 0 },
+                    createdAt: new Date().toLocaleString('en-KE')
+                });
+                self.toast('Account created! (Location not available)', 'success');
+                setTimeout(() => self.loadSignupHeatmap(), 1000);
+            }).catch(err2 => {
+                if (signupSpinner) signupSpinner.style.display = 'none';
+                if (signupText) signupText.style.display = 'inline';
+                if (signupBtn) signupBtn.disabled = false;
+                self.toast(err2.message, 'error');
+            });
+        });
+    },
+    
+    // DETECT USER LOCATION (Geolocation + Reverse Geocoding)
+    detectUserLocation: function() {
+        var self = this;
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                console.warn('Geolocation not supported');
+                reject({message: 'Geolocation not supported'});
+                return;
+            }
+            
+            // Update status
+            var statusEl = document.getElementById('locationStatus');
+            if (statusEl) statusEl.innerHTML = '🔄 Detecting your location...';
+            
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
+                    console.log('📍 Location detected:', lat, lng);
+                    
+                    // Update status
+                    if (statusEl) statusEl.innerHTML = '🌐 Converting coordinates...';
+                    
+                    // Reverse geocoding using Nominatim (FREE, no API key needed)
+                    self.reverseGeocode(lat, lng).then(city => {
+                        console.log('✅ City detected:', city);
+                        if (statusEl) statusEl.innerHTML = '✅ ' + city;
+                        
+                        // Store in hidden input
+                        document.getElementById('signupLocation').value = city;
+                        
+                        resolve({
+                            city: city,
+                            lat: lat,
+                            lng: lng
+                        });
+                    }).catch(err => {
+                        console.error('Reverse geocoding failed:', err);
+                        if (statusEl) statusEl.innerHTML = '⚠️ Location not available';
+                        reject(err);
+                    });
+                },
+                error => {
+                    console.error('❌ Geolocation error:', error.message);
+                    if (statusEl) statusEl.innerHTML = '❌ ' + error.message;
+                    reject(error);
+                },
+                {
+                    timeout: 5000,
+                    enableHighAccuracy: false
+                }
+            );
+        });
+    },
+    
+    // REVERSE GEOCODING (Convert Coordinates to City Name)
+    reverseGeocode: function(lat, lng) {
+        return new Promise((resolve, reject) => {
+            var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng;
+            
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    var city = data.address.city || 
+                               data.address.town || 
+                               data.address.village || 
+                               data.address.county ||
+                               'Unknown';
+                    console.log('🌍 Reverse geocoded address:', data.address);
+                    resolve(city);
+                })
+                .catch(err => {
+                    console.error('Nominatim error:', err);
+                    reject(err);
+                });
         });
     },
 
@@ -1175,6 +1309,7 @@ var app = {
         var modal = document.getElementById('createModal');
         if (!modal) return;
         modal.classList.remove('active');
+        modal.style.display = 'none';  // ADDED: Hide modal completely
         
         var photoInput = document.getElementById('photoInput');
         if (photoInput) photoInput.value = '';
@@ -1187,9 +1322,7 @@ var app = {
             photoPreview.style.display = 'none';
             photoPreview.textContent = '';
         }
-        // Reset toggle to OFF position
-        var toggle = document.getElementById('headerToggle');
-        if (toggle) toggle.checked = false;
+        console.log('✅ Modal closed');
     },
 
     previewPhoto: function(e) {
@@ -1294,37 +1427,38 @@ var app = {
         });
     },
 
-    // ===== STORIES (TELEGRAM STYLE) =====
+    // ===== STORIES (TELEGRAM STYLE - OVERLAPPED) =====
     loadStories: function() {
         if (!this.user || this.isGuest) return;
         
         var self = this;
         var html = '';
         
-        // Add "My Story" first
+        // Add "My Story" first (+ icon)
         html += `
-            <div class="story-item" onclick="app.toast('Create story coming soon', 'info')" style="display: flex; flex-direction: column; align-items: center; cursor: pointer; min-width: 70px;">
-                <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; border: 2px solid #ddd; margin-bottom: 6px;">➕</div>
-                <div style="font-size: 11px; text-align: center; font-weight: 600;">Your story</div>
+            <div class="story-item" onclick="app.toast('Create story coming soon', 'info')" 
+                 style="position: absolute; left: 0; top: 0; display: flex; align-items: center; justify-content: center; width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 2px solid white; cursor: pointer; font-size: 20px; z-index: 10;">
+                ➕
             </div>
         `;
         
-        // Add followed users' stories
+        var storyIndex = 1;
+        // Add followed users' stories (overlapped)
         for (var uid in this.following) {
-            if (this.following[uid]) {
+            if (this.following[uid] && storyIndex < 4) {  // Show max 3 overlapping stories
                 var user = this.users[uid];
                 if (user) {
-                    var hasStory = Math.random() > 0.5; // Simulate some users have stories
+                    var leftPos = (30 * storyIndex) + 'px';  // Overlap by 30px
+                    var hasStory = Math.random() > 0.5;
                     var borderStyle = hasStory ? '2px solid var(--primary)' : '2px solid #ddd';
                     
                     html += `
-                        <div class="story-item" onclick="app.openStory('${uid}')" style="display: flex; flex-direction: column; align-items: center; cursor: pointer; min-width: 70px;">
-                            <div style="width: 60px; height: 60px; border-radius: 50%; background: url('${user.profilePhoto || ''}'); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; border: ${borderStyle}; margin-bottom: 6px; ${!user.profilePhoto ? 'background: var(--primary); color: white;' : ''}">
-                                ${!user.profilePhoto ? user.name.charAt(0).toUpperCase() : ''}
-                            </div>
-                            <div style="font-size: 11px; text-align: center; font-weight: 600; max-width: 60px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${user.name.split(' ')[0]}</div>
+                        <div class="story-item" onclick="app.openStory('${uid}')" 
+                             style="position: absolute; left: ${leftPos}; top: 0; width: 50px; height: 50px; border-radius: 50%; background: url('${user.profilePhoto || ''}'); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; border: ${borderStyle}; cursor: pointer; z-index: ${11 - storyIndex}; ${!user.profilePhoto ? 'background: var(--primary); color: white; font-weight: 700;' : ''}">
+                            ${!user.profilePhoto ? user.name.charAt(0).toUpperCase() : ''}
                         </div>
                     `;
+                    storyIndex++;
                 }
             }
         }
@@ -1341,6 +1475,107 @@ var app = {
         
         this.toast(`📖 Story from ${user.name}`, 'info');
         console.log('Opening story from:', user.name);
+    },
+
+    // Check and show hashtag popup for users without hashtags
+    checkAndShowHashtagPopup: function() {
+        if (!this.user) return;
+        
+        var userHashtags = this.profile.hashtags || [];
+        console.log('🏷️ User hashtags:', userHashtags);
+        
+        // Only show if user has NO hashtags and has been around for a bit
+        if (userHashtags.length === 0) {
+            console.log('⚠️ User has no hashtags - showing popup');
+            this.showHashtagSelectionPopup();
+        }
+    },
+
+    showHashtagSelectionPopup: function() {
+        var self = this;
+        var hashtagCategories = {
+            '🎬 Entertainment': ['Movies', 'Music', 'Comedy', 'Gaming', 'Animation'],
+            '🎨 Creative': ['Photography', 'Art', 'Design', 'Fashion', 'Illustration'],
+            '⚽ Sports': ['Football', 'Basketball', 'Tennis', 'Fitness', 'Yoga'],
+            '🍔 Lifestyle': ['Food', 'Travel', 'Health', 'Beauty', 'DIY'],
+            '💻 Tech': ['Programming', 'AI', 'Web Dev', 'Apps', 'Gadgets'],
+            '📚 Education': ['Learning', 'Science', 'History', 'Language', 'Books'],
+            '💰 Business': ['Entrepreneurship', 'Marketing', 'Investing', 'Startups', 'Finance'],
+            '🌍 Social': ['Environment', 'Charity', 'Community', 'Activism', 'Culture']
+        };
+        
+        var htmlOptions = '';
+        for (var category in hashtagCategories) {
+            htmlOptions += `
+                <div style="margin-bottom: 16px;">
+                    <div style="font-weight: 600; margin-bottom: 8px;">${category}</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            `;
+            hashtagCategories[category].forEach(tag => {
+                htmlOptions += `
+                    <label style="display: flex; align-items: center; padding: 8px; background: #f3f4f6; border-radius: 8px; cursor: pointer;">
+                        <input type="checkbox" class="hashtag-option" value="${tag}" style="margin-right: 8px;">
+                        <span>${tag}</span>
+                    </label>
+                `;
+            });
+            htmlOptions += `
+                    </div>
+                </div>
+            `;
+        }
+        
+        var modalHTML = `
+            <div class="modal-overlay" id="hashtagPopupModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 9999;">
+                <div class="modal-box" style="max-width: 500px; width: 90%; background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto;">
+                    <div style="padding: 20px; border-bottom: 1px solid #eee; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white;">
+                        <h3 style="margin: 0; font-size: 18px;">🏷️ Choose Your Interests</h3>
+                        <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">Select topics you care about to see relevant creators and content</p>
+                    </div>
+                    
+                    <div style="padding: 20px; max-height: calc(80vh - 200px); overflow-y: auto;">
+                        ${htmlOptions}
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; justify-content: flex-end; padding: 16px; border-top: 1px solid #eee;">
+                        <button onclick="document.getElementById('hashtagPopupModal').remove()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: white;">Skip</button>
+                        <button onclick="app.saveSelectedHashtags()" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Save Interests</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    },
+
+    saveSelectedHashtags: function() {
+        var checkboxes = document.querySelectorAll('.hashtag-option:checked');
+        var selected = [];
+        checkboxes.forEach(cb => {
+            selected.push(cb.value);
+        });
+        
+        if (selected.length === 0) {
+            this.toast('Select at least one interest', 'error');
+            return;
+        }
+        
+        console.log('💾 Saving hashtags:', selected);
+        
+        var self = this;
+        db.ref('users/' + this.user.uid + '/hashtags').set(selected).then(() => {
+            console.log('✅ Hashtags saved');
+            self.profile.hashtags = selected;
+            self.toast('✅ Interests saved!', 'success');
+            
+            var modal = document.getElementById('hashtagPopupModal');
+            if (modal) modal.remove();
+            
+            self.loadExplore();
+        }).catch(err => {
+            console.error('❌ Error saving hashtags:', err);
+            self.toast('Error saving interests', 'error');
+        });
     },
 
     loadPosts: function() {
@@ -2129,25 +2364,34 @@ var app = {
                 <div style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 24px 16px; margin: 12px 16px; border-radius: 14px; text-align: center; box-shadow: 0 8px 24px rgba(0, 136, 204, 0.25);">
                     <div style="font-weight: 700; margin-bottom: 10px; font-size: 18px;">✨ Unlock Your Full Experience</div>
                     <div style="font-size: 14px; margin-bottom: 4px; opacity: 0.95;">Follow amazing creators and stay connected</div>
-                    <div style="font-size: 13px; margin-bottom: 16px; opacity: 0.9;">💬 Chat • ❤️ Engage • 🌟 Discover • 💰 Earn Rewards</div>
-                    <button onclick="app.showLoginPage()" style="background: white; color: var(--primary); border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">🚀 Join Now</button>
+                    <button onclick="app.showLoginPage()" style="background: white; color: var(--primary); border: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">🚀 Join Now</button>
                 </div>
             `;
         } else {
-            // ONLY show user list for logged-in users
+            console.log('🔍 Explore: Filtering users with common hashtags');
+            console.log('📌 Your hashtags:', this.profile.hashtags);
+            
             var sorted = [];
             for (var uid in this.users) {
                 var user = this.users[uid];
-                // STRICT filter: must have name, email, uid must not be empty, and must be different user
-                if (uid &&
-                    uid !== this.user.uid &&
-                    user &&
-                    user.name &&
-                    user.email &&
-                    typeof user === 'object' &&
-                    user.name.trim().length > 0 &&
-                    user.email.trim().length > 0) {
-                    sorted.push({ uid: uid, user: user });
+                
+                // Basic validation
+                if (uid && uid !== this.user.uid && user && user.name && user.email) {
+                    // CHECK: Users must have hashtags in common
+                    var userHashtags = user.hashtags || [];
+                    var myHashtags = this.profile.hashtags || [];
+                    
+                    var hasCommonHashtag = false;
+                    if (myHashtags.length > 0 && userHashtags.length > 0) {
+                        hasCommonHashtag = myHashtags.some(tag => userHashtags.includes(tag));
+                    }
+                    
+                    console.log(`  ${user.name}: ${userHashtags.join(',')} - common: ${hasCommonHashtag}`);
+                    
+                    // ONLY ADD if has common hashtags
+                    if (hasCommonHashtag) {
+                        sorted.push({ uid: uid, user: user });
+                    }
                 }
             }
            
@@ -2157,14 +2401,19 @@ var app = {
             sorted.slice(0, 20).forEach(u => {
                 var isFollowing = this.following[u.uid] || false;
                 var unreadCount = this.getUnreadCountForUser(u.uid);
-                var msgButtonBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">${unreadCount}</span>` : '';
+                var msgButtonBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white;">${unreadCount}</span>` : '';
+                
+                // Show common hashtags
+                var commonTags = (this.profile.hashtags || []).filter(tag => (u.user.hashtags || []).includes(tag));
+                var tagsDisplay = commonTags.length > 0 ? commonTags.slice(0, 2).join(' ') : 'No tags in common';
                
                 html += `
                     <div class="search-user" style="margin: 8px 16px;">
                         <div class="search-user-avatar" style="background-image: url(${u.user.profilePhoto || ''});">${!u.user.profilePhoto ? u.user.name.charAt(0).toUpperCase() : ''}</div>
                         <div class="search-user-info">
                             <div class="search-user-name">${u.user.name}</div>
-                            <div class="search-user-followers">⭐ ${u.user.followers || 0} followers</div>
+                            <div class="search-user-followers" style="font-size: 12px; color: #2E5BFF;">🏷️ ${tagsDisplay}</div>
+                            <div class="search-user-followers" style="font-size: 11px; color: #6b7280;">⭐ ${u.user.followers || 0} followers</div>
                         </div>
                         <div class="search-user-actions">
                             <button class="search-msg-btn" onclick="app.openChatFromSearch('${u.uid}', '${u.user.name}')" style="position: relative;">
@@ -2177,7 +2426,9 @@ var app = {
                 `;
             });
 
-            if (html === '') html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No users to explore</div>';
+            if (html === '') {
+                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No users to explore. Add hashtags to see recommendations! 🏷️</div>';
+            }
         }
        
         var container = document.getElementById('exploreUsersList');
@@ -2188,6 +2439,9 @@ var app = {
         // [PHASE 2] Set up trending hashtags
         this.renderTrendingInExplore();
         this.setupTrendingRefresh();
+        
+        // [PHASE 3] Load signup heatmap
+        this.loadSignupHeatmap();
     },
 
     // Format time for messages
@@ -2649,6 +2903,7 @@ var app = {
 
     loadMessages: function() {
         var self = this;
+        console.log('💬 Loading messages for user:', this.user ? this.user.uid : 'guest');
         
         // Check if guest - show sign-up prompt
         if (!this.user || this.isGuest) {
@@ -2659,11 +2914,7 @@ var app = {
                     <div style="font-size: 15px; color: var(--text-light); margin-bottom: 12px; line-height: 1.6; max-width: 280px;">
                         Join our community to message friends, share ideas, and build real connections!
                     </div>
-                    <div style="font-size: 13px; color: var(--text-light); margin-bottom: 24px; line-height: 1.5; max-width: 300px;">
-                        ✨ Real-time messaging • 🔔 Instant notifications • 👥 Connect with creators
-                    </div>
-                    <button onclick="app.showLoginPage()" style="background: var(--primary); color: white; border: none; padding: 14px 40px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px; margin-bottom: 12px; width: 100%; max-width: 250px; box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);">🚀 Sign Up / Login</button>
-                    <button onclick="app.switchView('feed')" style="background: white; color: var(--primary); border: 2px solid var(--primary); padding: 12px 40px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; width: 100%; max-width: 250px;">← Back to Feed</button>
+                    <button onclick="app.showLoginPage()" style="background: var(--primary); color: white; border: none; padding: 14px 40px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px;">🚀 Sign Up / Login</button>
                 </div>
             `;
             document.getElementById('messagesView').innerHTML = html;
@@ -2681,10 +2932,18 @@ var app = {
         }
         
         var conversations = [];
+        var messagesLoaded = false;
+        
+        console.log('🔍 Searching for message conversations...');
         
         // ADDED: Load message history to get only users with text messages
         db.ref('messages').once('value', snapshot => {
+            messagesLoaded = true;
+            console.log('📡 Messages snapshot received');
+            
             if (snapshot.val()) {
+                console.log('✅ Messages found:', Object.keys(snapshot.val()).length, 'conversations');
+                
                 Object.keys(snapshot.val()).forEach(chatKey => {
                     // Check if this chatKey involves current user
                     if (chatKey.includes(self.user.uid)) {
@@ -2693,7 +2952,7 @@ var app = {
                         var otherUserId = parts[0] === self.user.uid ? parts[1] : parts[0];
                         
                         // ADDED: Skip if user is blocked
-                        if (self.blockedUsers[otherUserId]) {
+                        if (self.blockedUsers && self.blockedUsers[otherUserId]) {
                             return;
                         }
                         
@@ -2713,9 +2972,75 @@ var app = {
                                 if (msg && !msg.deleted) {
                                     if (msg.text) {
                                         hasTextMessages = true;
+                                        lastMessage = msg.text.substring(0, 50);
+                                        lastTimestamp = msg.timestamp || 0;
                                         
                                         // Count unread from other user
                                         if (msg.senderId !== self.user.uid && !msg.read) {
+                                            unreadCount++;
+                                        }
+                                    }
+                                }
+                            });
+                            
+                            if (hasTextMessages && otherUserId && self.users[otherUserId]) {
+                                conversations.push({
+                                    uid: otherUserId,
+                                    chatKey: chatKey,
+                                    lastMessage: lastMessage,
+                                    lastTime: lastTime,
+                                    lastTimestamp: lastTimestamp,
+                                    unreadCount: unreadCount,
+                                    user: self.users[otherUserId]
+                                });
+                            }
+                        }
+                    }
+                });
+            } else {
+                console.log('📭 No messages found in database');
+            }
+            
+            // Sort by most recent first
+            conversations.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+            
+            console.log('✅ Total conversations:', conversations.length);
+            
+            // Render conversations
+            if (conversations.length > 0) {
+                conversations.forEach(conv => {
+                    var unreadBadge = conv.unreadCount > 0 ? `<span style="background: #ef4444; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">${conv.unreadCount}</span>` : '';
+                    
+                    html += `
+                        <div onclick="app.openChatFromSearch('${conv.uid}', '${conv.user.name}')" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: ${conv.user.profilePhoto ? `url('${conv.user.profilePhoto}')` : 'var(--primary)'}; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; margin-right: 12px;">
+                                ${!conv.user.profilePhoto ? conv.user.name.charAt(0) : ''}
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; margin-bottom: 4px;">${conv.user.name}</div>
+                                <div style="font-size: 14px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${conv.lastMessage}</div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                                <div style="font-size: 12px; color: #9ca3af;">${conv.lastTime}</div>
+                                ${unreadBadge}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No messages yet. Go to someone\'s profile to start a chat!</div>';
+            }
+            
+            var container = document.getElementById('messageList');
+            if (container) {
+                container.innerHTML = html;
+                console.log('✅ Messages rendered:', conversations.length);
+            }
+        }).catch(err => {
+            console.error('❌ Error loading messages:', err);
+            self.toast('Error loading messages', 'error');
+        });
+    },
                                             unreadCount++;
                                         }
                                         
@@ -2829,17 +3154,25 @@ var app = {
         }
         
         this.currentChat = { uid: uid, name: name };
+        
+        // Update header for new chat view
+        document.getElementById('chatHeaderName').textContent = name;
+        document.getElementById('chatHeaderStatus').textContent = 'Active now';
+        document.getElementById('chatHeaderAvatar').textContent = name.charAt(0).toUpperCase();
+        document.getElementById('chatMessages').innerHTML = '';
+        document.getElementById('chatMessageInput').value = '';
+        
+        // Show new chat view
+        var chatView = document.getElementById('chatView');
+        if (chatView) {
+            chatView.classList.add('active');
+            chatView.style.display = 'flex';
+        }
+        
+        // Also keep modal for compatibility
         document.getElementById('chatModalUserName').textContent = name;
         document.getElementById('chatModalMessages').innerHTML = '';
         document.getElementById('chatModalInput').value = '';
-       
-        // Check if there are unread messages and show green dot
-        var chatKey = [this.user.uid, uid].sort().join('_');
-        var unreadCount = (this.unreadMessages && this.unreadMessages[chatKey]) ? this.unreadMessages[chatKey].count : 0;
-        var dot = document.getElementById('chatUnreadDot');
-        if (dot) {
-            dot.style.display = unreadCount > 0 ? 'block' : 'none';
-        }
        
         var avatar = document.getElementById('chatModalAvatar');
         var userPhoto = this.users[uid] && this.users[uid].profilePhoto;
@@ -2851,38 +3184,13 @@ var app = {
             avatar.textContent = name.charAt(0).toUpperCase();
         }
        
-        document.getElementById('chatModalOverlay').classList.add('active');
-       
         var self = this;
-       
-        // SAFETY CHECK: Verify we notified about all unread messages
-        db.ref('chats/' + chatKey + '/messages').orderByChild('timestamp').once('value', s => {
-            var lastUnreadMessage = null;
-            s.forEach(c => {
-                var m = c.val();
-                if (m && m.sender !== self.user.uid && (m.text || m.image) && !m.read) {
-                    lastUnreadMessage = m;
-                }
-            });
-           
-            // If there's an unread message we haven't notified about, notify now
-            if (lastUnreadMessage) {
-                var notifyKey = chatKey + '_' + lastUnreadMessage.timestamp;
-                if (!self.notifiedMessages[notifyKey]) {
-                    console.log('🔔 [CATCH-UP] Unread message from ' + name);
-                    self.notifyNewMessage(name, lastUnreadMessage.text || '📷 Image');
-                    self.notifiedMessages[notifyKey] = true;
-                }
-            }
-        });
-       
+        var chatKey = [this.user.uid, uid].sort().join('_');
+        
         setTimeout(() => {
             self.loadChatMessages();
             self.markAsRead(uid);
-            document.getElementById('chatModalInput').focus();
-            // Hide green dot after loading messages (they're now reading)
-            var dot = document.getElementById('chatUnreadDot');
-            if (dot) dot.style.display = 'none';
+            document.getElementById('chatMessageInput').focus();
         }, 100);
     },
 
@@ -2979,10 +3287,17 @@ var app = {
             if (chatMessagesDiv) {
                 chatMessagesDiv.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">Start a conversation!</div>';
             }
+            
+            var chatMessagesView = document.getElementById('chatMessages');
+            if (chatMessagesView) {
+                chatMessagesView.innerHTML = '<div style="text-align: center; color: #999; padding: 40px 16px; font-size: 14px;">No messages yet. Say hello! 👋</div>';
+            }
             return;
         }
        
         var html = '';
+        var htmlWhatsApp = '';
+        var lastDate = '';
        
         messages.forEach((m, idx) => {
             if (!m || (!m.text && !m.image)) return;
@@ -3005,6 +3320,12 @@ var app = {
                 }
                
                 html += `<div style="text-align: center; margin: 16px 0; color: var(--text-light); font-size: 0.75rem; font-weight: 600;">${dateStr}</div>`;
+                
+                // WhatsApp date divider
+                if (dateStr !== lastDate) {
+                    htmlWhatsApp += `<div class="message-date-divider">${dateStr}</div>`;
+                    lastDate = dateStr;
+                }
             }
            
             var content = '';
@@ -3025,6 +3346,7 @@ var app = {
                 content += `<div>${m.text}</div>`;
             }
            
+            // Old modal style
             var bubbleStyle = side === 'sent' ?
                 'background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border-radius: 18px 18px 4px 18px;' :
                 'background: linear-gradient(135deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 100%); color: var(--text); border-radius: 18px 18px 18px 4px;';
@@ -3037,15 +3359,141 @@ var app = {
                     </div>
                 </div>
             `;
+            
+            // WhatsApp light theme style
+            var whatsAppBubbleClass = side === 'sent' ? 'own' : 'other';
+            htmlWhatsApp += `
+                <div class="message-bubble ${whatsAppBubbleClass}">
+                    <div>
+                        <div class="message-content">
+                            ${m.text || (m.image ? '📷' : '')}
+                        </div>
+                        <div class="message-time">${timestamp}</div>
+                    </div>
+                </div>
+            `;
         });
        
+        // Render in modal
         var chatMessagesDiv = document.getElementById('chatModalMessages');
         if (chatMessagesDiv) {
             chatMessagesDiv.innerHTML = html;
-            // Aggressive scroll - ensures we see the last message
             setTimeout(() => chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight, 50);
             setTimeout(() => chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight, 150);
             setTimeout(() => chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight, 300);
+        }
+        
+        // Render in WhatsApp chat view
+        var chatMessagesView = document.getElementById('chatMessages');
+        if (chatMessagesView) {
+            chatMessagesView.innerHTML = htmlWhatsApp;
+            setTimeout(() => chatMessagesView.scrollTop = chatMessagesView.scrollHeight, 50);
+            setTimeout(() => chatMessagesView.scrollTop = chatMessagesView.scrollHeight, 150);
+        }
+    },
+
+    closeChatView: function() {
+        var chatView = document.getElementById('chatView');
+        if (chatView) {
+            chatView.classList.remove('active');
+            chatView.style.display = 'none';
+        }
+        if (this.currentChat && this.chatMessagesListener) {
+            var key = [this.user.uid, this.currentChat.uid].sort().join('_');
+            db.ref('chats/' + key + '/messages').off();
+            this.chatMessagesListener = null;
+        }
+        this.currentChat = null;
+    },
+
+    filterMessages: function(filter) {
+        console.log('🔍 Filtering messages:', filter);
+        
+        // Update active tab
+        document.querySelectorAll('.message-filter-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        // Re-render messages with filter
+        this.loadMessages();
+    },
+
+    renderWhatsAppMessages: function(conversations) {
+        var html = '';
+        
+        if (conversations.length === 0) {
+            html = '<div style="text-align: center; color: #999; padding: 40px 16px;">No conversations yet</div>';
+        } else {
+            conversations.forEach(conv => {
+                var unreadBadge = conv.unreadCount > 0 ? `<div class="whatsapp-unread-badge">${conv.unreadCount}</div>` : '';
+                var avatarStyle = conv.user.profilePhoto ? `background-image: url('${conv.user.profilePhoto}');` : '';
+                var avatarText = !conv.user.profilePhoto ? conv.user.name.charAt(0).toUpperCase() : '';
+                
+                html += `
+                    <div class="whatsapp-conversation" onclick="app.openChatFromSearch('${conv.uid}', '${conv.user.name}')">
+                        <div class="whatsapp-conv-avatar" style="${avatarStyle}">
+                            ${avatarText}
+                        </div>
+                        <div class="whatsapp-conv-info">
+                            <div class="whatsapp-conv-name">${conv.user.name}</div>
+                            <div class="whatsapp-conv-message">${conv.lastMessage}</div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <div class="whatsapp-conv-time">${conv.lastTime}</div>
+                            ${unreadBadge}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        var container = document.getElementById('messageList');
+        if (container) {
+            container.innerHTML = html;
+        }
+    },
+
+    renderChatMessagesWhatsApp: function(messages) {
+        var html = '';
+        var lastDate = '';
+        
+        for (var msgId in messages) {
+            var msg = messages[msgId];
+            if (msg && !msg.deleted) {
+                var isOwn = msg.sender === this.user.uid;
+                var msgDate = new Date(msg.timestamp).toLocaleDateString('en-KE');
+                
+                // Show date divider if date changed
+                if (msgDate !== lastDate) {
+                    html += `<div class="message-date-divider">${msgDate}</div>`;
+                    lastDate = msgDate;
+                }
+                
+                var msgTime = new Date(msg.timestamp).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' });
+                var readReceipt = isOwn && msg.read ? '✓✓' : '✓';
+                var readMarkup = isOwn ? ` ${readReceipt}` : '';
+                
+                html += `
+                    <div class="message-bubble ${isOwn ? 'own' : 'other'}">
+                        <div>
+                            <div class="message-content">
+                                ${msg.text || (msg.image ? '📷' : '')}
+                            </div>
+                            <div class="message-time">${msgTime}${readMarkup}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        var container = document.getElementById('chatMessages');
+        if (container) {
+            container.innerHTML = html;
+            // Auto-scroll to bottom
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 100);
         }
     },
 
@@ -3055,11 +3503,15 @@ var app = {
             return;
         }
        
+        // Try both input fields (modal and new view)
         var input = document.getElementById('chatModalInput');
-        var text = input.value.trim();
+        var inputWhatsApp = document.getElementById('chatMessageInput');
+        var text = (input && input.value) || (inputWhatsApp && inputWhatsApp.value) || '';
+        text = text.trim();
        
         if (!text) {
-            input.focus();
+            if (input) input.focus();
+            if (inputWhatsApp) inputWhatsApp.focus();
             return;
         }
 
@@ -3074,14 +3526,54 @@ var app = {
             sender: self.user.uid,
             text: text,
             timestamp: now,
-            pending: true  // Mark as pending until confirmed
+            pending: true
         };
        
         // Add to display immediately
         this.chatMessages[key].push(tempMessage);
         this.displayChatMessages(this.chatMessages[key], key);
        
-        // Clear input field
+        // Clear both input fields
+        if (input) input.value = '';
+        if (inputWhatsApp) inputWhatsApp.value = '';
+        
+        if (inputWhatsApp) inputWhatsApp.focus();
+        if (input) input.focus();
+       
+        // Save to Firebase (with retry)
+        var messageRef = db.ref('messages/' + key).push();
+        messageRef.set({
+            text: text,
+            senderId: self.user.uid,
+            sender: self.user.uid,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            read: false
+        }).then(() => {
+            console.log('✅ Message sent');
+            
+            // Update last message in chats/{key}/lastMessage
+            db.ref('chats/' + key + '/messages/' + messageRef.key).set({
+                text: text,
+                sender: self.user.uid,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                read: false
+            });
+            
+            // Mark message as confirmed
+            tempMessage.pending = false;
+            self.displayChatMessages(self.chatMessages[key], key);
+        }).catch(err => {
+            console.error('❌ Error sending message:', err);
+            self.toast('Error sending message', 'error');
+            
+            // Remove the temporary message on error
+            var idx = self.chatMessages[key].indexOf(tempMessage);
+            if (idx > -1) {
+                self.chatMessages[key].splice(idx, 1);
+                self.displayChatMessages(self.chatMessages[key], key);
+            }
+        });
+    },
         input.value = '';
         input.focus();
        
@@ -3961,39 +4453,71 @@ var app = {
     createGroup: function() {
         var name = document.getElementById('groupName').value.trim();
         var description = document.getElementById('groupDescription').value.trim();
-        var type = document.querySelector('input[name="groupType"]:checked').value;
+        var typeRadio = document.querySelector('input[name="groupType"]:checked');
         
         if (!name) {
             this.toast('Enter group name', 'error');
             return;
         }
         
-        console.log('📝 Creating group:', name);
+        if (!typeRadio) {
+            this.toast('Select group type', 'error');
+            return;
+        }
         
-        var groupId = db.ref('groups').push().key;
+        var type = typeRadio.value;
+        
+        console.log('📝 Creating group:', name, type);
+        console.log('✅ User UID:', this.user.uid);
+        console.log('✅ Firebase DB:', typeof db !== 'undefined');
+        
+        if (!this.user || !this.user.uid) {
+            this.toast('You must be logged in', 'error');
+            return;
+        }
+        
         var self = this;
+        var groupId = db.ref('groups').push().key;
+        console.log('📝 Group ID:', groupId);
         
-        db.ref('groups/' + groupId).set({
+        var groupData = {
             name: name,
             description: description,
             type: type,
             photo: '',
-            createdBy: this.user.uid,
-            members: {
-                [this.user.uid]: true
-            },
+            createdBy: self.user.uid,
+            members: {},
             posts: {},
             createdAt: new Date().toLocaleString('en-KE'),
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        }).then(() => {
-            console.log('✅ Group created:', groupId);
-            self.toast('Group created! 🎉', 'success');
-            document.getElementById('createGroupModal').remove();
-            self.loadGroups();
-        }).catch(err => {
-            console.error('❌ Error creating group:', err);
-            self.toast('Error creating group', 'error');
-        });
+        };
+        
+        // Add current user as member
+        groupData.members[self.user.uid] = true;
+        
+        console.log('📤 Sending group data:', groupData);
+        
+        db.ref('groups/' + groupId).set(groupData)
+            .then(() => {
+                console.log('✅ Group created successfully:', groupId);
+                self.toast('✅ Group created! 🎉', 'success');
+                
+                // Close modal
+                var modal = document.getElementById('createGroupModal');
+                if (modal) {
+                    modal.remove();
+                }
+                
+                // Reload groups
+                self.groups[groupId] = groupData;
+                self.renderGroups();
+            })
+            .catch(err => {
+                console.error('❌ Error creating group:', err);
+                console.error('Error code:', err.code);
+                console.error('Error message:', err.message);
+                self.toast('❌ Error: ' + err.message, 'error');
+            });
     },
 
     openGroup: function(groupId) {
@@ -5401,6 +5925,132 @@ app.updateUserHashtags = function(hashtags) {
             app.userHashtags[this.user.uid] = hashtags;
             app.toast('✅ Interests updated!', 'success');
         }
+    });
+};
+
+// ═════════════════════════════════════════════════════════════════════════
+// SIGNUP HEATMAP - World Map with Blinking Lights
+// ═════════════════════════════════════════════════════════════════════════
+
+app.signupMap = null;
+app.signupMapMarkers = [];
+
+app.loadSignupHeatmap = function() {
+    console.log('🗺️ Loading signup heatmap...');
+    
+    // Initialize map if not already done
+    if (!app.signupMap) {
+        app.initializeSignupMap();
+    }
+    
+    // Load and display signup locations
+    app.updateMapMarkers();
+};
+
+app.initializeSignupMap = function() {
+    console.log('🗺️ Initializing interactive map...');
+    
+    var mapElement = document.getElementById('leafletMap');
+    if (!mapElement) {
+        console.error('Map element not found!');
+        return;
+    }
+    
+    // Create map centered on Kenya/Africa
+    app.signupMap = L.map('leafletMap').setView([0, 20], 3);
+    
+    // Add tile layer (OpenStreetMap)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(app.signupMap);
+    
+    console.log('✅ Map initialized');
+};
+
+app.updateMapMarkers = function() {
+    console.log('📍 Updating map markers...');
+    
+    var self = app;
+    
+    // Count signups by location
+    var locationCounts = {};
+    var locationCoordinates = {};
+    
+    // Make sure users object exists
+    if (!app.users || Object.keys(app.users).length === 0) {
+        console.warn('No users data available');
+        return;
+    }
+    
+    // Count signups per location
+    for (var uid in app.users) {
+        var user = app.users[uid];
+        if (user && user.location && user.location !== 'Unknown') {
+            var location = user.location;
+            locationCounts[location] = (locationCounts[location] || 0) + 1;
+            
+            // Store coordinates if available
+            if (user.coordinates) {
+                locationCoordinates[location] = user.coordinates;
+            }
+        }
+    }
+    
+    console.log('📊 Signup counts by location:', locationCounts);
+    
+    // Clear existing markers
+    app.signupMapMarkers.forEach(marker => {
+        if (app.signupMap) {
+            app.signupMap.removeLayer(marker);
+        }
+    });
+    app.signupMapMarkers = [];
+    
+    // Add new markers for each location
+    for (var location in locationCounts) {
+        var count = locationCounts[location];
+        var coords = locationCoordinates[location];
+        
+        if (coords && coords.latitude && coords.longitude) {
+            var lat = coords.latitude;
+            var lng = coords.longitude;
+            
+            // Create custom icon with blinking light
+            var customIcon = L.divIcon({
+                className: 'signup-location-marker',
+                html: '<div class="signup-light ' + (count > 10 ? 'high-count' : '') + '"></div>',
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                popupAnchor: [0, -32]
+            });
+            
+            // Add marker
+            var marker = L.marker([lat, lng], { icon: customIcon })
+                .bindPopup('<strong>' + location + '</strong><br>' + count + ' signup' + (count !== 1 ? 's' : ''))
+                .addTo(app.signupMap);
+            
+            app.signupMapMarkers.push(marker);
+            
+            console.log('📍 Added marker:', location, '(' + count + ')', 'at', lat, lng);
+        }
+    }
+    
+    console.log('✅ Map updated with', app.signupMapMarkers.length, 'locations');
+};
+
+// Listen for user updates to refresh map in real-time
+app.setupSignupMapListener = function() {
+    console.log('🔄 Setting up real-time map updates...');
+    
+    db.ref('users').on('value', snapshot => {
+        app.users = {};
+        snapshot.forEach(child => {
+            app.users[child.key] = child.val();
+        });
+        
+        // Update map markers
+        app.updateMapMarkers();
     });
 };
 
