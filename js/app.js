@@ -3299,15 +3299,28 @@ var app = {
                 </div>
             `;
             
-            // WhatsApp light theme style
+            // WhatsApp light theme style - PROFESSIONAL DESIGN
             var whatsAppBubbleClass = side === 'sent' ? 'own' : 'other';
+            var otherUserName = self.currentChat.name || 'User';
+            var otherUserInitial = otherUserName.charAt(0).toUpperCase();
+            var senderName = side === 'sent' ? 'You' : otherUserName;
+            var showAvatar = side === 'received';
+            var readReceipt = side === 'sent' ? (m.read ? '✓✓' : '✓') : '';
+            var readClass = m.read ? 'read' : 'sent';
+            
             htmlWhatsApp += `
-                <div class="message-bubble ${whatsAppBubbleClass}">
-                    <div>
-                        <div class="message-content">
-                            ${m.text || (m.image ? '📷' : '')}
+                <div class="message-group ${whatsAppBubbleClass}">
+                    ${showAvatar ? `<div class="message-avatar">${otherUserInitial}</div>` : ''}
+                    <div class="message-wrapper">
+                        ${side === 'received' ? `<div class="message-sender">${senderName}</div>` : ''}
+                        <div class="message-bubble">
+                            ${m.text ? `<div>${m.text}</div>` : ''}
+                            ${m.image ? `<img src="${m.image}" style="max-width: 100%; border-radius: 12px; cursor: pointer;" onclick="app.viewFullImage('${m.image}')">` : ''}
                         </div>
-                        <div class="message-time">${timestamp}</div>
+                        <div class="message-meta">
+                            <span>${timestamp}</span>
+                            ${readReceipt ? `<span class="message-read-receipt ${readClass}">${readReceipt}</span>` : ''}
+                        </div>
                     </div>
                 </div>
             `;

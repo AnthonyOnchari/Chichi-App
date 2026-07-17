@@ -5202,3 +5202,444 @@ body {
     margin: 16px 0 !important;
     font-weight: 500 !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* PROFESSIONAL CHAT DESIGN - WhatsApp/iMessage Style */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+#chatView {
+    display: flex !important;
+    flex-direction: column !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 200 !important;
+    background: #f5f5f5 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* CHAT HEADER - Professional Design */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+#chatHeader {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 210 !important;
+    background: linear-gradient(135deg, #1f6f8f 0%, #154c6a 100%) !important;
+    color: white !important;
+    padding: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+#chatHeader button {
+    background: none !important;
+    border: none !important;
+    color: white !important;
+    cursor: pointer !important;
+    font-size: 24px !important;
+    padding: 0 !important;
+    transition: 0.2s !important;
+}
+
+#chatHeader button:hover {
+    opacity: 0.8 !important;
+}
+
+#chatHeaderAvatar {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    background: rgba(255,255,255,0.3) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: white !important;
+    font-weight: 700 !important;
+    font-size: 20px !important;
+    flex-shrink: 0 !important;
+    border: 2px solid rgba(255,255,255,0.5) !important;
+}
+
+#chatHeaderName {
+    font-weight: 700 !important;
+    font-size: 16px !important;
+    color: white !important;
+}
+
+#chatHeaderStatus {
+    font-size: 12px !important;
+    color: rgba(255,255,255,0.8) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MESSAGES CONTAINER */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+#chatMessages {
+    z-index: 202 !important;
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 16px !important;
+    background: #f5f5f5 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MESSAGE GROUP (By sender) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.message-group {
+    display: flex !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+    animation: fadeInUp 0.3s ease-out !important;
+}
+
+.message-group.own {
+    justify-content: flex-end !important;
+}
+
+.message-group.other {
+    justify-content: flex-start !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MESSAGE AVATAR */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.message-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    background: var(--primary) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: white !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.message-group.own .message-avatar {
+    display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MESSAGE CONTENT WRAPPER */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.message-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    max-width: 75% !important;
+}
+
+.message-group.own .message-wrapper {
+    align-items: flex-end !important;
+}
+
+.message-group.other .message-wrapper {
+    align-items: flex-start !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* SENDER NAME */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.message-sender {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 0 12px !important;
+}
+
+.message-group.other .message-sender {
+    color: #2E5BFF !important;
+}
+
+.message-group.own .message-sender {
+    color: #666 !important;
+    font-size: 11px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MESSAGE BUBBLE - Professional Styling */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.message-bubble {
+    padding: 12px 16px !important;
+    border-radius: 20px !important;
+    word-wrap: break-word !important;
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    position: relative !important;
+    animation: slideIn 0.3s ease-out !important;
+}
+
+/* SENT MESSAGES - Blue */
+.message-group.own .message-bubble {
+    background: #007AFF !important;
+    color: white !important;
+    border-radius: 20px 4px 20px 20px !important;
+}
+
+/* RECEIVED MESSAGES - Gray */
+.message-group.other .message-bubble {
+    background: white !important;
+    color: #333 !important;
+    border-radius: 20px 20px 4px 20px !important;
+    border: 1px solid #e5e5ea !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MESSAGE META (Time + Read Receipt) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.message-meta {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 11px !important;
+    padding: 0 12px !important;
+}
+
+.message-group.other .message-meta {
+    color: #999 !important;
+}
+
+.message-group.own .message-meta {
+    color: #666 !important;
+    justify-content: flex-end !important;
+}
+
+/* READ RECEIPT - Checkmarks */
+.message-read-receipt {
+    display: flex !important;
+    gap: 2px !important;
+    font-size: 10px !important;
+}
+
+.message-read-receipt.read {
+    color: #007AFF !important;
+}
+
+.message-read-receipt.sent {
+    color: #999 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MESSAGE REACTIONS (Emojis below message) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.message-reactions {
+    display: flex !important;
+    gap: 4px !important;
+    flex-wrap: wrap !important;
+    padding: 0 12px !important;
+    font-size: 16px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MESSAGE DATE DIVIDER */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.message-date-divider {
+    text-align: center !important;
+    margin: 16px 0 !important;
+    font-size: 12px !important;
+    color: #999 !important;
+}
+
+.message-date-label {
+    background: rgba(0,0,0,0.05) !important;
+    padding: 4px 12px !important;
+    border-radius: 12px !important;
+    display: inline-block !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* SYSTEM MESSAGE (Encryption notice, etc) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.message-system {
+    text-align: center !important;
+    color: #999 !important;
+    font-size: 12px !important;
+    padding: 12px 16px !important;
+    background: rgba(0,0,0,0.03) !important;
+    border-radius: 12px !important;
+    margin: 16px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* INPUT AREA - Professional Design */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+#chatInput,
+#chatInputContainer {
+    z-index: 204 !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    gap: 12px !important;
+    padding: 12px 16px !important;
+    background: white !important;
+    border-top: 1px solid #e5e5ea !important;
+}
+
+#chatMessageInput {
+    flex: 1 !important;
+    padding: 12px 16px !important;
+    border: 1px solid #e5e5ea !important;
+    border-radius: 24px !important;
+    font-size: 15px !important;
+    font-family: inherit !important;
+    outline: none !important;
+    resize: none !important;
+    max-height: 100px !important;
+    background: #f5f5f5 !important;
+}
+
+#chatMessageInput:focus {
+    border-color: #007AFF !important;
+    background: white !important;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1) !important;
+}
+
+#chatMessageInput::placeholder {
+    color: #999 !important;
+}
+
+/* Input buttons */
+#chatInput button {
+    background: none !important;
+    border: none !important;
+    font-size: 20px !important;
+    cursor: pointer !important;
+    padding: 8px !important;
+    transition: 0.2s !important;
+    opacity: 0.7 !important;
+}
+
+#chatInput button:hover {
+    opacity: 1 !important;
+}
+
+#chatInput button:active {
+    transform: scale(0.95) !important;
+}
+
+/* Send button - Blue when typing */
+#chatSendButton {
+    background: none !important;
+    border: none !important;
+    color: #007AFF !important;
+    font-size: 24px !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    font-weight: 700 !important;
+}
+
+#chatSendButton:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* ANIMATIONS */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* TYPING INDICATOR */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.typing-indicator {
+    display: flex !important;
+    gap: 4px !important;
+    padding: 12px 16px !important;
+    background: white !important;
+    border-radius: 20px !important;
+    width: fit-content !important;
+}
+
+.typing-dot {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    background: #ccc !important;
+    animation: typing 1.4s infinite !important;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s !important;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s !important;
+}
+
+@keyframes typing {
+    0%, 60%, 100% {
+        opacity: 0.5;
+        transform: translateY(0);
+    }
+    30% {
+        opacity: 1;
+        transform: translateY(-10px);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* RESPONSIVE */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+    .message-wrapper {
+        max-width: 85% !important;
+    }
+    
+    #chatMessages {
+        padding: 12px !important;
+    }
+    
+    #chatInput {
+        padding: 8px 12px !important;
+        gap: 8px !important;
+    }
+}
