@@ -455,20 +455,29 @@ var app = {
             console.log('localStorage not available');
         }
        
-        // Hide all views
+        // Hide ALL other views COMPLETELY
         document.querySelectorAll('.view').forEach(v => {
             v.classList.remove('active');
             v.style.display = 'none';
+            v.style.visibility = 'hidden';
+            v.style.opacity = '0';
+            v.style.zIndex = '1';
+            v.style.pointerEvents = 'none';
         });
        
         // Remove active from nav items
         document.querySelectorAll('.nav-wrapper > .nav-item').forEach(n => n.classList.remove('active'));
        
-        // Show selected view
+        // Show ONLY selected view with all CSS properties
         var viewElement = document.getElementById(view + 'View');
         if (viewElement) {
             viewElement.classList.add('active');
             viewElement.style.display = 'flex';
+            viewElement.style.visibility = 'visible';
+            viewElement.style.opacity = '1';
+            viewElement.style.zIndex = '100';
+            viewElement.style.position = 'fixed';
+            viewElement.style.pointerEvents = 'auto';
         }
        
         // Load view-specific data
@@ -3074,12 +3083,34 @@ var app = {
             return;
         }
         
-        // HIDE ALL OTHER VIEWS
+        // HIDE ALL OTHER VIEWS COMPLETELY
         var allViews = document.querySelectorAll('.view');
         allViews.forEach(view => {
             view.classList.remove('active');
-            view.style.display = 'none';
+            view.style.display = 'none !important';
+            view.style.visibility = 'hidden';
+            view.style.opacity = '0';
+            view.style.zIndex = '1';
+            view.style.pointerEvents = 'none';
         });
+        
+        // Hide main app background
+        var mainApp = document.getElementById('mainApp');
+        if (mainApp) {
+            mainApp.style.overflow = 'hidden';
+        }
+        
+        // Show chat view with full CSS properties
+        var chatView = document.getElementById('chatView');
+        if (chatView) {
+            chatView.classList.add('active');
+            chatView.style.display = 'flex';
+            chatView.style.visibility = 'visible';
+            chatView.style.opacity = '1';
+            chatView.style.zIndex = '2000';
+            chatView.style.position = 'fixed';
+            chatView.style.pointerEvents = 'auto';
+        }
         
         this.currentChat = { uid: uid, name: name };
         
@@ -3090,12 +3121,20 @@ var app = {
         document.getElementById('chatMessages').innerHTML = '';
         document.getElementById('chatMessageInput').value = '';
         
-        // Show ONLY chat view
+        // Show ONLY chat view - FULL SCREEN
         var chatView = document.getElementById('chatView');
         if (chatView) {
             chatView.classList.add('active');
             chatView.style.display = 'flex';
-            chatView.style.zIndex = '1000';
+            chatView.style.position = 'fixed';
+            chatView.style.top = '0';
+            chatView.style.left = '0';
+            chatView.style.right = '0';
+            chatView.style.bottom = '0';
+            chatView.style.width = '100%';
+            chatView.style.height = '100%';
+            chatView.style.zIndex = '2000';
+            chatView.style.backgroundColor = 'white';
         }
         
         // Also keep modal for compatibility
@@ -3326,6 +3365,10 @@ var app = {
         if (chatView) {
             chatView.classList.remove('active');
             chatView.style.display = 'none';
+            chatView.style.visibility = 'hidden';
+            chatView.style.opacity = '0';
+            chatView.style.zIndex = '-1';
+            chatView.style.pointerEvents = 'none';
         }
         if (this.currentChat && this.chatMessagesListener) {
             var key = [this.user.uid, this.currentChat.uid].sort().join('_');
@@ -3335,7 +3378,23 @@ var app = {
         this.currentChat = null;
         
         // Show messages view again
-        this.showView('messagesView');
+        this.showView('messages');
+    },
+    
+    showView: function(viewName) {
+        // Hide chat view COMPLETELY
+        var chatView = document.getElementById('chatView');
+        if (chatView) {
+            chatView.classList.remove('active');
+            chatView.style.display = 'none';
+            chatView.style.visibility = 'hidden';
+            chatView.style.opacity = '0';
+            chatView.style.zIndex = '-1';
+            chatView.style.pointerEvents = 'none';
+        }
+        
+        // Use switchView for the actual view switching
+        this.switchView(viewName);
     },
 
     filterMessages: function(filter) {
