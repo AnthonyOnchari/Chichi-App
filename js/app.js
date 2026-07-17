@@ -3194,12 +3194,12 @@ showAbout: function() {
                 <div style="background: #f7fafc; padding: 16px 18px; border-radius: 16px; text-align: left; border: 1px solid #e2e8f0; margin-bottom: 16px;">
                     <p style="font-size: 14px; line-height: 1.8; color: #2d3748; margin: 0;">
                         Hey there! 👋 I'm <strong style="color: #0088cc;">Anthony</strong>, 
-                        a simple developer who loves building things that bring people together. 
+                        a Developer and Digital Media Specialist who loves building things that bring people and Community together. 
                         I created <strong style="color: #0088cc;">CHICHI</strong> because I believe 
                         social media should feel like home — warm, real, and human.
                     </p>
                     <p style="font-size: 13px; line-height: 1.7; color: #4a5568; margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
-                        🚀 This is <strong>Version V01A.01</strong> — the beginning of something beautiful. 
+                        This is <strong>Version V01A.01</strong> — the beginning of something beautiful. 
                         More features, more love, and more connection coming soon!
                     </p>
                 </div>
@@ -3235,7 +3235,7 @@ showAbout: function() {
                 
                 <!-- Footer -->
                 <div style="margin-top: 14px; font-size: 11px; color: #a0aec0; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-                    <span>© 2024 Onchari Group • CHICHI V01A.01</span>
+                    <span>© 2026 Onchari Group • CHICHI V01A.01</span>
                 </div>
             </div>
         </div>
