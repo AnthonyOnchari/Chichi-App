@@ -4928,11 +4928,17 @@ var app = {
             this.calculateTrendingHashtags();
         }
         
+        // CHECK: If trending section already exists, don't add duplicate
+        if (document.getElementById('trendingSection')) {
+            this.renderTrendingList();
+            return;
+        }
+        
         var html = `
-            <div style="padding: 16px;">
+            <div id="trendingSection" style="padding: 16px; border-bottom: 1px solid #f0f0f0;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h3 style="margin: 0;">🔥 Trending Now</h3>
-                    <button onclick="app.calculateTrendingHashtags(); app.renderTrendingList();" style="background: var(--primary); color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 12px;">Refresh</button>
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 700;">🔥 Trending Now</h3>
+                    <button onclick="app.calculateTrendingHashtags(); app.renderTrendingList();" style="background: var(--primary); color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600;">Refresh</button>
                 </div>
                 
                 <div id="trendingList" style="display: grid; gap: 12px;"></div>
@@ -5880,125 +5886,199 @@ app.updateUserHashtags = function(hashtags) {
 // SIGNUP HEATMAP - World Map with Blinking Lights
 // ═════════════════════════════════════════════════════════════════════════
 
-app.signupMap = null;
-app.signupMapMarkers = [];
+// SIGNUP HEATMAP - Static World Map with Blinking Dots (Modern Design)
+// ═════════════════════════════════════════════════════════════════════════
 
 app.loadSignupHeatmap = function() {
     console.log('🗺️ Loading signup heatmap...');
     
-    // Initialize map if not already done
-    if (!app.signupMap) {
-        app.initializeSignupMap();
+    var mapContainer = document.getElementById('signupMapContainer');
+    if (!mapContainer) return;
+    
+    // Build heatmap HTML with dark background + blinking dots
+    var html = `
+        <div style="position: relative; width: 100%; height: 100%; background: linear-gradient(135deg, #1a1f3a 0%, #0f1d2e 100%); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+            <!-- Simple World Map Background -->
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.2; font-size: 9px; color: #00D4FF; padding: 12px; line-height: 1.2;">
+                🌍 New York 🌎 London ✈️ Tokyo 🏙️ Sydney 🌏
+            </div>
+            
+            <!-- Blinking Dots Overlay -->
+            <div id="heatmapDots" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+            
+            <!-- Real-time Signups List (Bottom) -->
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.7)); color: white; padding: 16px; max-height: 45%; overflow-y: auto;">
+                <div id="heatmapSignups" style="display: flex; flex-direction: column; gap: 10px; font-size: 12px;"></div>
+            </div>
+        </div>
+    `;
+    
+    mapContainer.innerHTML = html;
+    
+    // Add CSS animation for blinking
+    if (!document.getElementById('heatmapStyle')) {
+        var style = document.createElement('style');
+        style.id = 'heatmapStyle';
+        style.innerHTML = `
+            @keyframes heatmapBlink {
+                0%, 100% { opacity: 1; box-shadow: 0 0 8px #00D4FF, 0 0 16px rgba(0, 212, 255, 0.5); }
+                50% { opacity: 0.4; box-shadow: 0 0 4px #00D4FF; }
+            }
+        `;
+        document.head.appendChild(style);
     }
     
-    // Load and display signup locations
-    app.updateMapMarkers();
-};
-
-app.initializeSignupMap = function() {
-    console.log('🗺️ Initializing interactive map...');
+    // Render heatmap dots
+    app.renderHeatmapDots();
     
-    var mapElement = document.getElementById('leafletMap');
-    if (!mapElement) {
-        console.error('Map element not found!');
-        return;
+    // Setup real-time listener
+    if (!app.heatmapListenerSetup) {
+        app.setupHeatmapListener();
+        app.heatmapListenerSetup = true;
     }
-    
-    // Create map centered on Kenya/Africa
-    app.signupMap = L.map('leafletMap').setView([0, 20], 3);
-    
-    // Add tile layer (OpenStreetMap)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
-    }).addTo(app.signupMap);
-    
-    console.log('✅ Map initialized');
 };
 
-app.updateMapMarkers = function() {
-    console.log('📍 Updating map markers...');
+app.getLocationCoordinates = function(location) {
+    // Major cities with approximate percentages
+    var locations = {
+        'New York': { x: 15, y: 30 },
+        'London': { x: 42, y: 22 },
+        'Tokyo': { x: 85, y: 25 },
+        'Sydney': { x: 88, y: 70 },
+        'Dubai': { x: 58, y: 40 },
+        'Singapore': { x: 72, y: 50 },
+        'Nairobi': { x: 55, y: 55 },
+        'Lagos': { x: 48, y: 60 },
+        'São Paulo': { x: 28, y: 65 },
+        'Toronto': { x: 20, y: 18 },
+        'Paris': { x: 42, y: 20 },
+        'Berlin': { x: 45, y: 18 },
+        'Moscow': { x: 58, y: 12 },
+        'Bangkok': { x: 70, y: 42 },
+        'Mumbai': { x: 62, y: 32 },
+        'Los Angeles': { x: 12, y: 35 },
+        'Mexico City': { x: 18, y: 45 },
+        'Istanbul': { x: 50, y: 28 }
+    };
     
-    var self = app;
+    return locations[location] || { x: 50 + (Math.random() - 0.5) * 40, y: 50 + (Math.random() - 0.5) * 40 };
+};
+
+app.renderHeatmapDots = function() {
+    console.log('📍 Rendering heatmap dots...');
+    
+    var dotsContainer = document.getElementById('heatmapDots');
+    var signupsContainer = document.getElementById('heatmapSignups');
+    
+    if (!dotsContainer || !signupsContainer) return;
     
     // Count signups by location
     var locationCounts = {};
-    var locationCoordinates = {};
+    var locationTimes = {};
     
-    // Make sure users object exists
-    if (!app.users || Object.keys(app.users).length === 0) {
-        console.warn('No users data available');
-        return;
-    }
-    
-    // Count signups per location
-    for (var uid in app.users) {
-        var user = app.users[uid];
-        if (user && user.location && user.location !== 'Unknown') {
-            var location = user.location;
-            locationCounts[location] = (locationCounts[location] || 0) + 1;
-            
-            // Store coordinates if available
-            if (user.coordinates) {
-                locationCoordinates[location] = user.coordinates;
+    if (app.users) {
+        for (var uid in app.users) {
+            var user = app.users[uid];
+            if (user && user.location && user.location !== 'Unknown') {
+                var location = user.location;
+                locationCounts[location] = (locationCounts[location] || 0) + 1;
+                locationTimes[location] = user.createdAt || Date.now();
             }
         }
     }
     
-    console.log('📊 Signup counts by location:', locationCounts);
+    console.log('📊 Signup counts:', locationCounts);
     
-    // Clear existing markers
-    app.signupMapMarkers.forEach(marker => {
-        if (app.signupMap) {
-            app.signupMap.removeLayer(marker);
-        }
-    });
-    app.signupMapMarkers = [];
+    // Clear old dots
+    dotsContainer.innerHTML = '';
     
-    // Add new markers for each location
+    // Add blinking dots for each location
+    var dotIndex = 0;
     for (var location in locationCounts) {
-        var count = locationCounts[location];
-        var coords = locationCoordinates[location];
+        var coords = app.getLocationCoordinates(location);
         
-        if (coords && coords.latitude && coords.longitude) {
-            var lat = coords.latitude;
-            var lng = coords.longitude;
-            
-            // Create custom icon with blinking light
-            var customIcon = L.divIcon({
-                className: 'signup-location-marker',
-                html: '<div class="signup-light ' + (count > 10 ? 'high-count' : '') + '"></div>',
-                iconSize: [32, 32],
-                iconAnchor: [16, 32],
-                popupAnchor: [0, -32]
-            });
-            
-            // Add marker
-            var marker = L.marker([lat, lng], { icon: customIcon })
-                .bindPopup('<strong>' + location + '</strong><br>' + count + ' signup' + (count !== 1 ? 's' : ''))
-                .addTo(app.signupMap);
-            
-            app.signupMapMarkers.push(marker);
-            
-            console.log('📍 Added marker:', location, '(' + count + ')', 'at', lat, lng);
-        }
+        var dot = document.createElement('div');
+        dot.style.cssText = `
+            position: absolute;
+            left: ${coords.x}%;
+            top: ${coords.y}%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background: #00D4FF;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00D4FF, 0 0 16px rgba(0, 212, 255, 0.5);
+            animation: heatmapBlink 1.5s infinite;
+            z-index: 10;
+            cursor: pointer;
+            animation-delay: ${dotIndex * 0.1}s;
+        `;
+        
+        dot.onclick = () => app.toast(location + ': ' + locationCounts[location] + ' active signup' + (locationCounts[location] !== 1 ? 's' : ''), 'info');
+        dotsContainer.appendChild(dot);
+        dotIndex++;
     }
     
-    console.log('✅ Map updated with', app.signupMapMarkers.length, 'locations');
+    // Render signup list
+    var html = '';
+    var sortedLocations = Object.keys(locationCounts).sort((a, b) => locationCounts[b] - locationCounts[a]);
+    
+    sortedLocations.slice(0, 6).forEach((location, idx) => {
+        var count = locationCounts[location];
+        var timeAgo = app.getTimeAgo(locationTimes[location]);
+        
+        html += `
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0, 212, 255, 0.08); border-radius: 8px; border-left: 3px solid #00D4FF; transition: 0.2s;" onmouseover="this.style.background='rgba(0, 212, 255, 0.15)'" onmouseout="this.style.background='rgba(0, 212, 255, 0.08)'">
+                <div style="width: 8px; height: 8px; background: #00D4FF; border-radius: 50%; animation: heatmapBlink 1.5s infinite;"></div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 13px;">${location}</div>
+                    <div style="font-size: 11px; color: #00D4FF; opacity: 0.9;">Active Signup: ${timeAgo}</div>
+                </div>
+                <div style="background: #00D4FF; color: #1a1f3a; padding: 3px 9px; border-radius: 12px; font-weight: 700; font-size: 12px;">${count}</div>
+            </div>
+        `;
+    });
+    
+    if (html === '') {
+        html = '<div style="text-align: center; color: #00D4FF; padding: 20px; font-size: 12px;">⏳ Waiting for first signup...</div>';
+    }
+    
+    signupsContainer.innerHTML = html;
+    console.log('✅ Heatmap rendered with ' + sortedLocations.length + ' locations');
 };
 
-// Listen for user updates to refresh map in real-time
-app.setupSignupMapListener = function() {
-    console.log('🔄 Setting up real-time map updates...');
+app.getTimeAgo = function(timestamp) {
+    if (!timestamp) return 'Just now';
+    
+    var createdDate = new Date(timestamp);
+    var now = new Date();
+    var diff = now - createdDate;
+    
+    var seconds = Math.floor(diff / 1000);
+    var minutes = Math.floor(seconds / 60);
+    var hours = Math.floor(minutes / 60);
+    var days = Math.floor(hours / 24);
+    
+    if (seconds < 60) return 'Just now';
+    if (minutes < 60) return minutes + 'm ago';
+    if (hours < 24) return hours + 'h ago';
+    if (days < 7) return days + 'd ago';
+    return createdDate.toLocaleDateString();
+};
+
+app.setupHeatmapListener = function() {
+    console.log('🔄 Setting up real-time heatmap updates...');
     
     db.ref('users').on('value', snapshot => {
+        if (!app.users) app.users = {};
         app.users = {};
+        
         snapshot.forEach(child => {
             app.users[child.key] = child.val();
         });
         
-        // Update map markers
-        app.updateMapMarkers();
+        // Re-render heatmap
+        app.renderHeatmapDots();
     });
 };
 
