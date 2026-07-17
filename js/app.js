@@ -3009,26 +3009,26 @@ var app = {
             // Render conversations
             if (conversations.length > 0) {
                 conversations.forEach(conv => {
-                    var unreadBadge = conv.unreadCount > 0 ? `<span style="background: #ef4444; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">${conv.unreadCount}</span>` : '';
+                    var unreadBadge = conv.unreadCount > 0 ? `<div class="message-item-unread">${conv.unreadCount}</div>` : '<div style="width: 20px;"></div>';
                     
                     html += `
-                        <div onclick="app.openChatFromSearch('${conv.uid}', '${conv.user.name}')" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
-                            <div style="width: 50px; height: 50px; border-radius: 50%; background: ${conv.user.profilePhoto ? `url('${conv.user.profilePhoto}')` : 'var(--primary)'}; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; margin-right: 12px;">
-                                ${!conv.user.profilePhoto ? conv.user.name.charAt(0) : ''}
+                        <div class="message-item" onclick="app.openChatFromSearch('${conv.uid}', '${conv.user.name}')">
+                            <div class="message-item-avatar" style="background: ${conv.user.profilePhoto ? `url('${conv.user.profilePhoto}') center/cover` : 'var(--primary)'};">
+                                ${!conv.user.profilePhoto ? conv.user.name.charAt(0).toUpperCase() : ''}
                             </div>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 600; margin-bottom: 4px;">${conv.user.name}</div>
-                                <div style="font-size: 14px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${conv.lastMessage}</div>
+                            <div class="message-item-content">
+                                <div class="message-item-name">${conv.user.name}</div>
+                                <div class="message-item-preview">${conv.lastMessage}</div>
                             </div>
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                                <div style="font-size: 12px; color: #9ca3af;">${conv.lastTime}</div>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                                <div class="message-item-time">${conv.lastTime}</div>
                                 ${unreadBadge}
                             </div>
                         </div>
                     `;
                 });
             } else {
-                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No messages yet. Go to someone\'s profile to start a chat!</div>';
+                html = '<div style="text-align: center; color: #6b7280; padding: 60px 16px; font-size: 15px;">No conversations yet<br><br>Go find someone to chat with! 💬</div>';
             }
             
             var container = document.getElementById('messageList');
