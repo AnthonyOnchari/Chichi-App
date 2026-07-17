@@ -1231,17 +1231,32 @@ var app = {
         this.openChat(uid, name);
     },
 
+    // ============================================
+    // CREATE POST MODAL - FIXED
+    // ============================================
+
     showCreateModal: function() {
+        console.log('📝 Opening create post modal...');
         var modal = document.getElementById('createModal');
         if (!modal) {
-            console.error('❌ createModal not found');
-            this.toast('Error opening post creator', 'error');
-            return;
+            console.error('❌ createModal not found!');
+            // Try to find it by class as fallback
+            modal = document.querySelector('.modal-overlay#createModal');
+            if (!modal) {
+                this.toast('Error opening post creator', 'error');
+                return;
+            }
         }
         modal.classList.add('active');
         modal.style.display = 'flex';
         modal.style.zIndex = '9999';
         console.log('✅ Create modal opened');
+        
+        // Focus on caption input after a short delay
+        setTimeout(function() {
+            var captionInput = document.getElementById('captionInput');
+            if (captionInput) captionInput.focus();
+        }, 300);
     },
 
     closeCreateModal: function() {
@@ -1261,7 +1276,7 @@ var app = {
             photoPreview.style.display = 'none';
             photoPreview.textContent = '';
         }
-        console.log('✅ Modal closed');
+        console.log('✅ Create modal closed');
     },
 
     previewPhoto: function(e) {
@@ -3352,7 +3367,7 @@ var app = {
     },
 
     // ============================================
-    // MANDATORY HASHTAG SELECTION - FIXED
+    // MANDATORY HASHTAG SELECTION
     // ============================================
 
     showMandatoryHashtagSelection: function() {
@@ -3523,7 +3538,7 @@ var app = {
     },
 
     // ============================================
-    // GLOBAL SIGNUP HEATMAP
+    // GLOBAL SIGNUP HEATMAP - WITH BLINKING DOTS
     // ============================================
 
     loadSignupHeatmap: function() {
@@ -3624,6 +3639,7 @@ var app = {
         
         var dotsContainer = document.getElementById('heatmapDots');
         var activityFeed = document.getElementById('recentActivityFeed');
+        var liveCountElement = document.getElementById('liveAccountCount');
         
         if (!dotsContainer) {
             console.error('Dots container not found!');
@@ -3632,9 +3648,12 @@ var app = {
         
         var locationData = {};
         var recentActivities = [];
+        var totalUsers = 0;
         
         if (this.users && Object.keys(this.users).length > 0) {
+            totalUsers = Object.keys(this.users).length;
             var userArray = Object.keys(this.users).map(uid => ({ uid: uid, user: this.users[uid] }));
+            
             userArray.sort(function(a, b) {
                 var dateA = new Date(a.user.createdAt || 0);
                 var dateB = new Date(b.user.createdAt || 0);
@@ -3677,8 +3696,32 @@ var app = {
             });
         }
         
+        // UPDATE LIVE COUNTER
+        if (liveCountElement) {
+            this.animateNumber(liveCountElement, totalUsers);
+        }
+        
+        // Update live signup rate
+        var rateElement = document.getElementById('liveSignupRate');
+        if (rateElement) {
+            var today = new Date().toDateString();
+            var todayCount = 0;
+            for (var uid in this.users) {
+                var user = this.users[uid];
+                if (user && user.createdAt) {
+                    var userDate = new Date(user.createdAt).toDateString();
+                    if (userDate === today) {
+                        todayCount++;
+                    }
+                }
+            }
+            rateElement.textContent = '+' + todayCount;
+        }
+        
+        // Render dots on map with BLINKING effect
         dotsContainer.innerHTML = '';
         var dotIndex = 0;
+        var dotCount = Object.keys(locationData).length;
         
         for (var key in locationData) {
             var data = locationData[key];
@@ -3689,8 +3732,15 @@ var app = {
             var x = ((lng + 180) / 360) * 100;
             var y = ((90 - lat) / 180) * 100;
             
-            var size = 12 + Math.min(data.count * 2, 20);
-            var brightness = Math.min(0.6 + data.count * 0.05, 1);
+            var size = 10 + Math.min(data.count * 3, 22);
+            var brightness = Math.min(0.5 + data.count * 0.08, 1);
+            
+            var colors = ['#00D4FF', '#00FF88', '#FF6B6B', '#FFD93D', '#A66CFF'];
+            var colorIndex = Math.min(data.count - 1, colors.length - 1);
+            var color = colors[colorIndex] || '#00D4FF';
+            
+            var blinkDuration = 1.2 + Math.random() * 1.5;
+            var delay = dotIndex * 0.08;
             
             dot.style.cssText = `
                 position: absolute;
@@ -3698,28 +3748,52 @@ var app = {
                 top: ${y}%;
                 width: ${size}px;
                 height: ${size}px;
-                background: rgba(0, 212, 255, ${brightness});
+                background: ${color};
                 border-radius: 50%;
-                box-shadow: 0 0 ${size * 1.5}px rgba(0, 212, 255, ${brightness * 0.6}), 0 0 ${size * 3}px rgba(0, 212, 255, ${brightness * 0.3});
+                box-shadow: 0 0 ${size * 1.5}px ${color}, 0 0 ${size * 3}px ${color}40;
                 transform: translate(-50%, -50%);
                 z-index: 10;
                 cursor: pointer;
-                animation: heatmapBlink ${1.5 + Math.random()}s infinite;
-                animation-delay: ${dotIndex * 0.1}s;
-                border: 2px solid rgba(255,255,255,0.3);
+                animation: heatmapBlink ${blinkDuration}s infinite;
+                animation-delay: ${delay}s;
+                border: 2px solid rgba(255,255,255,${Math.min(0.3 + data.count * 0.05, 0.6)});
                 pointer-events: auto;
+                transition: all 0.3s ease;
             `;
             
-            dot.onclick = function(loc, count) {
+            dot.onmouseover = function() {
+                this.style.transform = 'translate(-50%, -50%) scale(1.5)';
+                this.style.zIndex = '20';
+            };
+            dot.onmouseout = function() {
+                this.style.transform = 'translate(-50%, -50%) scale(1)';
+                this.style.zIndex = '10';
+            };
+            
+            dot.onclick = function(loc, count, users) {
                 return function() {
-                    app.toast(`📍 ${loc}: ${count} signups`, 'info');
+                    var userList = users.slice(0, 5).join(', ');
+                    if (users.length > 5) {
+                        userList += ' and ' + (users.length - 5) + ' more';
+                    }
+                    app.toast(`📍 ${loc}: ${count} signup${count !== 1 ? 's' : ''}\n👤 ${userList}`, 'info');
                 };
-            }(data.location, data.count);
+            }(data.location, data.count, data.users);
             
             dotsContainer.appendChild(dot);
             dotIndex++;
         }
         
+        if (dotCount === 0) {
+            dotsContainer.innerHTML = `
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.3); font-size: 14px; text-align: center;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">🌍</div>
+                    Waiting for signups...
+                </div>
+            `;
+        }
+        
+        // Render activity feed
         if (activityFeed) {
             var html = '';
             if (recentActivities.length === 0) {
@@ -3751,7 +3825,7 @@ var app = {
             activityFeed.innerHTML = html;
         }
         
-        console.log('✅ Heatmap rendered:', Object.keys(locationData).length, 'locations');
+        console.log('✅ Heatmap rendered:', dotCount, 'locations,', totalUsers, 'total users');
     },
 
     getLocationCoordinates: function(location) {
@@ -3796,6 +3870,30 @@ var app = {
             this.updateHeatmapStats();
             this.renderHeatmapDots();
             this.showHashtagSuggestions();
+            
+            // Update live counter
+            var liveCountElement = document.getElementById('liveAccountCount');
+            if (liveCountElement) {
+                var totalUsers = Object.keys(this.users).length;
+                this.animateNumber(liveCountElement, totalUsers);
+            }
+            
+            // Update live signup rate
+            var rateElement = document.getElementById('liveSignupRate');
+            if (rateElement) {
+                var today = new Date().toDateString();
+                var todayCount = 0;
+                for (var uid in this.users) {
+                    var user = this.users[uid];
+                    if (user && user.createdAt) {
+                        var userDate = new Date(user.createdAt).toDateString();
+                        if (userDate === today) {
+                            todayCount++;
+                        }
+                    }
+                }
+                rateElement.textContent = '+' + todayCount;
+            }
         });
     },
 
@@ -3887,6 +3985,258 @@ var app = {
             suggestionDiv.innerHTML = html;
             exploreView.insertBefore(suggestionDiv, exploreView.firstChild);
         }
+    },
+
+    // ============================================
+    // TRENDING HASHTAGS
+    // ============================================
+
+    trendingHashtags: [],
+
+    calculateTrendingHashtags: function() {
+        console.log('📈 Calculating trending hashtags...');
+        
+        var hashtagCount = {};
+        var now = new Date();
+        var weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        this.posts.forEach(post => {
+            var postDate = new Date(post.timestamp || post.createdAt);
+            if (postDate >= weekAgo) {
+                if (post.hashtags) {
+                    post.hashtags.forEach(tag => {
+                        hashtagCount[tag] = (hashtagCount[tag] || 0) + 1;
+                    });
+                }
+            }
+        });
+        
+        this.trendingHashtags = Object.keys(hashtagCount)
+            .map(tag => ({
+                name: tag,
+                count: hashtagCount[tag],
+                posts: this.posts.filter(p => p.hashtags && p.hashtags.includes(tag)).length
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 15);
+        
+        console.log('✅ Trending hashtags calculated:', this.trendingHashtags.length);
+    },
+
+    renderTrendingInExplore: function() {
+        if (this.trendingHashtags.length === 0) {
+            this.calculateTrendingHashtags();
+        }
+        
+        if (document.getElementById('trendingSection')) {
+            this.renderTrendingList();
+            return;
+        }
+        
+        var html = `
+            <div id="trendingSection" style="padding: 16px; border-bottom: 1px solid #f0f0f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 700;">🔥 Trending Now</h3>
+                    <button onclick="app.calculateTrendingHashtags(); app.renderTrendingList();" style="background: var(--primary); color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600;">Refresh</button>
+                </div>
+                
+                <div id="trendingList" style="display: grid; gap: 12px;"></div>
+            </div>
+        `;
+        
+        var exploreView = document.getElementById('exploreView');
+        if (exploreView) {
+            exploreView.insertAdjacentHTML('afterbegin', html);
+            this.renderTrendingList();
+        }
+    },
+
+    renderTrendingList: function() {
+        if (this.trendingHashtags.length === 0) {
+            this.calculateTrendingHashtags();
+            return;
+        }
+        
+        var html = '';
+        
+        this.trendingHashtags.forEach((trend, index) => {
+            var rankEmoji = ['🥇', '🥈', '🥉'][index] || '•';
+            
+            html += `
+                <div style="display: flex; align-items: center; padding: 12px; background: white; border-radius: 12px; cursor: pointer; transition: 0.2s; border: 1px solid #eee;" onclick="app.toast('View hashtag posts coming soon', 'info')" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                    <div style="font-size: 20px; margin-right: 12px; width: 30px; text-align: center;">
+                        ${rankEmoji}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: var(--primary);">${trend.name}</div>
+                        <div style="font-size: 12px; color: #6b7280;">${trend.posts} posts • ${trend.count} mentions</div>
+                    </div>
+                    <div style="color: #9ca3af; font-size: 18px;">→</div>
+                </div>
+            `;
+        });
+        
+        var trendingList = document.getElementById('trendingList');
+        if (trendingList) {
+            trendingList.innerHTML = html;
+        }
+    },
+
+    setupTrendingRefresh: function() {
+        var self = this;
+        
+        this.calculateTrendingHashtags();
+        
+        setInterval(() => {
+            console.log('🔄 Auto-refreshing trending hashtags...');
+            self.calculateTrendingHashtags();
+            if (document.getElementById('trendingList')) {
+                self.renderTrendingList();
+            }
+        }, 60 * 60 * 1000);
+    },
+
+    // ============================================
+    // TRACK UNREAD MESSAGES
+    // ============================================
+
+    trackUnreadMessages: function() {
+        var self = this;
+        
+        if (!this.user || this.isGuest) {
+            console.log('ℹ️ Guest mode - skipping message tracking');
+            return;
+        }
+       
+        if (self.unreadTrackingActive) {
+            console.log('ℹ️ Unread tracking already running - skipping');
+            return;
+        }
+        self.unreadTrackingActive = true;
+       
+        var userIds = Object.keys(this.users || {});
+       
+        if (!this.unreadMessages) this.unreadMessages = {};
+        if (!this.notifiedMessages) this.notifiedMessages = {};
+        if (!this.messageCountTracker) this.messageCountTracker = {};
+       
+        console.log('📊 Setting up message tracking for ' + userIds.length + ' users');
+       
+        if (userIds.length === 0) {
+            console.log('⚠️ No users to track! Skipping setup...');
+            self.unreadTrackingActive = false;
+            return;
+        }
+       
+        userIds.forEach(uid => {
+            if (uid !== self.user.uid) {
+                var key = [self.user.uid, uid].sort().join('_');
+                var userName = (this.users[uid] || {}).name || 'User';
+                var messagesRef = db.ref('chats/' + key + '/messages');
+               
+                messagesRef.orderByChild('timestamp').once('value', s => {
+                    var count = 0;
+                    s.forEach(c => {
+                        var m = c.val();
+                        if (m && (m.text || m.image)) {
+                            count++;
+                        }
+                    });
+                    self.messageCountTracker[key] = count;
+                    console.log('📊 ' + userName + ': ' + count + ' messages (baseline)');
+                });
+               
+                messagesRef.orderByChild('timestamp').on('child_added', childSnap => {
+                    var m = childSnap.val();
+                    if (!m) return;
+                   
+                    if (m.sender !== self.user.uid && (m.text || m.image)) {
+                        var notifyKey = key + '_' + m.timestamp;
+                       
+                        if (!self.notifiedMessages[notifyKey]) {
+                            console.log('🔔 [REAL-TIME] NEW MESSAGE from ' + userName + ': ' + (m.text || '📷 Image'));
+                            self.notifyNewMessage(userName, m.text || '📷 Image');
+                            self.notifiedMessages[notifyKey] = true;
+                        }
+                    }
+                });
+               
+                messagesRef.on('value', s => {
+                    var unreadCount = 0;
+                    var messages = [];
+                   
+                    s.forEach(c => {
+                        var m = c.val();
+                        if (m && (m.text || m.image)) {
+                            messages.push(m);
+                            if (m.sender !== self.user.uid && !m.read) {
+                                unreadCount++;
+                            }
+                        }
+                    });
+                   
+                    if (!self.unreadMessages[key]) {
+                        self.unreadMessages[key] = { userName: userName };
+                    }
+                    self.unreadMessages[key].count = unreadCount;
+                    self.unreadMessages[key].messages = messages;
+                   
+                    self.updateUnreadBadge();
+                    self.loadMessages();
+                });
+            }
+        });
+    },
+
+    // ============================================
+    // CHECK AND SHOW HASHTAG POPUP
+    // ============================================
+
+    checkAndShowHashtagPopup: function() {
+        if (!this.user) return;
+        
+        var userHashtags = this.profile.hashtags || [];
+        console.log('🏷️ User hashtags:', userHashtags);
+        
+        if (userHashtags.length === 0) {
+            console.log('⚠️ User has no hashtags - showing popup');
+            this.showMandatoryHashtagSelection();
+        }
+    },
+
+    // ============================================
+    // SEARCH MESSAGES
+    // ============================================
+
+    searchMessages: function(query) {
+        var items = document.querySelectorAll('.message-item');
+        var searchQuery = query.toLowerCase().trim();
+       
+        items.forEach(item => {
+            var nameEl = item.querySelector('.message-item-name');
+            var previewEl = item.querySelector('.message-item-preview');
+            var name = (nameEl ? nameEl.textContent : '').toLowerCase();
+            var preview = (previewEl ? previewEl.textContent : '').toLowerCase();
+           
+            if (name.includes(searchQuery) || preview.includes(searchQuery) || !searchQuery) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    },
+
+    filterMessages: function(filter) {
+        console.log('🔍 Filtering messages:', filter);
+        
+        document.querySelectorAll('.message-filter-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
+        
+        this.loadMessages();
     },
 
     // ============================================
@@ -4751,258 +5101,6 @@ var app = {
         
         resultsContainer.innerHTML = html;
         resultsSection.style.display = 'block';
-    },
-
-    // ============================================
-    // TRENDING HASHTAGS
-    // ============================================
-
-    trendingHashtags: [],
-
-    calculateTrendingHashtags: function() {
-        console.log('📈 Calculating trending hashtags...');
-        
-        var hashtagCount = {};
-        var now = new Date();
-        var weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        
-        this.posts.forEach(post => {
-            var postDate = new Date(post.timestamp || post.createdAt);
-            if (postDate >= weekAgo) {
-                if (post.hashtags) {
-                    post.hashtags.forEach(tag => {
-                        hashtagCount[tag] = (hashtagCount[tag] || 0) + 1;
-                    });
-                }
-            }
-        });
-        
-        this.trendingHashtags = Object.keys(hashtagCount)
-            .map(tag => ({
-                name: tag,
-                count: hashtagCount[tag],
-                posts: this.posts.filter(p => p.hashtags && p.hashtags.includes(tag)).length
-            }))
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 15);
-        
-        console.log('✅ Trending hashtags calculated:', this.trendingHashtags.length);
-    },
-
-    renderTrendingInExplore: function() {
-        if (this.trendingHashtags.length === 0) {
-            this.calculateTrendingHashtags();
-        }
-        
-        if (document.getElementById('trendingSection')) {
-            this.renderTrendingList();
-            return;
-        }
-        
-        var html = `
-            <div id="trendingSection" style="padding: 16px; border-bottom: 1px solid #f0f0f0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h3 style="margin: 0; font-size: 18px; font-weight: 700;">🔥 Trending Now</h3>
-                    <button onclick="app.calculateTrendingHashtags(); app.renderTrendingList();" style="background: var(--primary); color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600;">Refresh</button>
-                </div>
-                
-                <div id="trendingList" style="display: grid; gap: 12px;"></div>
-            </div>
-        `;
-        
-        var exploreView = document.getElementById('exploreView');
-        if (exploreView) {
-            exploreView.insertAdjacentHTML('afterbegin', html);
-            this.renderTrendingList();
-        }
-    },
-
-    renderTrendingList: function() {
-        if (this.trendingHashtags.length === 0) {
-            this.calculateTrendingHashtags();
-            return;
-        }
-        
-        var html = '';
-        
-        this.trendingHashtags.forEach((trend, index) => {
-            var rankEmoji = ['🥇', '🥈', '🥉'][index] || '•';
-            
-            html += `
-                <div style="display: flex; align-items: center; padding: 12px; background: white; border-radius: 12px; cursor: pointer; transition: 0.2s; border: 1px solid #eee;" onclick="app.toast('View hashtag posts coming soon', 'info')" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
-                    <div style="font-size: 20px; margin-right: 12px; width: 30px; text-align: center;">
-                        ${rankEmoji}
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; color: var(--primary);">${trend.name}</div>
-                        <div style="font-size: 12px; color: #6b7280;">${trend.posts} posts • ${trend.count} mentions</div>
-                    </div>
-                    <div style="color: #9ca3af; font-size: 18px;">→</div>
-                </div>
-            `;
-        });
-        
-        var trendingList = document.getElementById('trendingList');
-        if (trendingList) {
-            trendingList.innerHTML = html;
-        }
-    },
-
-    setupTrendingRefresh: function() {
-        var self = this;
-        
-        this.calculateTrendingHashtags();
-        
-        setInterval(() => {
-            console.log('🔄 Auto-refreshing trending hashtags...');
-            self.calculateTrendingHashtags();
-            if (document.getElementById('trendingList')) {
-                self.renderTrendingList();
-            }
-        }, 60 * 60 * 1000);
-    },
-
-    // ============================================
-    // TRACK UNREAD MESSAGES
-    // ============================================
-
-    trackUnreadMessages: function() {
-        var self = this;
-        
-        if (!this.user || this.isGuest) {
-            console.log('ℹ️ Guest mode - skipping message tracking');
-            return;
-        }
-       
-        if (self.unreadTrackingActive) {
-            console.log('ℹ️ Unread tracking already running - skipping');
-            return;
-        }
-        self.unreadTrackingActive = true;
-       
-        var userIds = Object.keys(this.users || {});
-       
-        if (!this.unreadMessages) this.unreadMessages = {};
-        if (!this.notifiedMessages) this.notifiedMessages = {};
-        if (!this.messageCountTracker) this.messageCountTracker = {};
-       
-        console.log('📊 Setting up message tracking for ' + userIds.length + ' users');
-       
-        if (userIds.length === 0) {
-            console.log('⚠️ No users to track! Skipping setup...');
-            self.unreadTrackingActive = false;
-            return;
-        }
-       
-        userIds.forEach(uid => {
-            if (uid !== self.user.uid) {
-                var key = [self.user.uid, uid].sort().join('_');
-                var userName = (this.users[uid] || {}).name || 'User';
-                var messagesRef = db.ref('chats/' + key + '/messages');
-               
-                messagesRef.orderByChild('timestamp').once('value', s => {
-                    var count = 0;
-                    s.forEach(c => {
-                        var m = c.val();
-                        if (m && (m.text || m.image)) {
-                            count++;
-                        }
-                    });
-                    self.messageCountTracker[key] = count;
-                    console.log('📊 ' + userName + ': ' + count + ' messages (baseline)');
-                });
-               
-                messagesRef.orderByChild('timestamp').on('child_added', childSnap => {
-                    var m = childSnap.val();
-                    if (!m) return;
-                   
-                    if (m.sender !== self.user.uid && (m.text || m.image)) {
-                        var notifyKey = key + '_' + m.timestamp;
-                       
-                        if (!self.notifiedMessages[notifyKey]) {
-                            console.log('🔔 [REAL-TIME] NEW MESSAGE from ' + userName + ': ' + (m.text || '📷 Image'));
-                            self.notifyNewMessage(userName, m.text || '📷 Image');
-                            self.notifiedMessages[notifyKey] = true;
-                        }
-                    }
-                });
-               
-                messagesRef.on('value', s => {
-                    var unreadCount = 0;
-                    var messages = [];
-                   
-                    s.forEach(c => {
-                        var m = c.val();
-                        if (m && (m.text || m.image)) {
-                            messages.push(m);
-                            if (m.sender !== self.user.uid && !m.read) {
-                                unreadCount++;
-                            }
-                        }
-                    });
-                   
-                    if (!self.unreadMessages[key]) {
-                        self.unreadMessages[key] = { userName: userName };
-                    }
-                    self.unreadMessages[key].count = unreadCount;
-                    self.unreadMessages[key].messages = messages;
-                   
-                    self.updateUnreadBadge();
-                    self.loadMessages();
-                });
-            }
-        });
-    },
-
-    // ============================================
-    // CHECK AND SHOW HASHTAG POPUP
-    // ============================================
-
-    checkAndShowHashtagPopup: function() {
-        if (!this.user) return;
-        
-        var userHashtags = this.profile.hashtags || [];
-        console.log('🏷️ User hashtags:', userHashtags);
-        
-        if (userHashtags.length === 0) {
-            console.log('⚠️ User has no hashtags - showing popup');
-            this.showMandatoryHashtagSelection();
-        }
-    },
-
-    // ============================================
-    // SEARCH MESSAGES
-    // ============================================
-
-    searchMessages: function(query) {
-        var items = document.querySelectorAll('.message-item');
-        var searchQuery = query.toLowerCase().trim();
-       
-        items.forEach(item => {
-            var nameEl = item.querySelector('.message-item-name');
-            var previewEl = item.querySelector('.message-item-preview');
-            var name = (nameEl ? nameEl.textContent : '').toLowerCase();
-            var preview = (previewEl ? previewEl.textContent : '').toLowerCase();
-           
-            if (name.includes(searchQuery) || preview.includes(searchQuery) || !searchQuery) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-    },
-
-    filterMessages: function(filter) {
-        console.log('🔍 Filtering messages:', filter);
-        
-        document.querySelectorAll('.message-filter-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        if (event && event.target) {
-            event.target.classList.add('active');
-        }
-        
-        this.loadMessages();
     }
 };
 
