@@ -3054,6 +3054,13 @@ var app = {
             return;
         }
         
+        // HIDE ALL OTHER VIEWS
+        var allViews = document.querySelectorAll('.view');
+        allViews.forEach(view => {
+            view.classList.remove('active');
+            view.style.display = 'none';
+        });
+        
         this.currentChat = { uid: uid, name: name };
         
         // Update header for new chat view
@@ -3063,11 +3070,12 @@ var app = {
         document.getElementById('chatMessages').innerHTML = '';
         document.getElementById('chatMessageInput').value = '';
         
-        // Show new chat view
+        // Show ONLY chat view
         var chatView = document.getElementById('chatView');
         if (chatView) {
             chatView.classList.add('active');
             chatView.style.display = 'flex';
+            chatView.style.zIndex = '1000';
         }
         
         // Also keep modal for compatibility
@@ -3305,6 +3313,9 @@ var app = {
             this.chatMessagesListener = null;
         }
         this.currentChat = null;
+        
+        // Show messages view again
+        this.showView('messagesView');
     },
 
     filterMessages: function(filter) {
