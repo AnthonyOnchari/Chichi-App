@@ -3475,49 +3475,6 @@ var app = {
             }
         });
     },
-        input.value = '';
-        input.focus();
-       
-        // NOW send to Firebase
-        db.ref('chats/' + key + '/messages').push({
-            sender: self.user.uid,
-            text: text,
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            read: false  // NEW: Mark as unread initially
-        }).then((ref) => {
-            // Message sent successfully
-            // Remove pending flag and reload to sync with Firebase
-            self.loadMessages(); // Update preview in list
-           
-            // Small delay then reload chat messages to show confirmed message
-            setTimeout(() => {
-                db.ref('chats/' + key + '/messages').once('value').then(s => {
-                    var messages = [];
-                    s.forEach(c => {
-                        var m = c.val();
-                        if (m && (m.text || m.image)) {
-                            messages.push(m);
-                        }
-                    });
-                    messages.sort((a, b) => {
-                        return (a.timestamp || 0) - (b.timestamp || 0);
-                    });
-                    self.chatMessages[key] = messages;
-                    self.displayChatMessages(messages, key);
-                });
-            }, 100);
-           
-        }).catch(err => {
-            self.toast('Failed to send message: ' + err.message, 'error');
-            console.error('Send message error:', err);
-           
-            // Remove the pending message on error
-            if (this.chatMessages[key]) {
-                this.chatMessages[key] = this.chatMessages[key].filter(m => !m.pending);
-                this.displayChatMessages(this.chatMessages[key], key);
-            }
-        });
-    },
 
     handleChatImageUpload: function(e) {
         var files = e.target.files;
