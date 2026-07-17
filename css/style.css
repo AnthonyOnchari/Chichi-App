@@ -504,6 +504,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 }
 
 /* ===== BOTTOM NAV - WITH CURVED TOP EDGES ===== */
+/* ===== BOTTOM NAV - WITH CURVED TOP EDGES ===== */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -597,6 +598,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     box-shadow: 0 4px 16px rgba(0, 136, 204, 0.4);
     flex-shrink: 0;
     margin: 0 2px;
+    order: 0;
 }
 
 .fab-button:hover {
@@ -607,6 +609,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 .fab-button:active {
     transform: scale(0.95);
 }
+
 
 /* ===== FEED ===== */
 .quick-post {

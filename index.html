@@ -271,37 +271,37 @@
     </div>
 
     <!-- BOTTOM NAVIGATION - Curved top edges -->
-    <div class="bottom-nav">
-        <div class="nav-wrapper">
-            <div class="nav-item active" onclick="app.switchView('feed')">
-                <div class="nav-icon">🏠</div>
-                <div>Home</div>
-            </div>
-            <div class="nav-item" onclick="app.switchView('explore')">
-                <div class="nav-icon">🔍</div>
-                <div>Explore</div>
-            </div>
-            
-            <!-- FAB BUTTON (Centered) -->
-            <button class="fab-button" onclick="app.showCreateModal()">✚</button>
-            
-            <div class="nav-item" onclick="app.switchView('messages')" style="position: relative;">
-                <div class="nav-icon">💬</div>
-                <div>Chats</div>
-                <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
-            </div>
-            <div class="nav-item" onclick="app.switchView('groups')">
-                <div class="nav-icon">👥</div>
-                <div>Groups</div>
-            </div>
-            <div class="nav-item" onclick="app.switchView('profile')">
-                <div class="nav-icon">👤</div>
-                <div>Profile</div>
-            </div>
-            <div class="nav-item" onclick="app.showAbout()">
-                <div class="nav-icon">ℹ️</div>
-                <div>About</div>
-            </div>
+    <!-- BOTTOM NAVIGATION - Curved top edges -->
+<div class="bottom-nav">
+    <div class="nav-wrapper">
+        <div class="nav-item active" onclick="app.switchView('feed')">
+            <div class="nav-icon">🏠</div>
+            <div>Home</div>
+        </div>
+        <div class="nav-item" onclick="app.switchView('explore')">
+            <div class="nav-icon">🔍</div>
+            <div>Explore</div>
+        </div>
+        <div class="nav-item" onclick="app.switchView('messages')" style="position: relative;">
+            <div class="nav-icon">💬</div>
+            <div>Chats</div>
+            <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
+        </div>
+        
+        <!-- FAB BUTTON - Between Chats and Groups -->
+        <button class="fab-button" onclick="app.showCreateModal()">✚</button>
+        
+        <div class="nav-item" onclick="app.switchView('groups')">
+            <div class="nav-icon">👥</div>
+            <div>Groups</div>
+        </div>
+        <div class="nav-item" onclick="app.switchView('profile')">
+            <div class="nav-icon">👤</div>
+            <div>Profile</div>
+        </div>
+        <div class="nav-item" onclick="app.showAbout()">
+            <div class="nav-icon">ℹ️</div>
+            <div>About</div>
         </div>
     </div>
 </div>

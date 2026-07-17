@@ -1410,136 +1410,145 @@ var app = {
         });
     },
 
-    showCreateStoryModal: function() {
-        var existing = document.getElementById('storyModalOverlay');
-        if (existing) existing.remove();
-        
-        var html = `
-            <div class="story-modal-overlay" id="storyModalOverlay">
-                <div class="story-modal">
-                    <div class="story-modal-header">
-                        <h2>📖 Create Story</h2>
-                        <button class="story-modal-close" onclick="document.getElementById('storyModalOverlay').remove()">✕</button>
+  showCreateStoryModal: function() {
+    var existing = document.getElementById('storyModalOverlay');
+    if (existing) existing.remove();
+    
+    var html = `
+        <div class="story-modal-overlay" id="storyModalOverlay">
+            <div class="story-modal">
+                <div class="story-modal-header">
+                    <h2>📖 Create Story</h2>
+                    <button class="story-modal-close" onclick="document.getElementById('storyModalOverlay').remove()">✕</button>
+                </div>
+                <div class="story-modal-content">
+                    <div class="story-form-group">
+                        <label class="story-form-label">Story Image *</label>
+                        <input type="file" id="storyImageInput" accept="image/*" class="story-file-input">
                     </div>
-                    <div class="story-modal-content">
-                        <div class="story-form-group">
-                            <label class="story-form-label">Story Image *</label>
-                            <input type="file" id="storyImageInput" accept="image/*" class="story-file-input">
-                        </div>
-                        <div class="story-form-group">
-                            <label class="story-form-label">Music URL (Cloudinary)</label>
-                            <input type="text" id="storyMusicInput" placeholder="https://res.cloudinary.com/..." class="story-form-input">
-                        </div>
-                        <div class="story-form-group">
-                            <label class="story-form-label">Music Name</label>
-                            <input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" class="story-form-input">
-                        </div>
-                        <div class="story-form-group">
-                            <label class="story-form-label">Caption</label>
-                            <textarea id="storyCaptionInput" placeholder="Add a caption..." class="story-form-textarea"></textarea>
-                        </div>
+                    <!-- REMOVED: Music URL field -->
+                    <div class="story-form-group">
+                        <label class="story-form-label">🎵 Music Name</label>
+                        <input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" class="story-form-input">
                     </div>
-                    <div class="story-modal-footer">
-                        <button class="story-btn-cancel" onclick="document.getElementById('storyModalOverlay').remove()">Cancel</button>
-                        <button class="story-btn-upload" id="storyUploadBtn" onclick="app.uploadStory()">
-                            <span class="story-btn-text">📤 Upload Story</span>
-                            <div class="story-spinner"></div>
-                        </button>
+                    <div class="story-form-group">
+                        <label class="story-form-label">Caption</label>
+                        <textarea id="storyCaptionInput" placeholder="Add a caption..." class="story-form-textarea"></textarea>
                     </div>
                 </div>
+                <div class="story-modal-footer">
+                    <button class="story-btn-cancel" onclick="document.getElementById('storyModalOverlay').remove()">Cancel</button>
+                    <button class="story-btn-upload" id="storyUploadBtn" onclick="app.uploadStory()">
+                        <span class="story-btn-text">📤 Upload Story</span>
+                        <div class="story-spinner"></div>
+                    </button>
+                </div>
             </div>
-        `;
-       
-        document.body.insertAdjacentHTML('beforeend', html);
-        document.getElementById('storyModalOverlay').classList.add('active');
-        
-        document.getElementById('storyModalOverlay').addEventListener('click', function(e) {
-            if (e.target === this) {
-                this.remove();
-            }
-        });
-    },
+        </div>
+    `;
+   
+    document.body.insertAdjacentHTML('beforeend', html);
+    document.getElementById('storyModalOverlay').classList.add('active');
+    
+    document.getElementById('storyModalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.remove();
+        }
+    });
+},
 
-    uploadStory: function() {
-        var self = this;
-        var imageInput = document.getElementById('storyImageInput');
-        var musicInput = document.getElementById('storyMusicInput');
-        var musicNameInput = document.getElementById('storyMusicNameInput');
-        var captionInput = document.getElementById('storyCaptionInput');
-        var uploadBtn = document.getElementById('storyUploadBtn');
-       
-        if (!imageInput || !imageInput.files || !imageInput.files[0]) {
-            this.toast('⚠️ Please select an image', 'error');
-            return;
-        }
-        
-        if (!this.user || !this.user.uid) {
-            this.toast('⚠️ Please login first', 'error');
-            return;
-        }
-       
-        if (uploadBtn) uploadBtn.classList.add('loading');
-        
-        this.toast('📤 Uploading story...', 'info');
-       
-        var formData = new FormData();
-        formData.append('file', imageInput.files[0]);
-        formData.append('upload_preset', 'chichi_upload');
-       
-        fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
-            method: 'POST',
-            body: formData
-        })
-        .then(r => {
-            if (!r.ok) throw new Error('Upload failed: ' + r.status);
-            return r.json();
-        })
-        .then(data => {
-            if (!data.secure_url) {
-                throw new Error('No image URL returned');
-            }
-            
-            var musicUrl = musicInput ? musicInput.value.trim() : '';
-            var musicName = musicNameInput ? musicNameInput.value.trim() : 'Audio';
-            var caption = captionInput ? captionInput.value.trim() : '';
-            
-            var storyId = 'story_' + Date.now();
-            var storyData = {
-                image: data.secure_url,
-                musicUrl: musicUrl || '',
-                musicName: musicName || 'Audio',
-                caption: caption || '',
-                createdAt: new Date().getTime(),
-                views: 0,
-                authorUid: self.user.uid,
-                authorName: self.user.displayName || 'Anonymous',
-                userName: self.profile ? (self.profile.name || 'User') : 'User',
-                userPhoto: self.profile ? (self.profile.profilePhoto || '') : ''
-            };
-            
-            if (!db) throw new Error('Database not initialized');
-            
-            db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData, function(err) {
-                if (err) {
-                    console.error('Firebase error:', err);
-                    self.toast('❌ Error saving story: ' + err.message, 'error');
-                    if (uploadBtn) uploadBtn.classList.remove('loading');
-                } else {
-                    self.toast('✅ Story uploaded successfully!', 'success');
-                    setTimeout(() => {
-                        var modal = document.getElementById('storyModalOverlay');
-                        if (modal) modal.remove();
-                        self.loadStories();
-                    }, 500);
-                }
+    
+
+
+uploadStory: function() {
+    var self = this;
+    var imageInput = document.getElementById('storyImageInput');
+    var musicInput = document.getElementById('storyMusicInput');
+    var musicNameInput = document.getElementById('storyMusicNameInput');
+    var captionInput = document.getElementById('storyCaptionInput');
+    var uploadBtn = document.getElementById('storyUploadBtn');
+   
+    if (!imageInput || !imageInput.files || !imageInput.files[0]) {
+        this.toast('⚠️ Please select an image', 'error');
+        return;
+    }
+    
+    if (!this.user || !this.user.uid) {
+        this.toast('⚠️ Please login first', 'error');
+        return;
+    }
+   
+    if (uploadBtn) uploadBtn.classList.add('loading');
+    
+    this.toast('📤 Uploading story...', 'info');
+   
+    var formData = new FormData();
+    formData.append('file', imageInput.files[0]);
+    // FIX: Use the correct upload preset from config
+    formData.append('upload_preset', UPLOAD_PRESET || 'chichi_photos');
+   
+    fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => {
+        if (!r.ok) {
+            // Get error details
+            return r.json().then(errData => {
+                console.error('Cloudinary error details:', errData);
+                throw new Error(errData.error?.message || 'Upload failed: ' + r.status);
             });
-        })
-        .catch(err => {
-            console.error('Upload error:', err);
-            this.toast('❌ Upload failed: ' + err.message, 'error');
-            if (uploadBtn) uploadBtn.classList.remove('loading');
+        }
+        return r.json();
+    })
+    .then(data => {
+        if (!data.secure_url) {
+            throw new Error('No image URL returned');
+        }
+        
+        // Get safe values - REMOVED Music URL field
+        var musicName = musicNameInput ? musicNameInput.value.trim() : 'Audio';
+        var caption = captionInput ? captionInput.value.trim() : '';
+        
+        var storyId = 'story_' + Date.now();
+        var storyData = {
+            image: data.secure_url,
+            musicUrl: '',  // Removed music URL field
+            musicName: musicName || 'Audio',
+            caption: caption || '',
+            createdAt: new Date().getTime(),
+            views: 0,
+            authorUid: self.user.uid,
+            authorName: self.user.displayName || 'Anonymous',
+            userName: self.profile ? (self.profile.name || 'User') : 'User',
+            userPhoto: self.profile ? (self.profile.profilePhoto || '') : ''
+        };
+        
+        if (!db) throw new Error('Database not initialized');
+        
+        db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData, function(err) {
+            if (err) {
+                console.error('Firebase error:', err);
+                self.toast('❌ Error saving story: ' + err.message, 'error');
+                if (uploadBtn) uploadBtn.classList.remove('loading');
+            } else {
+                self.toast('✅ Story uploaded successfully!', 'success');
+                setTimeout(() => {
+                    var modal = document.getElementById('storyModalOverlay');
+                    if (modal) modal.remove();
+                    self.loadStories();
+                }, 500);
+            }
         });
-    },
+    })
+    .catch(err => {
+        console.error('Upload error:', err);
+        this.toast('❌ Upload failed: ' + err.message, 'error');
+        if (uploadBtn) uploadBtn.classList.remove('loading');
+    });
+},
+
+
 
     viewStory: function(storyId, userId) {
         userId = userId || this.user.uid;
