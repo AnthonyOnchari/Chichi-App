@@ -188,15 +188,78 @@
                 </div>
             </div>
             
-            <!-- SIGNUP HEATMAP -->
-            <div style="padding: 0 16px;">
-                <h4 style="margin: 16px 0 12px 0; font-size: 14px; font-weight: 700; color: #333;">📍 Global Signups</h4>
-            </div>
-            <div id="signupMapContainer" style="margin: 0 16px 16px 16px; height: 350px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: white;">
-                <div id="leafletMap" style="width: 100%; height: 100%;"></div>
+            <!-- STATS CARDS -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px;">
+                <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 4px solid #0088cc;">
+                    <div style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Total Signups</div>
+                    <div style="font-size: 22px; font-weight: 800; color: #1a202c; margin: 4px 0;" id="totalSignups">0</div>
+                    <div style="font-size: 11px; color: #22c55e; display: flex; align-items: center; gap: 4px;">
+                        <span>↑</span> <span id="signupGrowth">+0%</span> <span style="color: #6b7280;">vs yesterday</span>
+                    </div>
+                </div>
+                <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 4px solid #f59e0b;">
+                    <div style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Currently Online</div>
+                    <div style="font-size: 22px; font-weight: 800; color: #1a202c; margin: 4px 0;" id="onlineCount">0</div>
+                    <div style="font-size: 11px; color: #6b7280;">Active now</div>
+                </div>
             </div>
             
-            <!-- TRENDING -->
+            <!-- LIVE MAP -->
+            <div style="padding: 0 16px 8px 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #1a202c;">🌍 Live Signups Map</h4>
+                    <span style="font-size: 11px; color: #22c55e; display: flex; align-items: center; gap: 4px;">
+                        <span id="liveDot" style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; display: inline-block; animation: livePulse 1.5s infinite;"></span>
+                        LIVE
+                    </span>
+                </div>
+            </div>
+            
+            <!-- MAP CONTAINER -->
+            <div id="signupMapContainer" style="margin: 0 16px 16px 16px; height: 320px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #0f1419; position: relative;">
+                <div id="leafletMap" style="width: 100%; height: 100%;"></div>
+                <div id="heatmapDots" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></div>
+            </div>
+            
+            <!-- LIVE COUNTER - Below the map -->
+            <div style="padding: 0 16px 12px 16px;">
+                <div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 12px; padding: 16px 20px; box-shadow: 0 4px 16px rgba(0,136,204,0.3);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Total Accounts</div>
+                            <div style="font-size: 32px; font-weight: 800; color: white; margin-top: 2px;" id="liveAccountCount">0</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Live Signups</div>
+                            <div style="font-size: 18px; font-weight: 700; color: #4ade80; margin-top: 2px;">
+                                <span id="liveSignupRate">+0</span> <span style="font-size: 12px; color: rgba(255,255,255,0.6);">today</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 8px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
+                        <div id="liveProgressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #4ade80, #22d3ee); border-radius: 2px; transition: width 0.5s ease;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: rgba(255,255,255,0.5);">
+                        <span>🚀 Growing</span>
+                        <span id="liveGrowthTime">Just now</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- RECENT ACTIVITY FEED -->
+            <div style="padding: 0 16px 16px 16px;">
+                <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #1a202c;">🕐 Recent Activity</h4>
+                        <span style="font-size: 11px; color: #6b7280;">Live feed</span>
+                    </div>
+                    <div id="recentActivityFeed" style="max-height: 200px; overflow-y: auto;">
+                        <div style="text-align: center; color: #6b7280; padding: 20px; font-size: 13px;">Loading activity...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- TRENDING SECTION -->
             <div id="trendingSection"></div>
             
             <!-- SEARCH RESULTS -->
@@ -223,9 +286,8 @@
             <div class="messages-container" id="messageList"></div>
         </div>
 
-        <!-- CHAT VIEW - Full Screen -->
+        <!-- CHAT VIEW -->
         <div class="view" id="chatView">
-            <!-- Chat Header with user photo + 3-dots -->
             <div id="chatHeader">
                 <button id="chatBackBtn" onclick="app.closeChatView()">←</button>
                 <div id="chatHeaderAvatar"></div>
@@ -236,13 +298,10 @@
                 <button id="chatMenuBtn" onclick="app.showChatMenu()" style="font-size:22px;background:rgba(255,255,255,0.1);border-radius:8px;padding:6px 10px;">⋮</button>
             </div>
             
-            <!-- Messages Container -->
             <div id="chatMessages"></div>
             
-            <!-- Typing Indicator -->
             <div id="typingIndicator" style="display:none;padding:6px 16px;background:#f3f4f6;border-radius:8px;margin:0 16px 8px;font-size:13px;color:#6b7280;">Someone is typing...</div>
             
-            <!-- Chat Input with Professional Send Button -->
             <div id="chatInput">
                 <button class="attach-btn" onclick="document.getElementById('chatImageInput').click()" style="background:none;border:none;font-size:20px;cursor:pointer;padding:8px;opacity:0.6;">📎</button>
                 <input type="file" id="chatImageInput" style="display:none;" accept="image/*" multiple onchange="app.handleChatImageUpload(event)">
@@ -270,38 +329,38 @@
         </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION - Curved top edges -->
-    <!-- BOTTOM NAVIGATION - Curved top edges -->
-<div class="bottom-nav">
-    <div class="nav-wrapper">
-        <div class="nav-item active" onclick="app.switchView('feed')">
-            <div class="nav-icon">🏠</div>
-            <div>Home</div>
-        </div>
-        <div class="nav-item" onclick="app.switchView('explore')">
-            <div class="nav-icon">🔍</div>
-            <div>Explore</div>
-        </div>
-        <div class="nav-item" onclick="app.switchView('messages')" style="position: relative;">
-            <div class="nav-icon">💬</div>
-            <div>Chats</div>
-            <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
-        </div>
-        
-        <!-- FAB BUTTON - Between Chats and Groups -->
-        <button class="fab-button" onclick="app.showCreateModal()">✚</button>
-        
-        <div class="nav-item" onclick="app.switchView('groups')">
-            <div class="nav-icon">👥</div>
-            <div>Groups</div>
-        </div>
-        <div class="nav-item" onclick="app.switchView('profile')">
-            <div class="nav-icon">👤</div>
-            <div>Profile</div>
-        </div>
-        <div class="nav-item" onclick="app.showAbout()">
-            <div class="nav-icon">ℹ️</div>
-            <div>About</div>
+    <!-- BOTTOM NAVIGATION -->
+    <div class="bottom-nav">
+        <div class="nav-wrapper">
+            <div class="nav-item active" onclick="app.switchView('feed')">
+                <div class="nav-icon">🏠</div>
+                <div>Home</div>
+            </div>
+            <div class="nav-item" onclick="app.switchView('explore')">
+                <div class="nav-icon">🔍</div>
+                <div>Explore</div>
+            </div>
+            <div class="nav-item" onclick="app.switchView('messages')" style="position: relative;">
+                <div class="nav-icon">💬</div>
+                <div>Chats</div>
+                <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
+            </div>
+            
+            <!-- FAB BUTTON -->
+            <button class="fab-button" onclick="app.showCreateModal()">✚</button>
+            
+            <div class="nav-item" onclick="app.switchView('groups')">
+                <div class="nav-icon">👥</div>
+                <div>Groups</div>
+            </div>
+            <div class="nav-item" onclick="app.switchView('profile')">
+                <div class="nav-icon">👤</div>
+                <div>Profile</div>
+            </div>
+            <div class="nav-item" onclick="app.showAbout()">
+                <div class="nav-icon">ℹ️</div>
+                <div>About</div>
+            </div>
         </div>
     </div>
 </div>
@@ -402,6 +461,22 @@
 
 <!-- AUDIO ELEMENT FOR MUSIC -->
 <audio id="themeMusic" preload="auto"></audio>
+
+<!-- CREATE POST MODAL -->
+<div class="modal-overlay" id="createModal">
+    <div class="create-modal">
+        <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
+        <h2>Create Post</h2>
+        <div id="photoPreview"></div>
+        <input type="file" id="photoInput" style="display: none;" accept="image/*">
+        <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">📷 Choose Photo</button>
+        <textarea id="captionInput" placeholder="Write a caption..."></textarea>
+        <button type="button" class="btn-submit" id="sharePostBtn" onclick="app.createPost()">
+            <span class="share-btn-text">Share Post</span>
+            <span class="share-spinner" style="display: none; margin-left: 8px;">⏳</span>
+        </button>
+    </div>
+</div>
 
 <script src="js/app.js"></script>
 <script>
