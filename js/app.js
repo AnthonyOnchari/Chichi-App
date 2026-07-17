@@ -4622,7 +4622,7 @@ var app = {
 
     setupTypingCleanup: function() {
         if (!this.user) return;
-        var userTypingRef = db.ref('messages/.info/connected');
+        var userTypingRef = db.ref('.info/connected');
         userTypingRef.on('value', snapshot => {
             if (snapshot.val() === false) {
                 console.log('⚠️ User going offline');
