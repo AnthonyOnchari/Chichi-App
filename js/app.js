@@ -3165,60 +3165,89 @@ uploadStory: function() {
     },
 
     // ============================================
-    // ABOUT US - Anthony Onchari
-    // ============================================
+// ABOUT US - Anthony Onchari (Personal & Human)
+// ============================================
 
-    showAbout: function() {
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        modal.innerHTML = `
-            <div class="modal" style="max-width: 420px; border-radius: 20px; padding: 24px;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+showAbout: function() {
+    var modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.innerHTML = `
+        <div class="modal" style="max-width: 420px; border-radius: 20px; padding: 24px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">✕</button></div>
+            
+            <div style="text-align: center; padding: 4px 0;">
+                <!-- Profile Photo -->
+                <div style="width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 12px; overflow: hidden; border: 3px solid #0088cc; box-shadow: 0 4px 16px rgba(0,136,204,0.3);">
+                    <img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1784291624/1768467745366_1_lu01jr.jpg" alt="Anthony Onchari" style="width:100%;height:100%;object-fit:cover;">
+                </div>
                 
-                <div style="text-align: center; padding: 8px 0;">
-                    <div style="font-size: 64px; margin-bottom: 12px;">👨‍💻</div>
-                    <h2 style="margin-bottom: 4px; font-weight: 800; font-size: 24px; background: linear-gradient(135deg, #0088cc, #2E5BFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">CHICHI</h2>
-                    <p style="color: var(--text-light); font-size: 14px; margin-bottom: 16px;">Built with ❤️ by Anthony Onchari</p>
-                    
-                    <div style="background: var(--light); padding: 20px; border-radius: 16px; text-align: left; border: 1px solid var(--border);">
-                        <p style="font-size: 14px; line-height: 1.8; color: var(--text);">
-                            <strong style="color: var(--primary);">Anthony Onchari</strong> is the visionary founder of 
-                            <strong style="color: var(--primary);">Onchari Group</strong>, a passionate developer dedicated to 
-                            creating innovative social experiences that connect people across the globe.
-                        </p>
-                        <p style="font-size: 13px; line-height: 1.6; color: var(--text-light); margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px;">
-                            🚀 <strong>Mission:</strong> To build digital communities that empower and inspire.
-                        </p>
+                <!-- Name & Version -->
+                <h2 style="margin-bottom: 2px; font-weight: 800; font-size: 22px; color: #1a202c;">Anthony Onchari</h2>
+                <p style="color: #0088cc; font-size: 13px; font-weight: 600; margin-bottom: 4px;">👨‍💻 Simple Developer</p>
+                <p style="color: #6b7280; font-size: 11px; background: #f0f0f0; display: inline-block; padding: 2px 12px; border-radius: 12px; margin-bottom: 16px;">
+                    📱 Version V01A.01
+                </p>
+                
+                <!-- Bio - Human & Personal -->
+                <div style="background: #f7fafc; padding: 16px 18px; border-radius: 16px; text-align: left; border: 1px solid #e2e8f0; margin-bottom: 16px;">
+                    <p style="font-size: 14px; line-height: 1.8; color: #2d3748; margin: 0;">
+                        Hey there! 👋 I'm <strong style="color: #0088cc;">Anthony</strong>, 
+                        a simple developer who loves building things that bring people together. 
+                        I created <strong style="color: #0088cc;">CHICHI</strong> because I believe 
+                        social media should feel like home — warm, real, and human.
+                    </p>
+                    <p style="font-size: 13px; line-height: 1.7; color: #4a5568; margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+                        🚀 This is <strong>Version V01A.01</strong> — the beginning of something beautiful. 
+                        More features, more love, and more connection coming soon!
+                    </p>
+                </div>
+                
+                <!-- Quick Facts -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+                    <div style="background: #ebf8ff; padding: 10px 6px; border-radius: 12px;">
+                        <div style="font-size: 20px;">❤️</div>
+                        <div style="font-size: 11px; color: #2b6cb0; font-weight: 600;">Built with Love</div>
                     </div>
-                    
-                    <div style="margin-top: 16px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                        <button onclick="window.open('https://github.com/antonychari', '_blank')" style="padding: 10px 20px; background: #24292e; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            🐙 GitHub
-                        </button>
-                        <button onclick="window.open('https://twitter.com/antonychari', '_blank')" style="padding: 10px 20px; background: #1DA1F2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            🐦 Twitter
-                        </button>
-                        <button onclick="window.open('https://linkedin.com/in/antonychari', '_blank')" style="padding: 10px 20px; background: #0A66C2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            💼 LinkedIn
-                        </button>
+                    <div style="background: #f0fff4; padding: 10px 6px; border-radius: 12px;">
+                        <div style="font-size: 20px;">🌍</div>
+                        <div style="font-size: 11px; color: #276749; font-weight: 600;">Global Community</div>
                     </div>
-                    
-                    <div style="margin-top: 16px; font-size: 12px; color: var(--text-light);">
-                        <span>© 2024 Onchari Group. All rights reserved.</span>
+                    <div style="background: #faf5ff; padding: 10px 6px; border-radius: 12px;">
+                        <div style="font-size: 20px;">✨</div>
+                        <div style="font-size: 11px; color: #6b46c1; font-weight: 600;">Always Evolving</div>
                     </div>
                 </div>
+                
+                <!-- Social Links -->
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="window.open('https://github.com/antonychari', '_blank')" style="padding: 10px 18px; background: #24292e; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        🐙 GitHub
+                    </button>
+                    <button onclick="window.open('https://twitter.com/antonychari', '_blank')" style="padding: 10px 18px; background: #1DA1F2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        🐦 Twitter
+                    </button>
+                    <button onclick="window.open('https://linkedin.com/in/antonychari', '_blank')" style="padding: 10px 18px; background: #0A66C2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        💼 LinkedIn
+                    </button>
+                </div>
+                
+                <!-- Footer -->
+                <div style="margin-top: 14px; font-size: 11px; color: #a0aec0; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                    <span>© 2024 Onchari Group • CHICHI V01A.01</span>
+                </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                this.remove();
-            }
-        });
-    },
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.remove();
+        }
+    });
+},
 
     // ============================================
     // MUSIC SYSTEM
