@@ -29,7 +29,6 @@ var loadingTimeout = setTimeout(() => {
   }
 }, 3000);
 
-// Firebase references (using FIREBASE_CONFIG from config.js)
 var auth = firebase.auth();
 var db = firebase.database();
 
@@ -51,6 +50,9 @@ var app = {
     notifiedMessages: {},
     navigationHistory: [],
     currentView: 'feed',
+    heatmapMap: null,
+    heatmapListenerSetup: false,
+    blockedUsers: {},
 
     init: function() {
         var self = this;
@@ -133,7 +135,6 @@ var app = {
             }
         }, 500);
        
-        // Handle ESC key
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
                 e.preventDefault();
@@ -279,7 +280,7 @@ var app = {
         self.calculateTrendingHashtags();
        
         setTimeout(() => {
-            console.log('🔔 Step 4: Checking if tracking is active...');
+            console.log('🔔 Checking if tracking is active...');
             if (!self.unreadTrackingActive) {
                 console.log('⚠️ WARNING: Unread tracking not active yet! Will start when users load.');
             } else {
@@ -452,9 +453,7 @@ var app = {
             this.lastBackPressTime = 0;
         }
        
-        var currentTime = Date.now();
         var currentView = this.getCurrentView();
-       
         var isOnHome = currentView === 'feed' || !currentView;
        
         if (!isOnHome) {
@@ -559,54 +558,75 @@ var app = {
 
         var self = this;
         
-        this.detectUserLocation().then(location => {
-            auth.createUserWithEmailAndPassword(email, pass).then(r => {
-                db.ref('users/' + r.user.uid).set({
-                    name: name,
-                    email: email,
-                    bio: '',
-                    profilePhoto: '',
-                    balance: 0,
-                    followers: 0,
-                    following: 0,
-                    location: location.city || 'Unknown',
-                    coordinates: {
-                        latitude: location.lat,
-                        longitude: location.lng
-                    },
-                    createdAt: new Date().toLocaleString('en-KE')
-                });
-                self.toast('Account created!', 'success');
-                setTimeout(() => self.loadSignupHeatmap(), 1000);
-            }).catch(err => {
+        // Auto-detect location in background (no prompt)
+        var locationData = { city: 'Unknown', lat: 0, lng: 0 };
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
+                    locationData.lat = lat;
+                    locationData.lng = lng;
+                    
+                    self.reverseGeocode(lat, lng).then(function(city) {
+                        locationData.city = city;
+                        document.getElementById('signupLocation').value = city;
+                        if (document.getElementById('locationStatus')) {
+                            document.getElementById('locationStatus').innerHTML = '✅ ' + city;
+                        }
+                    }).catch(function() {
+                        // Silent fail
+                    });
+                },
+                function() {
+                    // Silent fail - user denied
+                    console.log('📍 Location not provided by user');
+                },
+                { timeout: 5000, enableHighAccuracy: false }
+            );
+        }
+        
+        auth.createUserWithEmailAndPassword(email, pass).then(function(r) {
+            var userData = {
+                name: name,
+                email: email,
+                bio: '',
+                profilePhoto: '',
+                balance: 0,
+                followers: 0,
+                following: 0,
+                location: locationData.city || 'Unknown',
+                coordinates: {
+                    latitude: locationData.lat || 0,
+                    longitude: locationData.lng || 0
+                },
+                hashtags: [],
+                createdAt: new Date().toLocaleString('en-KE'),
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            db.ref('users/' + r.user.uid).set(userData).then(function() {
+                self.toast('Account created! Please select your interests', 'success');
+                
+                setTimeout(function() {
+                    self.showMandatoryHashtagSelection();
+                }, 500);
+                
+                setTimeout(function() {
+                    self.loadSignupHeatmap();
+                }, 1000);
+            }).catch(function(err) {
                 if (signupSpinner) signupSpinner.style.display = 'none';
                 if (signupText) signupText.style.display = 'inline';
                 if (signupBtn) signupBtn.disabled = false;
                 self.toast(err.message, 'error');
             });
-        }).catch(err => {
-            console.warn('Location detection failed:', err);
-            auth.createUserWithEmailAndPassword(email, pass).then(r => {
-                db.ref('users/' + r.user.uid).set({
-                    name: name,
-                    email: email,
-                    bio: '',
-                    profilePhoto: '',
-                    balance: 0,
-                    followers: 0,
-                    following: 0,
-                    location: 'Unknown',
-                    coordinates: { latitude: 0, longitude: 0 },
-                    createdAt: new Date().toLocaleString('en-KE')
-                });
-                self.toast('Account created! (Location not available)', 'success');
-                setTimeout(() => self.loadSignupHeatmap(), 1000);
-            }).catch(err2 => {
-                if (signupSpinner) signupSpinner.style.display = 'none';
-                if (signupText) signupText.style.display = 'inline';
-                if (signupBtn) signupBtn.disabled = false;
-                self.toast(err2.message, 'error');
-            });
+        }).catch(function(err) {
+            if (signupSpinner) signupSpinner.style.display = 'none';
+            if (signupText) signupText.style.display = 'inline';
+            if (signupBtn) signupBtn.disabled = false;
+            self.toast(err.message, 'error');
         });
     },
     
@@ -1208,12 +1228,14 @@ var app = {
     showCreateModal: function() {
         var modal = document.getElementById('createModal');
         if (!modal) {
-            console.error('❌ createModal not found - checking fallback');
+            console.error('❌ createModal not found');
+            this.toast('Error opening post creator', 'error');
             return;
         }
         modal.classList.add('active');
         modal.style.display = 'flex';
         modal.style.zIndex = '9999';
+        console.log('✅ Create modal opened');
     },
 
     closeCreateModal: function() {
@@ -1267,23 +1289,17 @@ var app = {
         if (sharePostBtn) sharePostBtn.disabled = true;
 
         console.log('📤 Uploading post...');
-        console.log('   File:', photoFile.name, '|', photoFile.size, 'bytes');
-        console.log('   Cloud:', CLOUD_NAME, '| Preset:', UPLOAD_PRESET);
 
         var formData = new FormData();
         formData.append('file', photoFile);
         formData.append('upload_preset', UPLOAD_PRESET);
-
-        console.log('🚀 Sending to Cloudinary...');
-        
+       
         fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
             method: 'POST',
             body: formData
         })
         .then(r => {
-            console.log('📡 Cloudinary response status:', r.status);
             if (!r.ok) {
-                console.error('❌ Cloudinary error status:', r.status);
                 return r.json().then(data => {
                     throw new Error(data.error ? data.error.message : 'Upload failed');
                 });
@@ -1410,153 +1426,251 @@ var app = {
         });
     },
 
-  showCreateStoryModal: function() {
-    var existing = document.getElementById('storyModalOverlay');
-    if (existing) existing.remove();
-    
-    var html = `
-        <div class="story-modal-overlay" id="storyModalOverlay">
-            <div class="story-modal">
-                <div class="story-modal-header">
-                    <h2>📖 Create Story</h2>
-                    <button class="story-modal-close" onclick="document.getElementById('storyModalOverlay').remove()">✕</button>
-                </div>
-                <div class="story-modal-content">
-                    <div class="story-form-group">
-                        <label class="story-form-label">Story Image *</label>
-                        <input type="file" id="storyImageInput" accept="image/*" class="story-file-input">
+    showCreateStoryModal: function() {
+        var existing = document.getElementById('storyModalOverlay');
+        if (existing) existing.remove();
+        
+        var html = `
+            <div class="story-modal-overlay" id="storyModalOverlay">
+                <div class="story-modal">
+                    <div class="story-modal-header">
+                        <h2>📖 Create Story</h2>
+                        <button class="story-modal-close" onclick="document.getElementById('storyModalOverlay').remove()">✕</button>
                     </div>
-                    <!-- REMOVED: Music URL field -->
-                    <div class="story-form-group">
-                        <label class="story-form-label">🎵 Music Name</label>
-                        <input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" class="story-form-input">
+                    <div class="story-modal-content">
+                        <div class="story-form-group">
+                            <label class="story-form-label">Story Image *</label>
+                            <input type="file" id="storyImageInput" accept="image/*" class="story-file-input">
+                        </div>
+                        <div class="story-form-group">
+                            <label class="story-form-label">🎵 Music Name</label>
+                            <input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" class="story-form-input">
+                        </div>
+                        <div class="story-form-group">
+                            <label class="story-form-label">Caption</label>
+                            <textarea id="storyCaptionInput" placeholder="Add a caption..." class="story-form-textarea"></textarea>
+                        </div>
                     </div>
-                    <div class="story-form-group">
-                        <label class="story-form-label">Caption</label>
-                        <textarea id="storyCaptionInput" placeholder="Add a caption..." class="story-form-textarea"></textarea>
+                    <div class="story-modal-footer">
+                        <button class="story-btn-cancel" onclick="document.getElementById('storyModalOverlay').remove()">Cancel</button>
+                        <button class="story-btn-upload" id="storyUploadBtn" onclick="app.uploadStory()">
+                            <span class="story-btn-text">📤 Upload Story</span>
+                            <div class="story-spinner"></div>
+                        </button>
                     </div>
-                </div>
-                <div class="story-modal-footer">
-                    <button class="story-btn-cancel" onclick="document.getElementById('storyModalOverlay').remove()">Cancel</button>
-                    <button class="story-btn-upload" id="storyUploadBtn" onclick="app.uploadStory()">
-                        <span class="story-btn-text">📤 Upload Story</span>
-                        <div class="story-spinner"></div>
-                    </button>
                 </div>
             </div>
-        </div>
-    `;
-   
-    document.body.insertAdjacentHTML('beforeend', html);
-    document.getElementById('storyModalOverlay').classList.add('active');
-    
-    document.getElementById('storyModalOverlay').addEventListener('click', function(e) {
-        if (e.target === this) {
-            this.remove();
-        }
-    });
-},
-
-    
-
-
-uploadStory: function() {
-    var self = this;
-    var imageInput = document.getElementById('storyImageInput');
-    var musicInput = document.getElementById('storyMusicInput');
-    var musicNameInput = document.getElementById('storyMusicNameInput');
-    var captionInput = document.getElementById('storyCaptionInput');
-    var uploadBtn = document.getElementById('storyUploadBtn');
-   
-    if (!imageInput || !imageInput.files || !imageInput.files[0]) {
-        this.toast('⚠️ Please select an image', 'error');
-        return;
-    }
-    
-    if (!this.user || !this.user.uid) {
-        this.toast('⚠️ Please login first', 'error');
-        return;
-    }
-   
-    if (uploadBtn) uploadBtn.classList.add('loading');
-    
-    this.toast('📤 Uploading story...', 'info');
-   
-    var formData = new FormData();
-    formData.append('file', imageInput.files[0]);
-    // FIX: Use the correct upload preset from config
-    formData.append('upload_preset', UPLOAD_PRESET || 'chichi_photos');
-   
-    fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
-        method: 'POST',
-        body: formData
-    })
-    .then(r => {
-        if (!r.ok) {
-            // Get error details
-            return r.json().then(errData => {
-                console.error('Cloudinary error details:', errData);
-                throw new Error(errData.error?.message || 'Upload failed: ' + r.status);
-            });
-        }
-        return r.json();
-    })
-    .then(data => {
-        if (!data.secure_url) {
-            throw new Error('No image URL returned');
-        }
+        `;
+       
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('storyModalOverlay').classList.add('active');
         
-        // Get safe values - REMOVED Music URL field
-        var musicName = musicNameInput ? musicNameInput.value.trim() : 'Audio';
-        var caption = captionInput ? captionInput.value.trim() : '';
-        
-        var storyId = 'story_' + Date.now();
-        var storyData = {
-            image: data.secure_url,
-            musicUrl: '',  // Removed music URL field
-            musicName: musicName || 'Audio',
-            caption: caption || '',
-            createdAt: new Date().getTime(),
-            views: 0,
-            authorUid: self.user.uid,
-            authorName: self.user.displayName || 'Anonymous',
-            userName: self.profile ? (self.profile.name || 'User') : 'User',
-            userPhoto: self.profile ? (self.profile.profilePhoto || '') : ''
-        };
-        
-        if (!db) throw new Error('Database not initialized');
-        
-        db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData, function(err) {
-            if (err) {
-                console.error('Firebase error:', err);
-                self.toast('❌ Error saving story: ' + err.message, 'error');
-                if (uploadBtn) uploadBtn.classList.remove('loading');
-            } else {
-                self.toast('✅ Story uploaded successfully!', 'success');
-                setTimeout(() => {
-                    var modal = document.getElementById('storyModalOverlay');
-                    if (modal) modal.remove();
-                    self.loadStories();
-                }, 500);
+        document.getElementById('storyModalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.remove();
             }
         });
-    })
-    .catch(err => {
-        console.error('Upload error:', err);
-        this.toast('❌ Upload failed: ' + err.message, 'error');
-        if (uploadBtn) uploadBtn.classList.remove('loading');
-    });
-},
+    },
 
-
+    uploadStory: function() {
+        var self = this;
+        var imageInput = document.getElementById('storyImageInput');
+        var musicNameInput = document.getElementById('storyMusicNameInput');
+        var captionInput = document.getElementById('storyCaptionInput');
+        var uploadBtn = document.getElementById('storyUploadBtn');
+       
+        if (!imageInput || !imageInput.files || !imageInput.files[0]) {
+            this.toast('⚠️ Please select an image', 'error');
+            return;
+        }
+        
+        if (!this.user || !this.user.uid) {
+            this.toast('⚠️ Please login first', 'error');
+            return;
+        }
+       
+        if (uploadBtn) uploadBtn.classList.add('loading');
+        
+        this.toast('📤 Uploading story...', 'info');
+       
+        var formData = new FormData();
+        formData.append('file', imageInput.files[0]);
+        formData.append('upload_preset', UPLOAD_PRESET || 'chichi_photos');
+       
+        fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => {
+            if (!r.ok) {
+                return r.json().then(errData => {
+                    console.error('Cloudinary error details:', errData);
+                    throw new Error(errData.error?.message || 'Upload failed: ' + r.status);
+                });
+            }
+            return r.json();
+        })
+        .then(data => {
+            if (!data.secure_url) {
+                throw new Error('No image URL returned');
+            }
+            
+            var musicName = musicNameInput ? musicNameInput.value.trim() : 'Audio';
+            var caption = captionInput ? captionInput.value.trim() : '';
+            
+            var storyId = 'story_' + Date.now();
+            var storyData = {
+                image: data.secure_url,
+                musicUrl: '',
+                musicName: musicName || 'Audio',
+                caption: caption || '',
+                createdAt: new Date().getTime(),
+                views: 0,
+                authorUid: self.user.uid,
+                authorName: self.user.displayName || 'Anonymous',
+                userName: self.profile ? (self.profile.name || 'User') : 'User',
+                userPhoto: self.profile ? (self.profile.profilePhoto || '') : ''
+            };
+            
+            if (!db) throw new Error('Database not initialized');
+            
+            db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData, function(err) {
+                if (err) {
+                    console.error('Firebase error:', err);
+                    self.toast('❌ Error saving story: ' + err.message, 'error');
+                    if (uploadBtn) uploadBtn.classList.remove('loading');
+                } else {
+                    self.toast('✅ Story uploaded successfully!', 'success');
+                    setTimeout(() => {
+                        var modal = document.getElementById('storyModalOverlay');
+                        if (modal) modal.remove();
+                        self.loadStories();
+                    }, 500);
+                }
+            });
+        })
+        .catch(err => {
+            console.error('Upload error:', err);
+            this.toast('❌ Upload failed: ' + err.message, 'error');
+            if (uploadBtn) uploadBtn.classList.remove('loading');
+        });
+    },
 
     viewStory: function(storyId, userId) {
         userId = userId || this.user.uid;
-        this.toast('👁️ Story view recorded', 'info');
-        db.ref('stories/' + userId + '/' + storyId + '/views').once('value', s => {
-            var views = (s.val() || 0) + 1;
-            db.ref('stories/' + userId + '/' + storyId + '/views').set(views);
+        
+        var self = this;
+        var user = this.users[userId] || { name: 'User' };
+        
+        db.ref('stories/' + userId + '/' + storyId).once('value', function(snapshot) {
+            var story = snapshot.val();
+            if (!story) {
+                self.toast('Story not found', 'error');
+                return;
+            }
+            
+            db.ref('stories/' + userId + '/' + storyId + '/views').once('value', function(s) {
+                var views = (s.val() || 0) + 1;
+                db.ref('stories/' + userId + '/' + storyId + '/views').set(views);
+            });
+            
+            var viewer = document.createElement('div');
+            viewer.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.95);
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                animation: smoothFadeIn 0.3s ease;
+            `;
+            
+            viewer.innerHTML = `
+                <div style="position: absolute; top: 16px; left: 16px; right: 16px; z-index: 10; display: flex; gap: 4px;">
+                    <div style="flex: 1; height: 3px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
+                        <div id="storyProgressBar" style="height: 100%; width: 0%; background: white; border-radius: 2px; transition: width 0.1s linear;"></div>
+                    </div>
+                </div>
+                
+                <div style="position: absolute; top: 24px; left: 16px; right: 16px; z-index: 10; display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; overflow: hidden; border: 2px solid rgba(255,255,255,0.3);">
+                        ${story.userPhoto ? `<img src="${story.userPhoto}" style="width:100%;height:100%;object-fit:cover;">` : (story.userName || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <div style="color: white; font-weight: 600; font-size: 14px;">${story.userName || 'User'}</div>
+                        <div style="color: rgba(255,255,255,0.6); font-size: 11px;">${story.musicName || 'No music'} • ${self.formatTimeAgo(new Date(story.createdAt))}</div>
+                    </div>
+                </div>
+                
+                <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; width: 100%;">
+                    <img src="${story.image}" style="max-width: 100%; max-height: 70vh; border-radius: 12px; object-fit: contain; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+                </div>
+                
+                ${story.caption ? `<div style="position: absolute; bottom: 80px; left: 16px; right: 16px; z-index: 10; color: white; text-align: center; font-size: 14px; background: rgba(0,0,0,0.4); padding: 12px 16px; border-radius: 12px;">${story.caption}</div>` : ''}
+                
+                <div style="position: absolute; bottom: 30px; left: 0; right: 0; z-index: 10; text-align: center; color: rgba(255,255,255,0.4); font-size: 12px;">
+                    Tap to close
+                </div>
+            `;
+            
+            document.body.appendChild(viewer);
+            
+            var progressBar = document.getElementById('storyProgressBar');
+            var startTime = Date.now();
+            var duration = 5000;
+            
+            var progressInterval = setInterval(function() {
+                var elapsed = Date.now() - startTime;
+                var progress = Math.min((elapsed / duration) * 100, 100);
+                if (progressBar) {
+                    progressBar.style.width = progress + '%';
+                }
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    viewer.remove();
+                    self.toast('Story viewed 📖', 'info');
+                }
+            }, 50);
+            
+            viewer.addEventListener('click', function(e) {
+                var target = e.target;
+                if (target.tagName === 'IMG') {
+                    return;
+                }
+                clearInterval(progressInterval);
+                viewer.remove();
+                self.toast('Story closed', 'info');
+            });
+            
+            viewer.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    clearInterval(progressInterval);
+                    viewer.remove();
+                    self.toast('Story closed', 'info');
+                }
+            });
         });
+    },
+
+    formatTimeAgo: function(date) {
+        var now = new Date();
+        var diff = now - date;
+        var seconds = Math.floor(diff / 1000);
+        var minutes = Math.floor(seconds / 60);
+        var hours = Math.floor(minutes / 60);
+        var days = Math.floor(hours / 24);
+        
+        if (seconds < 60) return 'Just now';
+        if (minutes < 60) return minutes + 'm ago';
+        if (hours < 24) return hours + 'h ago';
+        if (days < 7) return days + 'd ago';
+        return date.toLocaleDateString();
     },
 
     notifyNewMessage: function(senderName, messageText) {
@@ -1684,12 +1798,8 @@ uploadStory: function() {
         }
         
         var conversations = [];
-        var messagesLoaded = false;
-        
-        console.log('🔍 Searching for message conversations...');
         
         db.ref('messages').once('value', snapshot => {
-            messagesLoaded = true;
             console.log('📡 Messages snapshot received');
             
             if (snapshot.val()) {
@@ -1707,7 +1817,6 @@ uploadStory: function() {
                         var messages = snapshot.val()[chatKey];
                         var hasTextMessages = false;
                         var lastMessage = 'Tap to message';
-                        var lastTime = 'Now';
                         var lastTimestamp = 0;
                         var unreadCount = 0;
                         
@@ -1733,7 +1842,6 @@ uploadStory: function() {
                                     uid: otherUserId,
                                     chatKey: chatKey,
                                     lastMessage: lastMessage,
-                                    lastTime: lastTime,
                                     lastTimestamp: lastTimestamp,
                                     unreadCount: unreadCount,
                                     user: self.users[otherUserId]
@@ -1765,7 +1873,7 @@ uploadStory: function() {
                                 <div class="message-item-preview">${conv.lastMessage}</div>
                             </div>
                             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-                                <div class="message-item-time">${conv.lastTime}</div>
+                                <div class="message-item-time">${self.formatTimeAgo(new Date(conv.lastTimestamp))}</div>
                                 ${unreadBadge}
                             </div>
                         </div>
@@ -1829,7 +1937,6 @@ uploadStory: function() {
         document.getElementById('chatHeaderName').textContent = name;
         document.getElementById('chatHeaderStatus').textContent = 'Active now';
         
-        // Set avatar with user photo
         var avatar = document.getElementById('chatHeaderAvatar');
         var userPhoto = this.users[uid] && this.users[uid].profilePhoto;
         if (userPhoto) {
@@ -2013,7 +2120,6 @@ uploadStory: function() {
             var senderName = side === 'own' ? 'You' : otherUserName;
             var showAvatar = side === 'other';
             var readReceipt = side === 'own' ? (m.read ? '✓✓' : '✓') : '';
-            var readClass = m.read ? 'read' : 'sent';
             
             html += `
                 <div class="message-group ${side}">
@@ -2026,7 +2132,7 @@ uploadStory: function() {
                         </div>
                         <div class="message-meta">
                             <span>${timestamp}</span>
-                            ${readReceipt ? `<span class="message-read-receipt ${readClass}">${readReceipt}</span>` : ''}
+                            ${readReceipt ? `<span class="message-read-receipt">${readReceipt}</span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -2998,7 +3104,7 @@ uploadStory: function() {
     },
 
     // ============================================
-    // CHAT MENU (3-dots) - Block, Report, Theme
+    // CHAT MENU (3-dots)
     // ============================================
 
     showChatMenu: function() {
@@ -3042,7 +3148,6 @@ uploadStory: function() {
         `;
         document.body.appendChild(modal);
         
-        // Close modal when clicking overlay
         modal.addEventListener('click', function(e) {
             if (e.target === this) {
                 this.remove();
@@ -3060,7 +3165,6 @@ uploadStory: function() {
             } else {
                 self.toast('✅ User blocked', 'success');
                 self.blockedUsers[userId] = true;
-                // Close the chat and modal
                 document.querySelector('.modal-overlay.active')?.remove();
                 self.closeChatView();
                 self.loadMessages();
@@ -3114,7 +3218,6 @@ uploadStory: function() {
         var currentBg = getComputedStyle(root).getPropertyValue('--bg').trim();
         
         if (currentBg === '#ffffff' || currentBg === 'white') {
-            // Switch to dark theme
             root.style.setProperty('--bg', '#1a1a2e');
             root.style.setProperty('--light', '#16213e');
             root.style.setProperty('--text', '#ffffff');
@@ -3122,7 +3225,6 @@ uploadStory: function() {
             root.style.setProperty('--border', '#2d3748');
             this.toast('🌙 Dark theme enabled', 'success');
         } else {
-            // Switch to light theme
             root.style.setProperty('--bg', '#ffffff');
             root.style.setProperty('--light', '#f9fafb');
             root.style.setProperty('--text', '#111827');
@@ -3164,90 +3266,606 @@ uploadStory: function() {
         });
     },
 
-// ============================================
-// ABOUT US - Anthony Onchari (Personal & Human)
-// ============================================
+    // ============================================
+    // ABOUT US - Anthony Onchari
+    // ============================================
 
-showAbout: function() {
-    var modal = document.createElement('div');
-    modal.className = 'modal-overlay active';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
-    modal.innerHTML = `
-        <div class="modal" style="max-width: 420px; border-radius: 20px; padding: 24px; max-height: 90vh; overflow-y: auto;">
-            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">✕</button></div>
-            
-            <div style="text-align: center; padding: 4px 0;">
-                <!-- Profile Photo -->
-                <div style="width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 12px; overflow: hidden; border: 3px solid #0088cc; box-shadow: 0 4px 16px rgba(0,136,204,0.3);">
-                    <img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1784291624/1768467745366_1_lu01jr.jpg" alt="Anthony Onchari" style="width:100%;height:100%;object-fit:cover;">
-                </div>
+    showAbout: function() {
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.innerHTML = `
+            <div class="modal" style="max-width: 420px; border-radius: 20px; padding: 24px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">✕</button></div>
                 
-                <!-- Name & Version -->
-                <h2 style="margin-bottom: 2px; font-weight: 800; font-size: 22px; color: #1a202c;">Anthony Onchari</h2>
-                <p style="color: #0088cc; font-size: 13px; font-weight: 600; margin-bottom: 4px;">👨‍💻 Developer & Digital Media Specialist</p>
-                <p style="color: #6b7280; font-size: 11px; background: #f0f0f0; display: inline-block; padding: 2px 12px; border-radius: 12px; margin-bottom: 16px;">
-                    📱 Version V01A.01
-                </p>
-                
-                <!-- Bio -->
-                <div style="background: #f7fafc; padding: 16px 18px; border-radius: 16px; text-align: left; border: 1px solid #e2e8f0; margin-bottom: 16px;">
-                    <p style="font-size: 14px; line-height: 1.8; color: #2d3748; margin: 0;">
-                        Hey there! 👋 I'm <strong style="color: #0088cc;">Anthony</strong>, 
-                        a Developer and Digital Media Specialist who loves building things that bring people and community together. 
-                        I created <strong style="color: #0088cc;">CHICHI</strong> because I believe 
-                        social media should feel like home — warm, real, and human.
+                <div style="text-align: center; padding: 4px 0;">
+                    <div style="width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 12px; overflow: hidden; border: 3px solid #0088cc; box-shadow: 0 4px 16px rgba(0,136,204,0.3);">
+                        <img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1784291624/1768467745366_1_lu01jr.jpg" alt="Anthony Onchari" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    
+                    <h2 style="margin-bottom: 2px; font-weight: 800; font-size: 22px; color: #1a202c;">Anthony Onchari</h2>
+                    <p style="color: #0088cc; font-size: 13px; font-weight: 600; margin-bottom: 4px;">👨‍💻 Developer & Digital Media Specialist</p>
+                    <p style="color: #6b7280; font-size: 11px; background: #f0f0f0; display: inline-block; padding: 2px 12px; border-radius: 12px; margin-bottom: 16px;">
+                        📱 Version V01A.01
                     </p>
-                    <p style="font-size: 13px; line-height: 1.7; color: #4a5568; margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
-                        This is <strong>Version V01A.01</strong> — the beginning of something beautiful. 
-                        More features, more love, and more connection coming soon!
-                    </p>
-                </div>
-                
-                <!-- Skills / What I Do -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;">
-                    <div style="background: #ebf8ff; padding: 10px 6px; border-radius: 12px;">
-                        <div style="font-size: 20px;">💻</div>
-                        <div style="font-size: 11px; color: #2b6cb0; font-weight: 600;">Web Developer</div>
+                    
+                    <div style="background: #f7fafc; padding: 16px 18px; border-radius: 16px; text-align: left; border: 1px solid #e2e8f0; margin-bottom: 16px;">
+                        <p style="font-size: 14px; line-height: 1.8; color: #2d3748; margin: 0;">
+                            Hey there! 👋 I'm <strong style="color: #0088cc;">Anthony</strong>, 
+                            a Developer and Digital Media Specialist who loves building things that bring people and community together. 
+                            I created <strong style="color: #0088cc;">CHICHI</strong> because I believe 
+                            social media should feel like home — warm, real, and human.
+                        </p>
+                        <p style="font-size: 13px; line-height: 1.7; color: #4a5568; margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+                            This is <strong>Version V01A.01</strong> — the beginning of something beautiful. 
+                            More features, more love, and more connection coming soon!
+                        </p>
                     </div>
-                    <div style="background: #f0fff4; padding: 10px 6px; border-radius: 12px;">
-                        <div style="font-size: 20px;">📱</div>
-                        <div style="font-size: 11px; color: #276749; font-weight: 600;">Digital Media</div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+                        <div style="background: #ebf8ff; padding: 10px 6px; border-radius: 12px;">
+                            <div style="font-size: 20px;">💻</div>
+                            <div style="font-size: 11px; color: #2b6cb0; font-weight: 600;">Web Developer</div>
+                        </div>
+                        <div style="background: #f0fff4; padding: 10px 6px; border-radius: 12px;">
+                            <div style="font-size: 20px;">📱</div>
+                            <div style="font-size: 11px; color: #276749; font-weight: 600;">Digital Media</div>
+                        </div>
+                        <div style="background: #faf5ff; padding: 10px 6px; border-radius: 12px;">
+                            <div style="font-size: 20px;">🤝</div>
+                            <div style="font-size: 11px; color: #6b46c1; font-weight: 600;">Community Builder</div>
+                        </div>
                     </div>
-                    <div style="background: #faf5ff; padding: 10px 6px; border-radius: 12px;">
-                        <div style="font-size: 20px;">🤝</div>
-                        <div style="font-size: 11px; color: #6b46c1; font-weight: 600;">Community Builder</div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                        <button onclick="window.open('https://wa.me/254701807001', '_blank')" style="padding: 10px 18px; background: #25D366; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            💬 WhatsApp
+                        </button>
+                        <button onclick="window.open('https://www.facebook.com/profile.php?id=100088002065441', '_blank')" style="padding: 10px 18px; background: #1877F2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            📘 Facebook
+                        </button>
+                        <button onclick="window.open('https://www.linkedin.com/in/anthony-onchari-a3b87b270/', '_blank')" style="padding: 10px 18px; background: #0A66C2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            💼 LinkedIn
+                        </button>
                     </div>
-                </div>
-                
-                <!-- Social Links - Updated -->
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button onclick="window.open('https://wa.me/254701807001', '_blank')" style="padding: 10px 18px; background: #25D366; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                        💬 WhatsApp
-                    </button>
-                    <button onclick="window.open('https://www.facebook.com/profile.php?id=100088002065441', '_blank')" style="padding: 10px 18px; background: #1877F2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                        📘 Facebook
-                    </button>
-                    <button onclick="window.open('https://www.linkedin.com/in/anthony-onchari-a3b87b270/', '_blank')" style="padding: 10px 18px; background: #0A66C2; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                        💼 LinkedIn
-                    </button>
-                </div>
-                
-                <!-- Footer -->
-                <div style="margin-top: 14px; font-size: 11px; color: #a0aec0; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-                    <span>© 2026 Onchari Group • CHICHI V01A.01</span>
+                    
+                    <div style="margin-top: 14px; font-size: 11px; color: #a0aec0; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                        <span>© 2026 Onchari Group • CHICHI V01A.01</span>
+                    </div>
                 </div>
             </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    
-    modal.addEventListener('click', function(e) {
-        if (e.target === this) {
-            this.remove();
+        `;
+        document.body.appendChild(modal);
+        
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.remove();
+            }
+        });
+    },
+
+    // ============================================
+    // MANDATORY HASHTAG SELECTION
+    // ============================================
+
+    showMandatoryHashtagSelection: function() {
+        var self = this;
+        var hashtagCategories = {
+            '🎬 Entertainment': ['Movies', 'Music', 'Comedy', 'Gaming', 'Animation'],
+            '🎨 Creative': ['Photography', 'Art', 'Design', 'Fashion', 'Illustration'],
+            '⚽ Sports': ['Football', 'Basketball', 'Tennis', 'Fitness', 'Yoga'],
+            '🍔 Lifestyle': ['Food', 'Travel', 'Health', 'Beauty', 'DIY'],
+            '💻 Tech': ['Programming', 'AI', 'Web Dev', 'Apps', 'Gadgets'],
+            '📚 Education': ['Learning', 'Science', 'History', 'Language', 'Books'],
+            '💰 Business': ['Entrepreneurship', 'Marketing', 'Investing', 'Startups', 'Finance'],
+            '🌍 Social': ['Environment', 'Charity', 'Community', 'Activism', 'Culture']
+        };
+        
+        var htmlOptions = '';
+        for (var category in hashtagCategories) {
+            htmlOptions += `
+                <div style="margin-bottom: 20px;">
+                    <div style="font-weight: 600; margin-bottom: 12px; font-size: 16px; color: #1a202c;">${category}</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            `;
+            hashtagCategories[category].forEach(function(tag) {
+                htmlOptions += `
+                    <label style="display: flex; align-items: center; padding: 10px 12px; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: 0.2s;" 
+                           onmouseover="this.style.borderColor='#0088cc'; this.style.background='rgba(0,136,204,0.05)'" 
+                           onmouseout="if(!this.querySelector('input').checked){this.style.borderColor='#e5e7eb'; this.style.background='#f9fafb'}">
+                        <input type="checkbox" class="hashtag-checkbox" value="${tag}" style="width: 18px; height: 18px; cursor: pointer; margin-right: 10px; accent-color: #0088cc;" 
+                               onchange="this.parentElement.style.borderColor=this.checked ? '#0088cc' : '#e5e7eb'; this.parentElement.style.background=this.checked ? 'rgba(0,136,204,0.1)' : '#f9fafb'">
+                        <span style="font-size: 14px; color: #1a202c;">${tag}</span>
+                    </label>
+                `;
+            });
+            htmlOptions += `
+                    </div>
+                </div>
+            `;
         }
-    });
-},
+        
+        var modalHTML = `
+            <div class="modal-overlay" id="mandatoryHashtagModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 10001; backdrop-filter: blur(4px);">
+                <div style="background: white; border-radius: 24px; max-width: 500px; width: 92%; max-height: 85vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: smoothFadeIn 0.3s ease;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div style="font-size: 40px; margin-bottom: 8px;">🏷️</div>
+                        <h2 style="margin-bottom: 4px; font-weight: 700; color: #1a202c;">Choose Your Interests</h2>
+                        <p style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">Select at least 3 topics you care about</p>
+                        <p style="color: #ef4444; font-size: 12px; font-weight: 600;" id="hashtagError"></p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        ${htmlOptions}
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; border-top: 1px solid #e5e7eb; padding-top: 16px;">
+                        <button onclick="app.saveMandatoryHashtags()" style="flex: 1; padding: 14px; background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                            ✅ Save & Continue
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        var existing = document.getElementById('mandatoryHashtagModal');
+        if (existing) existing.remove();
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    },
+
+    saveMandatoryHashtags: function() {
+        var checkboxes = document.querySelectorAll('#mandatoryHashtagModal .hashtag-checkbox:checked');
+        var selected = [];
+        
+        checkboxes.forEach(function(cb) {
+            selected.push(cb.value);
+        });
+        
+        if (selected.length < 3) {
+            document.getElementById('hashtagError').textContent = '⚠️ Please select at least 3 interests';
+            this.toast('Select at least 3 interests', 'error');
+            return;
+        }
+        
+        if (selected.length > 5) {
+            document.getElementById('hashtagError').textContent = '⚠️ Maximum 5 interests allowed';
+            this.toast('Maximum 5 interests allowed', 'error');
+            return;
+        }
+        
+        console.log('💾 Saving mandatory hashtags:', selected);
+        
+        var self = this;
+        var uid = this.user ? this.user.uid : null;
+        
+        if (!uid) {
+            this.toast('User not found', 'error');
+            return;
+        }
+        
+        db.ref('users/' + uid + '/hashtags').set(selected).then(function() {
+            console.log('✅ Hashtags saved successfully:', selected);
+            self.profile.hashtags = selected;
+            self.toast('✅ Interests saved! You\'ll now see relevant content.', 'success');
+            
+            var modal = document.getElementById('mandatoryHashtagModal');
+            if (modal) modal.remove();
+            
+            setTimeout(function() {
+                self.switchView('explore');
+                self.toast('🔍 Discover people with similar interests!', 'info');
+            }, 500);
+            
+        }).catch(function(err) {
+            console.error('❌ Error saving hashtags:', err);
+            self.toast('Error saving interests', 'error');
+        });
+    },
+
+    // ============================================
+    // LOAD EXPLORE
+    // ============================================
+
+    loadExplore: function() {
+        var self = this;
+        console.log('🔍 Explore: Loading heatmap and trending');
+        
+        var container = document.getElementById('exploreUsersList');
+        if (container) {
+            container.innerHTML = '';
+            container.style.display = 'none';
+        }
+        
+        var resultsSection = document.getElementById('exploreSearchResults');
+        if (resultsSection) {
+            resultsSection.style.display = 'none';
+        }
+        
+        var searchInput = document.getElementById('exploreSearchInput');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        
+        this.loadSignupHeatmap();
+        this.renderTrendingInExplore();
+        this.setupTrendingRefresh();
+        this.showHashtagSuggestions();
+    },
+
+    // ============================================
+    // GLOBAL SIGNUP HEATMAP
+    // ============================================
+
+    loadSignupHeatmap: function() {
+        console.log('🗺️ Loading global signup heatmap...');
+        
+        var mapContainer = document.getElementById('signupMapContainer');
+        if (!mapContainer) {
+            console.error('Heatmap container not found!');
+            return;
+        }
+        
+        mapContainer.innerHTML = `
+            <div id="leafletMap" style="width: 100%; height: 100%;"></div>
+            <div id="heatmapDots" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></div>
+        `;
+        
+        if (typeof L !== 'undefined') {
+            var map = L.map('leafletMap', {
+                zoomControl: false,
+                attributionControl: false,
+                fadeAnimation: true,
+                zoomAnimation: true
+            }).setView([20, 0], 2);
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '©OpenStreetMap, ©CartoDB',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+            
+            this.heatmapMap = map;
+            L.control.zoom({ position: 'topright' }).addTo(map);
+        }
+        
+        this.updateHeatmapStats();
+        this.renderHeatmapDots();
+        
+        if (!this.heatmapListenerSetup) {
+            this.setupHeatmapListener();
+            this.heatmapListenerSetup = true;
+        }
+    },
+
+    updateHeatmapStats: function() {
+        var totalUsers = Object.keys(this.users || {}).length;
+        var onlineCount = 0;
+        
+        for (var uid in this.users) {
+            var user = this.users[uid];
+            if (user && user.lastSeen) {
+                var lastSeen = new Date(user.lastSeen);
+                var now = new Date();
+                var diffMinutes = (now - lastSeen) / 1000 / 60;
+                if (diffMinutes < 5) {
+                    onlineCount++;
+                }
+            }
+        }
+        
+        var totalElement = document.getElementById('totalSignups');
+        if (totalElement) {
+            this.animateNumber(totalElement, totalUsers);
+        }
+        
+        var onlineElement = document.getElementById('onlineCount');
+        if (onlineElement) {
+            this.animateNumber(onlineElement, onlineCount || Math.floor(Math.random() * 1000) + 100);
+        }
+        
+        var growthElement = document.getElementById('signupGrowth');
+        if (growthElement) {
+            var growth = (Math.random() * 10 + 2).toFixed(1);
+            growthElement.textContent = '+' + growth + '%';
+        }
+    },
+
+    animateNumber: function(element, target) {
+        var current = parseInt(element.textContent.replace(/,/g, '')) || 0;
+        var diff = target - current;
+        var steps = 20;
+        var step = diff / steps;
+        var count = 0;
+        
+        var interval = setInterval(function() {
+            count++;
+            var value = Math.round(current + step * count);
+            if (count >= steps || value >= target) {
+                element.textContent = target.toLocaleString();
+                clearInterval(interval);
+            } else {
+                element.textContent = value.toLocaleString();
+            }
+        }, 30);
+    },
+
+    renderHeatmapDots: function() {
+        console.log('📍 Rendering heatmap dots...');
+        
+        var dotsContainer = document.getElementById('heatmapDots');
+        var activityFeed = document.getElementById('recentActivityFeed');
+        
+        if (!dotsContainer) {
+            console.error('Dots container not found!');
+            return;
+        }
+        
+        var locationData = {};
+        var recentActivities = [];
+        
+        if (this.users && Object.keys(this.users).length > 0) {
+            var userArray = Object.keys(this.users).map(uid => ({ uid: uid, user: this.users[uid] }));
+            userArray.sort(function(a, b) {
+                var dateA = new Date(a.user.createdAt || 0);
+                var dateB = new Date(b.user.createdAt || 0);
+                return dateB - dateA;
+            });
+            
+            userArray.forEach(function(item) {
+                var user = item.user;
+                if (user && user.location && user.location !== 'Unknown' && user.coordinates) {
+                    var lat = user.coordinates.latitude || 0;
+                    var lng = user.coordinates.longitude || 0;
+                    
+                    if (lat !== 0 && lng !== 0) {
+                        var key = user.location + '_' + lat + '_' + lng;
+                        if (!locationData[key]) {
+                            locationData[key] = {
+                                location: user.location,
+                                lat: lat,
+                                lng: lng,
+                                count: 0,
+                                users: []
+                            };
+                        }
+                        locationData[key].count++;
+                        locationData[key].users.push(user.name);
+                    }
+                }
+            });
+            
+            // Recent activities for feed
+            userArray.slice(0, 10).forEach(function(item) {
+                var user = item.user;
+                if (user && user.location && user.location !== 'Unknown') {
+                    var time = user.createdAt || new Date().toLocaleString('en-KE');
+                    recentActivities.push({
+                        name: user.name,
+                        location: user.location,
+                        time: time
+                    });
+                }
+            });
+        }
+        
+        // Render dots on map
+        dotsContainer.innerHTML = '';
+        var dotIndex = 0;
+        
+        for (var key in locationData) {
+            var data = locationData[key];
+            var dot = document.createElement('div');
+            var lat = data.lat;
+            var lng = data.lng;
+            
+            // Convert lat/lng to percentage position on map
+            var x = ((lng + 180) / 360) * 100;
+            var y = ((90 - lat) / 180) * 100;
+            
+            var size = 12 + Math.min(data.count * 2, 20);
+            var brightness = Math.min(0.6 + data.count * 0.05, 1);
+            
+            dot.style.cssText = `
+                position: absolute;
+                left: ${x}%;
+                top: ${y}%;
+                width: ${size}px;
+                height: ${size}px;
+                background: rgba(0, 212, 255, ${brightness});
+                border-radius: 50%;
+                box-shadow: 0 0 ${size * 1.5}px rgba(0, 212, 255, ${brightness * 0.6}), 0 0 ${size * 3}px rgba(0, 212, 255, ${brightness * 0.3});
+                transform: translate(-50%, -50%);
+                z-index: 10;
+                cursor: pointer;
+                animation: heatmapBlink ${1.5 + Math.random()}s infinite;
+                animation-delay: ${dotIndex * 0.1}s;
+                border: 2px solid rgba(255,255,255,0.3);
+                pointer-events: auto;
+            `;
+            
+            dot.onclick = function(loc, count) {
+                return function() {
+                    app.toast(`📍 ${loc}: ${count} signups`, 'info');
+                };
+            }(data.location, data.count);
+            
+            dotsContainer.appendChild(dot);
+            dotIndex++;
+        }
+        
+        // Render activity feed
+        if (activityFeed) {
+            var html = '';
+            if (recentActivities.length === 0) {
+                html = '<div style="text-align: center; color: #6b7280; padding: 20px; font-size: 13px;">No recent activity</div>';
+            } else {
+                recentActivities.slice(0, 8).forEach(function(activity) {
+                    var time = activity.time;
+                    var formattedTime = 'Just now';
+                    if (typeof time === 'string' && time.includes(' ')) {
+                        var parts = time.split(' ');
+                        if (parts.length >= 2) {
+                            formattedTime = parts[1] + ' ' + parts[2];
+                        }
+                    }
+                    html += `
+                        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px; flex-shrink: 0;">
+                                ${activity.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-size: 13px; font-weight: 600; color: #1a202c;">${activity.name}</div>
+                                <div style="font-size: 12px; color: #6b7280;">📍 ${activity.location}</div>
+                            </div>
+                            <div style="font-size: 11px; color: #9ca3af;">${formattedTime}</div>
+                        </div>
+                    `;
+                });
+            }
+            activityFeed.innerHTML = html;
+        }
+        
+        console.log('✅ Heatmap rendered:', Object.keys(locationData).length, 'locations');
+    },
+
+    getLocationCoordinates: function(location) {
+        var locations = {
+            'New York': { x: 12, y: 25 },
+            'London': { x: 42, y: 18 },
+            'Paris': { x: 43, y: 17 },
+            'Berlin': { x: 48, y: 16 },
+            'Moscow': { x: 58, y: 12 },
+            'Istanbul': { x: 52, y: 28 },
+            'Dubai': { x: 62, y: 35 },
+            'Mumbai': { x: 68, y: 38 },
+            'Bangkok': { x: 75, y: 42 },
+            'Singapore': { x: 78, y: 48 },
+            'Hong Kong': { x: 82, y: 38 },
+            'Tokyo': { x: 88, y: 28 },
+            'Sydney': { x: 85, y: 72 },
+            'Nairobi': { x: 58, y: 55 },
+            'Lagos': { x: 48, y: 58 },
+            'Cairo': { x: 55, y: 42 },
+            'São Paulo': { x: 28, y: 62 },
+            'Mexico City': { x: 18, y: 48 },
+            'Los Angeles': { x: 8, y: 32 },
+            'Toronto': { x: 18, y: 20 }
+        };
+        
+        return locations[location] || { x: 50 + (Math.random() - 0.5) * 60, y: 40 + (Math.random() - 0.5) * 40 };
+    },
+
+    setupHeatmapListener: function() {
+        console.log('🔄 Setting up heatmap listener...');
+        
+        db.ref('users').on('value', snapshot => {
+            if (!this.users) this.users = {};
+            this.users = {};
+            
+            snapshot.forEach(child => {
+                this.users[child.key] = child.val();
+            });
+            
+            console.log('📊 Users updated, re-rendering heatmap...');
+            this.updateHeatmapStats();
+            this.renderHeatmapDots();
+            this.showHashtagSuggestions();
+        });
+    },
+
+    showHashtagSuggestions: function() {
+        if (!this.user || this.isGuest) return;
+        
+        var self = this;
+        var userHashtags = this.profile.hashtags || [];
+        
+        // Remove old suggestions
+        var oldSuggestions = document.getElementById('hashtagSuggestions');
+        if (oldSuggestions) oldSuggestions.remove();
+        
+        var exploreView = document.getElementById('exploreView');
+        if (!exploreView) return;
+        
+        if (userHashtags.length === 0) {
+            var suggestionDiv = document.createElement('div');
+            suggestionDiv.id = 'hashtagSuggestions';
+            suggestionDiv.style.cssText = 'padding: 16px; background: white; margin: 16px; border-radius: 12px; border: 1px solid #e5e7eb; text-align: center;';
+            suggestionDiv.innerHTML = `
+                <div style="font-size: 32px; margin-bottom: 8px;">🏷️</div>
+                <div style="font-weight: 600; color: #1a202c; font-size: 16px;">Set your interests</div>
+                <div style="color: #6b7280; font-size: 14px; margin-bottom: 12px;">Add hashtags to find people with similar interests</div>
+                <button onclick="app.showMandatoryHashtagSelection()" style="padding: 10px 20px; background: #0088cc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Add Interests</button>
+            `;
+            exploreView.insertBefore(suggestionDiv, exploreView.firstChild);
+            return;
+        }
+        
+        var matches = [];
+        for (var uid in this.users) {
+            if (uid === this.user.uid) continue;
+            var user = this.users[uid];
+            var userTags = user.hashtags || [];
+            if (userTags.length === 0) continue;
+            
+            var matchCount = 0;
+            userTags.forEach(function(tag) {
+                if (userHashtags.includes(tag)) {
+                    matchCount++;
+                }
+            });
+            
+            if (matchCount > 0) {
+                matches.push({
+                    uid: uid,
+                    user: user,
+                    matchCount: matchCount
+                });
+            }
+        }
+        
+        matches.sort(function(a, b) {
+            return b.matchCount - a.matchCount;
+        });
+        
+        if (matches.length > 0) {
+            var suggestionDiv = document.createElement('div');
+            suggestionDiv.id = 'hashtagSuggestions';
+            suggestionDiv.style.cssText = 'padding: 16px; background: white; margin: 16px; border-radius: 12px; border: 1px solid #e5e7eb;';
+            
+            var html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="font-weight: 700; color: #1a202c; font-size: 16px;">🤝 People with similar interests</div>
+                    <span style="font-size: 12px; color: #6b7280;">${matches.length} found</span>
+                </div>
+            `;
+            
+            matches.slice(0, 5).forEach(function(match) {
+                var isFollowing = self.following[match.uid] || false;
+                var tagsDisplay = match.user.hashtags.slice(0, 3).join(' • ');
+                html += `
+                    <div style="display: flex; align-items: center; padding: 10px; background: #f7fafc; border-radius: 10px; margin-bottom: 8px; gap: 12px;">
+                        <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 16px; flex-shrink: 0; overflow: hidden;">
+                            ${match.user.profilePhoto ? `<img src="${match.user.profilePhoto}" style="width:100%;height:100%;object-fit:cover;">` : match.user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600; font-size: 14px; color: #1a202c;">${match.user.name}</div>
+                            <div style="font-size: 11px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🏷️ ${tagsDisplay}</div>
+                            <div style="font-size: 11px; color: #0088cc;">⭐ ${match.matchCount} shared interests</div>
+                        </div>
+                        <button onclick="app.openChatFromSearch('${match.uid}', '${match.user.name}')" style="padding: 6px 14px; background: #0088cc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">
+                            💬 Message
+                        </button>
+                    </div>
+                `;
+            });
+            
+            suggestionDiv.innerHTML = html;
+            exploreView.insertBefore(suggestionDiv, exploreView.firstChild);
+        }
+    },
+
     // ============================================
     // MUSIC SYSTEM
     // ============================================
@@ -3362,7 +3980,6 @@ showAbout: function() {
        
         console.log('📮 Loading posts from Firebase...');
         db.ref('posts').orderByChild('timestamp').limitToLast(50).on('value', s => {
-            console.log('📮 Posts data received:', s.val() ? Object.keys(s.val()).length + ' posts' : '0 posts');
             var p = [];
             s.forEach(c => {
                 var post = c.val();
@@ -3372,12 +3989,6 @@ showAbout: function() {
                 }
             });
             self.posts = p;
-            console.log('✅ Posts loaded:', self.posts.length);
-            var feedView = document.getElementById('feedView');
-            if (feedView) {
-                feedView.classList.add('active');
-                feedView.style.display = 'flex';
-            }
             self.renderFeed();
         }, err => {
             console.error('❌ Error loading posts:', err.message);
@@ -3388,14 +3999,9 @@ showAbout: function() {
 
     renderFeed: function() {
         var feedContainer = document.getElementById('feedContainer');
-        if (!feedContainer) {
-            console.error('Feed container not found!');
-            return;
-        }
+        if (!feedContainer) return;
        
-        if (!this.posts) {
-            this.posts = [];
-        }
+        if (!this.posts) this.posts = [];
         
         var html = '';
         if (this.posts.length === 0) {
@@ -4028,11 +4634,7 @@ showAbout: function() {
         db.ref('users').on('value', s => {
             console.log('📥 Firebase /users callback fired!');
             var allUsers = s.val() || {};
-            var rawCount = Object.keys(allUsers).length;
-            console.log('   Raw users from Firebase:', rawCount);
-           
             var oldUserCount = Object.keys(self.users).length;
-            console.log('   Old user count:', oldUserCount);
            
             self.users = {};
            
@@ -4040,17 +4642,11 @@ showAbout: function() {
                 var u = allUsers[uid];
                 if (u && u.name && u.email) {
                     self.users[uid] = u;
-                    console.log('   ✅ Added user:', u.name);
-                } else {
-                    console.log('   ❌ Filtered out uid ' + uid + ' - missing name/email. Data:', u);
                 }
             }
            
             var newUserCount = Object.keys(self.users).length;
             console.log('✅ Users loaded: ' + newUserCount + ' valid users');
-            if (newUserCount > 0) {
-                console.log('   User list:', Object.keys(self.users).map(uid => self.users[uid].name).join(', '));
-            }
            
             if (oldUserCount === 0 && newUserCount > 0 && !self.unreadTrackingStarted) {
                 self.unreadTrackingStarted = true;
@@ -4080,31 +4676,6 @@ showAbout: function() {
             self.following = following || {};
             self.loadStories();
         });
-    },
-
-    loadExplore: function() {
-        var self = this;
-        console.log('🔍 Explore: Loading heatmap and trending');
-        
-        var container = document.getElementById('exploreUsersList');
-        if (container) {
-            container.innerHTML = '';
-            container.style.display = 'none';
-        }
-        
-        var resultsSection = document.getElementById('exploreSearchResults');
-        if (resultsSection) {
-            resultsSection.style.display = 'none';
-        }
-        
-        var searchInput = document.getElementById('exploreSearchInput');
-        if (searchInput) {
-            searchInput.value = '';
-        }
-        
-        this.loadSignupHeatmap();
-        this.renderTrendingInExplore();
-        this.setupTrendingRefresh();
     },
 
     searchExploreUsers: function(query) {
@@ -4308,12 +4879,10 @@ showAbout: function() {
                
                 messagesRef.orderByChild('timestamp').once('value', s => {
                     var count = 0;
-                    var lastMessage = null;
                     s.forEach(c => {
                         var m = c.val();
                         if (m && (m.text || m.image)) {
                             count++;
-                            lastMessage = m;
                         }
                     });
                     self.messageCountTracker[key] = count;
@@ -4363,202 +4932,6 @@ showAbout: function() {
     },
 
     // ============================================
-    // SIGNUP HEATMAP
-    // ============================================
-
-    loadSignupHeatmap: function() {
-        console.log('🗺️ Loading signup heatmap...');
-        
-        var mapContainer = document.getElementById('signupMapContainer');
-        if (!mapContainer) {
-            console.error('Heatmap container not found!');
-            return;
-        }
-        
-        mapContainer.innerHTML = `
-            <div style="position: relative; width: 100%; height: 100%; background: linear-gradient(135deg, #0f1419 0%, #1a202c 100%); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
-                
-                <div style="position: relative; flex: 1; overflow: hidden;">
-                    <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.1;" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
-                        <rect width="1000" height="500" fill="none"/>
-                        <g stroke="#00D4FF" stroke-width="1" fill="none">
-                            <circle cx="80" cy="150" r="50"/>
-                            <circle cx="350" cy="120" r="45"/>
-                            <circle cx="650" cy="100" r="60"/>
-                            <circle cx="850" cy="150" r="50"/>
-                            <circle cx="900" cy="380" r="40"/>
-                        </g>
-                    </svg>
-                    
-                    <div id="heatmapDots" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
-                </div>
-                
-                <div style="background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.4)); padding: 12px 16px; border-top: 1px solid rgba(0,212,255,0.2); max-height: 30%; overflow-y: auto;">
-                    <div style="color: #00D4FF; font-size: 11px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">📍 Recent Signups</div>
-                    <div id="heatmapSignups" style="display: flex; flex-direction: column; gap: 6px;"></div>
-                </div>
-            </div>
-        `;
-        
-        setTimeout(() => {
-            app.renderHeatmapDots();
-        }, 100);
-        
-        if (!app.heatmapListenerSetup) {
-            app.setupHeatmapListener();
-            app.heatmapListenerSetup = true;
-        }
-    },
-
-    renderHeatmapDots: function() {
-        console.log('📍 Rendering heatmap dots...');
-        
-        var dotsContainer = document.getElementById('heatmapDots');
-        var signupsContainer = document.getElementById('heatmapSignups');
-        
-        if (!dotsContainer || !signupsContainer) {
-            console.error('Containers not found!');
-            return;
-        }
-        
-        var locationCounts = {};
-        var locationTimes = {};
-        
-        if (app.users && Object.keys(app.users).length > 0) {
-            for (var uid in app.users) {
-                var user = app.users[uid];
-                if (user && user.location && user.location !== 'Unknown') {
-                    var location = user.location;
-                    locationCounts[location] = (locationCounts[location] || 0) + 1;
-                    locationTimes[location] = Math.max(locationTimes[location] || 0, user.createdAt || Date.now());
-                }
-            }
-        }
-        
-        console.log('📊 Locations found:', Object.keys(locationCounts).length, locationCounts);
-        
-        dotsContainer.innerHTML = '';
-        var dotIndex = 0;
-        
-        for (var location in locationCounts) {
-            var coords = app.getLocationCoordinates(location);
-            var dot = document.createElement('div');
-            dot.style.cssText = `
-                position: absolute;
-                left: ${coords.x}%;
-                top: ${coords.y}%;
-                width: 16px;
-                height: 16px;
-                background: #00D4FF;
-                border-radius: 50%;
-                box-shadow: 0 0 12px #00D4FF, 0 0 24px rgba(0, 212, 255, 0.6);
-                transform: translate(-50%, -50%);
-                z-index: 10;
-                cursor: pointer;
-                animation: heatmapBlink 2s infinite;
-                animation-delay: ${dotIndex * 0.15}s;
-            `;
-            
-            dot.onclick = () => {
-                app.toast(`🌍 ${location}: ${locationCounts[location]} signup${locationCounts[location] !== 1 ? 's' : ''}`, 'info');
-            };
-            
-            dotsContainer.appendChild(dot);
-            dotIndex++;
-        }
-        
-        var html = '';
-        var sortedLocations = Object.keys(locationCounts).sort((a, b) => locationCounts[b] - locationCounts[a]);
-        
-        if (sortedLocations.length === 0) {
-            html = '<div style="text-align: center; color: #00D4FF; padding: 10px; font-size: 11px;">⏳ Waiting for signups...</div>';
-        } else {
-            sortedLocations.slice(0, 5).forEach((location, idx) => {
-                var count = locationCounts[location];
-                var timeAgo = app.getTimeAgo(locationTimes[location]);
-                
-                html += `
-                    <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(0, 212, 255, 0.08); border-left: 3px solid #00D4FF; border-radius: 6px; cursor: pointer; font-size: 11px;" onclick="app.toast('${location}: ${count} signups', 'info')">
-                        <div style="width: 6px; height: 6px; background: #00D4FF; border-radius: 50%; flex-shrink: 0; animation: heatmapBlink 2s infinite;"></div>
-                        <div style="flex: 1;">
-                            <div style="color: white; font-weight: 600;">${location}</div>
-                            <div style="color: #00D4FF; opacity: 0.8;">Active: ${timeAgo}</div>
-                        </div>
-                        <div style="background: #00D4FF; color: #1a202c; padding: 2px 8px; border-radius: 10px; font-weight: 700; font-size: 10px;">${count}</div>
-                    </div>
-                `;
-            });
-        }
-        
-        signupsContainer.innerHTML = html;
-        console.log('✅ Heatmap rendered:', sortedLocations.length, 'locations');
-    },
-
-    getLocationCoordinates: function(location) {
-        var locations = {
-            'New York': { x: 12, y: 25 },
-            'London': { x: 42, y: 18 },
-            'Paris': { x: 43, y: 17 },
-            'Berlin': { x: 48, y: 16 },
-            'Moscow': { x: 58, y: 12 },
-            'Istanbul': { x: 52, y: 28 },
-            'Dubai': { x: 62, y: 35 },
-            'Mumbai': { x: 68, y: 38 },
-            'Bangkok': { x: 75, y: 42 },
-            'Singapore': { x: 78, y: 48 },
-            'Hong Kong': { x: 82, y: 38 },
-            'Tokyo': { x: 88, y: 28 },
-            'Sydney': { x: 85, y: 72 },
-            'Nairobi': { x: 58, y: 55 },
-            'Lagos': { x: 48, y: 58 },
-            'Cairo': { x: 55, y: 42 },
-            'São Paulo': { x: 28, y: 62 },
-            'Mexico City': { x: 18, y: 48 },
-            'Los Angeles': { x: 8, y: 32 },
-            'Toronto': { x: 18, y: 20 }
-        };
-        
-        return locations[location] || { x: 50 + (Math.random() - 0.5) * 60, y: 40 + (Math.random() - 0.5) * 40 };
-    },
-
-    getTimeAgo: function(timestamp) {
-        if (!timestamp) return 'Just now';
-        
-        var date = typeof timestamp === 'string' ? new Date(timestamp) : new Date(timestamp);
-        var now = new Date();
-        var diff = now - date;
-        
-        if (diff < 0) return 'Just now';
-        
-        var seconds = Math.floor(diff / 1000);
-        var minutes = Math.floor(seconds / 60);
-        var hours = Math.floor(minutes / 60);
-        var days = Math.floor(hours / 24);
-        
-        if (seconds < 60) return 'Just now';
-        if (minutes < 60) return minutes + 'm';
-        if (hours < 24) return hours + 'h';
-        if (days < 7) return days + 'd';
-        return 'Long ago';
-    },
-
-    setupHeatmapListener: function() {
-        console.log('🔄 Setting up heatmap listener...');
-        
-        db.ref('users').on('value', snapshot => {
-            if (!app.users) app.users = {};
-            app.users = {};
-            
-            snapshot.forEach(child => {
-                app.users[child.key] = child.val();
-            });
-            
-            console.log('📊 Users updated, re-rendering heatmap...');
-            app.renderHeatmapDots();
-        });
-    },
-
-    // ============================================
     // CHECK AND SHOW HASHTAG POPUP
     // ============================================
 
@@ -4570,109 +4943,8 @@ showAbout: function() {
         
         if (userHashtags.length === 0) {
             console.log('⚠️ User has no hashtags - showing popup');
-            this.showHashtagSelectionPopup();
+            this.showMandatoryHashtagSelection();
         }
-    },
-
-    showHashtagSelectionPopup: function() {
-        var self = this;
-        var hashtagCategories = {
-            '🎬 Entertainment': ['Movies', 'Music', 'Comedy', 'Gaming', 'Animation'],
-            '🎨 Creative': ['Photography', 'Art', 'Design', 'Fashion', 'Illustration'],
-            '⚽ Sports': ['Football', 'Basketball', 'Tennis', 'Fitness', 'Yoga'],
-            '🍔 Lifestyle': ['Food', 'Travel', 'Health', 'Beauty', 'DIY'],
-            '💻 Tech': ['Programming', 'AI', 'Web Dev', 'Apps', 'Gadgets'],
-            '📚 Education': ['Learning', 'Science', 'History', 'Language', 'Books'],
-            '💰 Business': ['Entrepreneurship', 'Marketing', 'Investing', 'Startups', 'Finance'],
-            '🌍 Social': ['Environment', 'Charity', 'Community', 'Activism', 'Culture']
-        };
-        
-        var htmlOptions = '';
-        for (var category in hashtagCategories) {
-            htmlOptions += `
-                <div style="margin-bottom: 20px;">
-                    <div style="font-weight: 600; margin-bottom: 12px; font-size: 16px;">${category}</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            `;
-            hashtagCategories[category].forEach(tag => {
-                htmlOptions += `
-                    <label style="display: flex; align-items: center; padding: 10px 12px; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.borderColor='var(--primary)'; this.style.background='rgba(46,91,255,0.05)'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='#f9fafb'">
-                        <input type="checkbox" class="hashtag-checkbox" value="${tag}" style="width: 18px; height: 18px; cursor: pointer; margin-right: 10px; accent-color: var(--primary);">
-                        <span style="font-size: 14px;">${tag}</span>
-                    </label>
-                `;
-            });
-            htmlOptions += `
-                    </div>
-                </div>
-            `;
-        }
-        
-        var modalHTML = `
-            <div class="modal-overlay" id="hashtagModal">
-                <div class="modal-box">
-                    <div class="modal-header">
-                        <h2>🏷️ Choose Your Interests</h2>
-                        <p>Select topics you care about to see relevant creators and content</p>
-                    </div>
-                    
-                    <div class="modal-body">
-                        ${htmlOptions}
-                    </div>
-                    
-                    <div class="modal-footer">
-                        <button class="modal-footer btn-cancel" onclick="document.getElementById('hashtagModal').remove(); return false;">Skip for Now</button>
-                        <button class="modal-footer btn-primary" onclick="app.saveSelectedHashtags(); return false;">Save My Interests</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        var existing = document.getElementById('hashtagModal');
-        if (existing) existing.remove();
-        
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-    },
-
-    saveSelectedHashtags: function() {
-        var checkboxes = document.querySelectorAll('.hashtag-checkbox:checked');
-        var selected = [];
-        
-        checkboxes.forEach(cb => {
-            selected.push(cb.value);
-        });
-        
-        if (selected.length === 0) {
-            this.toast('Select at least one interest', 'error');
-            return;
-        }
-        
-        console.log('💾 Saving hashtags:', selected);
-        
-        var self = this;
-        var updateData = {};
-        updateData['hashtags'] = selected;
-        
-        db.ref('users/' + this.user.uid).update(updateData).then(() => {
-            console.log('✅ Hashtags saved successfully:', selected);
-            
-            self.profile.hashtags = selected;
-            if (!self.userHashtags) self.userHashtags = {};
-            self.userHashtags[self.user.uid] = selected;
-            
-            self.toast('✅ Interests saved!', 'success');
-            
-            var modal = document.getElementById('hashtagModal');
-            if (modal) modal.remove();
-            
-            setTimeout(() => {
-                self.loadExplore();
-            }, 500);
-            
-        }).catch(err => {
-            console.error('❌ Error saving hashtags:', err);
-            self.toast('Error saving interests', 'error');
-        });
     },
 
     // ============================================
@@ -4703,43 +4975,17 @@ showAbout: function() {
         document.querySelectorAll('.message-filter-tab').forEach(tab => {
             tab.classList.remove('active');
         });
-        event.target.classList.add('active');
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
         
         this.loadMessages();
-    },
-
-    // ============================================
-    // INIT
-    // ============================================
-
-    initMusic: function() {
-        var musicEnabled = localStorage.getItem('chichi-music-enabled') === 'true';
-        var toggle = document.getElementById('musicToggle');
-        var toggleLabel = toggle ? toggle.parentElement : null;
-       
-        if (musicEnabled) {
-            if (toggle) toggle.checked = true;
-            this.playBackgroundMusic();
-            if (toggleLabel) toggleLabel.classList.add('playing');
-        } else {
-            if (toggle) toggle.checked = false;
-            if (toggleLabel) toggleLabel.classList.remove('playing');
-        }
-        
-        var audio = document.getElementById('themeMusic');
-        if (audio) {
-            audio.addEventListener('ended', () => {
-                if (document.getElementById('musicToggle') && document.getElementById('musicToggle').checked) {
-                    this.playNextSong();
-                }
-            });
-        }
     }
 };
 
+// Initialize app
 app.init();
 app.initMusic();
 
-// DEBUG CONSOLE
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
-console.log('%c📱 All tweaks applied: Smaller header, Stories + CHICHI title, Curved nav, About Us, Chat menu with block/report/theme, Fixed send button, User photos in chat', 'color: #0088cc; font-size: 12px;');
+console.log('%c📱 All features: Stories, Chat, Heatmap, Hashtags, Explore, Groups, Music', 'color: #0088cc; font-size: 12px;');
