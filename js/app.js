@@ -455,29 +455,35 @@ var app = {
             console.log('localStorage not available');
         }
        
-        // Hide ALL other views COMPLETELY
+        // Hide ALL other views COMPLETELY using CSS classes
         document.querySelectorAll('.view').forEach(v => {
             v.classList.remove('active');
-            v.style.display = 'none';
-            v.style.visibility = 'hidden';
-            v.style.opacity = '0';
-            v.style.zIndex = '1';
-            v.style.pointerEvents = 'none';
+            // Remove inline styles to let CSS handle it
+            v.style.display = '';
+            v.style.visibility = '';
+            v.style.opacity = '';
+            v.style.zIndex = '';
+            v.style.pointerEvents = '';
         });
+       
+        // Close any open chat
+        var chatView = document.getElementById('chatView');
+        if (chatView) {
+            chatView.classList.remove('active');
+            chatView.style.display = '';
+            chatView.style.visibility = '';
+            chatView.style.opacity = '';
+            chatView.style.zIndex = '';
+        }
        
         // Remove active from nav items
         document.querySelectorAll('.nav-wrapper > .nav-item').forEach(n => n.classList.remove('active'));
        
-        // Show ONLY selected view with all CSS properties
+        // Show ONLY selected view using CSS class
         var viewElement = document.getElementById(view + 'View');
         if (viewElement) {
             viewElement.classList.add('active');
-            viewElement.style.display = 'flex';
-            viewElement.style.visibility = 'visible';
-            viewElement.style.opacity = '1';
-            viewElement.style.zIndex = '100';
-            viewElement.style.position = 'fixed';
-            viewElement.style.pointerEvents = 'auto';
+            // Let CSS handle all positioning
         }
        
         // Load view-specific data
@@ -2418,7 +2424,7 @@ var app = {
                 </div>
             `;
         } else {
-            console.log('🔍 Explore: Filtering users with common hashtags');
+            console.log('🔍 Explore: Loading all users');
             console.log('📌 Your hashtags:', this.profile.hashtags);
             
             var sorted = [];
@@ -2427,21 +2433,7 @@ var app = {
                 
                 // Basic validation
                 if (uid && uid !== this.user.uid && user && user.name && user.email) {
-                    // CHECK: Users must have hashtags in common
-                    var userHashtags = user.hashtags || [];
-                    var myHashtags = this.profile.hashtags || [];
-                    
-                    var hasCommonHashtag = false;
-                    if (myHashtags.length > 0 && userHashtags.length > 0) {
-                        hasCommonHashtag = myHashtags.some(tag => userHashtags.includes(tag));
-                    }
-                    
-                    console.log(`  ${user.name}: ${userHashtags.join(',')} - common: ${hasCommonHashtag}`);
-                    
-                    // ONLY ADD if has common hashtags
-                    if (hasCommonHashtag) {
-                        sorted.push({ uid: uid, user: user });
-                    }
+                    sorted.push({ uid: uid, user: user });
                 }
             }
            
@@ -2453,9 +2445,9 @@ var app = {
                 var unreadCount = this.getUnreadCountForUser(u.uid);
                 var msgButtonBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white;">${unreadCount}</span>` : '';
                 
-                // Show common hashtags
-                var commonTags = (this.profile.hashtags || []).filter(tag => (u.user.hashtags || []).includes(tag));
-                var tagsDisplay = commonTags.length > 0 ? commonTags.slice(0, 2).join(' ') : 'No tags in common';
+                // Show user's actual hashtags
+                var userTags = (u.user.hashtags || []).slice(0, 2);
+                var tagsDisplay = userTags.length > 0 ? userTags.join(' ') : '📝 No interests set';
                
                 html += `
                     <div class="search-user" style="margin: 8px 16px;">
@@ -2477,7 +2469,7 @@ var app = {
             });
 
             if (html === '') {
-                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No users to explore. Add hashtags to see recommendations! 🏷️</div>';
+                html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No users found. Check back soon! 👥</div>';
             }
         }
        
@@ -5911,41 +5903,47 @@ app.loadSignupHeatmap = function() {
     console.log('🗺️ Loading signup heatmap...');
     
     var mapContainer = document.getElementById('signupMapContainer');
-    if (!mapContainer) return;
+    if (!mapContainer) {
+        console.error('Heatmap container not found!');
+        return;
+    }
     
-    // Build professional heatmap HTML
-    var html = `
-        <div style="position: relative; width: 100%; height: 100%; background: linear-gradient(135deg, #0f1419 0%, #1a202c 100%); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+    // CRITICAL: Simple working HTML structure
+    mapContainer.innerHTML = `
+        <div style="position: relative; width: 100%; height: 100%; background: linear-gradient(135deg, #0f1419 0%, #1a202c 100%); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
             
-            <!-- World Map Background SVG -->
-            <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 65%; opacity: 0.15;" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
-                <rect width="1000" height="500" fill="none"/>
-                <g stroke="#00D4FF" stroke-width="0.5" fill="none">
-                    <circle cx="80" cy="150" r="40"/>   <!-- Americas -->
-                    <circle cx="350" cy="120" r="35"/>  <!-- Europe/Africa -->
-                    <circle cx="650" cy="100" r="50"/>  <!-- Middle East/Asia -->
-                    <circle cx="850" cy="150" r="40"/>  <!-- East Asia -->
-                    <circle cx="900" cy="380" r="30"/>  <!-- Australia -->
-                </g>
-            </svg>
+            <!-- Map area (70% of height) -->
+            <div style="position: relative; flex: 1; overflow: hidden;">
+                <!-- World Map Background SVG -->
+                <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.1;" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
+                    <rect width="1000" height="500" fill="none"/>
+                    <g stroke="#00D4FF" stroke-width="1" fill="none">
+                        <circle cx="80" cy="150" r="50"/>
+                        <circle cx="350" cy="120" r="45"/>
+                        <circle cx="650" cy="100" r="60"/>
+                        <circle cx="850" cy="150" r="50"/>
+                        <circle cx="900" cy="380" r="40"/>
+                    </g>
+                </svg>
+                
+                <!-- Dots Layer -->
+                <div id="heatmapDots" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+            </div>
             
-            <!-- Blinking Dots Layer -->
-            <div id="heatmapDots" style="position: absolute; top: 0; left: 0; width: 100%; height: 65%;"></div>
-            
-            <!-- Signup Stats at Bottom -->
-            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.3)); padding: 16px; max-height: 35%; display: flex; flex-direction: column;">
-                <div style="color: #00D4FF; font-size: 12px; font-weight: 600; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">📍 Recent Signups</div>
-                <div id="heatmapSignups" style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;"></div>
+            <!-- Signups List (30% of height) -->
+            <div style="background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.4)); padding: 12px 16px; border-top: 1px solid rgba(0,212,255,0.2); max-height: 30%; overflow-y: auto;">
+                <div style="color: #00D4FF; font-size: 11px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">📍 Recent Signups</div>
+                <div id="heatmapSignups" style="display: flex; flex-direction: column; gap: 6px;"></div>
             </div>
         </div>
     `;
     
-    mapContainer.innerHTML = html;
+    // Render immediately
+    setTimeout(() => {
+        app.renderHeatmapDots();
+    }, 100);
     
-    // Render heatmap dots and signups
-    app.renderHeatmapDots();
-    
-    // Setup real-time listener if not already done
+    // Setup real-time listener
     if (!app.heatmapListenerSetup) {
         app.setupHeatmapListener();
         app.heatmapListenerSetup = true;
@@ -5953,7 +5951,6 @@ app.loadSignupHeatmap = function() {
 };
 
 app.getLocationCoordinates = function(location) {
-    // Professional city locations mapped to percentages
     var locations = {
         'New York': { x: 12, y: 25 },
         'London': { x: 42, y: 18 },
@@ -5977,7 +5974,7 @@ app.getLocationCoordinates = function(location) {
         'Toronto': { x: 18, y: 20 }
     };
     
-    return locations[location] || { x: 50 + (Math.random() - 0.5) * 60, y: 50 + (Math.random() - 0.5) * 40 };
+    return locations[location] || { x: 50 + (Math.random() - 0.5) * 60, y: 40 + (Math.random() - 0.5) * 40 };
 };
 
 app.renderHeatmapDots = function() {
@@ -5986,13 +5983,16 @@ app.renderHeatmapDots = function() {
     var dotsContainer = document.getElementById('heatmapDots');
     var signupsContainer = document.getElementById('heatmapSignups');
     
-    if (!dotsContainer || !signupsContainer) return;
+    if (!dotsContainer || !signupsContainer) {
+        console.error('Containers not found!');
+        return;
+    }
     
-    // Count signups by location
+    // Count signups
     var locationCounts = {};
     var locationTimes = {};
     
-    if (app.users) {
+    if (app.users && Object.keys(app.users).length > 0) {
         for (var uid in app.users) {
             var user = app.users[uid];
             if (user && user.location && user.location !== 'Unknown') {
@@ -6003,36 +6003,32 @@ app.renderHeatmapDots = function() {
         }
     }
     
-    console.log('📊 Signup counts:', locationCounts);
+    console.log('📊 Locations found:', Object.keys(locationCounts).length, locationCounts);
     
-    // Clear old dots
+    // Clear and render dots
     dotsContainer.innerHTML = '';
-    
-    // Add blinking dots for each location
     var dotIndex = 0;
+    
     for (var location in locationCounts) {
         var coords = app.getLocationCoordinates(location);
-        
         var dot = document.createElement('div');
-        dot.className = 'heatmap-dot';
         dot.style.cssText = `
             position: absolute;
             left: ${coords.x}%;
             top: ${coords.y}%;
-            transform: translate(-50%, -50%);
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             background: #00D4FF;
             border-radius: 50%;
             box-shadow: 0 0 12px #00D4FF, 0 0 24px rgba(0, 212, 255, 0.6);
-            animation: heatmapBlink 2s infinite;
+            transform: translate(-50%, -50%);
             z-index: 10;
             cursor: pointer;
+            animation: heatmapBlink 2s infinite;
             animation-delay: ${dotIndex * 0.15}s;
         `;
         
-        dot.onclick = (e) => {
-            e.stopPropagation();
+        dot.onclick = () => {
             app.toast(`🌍 ${location}: ${locationCounts[location]} signup${locationCounts[location] !== 1 ? 's' : ''}`, 'info');
         };
         
@@ -6040,58 +6036,58 @@ app.renderHeatmapDots = function() {
         dotIndex++;
     }
     
-    // Render signup list at bottom
+    // Render signup list
     var html = '';
     var sortedLocations = Object.keys(locationCounts).sort((a, b) => locationCounts[b] - locationCounts[a]);
     
-    sortedLocations.slice(0, 5).forEach((location, idx) => {
-        var count = locationCounts[location];
-        var timeAgo = app.getTimeAgo(locationTimes[location]);
-        var pulse = idx === 0 ? 'style="animation: pulse 1.5s infinite;"' : '';
-        
-        html += `
-            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(0, 212, 255, 0.08); border-left: 3px solid #00D4FF; border-radius: 6px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='rgba(0, 212, 255, 0.15)'" onmouseout="this.style.background='rgba(0, 212, 255, 0.08)'" onclick="app.toast('${location}: ${count} active signup${count !== 1 ? 's' : ''}', 'info')">
-                <div style="width: 8px; height: 8px; background: #00D4FF; border-radius: 50%; flex-shrink: 0; ${pulse}"></div>
-                <div style="flex: 1; min-width: 0;">
-                    <div style="color: white; font-weight: 600; font-size: 13px;">${location}</div>
-                    <div style="color: #00D4FF; font-size: 11px; opacity: 0.85;">Active Signup: ${timeAgo}</div>
+    if (sortedLocations.length === 0) {
+        html = '<div style="text-align: center; color: #00D4FF; padding: 10px; font-size: 11px;">⏳ Waiting for signups...</div>';
+    } else {
+        sortedLocations.slice(0, 5).forEach((location, idx) => {
+            var count = locationCounts[location];
+            var timeAgo = app.getTimeAgo(locationTimes[location]);
+            
+            html += `
+                <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(0, 212, 255, 0.08); border-left: 3px solid #00D4FF; border-radius: 6px; cursor: pointer; font-size: 11px;" onclick="app.toast('${location}: ${count} signups', 'info')">
+                    <div style="width: 6px; height: 6px; background: #00D4FF; border-radius: 50%; flex-shrink: 0; animation: heatmapBlink 2s infinite;"></div>
+                    <div style="flex: 1;">
+                        <div style="color: white; font-weight: 600;">${location}</div>
+                        <div style="color: #00D4FF; opacity: 0.8;">Active: ${timeAgo}</div>
+                    </div>
+                    <div style="background: #00D4FF; color: #1a202c; padding: 2px 8px; border-radius: 10px; font-weight: 700; font-size: 10px;">${count}</div>
                 </div>
-                <div style="background: #00D4FF; color: #0f1419; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 12px; flex-shrink: 0;">${count}</div>
-            </div>
-        `;
-    });
-    
-    if (html === '') {
-        html = '<div style="text-align: center; color: #00D4FF; padding: 20px 16px; font-size: 12px; opacity: 0.7;">⏳ Waiting for signups...</div>';
+            `;
+        });
     }
     
     signupsContainer.innerHTML = html;
-    console.log('✅ Heatmap rendered with ' + sortedLocations.length + ' locations');
+    console.log('✅ Heatmap rendered:', sortedLocations.length, 'locations');
 };
 
 app.getTimeAgo = function(timestamp) {
     if (!timestamp) return 'Just now';
     
-    var createdDate = typeof timestamp === 'string' ? new Date(timestamp) : new Date(timestamp);
+    var date = typeof timestamp === 'string' ? new Date(timestamp) : new Date(timestamp);
     var now = new Date();
-    var diff = now - createdDate;
+    var diff = now - date;
     
     if (diff < 0) return 'Just now';
     
-    var seconds = Math.floor(diff / 1000);
+    var ms = diff;
+    var seconds = Math.floor(ms / 1000);
     var minutes = Math.floor(seconds / 60);
     var hours = Math.floor(minutes / 60);
     var days = Math.floor(hours / 24);
     
     if (seconds < 60) return 'Just now';
-    if (minutes < 60) return minutes + 'm ago';
-    if (hours < 24) return hours + 'h ago';
-    if (days < 7) return days + 'd ago';
-    return 'Long time ago';
+    if (minutes < 60) return minutes + 'm';
+    if (hours < 24) return hours + 'h';
+    if (days < 7) return days + 'd';
+    return 'Long ago';
 };
 
 app.setupHeatmapListener = function() {
-    console.log('🔄 Setting up real-time heatmap updates...');
+    console.log('🔄 Setting up heatmap listener...');
     
     db.ref('users').on('value', snapshot => {
         if (!app.users) app.users = {};
@@ -6101,10 +6097,8 @@ app.setupHeatmapListener = function() {
             app.users[child.key] = child.val();
         });
         
-        // Re-render heatmap when users update
+        console.log('📊 Users updated, re-rendering heatmap...');
         app.renderHeatmapDots();
-    }, err => {
-        console.error('Error listening to users:', err);
     });
 };
 
@@ -6113,3 +6107,4 @@ function consentPopup() {
 }
 
 // Note: Google AdSense should initialize automatically with the script tag
+
