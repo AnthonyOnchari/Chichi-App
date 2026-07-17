@@ -11,7 +11,7 @@ const FIREBASE_CONFIG = {
 
 // Cloudinary Configuration
 const CLOUD_NAME = 'u1uilb6f';
-const UPLOAD_PRESET = 'chichi_photos';  // ✅ Matches actual Cloudinary preset
+const UPLOAD_PRESET = 'chichi_photos';
 
 // Music Playlist
 const MUSIC_PLAYLIST = [
@@ -22,14 +22,6 @@ const MUSIC_PLAYLIST = [
     'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136978/DOGGIE_IN_THE_WINDOW_senpyj.mp4',
     'https://res.cloudinary.com/u1uilb6f/video/upload/v1784136978/Rudimental_dneqjb.mp4'
 ];
-
-// Hashtag Categories
-const HASHTAG_CATEGORIES = {
-    interests: ['#Gaming', '#Photography', '#Music', '#Art', '#Writing', '#Sports', '#Fitness', '#Cooking', '#Travel', '#Fashion', '#Tech', '#Business', '#Entrepreneurship', '#Marketing', '#Design', '#Animation'],
-    location: ['#Nairobi', '#Mombasa', '#Kisumu', '#Nakuru', '#Eldoret', '#Kericho', '#Nyeri', '#Thika', '#Machakos', '#Kakamega', '#Bungoma', '#Isiolo'],
-    hobbies: ['#Fitness', '#Cooking', '#Travel', '#Fashion', '#Reading', '#Gaming', '#Photography', '#Gardening', '#DIY', '#Crafts', '#Pets', '#Hiking'],
-    contentTypes: ['#Vlog', '#Comedy', '#Tutorial', '#Podcast', '#Blog', '#News', '#Review', '#Motivation', '#Education', '#Entertainment', '#Lifestyle', '#Behind-the-scenes']
-};
 
 // Admin Password
 const ADMIN_PASSWORD = 'CHICHI26303@Admin';
