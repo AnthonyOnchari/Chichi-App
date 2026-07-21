@@ -1,4 +1,7 @@
-// Firebase config loaded from config.js
+// ============================================
+// FIREBASE CONFIG - Loaded from config.js
+// ============================================
+
 // Safety check: only initialize if not already initialized
 if (!firebase.apps.length) {
     firebase.initializeApp(FIREBASE_CONFIG);
@@ -12,25 +15,463 @@ var auth = firebase.auth();
 var db = firebase.database();
 
 db.ref('.info/connected').on('value', function(snapshot) {
-  if (snapshot.val() === true) {
-  } else {
-  }
+    if (snapshot.val() === true) {
+        console.log('🌐 Connected to Firebase');
+    } else {
+        console.log('📡 Disconnected from Firebase');
+    }
 });
 
 var loadingTimeout = setTimeout(() => {
-  var loading = document.getElementById('loadingScreen');
-  if (loading) {
-    loading.classList.remove('active');
-    loading.style.display = 'none';
-  }
-  var authPage = document.getElementById('authPage');
-  if (authPage) {
-    authPage.style.display = 'flex';
-  }
+    var loading = document.getElementById('loadingScreen');
+    if (loading) {
+        loading.classList.remove('active');
+        loading.style.display = 'none';
+    }
+    var authPage = document.getElementById('authPage');
+    if (authPage) {
+        authPage.style.display = 'flex';
+    }
 }, 3000);
 
-var auth = firebase.auth();
-var db = firebase.database();
+// ============================================
+// POST TEMPLATES - PEOPLE ONLY IMAGES
+// ============================================
+
+const POST_TEMPLATES = [
+    // Funny Stories - People Only
+    { text: "I told my boss I needed a raise because I'm the best worker here. He said 'You're also the only worker here.' I got the raise.", category: "Funny", imageKeyword: "happy person laughing portrait" },
+    { text: "My phone has more storage than my brain. I can remember 1000 songs but not what I ate for breakfast.", category: "Funny", imageKeyword: "confused person thinking" },
+    { text: "The best part about working from home is that my commute is 10 seconds. The worst part? My boss is always in my kitchen.", category: "Funny", imageKeyword: "person working on laptop smiling" },
+    { text: "I asked Google 'Why am I so tired?' It said 'Because you're always on your phone at 2 AM.'", category: "Funny", imageKeyword: "tired person in bed with phone" },
+    { text: "My dog thinks I'm a superhero. He gets excited every time I come home from the bathroom.", category: "Funny", imageKeyword: "person with dog happy" },
+    { text: "I'm not saying I'm old, but my back goes out more than I do.", category: "Funny", imageKeyword: "elderly person smiling" },
+    { text: "The best way to remember your wife's birthday is to forget it once.", category: "Funny", imageKeyword: "couple laughing together" },
+    { text: "I don't need a hair stylist, my pillow gives me a new style every morning.", category: "Funny", imageKeyword: "person with messy hair laughing" },
+    { text: "My brain has two modes: 'I can do anything' and 'What was I doing again?'", category: "Funny", imageKeyword: "confused person scratching head" },
+    { text: "The best exercise for losing weight is running out of patience.", category: "Funny", imageKeyword: "person exercising frustrated" },
+    { text: "My boss told me to have a good day. I went home.", category: "Funny", imageKeyword: "person leaving office happy" },
+    { text: "I'm not lazy, I'm on energy saving mode.", category: "Funny", imageKeyword: "person lying on couch relaxing" },
+    { text: "The only thing I'm good at is making bad decisions look good.", category: "Funny", imageKeyword: "person laughing at themselves" },
+    { text: "I need a 6-month vacation, twice a year.", category: "Funny", imageKeyword: "person on beach relaxing" },
+    { text: "My life is a series of naps interrupted by food.", category: "Funny", imageKeyword: "person sleeping peacefully" },
+    
+    // Inspirational - People Only
+    { text: "Your greatest strength is your ability to keep going when others give up. Keep pushing.", category: "Inspiration", imageKeyword: "determined person sunrise" },
+    { text: "The only person you should try to be better than is the person you were yesterday.", category: "Inspiration", imageKeyword: "person looking forward determined" },
+    { text: "Success is not about how many times you fall, but how many times you get back up.", category: "Inspiration", imageKeyword: "person getting up determined" },
+    { text: "Every morning is a new beginning. Make it count.", category: "Inspiration", imageKeyword: "person morning coffee smiling" },
+    { text: "Your potential is endless. Don't limit yourself.", category: "Inspiration", imageKeyword: "person with arms open confident" },
+    { text: "The best time to start was yesterday. The next best time is now.", category: "Inspiration", imageKeyword: "person starting journey determined" },
+    { text: "Believe you can and you're halfway there.", category: "Inspiration", imageKeyword: "confident person smiling" },
+    { text: "Your only limit is the one you set for yourself.", category: "Inspiration", imageKeyword: "person breaking through barrier" },
+    { text: "Dream big. Work hard. Stay focused.", category: "Inspiration", imageKeyword: "focused person working" },
+    { text: "You are stronger than you think.", category: "Inspiration", imageKeyword: "strong person confident" },
+    { text: "Success starts with self-belief.", category: "Inspiration", imageKeyword: "person believing in themselves" },
+    { text: "Be the energy you want to attract.", category: "Inspiration", imageKeyword: "happy positive person" },
+    
+    // Kenyan News & Facts - People Only
+    { text: "Kenya's economy grew by 5.6% in 2023. The tech sector is leading the growth.", category: "Kenya News", imageKeyword: "Kenyan person in tech office" },
+    { text: "The Maasai Mara is considered the 7th wonder of the world. Over 1.5 million wildebeest migrate annually.", category: "Kenya News", imageKeyword: "Maasai person smiling" },
+    { text: "Kenyan youth are leading Africa's tech revolution. Over 200 startups launched this year.", category: "Kenya News", imageKeyword: "Kenyan youth coding smiling" },
+    { text: "Kenya is home to the world's largest refugee camp at Dadaab.", category: "Kenya News", imageKeyword: "Kenyan community together" },
+    { text: "Lake Victoria, the largest lake in Africa, is shared by Kenya, Uganda, and Tanzania.", category: "Kenya News", imageKeyword: "people at lake smiling" },
+    { text: "Kenya has 42 different ethnic communities, each with its own unique culture.", category: "Kenya News", imageKeyword: "Kenyan cultural dancers" },
+    { text: "The Kenyan shilling is one of the most stable currencies in East Africa.", category: "Kenya News", imageKeyword: "Kenyan business person" },
+    { text: "Kenya produces some of the world's best marathon runners.", category: "Kenya News", imageKeyword: "Kenyan runner smiling" },
+    { text: "Nairobi is the only capital city with a national park.", category: "Kenya News", imageKeyword: "person in Nairobi smiling" },
+    { text: "Kenyan coffee is among the best in the world.", category: "Kenya News", imageKeyword: "Kenyan coffee farmer smiling" },
+    
+    // Tech & Innovation - People Only
+    { text: "AI is revolutionizing healthcare. New algorithms can detect diseases earlier than doctors.", category: "Tech", imageKeyword: "doctor with AI technology" },
+    { text: "Your smartphone is more powerful than the computers that sent humans to the moon.", category: "Tech", imageKeyword: "person amazed by phone" },
+    { text: "The world's fastest internet is in South Korea. 6G is coming soon.", category: "Tech", imageKeyword: "person on laptop excited" },
+    { text: "Blockchain technology is changing how we think about money and trust.", category: "Tech", imageKeyword: "person with blockchain concept" },
+    { text: "The first computer virus was created in 1983. It was called the 'Elk Cloner'.", category: "Tech", imageKeyword: "person at computer thinking" },
+    { text: "Cloud computing has revolutionized how businesses operate worldwide.", category: "Tech", imageKeyword: "business person using cloud" },
+    { text: "5G technology is transforming how we connect.", category: "Tech", imageKeyword: "person with 5G phone smiling" },
+    { text: "The future of work is remote and digital.", category: "Tech", imageKeyword: "person working remotely" },
+    
+    // Lifestyle & Wellness - People Only
+    { text: "A 10-minute daily meditation can reduce stress by 30%. Try it today.", category: "Wellness", imageKeyword: "person meditating peaceful" },
+    { text: "Walking 30 minutes a day can add 3 years to your life. It's that simple.", category: "Wellness", imageKeyword: "person walking happy smiling" },
+    { text: "The average person spends 2 hours a day on social media. Make it count.", category: "Wellness", imageKeyword: "person on phone mindful" },
+    { text: "Drinking water first thing in the morning boosts your metabolism.", category: "Wellness", imageKeyword: "person drinking water morning" },
+    { text: "Sleep is not a luxury, it's a necessity. Aim for 7-8 hours.", category: "Wellness", imageKeyword: "person sleeping peacefully" },
+    { text: "Reading 15 minutes a day can reduce stress by 60%.", category: "Wellness", imageKeyword: "person reading book relaxed" },
+    { text: "Yoga is the perfect way to start your day.", category: "Wellness", imageKeyword: "person doing yoga" },
+    { text: "Mental health matters. Take a break when you need to.", category: "Wellness", imageKeyword: "person taking a break" },
+    
+    // Food - People Only
+    { text: "The best Kenyan dish? Some say Nyama Choma, others say Ugali. Try both!", category: "Food", imageKeyword: "people eating Kenyan food" },
+    { text: "Cooking is an art. Your kitchen is your canvas. Create something beautiful.", category: "Food", imageKeyword: "person cooking happy" },
+    { text: "Traditional Kenyan food is some of the most flavorful in the world.", category: "Food", imageKeyword: "Kenyan person eating" },
+    { text: "Chapati is life. That's a fact, not an opinion.", category: "Food", imageKeyword: "person making chapati" },
+    { text: "Good food equals good mood.", category: "Food", imageKeyword: "person eating happily" },
+    { text: "The best meals are shared with loved ones.", category: "Food", imageKeyword: "family eating together" },
+    
+    // Travel - People Only
+    { text: "Kenya has 8 national parks. Each one is unique. Visit them all.", category: "Travel", imageKeyword: "person on safari smiling" },
+    { text: "Travel makes you realize how beautiful the world truly is.", category: "Travel", imageKeyword: "person traveling happy" },
+    { text: "The Kenyan coast is one of the most beautiful places on Earth.", category: "Travel", imageKeyword: "person on Kenyan beach" },
+    { text: "Mombasa's old town is a UNESCO World Heritage site. It's worth a visit.", category: "Travel", imageKeyword: "person in Mombasa smiling" },
+    { text: "Adventure awaits. Go explore!", category: "Travel", imageKeyword: "adventurous person" },
+    { text: "Travel is the only thing you buy that makes you richer.", category: "Travel", imageKeyword: "happy traveler" },
+    
+    // Fun Facts - People Only
+    { text: "Your brain is constantly changing. Every thought you have physically rewires your brain.", category: "Fun Facts", imageKeyword: "person thinking" },
+    { text: "The human body has 37 trillion cells. Each one is working right now to keep you alive.", category: "Fun Facts", imageKeyword: "healthy person smiling" },
+    { text: "Dolphins sleep with one eye open. Half their brain stays awake.", category: "Fun Facts", imageKeyword: "person amazed" },
+    { text: "The average person walks about 100,000 miles in their lifetime.", category: "Fun Facts", imageKeyword: "person walking" },
+    { text: "Your heart beats about 100,000 times per day. That's 2.5 billion times in a lifetime.", category: "Fun Facts", imageKeyword: "person with heart" },
+    { text: "The Great Wall of China is not visible from space. This is a common myth.", category: "Fun Facts", imageKeyword: "person traveling" },
+    { text: "Humans are the only animals that blush.", category: "Fun Facts", imageKeyword: "person blushing" },
+    { text: "Your body produces enough heat in 30 minutes to boil a gallon of water.", category: "Fun Facts", imageKeyword: "person feeling warm" },
+    
+    // Relationship/Love - People Only
+    { text: "The best relationships are built on trust, communication, and a good sense of humor.", category: "Relationships", imageKeyword: "couple laughing together" },
+    { text: "A happy relationship is about understanding, not agreement.", category: "Relationships", imageKeyword: "couple talking" },
+    { text: "Love is not about how many days you've been together, but how much you've grown together.", category: "Relationships", imageKeyword: "couple in love" },
+    { text: "The best love story is when you fall in love with the most unexpected person.", category: "Relationships", imageKeyword: "couple happy" },
+    { text: "Love is patient, love is kind. Love is everything.", category: "Relationships", imageKeyword: "couple hugging" },
+    { text: "A relationship is not a 50/50 deal. It's 100/100.", category: "Relationships", imageKeyword: "couple supporting each other" },
+];
+
+// ============================================
+// HARD TRIVIA QUESTIONS - KSh 3 per correct answer
+// ============================================
+
+const TRIVIA_QUESTIONS = [
+    // Kenyan History & Politics
+    {
+        question: "In which year did Kenya become a republic?",
+        options: ["1963", "1964", "1965", "1966"],
+        correct: 1
+    },
+    {
+        question: "Who was Kenya's first Vice President?",
+        options: ["Jaramogi Oginga Odinga", "Daniel arap Moi", "Mwai Kibaki", "Raila Odinga"],
+        correct: 0
+    },
+    {
+        question: "Which Kenyan president served the longest?",
+        options: ["Jomo Kenyatta", "Daniel arap Moi", "Mwai Kibaki", "Uhuru Kenyatta"],
+        correct: 1
+    },
+    {
+        question: "What year was the Kenyan Constitution promulgated?",
+        options: ["2008", "2010", "2012", "2013"],
+        correct: 1
+    },
+    {
+        question: "Who is known as the 'Father of the Kenyan Nation'?",
+        options: ["Jomo Kenyatta", "Tom Mboya", "Oginga Odinga", "Kenyatta Day"],
+        correct: 0
+    },
+    {
+        question: "Which Kenyan leader was assassinated in 1969?",
+        options: ["Tom Mboya", "Jomo Kenyatta", "Oginga Odinga", "Ronald Ngala"],
+        correct: 0
+    },
+    {
+        question: "What year did Kenya join the United Nations?",
+        options: ["1963", "1964", "1965", "1966"],
+        correct: 0
+    },
+    {
+        question: "Who was Kenya's first female Member of Parliament?",
+        options: ["Grace Onyango", "Martha Karua", "Wangari Maathai", "Charity Ngilu"],
+        correct: 0
+    },
+    {
+        question: "Which Kenyan president introduced the 'Nyayo' philosophy?",
+        options: ["Daniel arap Moi", "Jomo Kenyatta", "Mwai Kibaki", "Uhuru Kenyatta"],
+        correct: 0
+    },
+    {
+        question: "What year did Kenya hold its first multi-party elections?",
+        options: ["1990", "1992", "1995", "1997"],
+        correct: 1
+    },
+    
+    // Kenyan Geography
+    {
+        question: "What is the highest point in Kenya?",
+        options: ["Mount Kenya", "Mount Kilimanjaro", "Mount Elgon", "Mount Longonot"],
+        correct: 0
+    },
+    {
+        question: "Which lake is the largest in Kenya by surface area?",
+        options: ["Lake Victoria", "Lake Turkana", "Lake Nakuru", "Lake Naivasha"],
+        correct: 1
+    },
+    {
+        question: "How many counties does Kenya have?",
+        options: ["42", "47", "52", "55"],
+        correct: 1
+    },
+    {
+        question: "Which river flows through Nairobi?",
+        options: ["Nairobi River", "Tana River", "Athi River", "Nzoia River"],
+        correct: 0
+    },
+    {
+        question: "What is the largest national park in Kenya?",
+        options: ["Tsavo National Park", "Maasai Mara", "Amboseli", "Samburu"],
+        correct: 0
+    },
+    {
+        question: "Which city is Kenya's second largest?",
+        options: ["Mombasa", "Kisumu", "Nakuru", "Eldoret"],
+        correct: 0
+    },
+    {
+        question: "What is the deepest lake in Kenya?",
+        options: ["Lake Victoria", "Lake Turkana", "Lake Naivasha", "Lake Baringo"],
+        correct: 1
+    },
+    {
+        question: "Which country borders Kenya to the southeast?",
+        options: ["Somalia", "Tanzania", "Uganda", "Ethiopia"],
+        correct: 1
+    },
+    {
+        question: "What is the total area of Kenya in square kilometers?",
+        options: ["580,367", "582,646", "586,000", "590,000"],
+        correct: 0
+    },
+    {
+        question: "Which national park is located near Nairobi?",
+        options: ["Nairobi National Park", "Maasai Mara", "Amboseli", "Tsavo"],
+        correct: 0
+    },
+    
+    // Kenyan Culture & People
+    {
+        question: "How many ethnic communities are officially recognized in Kenya?",
+        options: ["42", "47", "50", "55"],
+        correct: 0
+    },
+    {
+        question: "What is the traditional Maasai dance called?",
+        options: ["Adumu", "Ngoma", "Chakacha", "Ochung'"],
+        correct: 0
+    },
+    {
+        question: "Which ethnic group practices the 'Nyamakama' initiation?",
+        options: ["Kikuyu", "Luo", "Kalenjin", "Meru"],
+        correct: 2
+    },
+    {
+        question: "What is the traditional Luo instrument called?",
+        options: ["Nyatiti", "Orutu", "Kipande", "Litungu"],
+        correct: 0
+    },
+    {
+        question: "Which Kenyan community practices 'Mugithi' music?",
+        options: ["Kikuyu", "Luo", "Kalenjin", "Meru"],
+        correct: 0
+    },
+    {
+        question: "What is the traditional Kalenjin initiation ceremony?",
+        options: ["Tumdo", "Nyamakama", "Mugithi", "Chakacha"],
+        correct: 0
+    },
+    {
+        question: "Which Kenyan community is known for the 'Chakacha' dance?",
+        options: ["Swahili", "Luo", "Kikuyu", "Kalenjin"],
+        correct: 0
+    },
+    {
+        question: "What is the traditional dress of the Maasai called?",
+        options: ["Shuka", "Kanga", "Kitenge", "Khanga"],
+        correct: 0
+    },
+    {
+        question: "Which Kenyan community practices 'Dodo' music?",
+        options: ["Luo", "Kikuyu", "Kalenjin", "Meru"],
+        correct: 0
+    },
+    {
+        question: "What is the traditional circumcision ceremony among the Kikuyu?",
+        options: ["Ituika", "Nyamakama", "Tumdo", "Chakacha"],
+        correct: 0
+    },
+    
+    // Kenyan Wildlife
+    {
+        question: "How many species of birds are found in Kenya?",
+        options: ["Over 1000", "Over 1100", "Over 1200", "Over 1300"],
+        correct: 1
+    },
+    {
+        question: "Which animal is found only in Kenya?",
+        options: ["Hirola antelope", "Lion", "Elephant", "Giraffe"],
+        correct: 0
+    },
+    {
+        question: "How many national parks does Kenya have?",
+        options: ["20", "22", "25", "28"],
+        correct: 1
+    },
+    {
+        question: "Which lake is famous for flamingos in Kenya?",
+        options: ["Lake Nakuru", "Lake Victoria", "Lake Turkana", "Lake Naivasha"],
+        correct: 0
+    },
+    {
+        question: "What is the largest mammal in Kenya?",
+        options: ["Elephant", "Giraffe", "Rhino", "Hippo"],
+        correct: 0
+    },
+    {
+        question: "Which Kenyan park is known for black rhino conservation?",
+        options: ["Lake Nakuru", "Maasai Mara", "Amboseli", "Samburu"],
+        correct: 0
+    },
+    {
+        question: "How many species of primates are found in Kenya?",
+        options: ["10", "15", "20", "25"],
+        correct: 1
+    },
+    {
+        question: "Which snake is the deadliest in Kenya?",
+        options: ["Black Mamba", "Puff Adder", "Cobra", "Viper"],
+        correct: 0
+    },
+    {
+        question: "What is Kenya's national bird?",
+        options: ["African Fish Eagle", "Ostrich", "Flamingo", "Lilac-breasted Roller"],
+        correct: 3
+    },
+    {
+        question: "Which national park is known for its elephants?",
+        options: ["Amboseli", "Maasai Mara", "Tsavo", "Samburu"],
+        correct: 0
+    },
+    
+    // Kenyan Economy
+    {
+        question: "What is Kenya's GDP growth rate in 2024?",
+        options: ["5.0%", "5.2%", "5.5%", "6.0%"],
+        correct: 1
+    },
+    {
+        question: "Which sector is Kenya's largest contributor to GDP?",
+        options: ["Agriculture", "Services", "Industry", "Manufacturing"],
+        correct: 1
+    },
+    {
+        question: "What is Kenya's currency code?",
+        options: ["KES", "KSH", "KNS", "KNY"],
+        correct: 0
+    },
+    {
+        question: "Which company is Kenya's largest mobile network operator?",
+        options: ["Safaricom", "Airtel", "Telkom", "Equitel"],
+        correct: 0
+    },
+    {
+        question: "What is Kenya's unemployment rate?",
+        options: ["10%", "12%", "15%", "18%"],
+        correct: 0
+    },
+    {
+        question: "Which port is Kenya's largest?",
+        options: ["Mombasa", "Kilindini", "Lamu", "Malindi"],
+        correct: 0
+    },
+    {
+        question: "What is Kenya's main export?",
+        options: ["Tea", "Coffee", "Flowers", "All of the above"],
+        correct: 3
+    },
+    {
+        question: "Which industry is Kenya known for in tech?",
+        options: ["Mobile Money", "AI", "Cloud Computing", "Cybersecurity"],
+        correct: 0
+    },
+    {
+        question: "What is Kenya's inflation rate?",
+        options: ["5%", "6%", "7%", "8%"],
+        correct: 1
+    },
+    {
+        question: "Which financial institution regulates Kenya's banking sector?",
+        options: ["Central Bank of Kenya", "Kenya Revenue Authority", "CBK", "KRA"],
+        correct: 0
+    },
+    
+    // Science & General Knowledge
+    {
+        question: "What is the chemical symbol for gold?",
+        options: ["Au", "Ag", "Fe", "Cu"],
+        correct: 0
+    },
+    {
+        question: "How many bones are in the human body?",
+        options: ["206", "207", "208", "210"],
+        correct: 0
+    },
+    {
+        question: "Which planet is known as the Red Planet?",
+        options: ["Mars", "Jupiter", "Saturn", "Venus"],
+        correct: 0
+    },
+    {
+        question: "What is the speed of light?",
+        options: ["299,792,458 m/s", "300,000,000 m/s", "280,000,000 m/s", "310,000,000 m/s"],
+        correct: 0
+    },
+    {
+        question: "Who discovered Penicillin?",
+        options: ["Alexander Fleming", "Marie Curie", "Louis Pasteur", "Joseph Lister"],
+        correct: 0
+    },
+    {
+        question: "What is the human body's largest organ?",
+        options: ["Skin", "Liver", "Heart", "Brain"],
+        correct: 0
+    },
+    {
+        question: "Which blood type is the universal donor?",
+        options: ["O Negative", "A Positive", "B Negative", "AB Positive"],
+        correct: 0
+    },
+    {
+        question: "How many teeth does an adult human have?",
+        options: ["32", "30", "28", "34"],
+        correct: 0
+    },
+    {
+        question: "What is the chemical formula for water?",
+        options: ["H2O", "CO2", "NaCl", "HCl"],
+        correct: 0
+    },
+    {
+        question: "Which scientist proposed the theory of relativity?",
+        options: ["Einstein", "Newton", "Hawking", "Galileo"],
+        correct: 0
+    }
+];
+
+// ============================================
+// MUSIC PLAYLIST - Single Declaration
+// ============================================
+
+if (typeof MUSIC_PLAYLIST === 'undefined') {
+    var MUSIC_PLAYLIST = [
+        'https://res.cloudinary.com/u1uilb6f/video/upload/v1740000000/chichi_music1.mp3',
+        'https://res.cloudinary.com/u1uilb6f/video/upload/v1740000001/chichi_music2.mp3',
+        'https://res.cloudinary.com/u1uilb6f/video/upload/v1740000002/chichi_music3.mp3',
+        'https://res.cloudinary.com/u1uilb6f/video/upload/v1740000003/chichi_music4.mp3',
+        'https://res.cloudinary.com/u1uilb6f/video/upload/v1740000004/chichi_music5.mp3'
+    ];
+}
+
+// ============================================
+// APP OBJECT - COMPLETE
+// ============================================
 
 var app = {
     user: null,
@@ -53,6 +494,24 @@ var app = {
     heatmapMap: null,
     heatmapListenerSetup: false,
     blockedUsers: {},
+    onlineInterval: null,
+    postedHistory: [],
+    lastPostTime: 0,
+    autoPostInterval: null,
+    editProfilePhoto: null,
+    triviaInterval: null,
+    currentTrivia: null,
+    triviaAnswered: false,
+    triviaTimeout: null,
+    triviaTimer: null,
+    suspiciousActivityDetected: false,
+    actionTimestamps: {},
+    isAdmin: false,
+    backPressCount: 0,
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
 
     init: function() {
         var self = this;
@@ -75,6 +534,8 @@ var app = {
         document.addEventListener('keydown', interactionHandler, { once: false });
        
         this.initConsent();
+        this.initActivityTracking();
+        this.initSuspiciousActivityDetection();
        
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
@@ -93,7 +554,25 @@ var app = {
             if (u) {
                 self.user = u;
                 self.isGuest = false;
+                self.isAdmin = u.email === 'support-chichi@gmail.com';
                
+                // Check if user is banned
+                db.ref('bannedUsers/' + u.uid).once('value', function(snapshot) {
+                    if (snapshot.exists()) {
+                        var banData = snapshot.val();
+                        self.showBannedScreen(banData);
+                        auth.signOut();
+                        return;
+                    }
+                });
+               
+                var authPage = document.getElementById('authPage');
+                if (authPage) {
+                    authPage.style.display = 'none';
+                    authPage.classList.remove('show');
+                    authPage.classList.add('hidden');
+                }
+                
                 db.ref('users/' + u.uid).once('value', s => {
                     if (s.exists()) {
                         self.profile = s.val();
@@ -102,22 +581,54 @@ var app = {
                         self.profile = {
                             name: u.displayName || 'User',
                             email: u.email,
+                            username: u.email.split('@')[0] || 'user',
                             bio: '',
                             profilePhoto: u.photoURL || '',
                             balance: 0,
                             followers: 0,
-                            following: 0
+                            following: 0,
+                            triviaAnswered: []
                         };
                     }
                     self.loadProfile();
                     self.showApp();
+                    self.setOnlineStatus();
+                    self.startTriviaTimer();
+                    self.logUserActivity('login', 'User logged in');
+                    
+                    setTimeout(function() {
+                        var mainApp = document.getElementById('mainApp');
+                        if (mainApp) {
+                            mainApp.style.display = 'flex';
+                            mainApp.classList.add('active');
+                        }
+                        var nav = document.querySelector('.bottom-nav');
+                        if (nav) nav.style.display = 'flex';
+                        self.switchView('feed');
+                        if (self.currentView === 'messages') {
+                            self.loadMessages();
+                        }
+                    }, 100);
                 });
             } else {
                 self.user = null;
                 self.isGuest = true;
-                self.profile = { name: 'Guest', balance: 0 };
+                self.isAdmin = false;
+                self.profile = { name: 'Guest', balance: 0, triviaAnswered: [] };
                 self.updateLogoutButton();
                 self.showApp();
+                if (self.onlineInterval) {
+                    clearInterval(self.onlineInterval);
+                    self.onlineInterval = null;
+                }
+                if (self.autoPostInterval) {
+                    clearInterval(self.autoPostInterval);
+                    self.autoPostInterval = null;
+                }
+                if (self.triviaInterval) {
+                    clearInterval(self.triviaInterval);
+                    self.triviaInterval = null;
+                }
             }
         });
 
@@ -158,7 +669,1168 @@ var app = {
         setTimeout(() => {
             self.setupHeatmapListener();
         }, 1000);
+        
+        this.loadPostedHistory();
+        this.loadDarkModePreference();
+        
+        setTimeout(function() {
+            if (self.user && self.user.email === 'support-chichi@gmail.com') {
+                console.log('🤖 Support account detected! Starting auto-post scheduler...');
+                self.startAutoPostScheduler();
+            }
+        }, 5000);
     },
+
+    // ============================================
+    // BANNED USER SCREEN
+    // ============================================
+
+    showBannedScreen: function(banData) {
+        var html = `
+            <div style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: #0f172a;
+                z-index: 99999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            ">
+                <div style="
+                    background: white;
+                    border-radius: 24px;
+                    max-width: 400px;
+                    width: 100%;
+                    padding: 32px;
+                    text-align: center;
+                ">
+                    <div style="font-size: 64px; margin-bottom: 16px;">🚫</div>
+                    <h2 style="color: #ef4444; margin-bottom: 8px;">Account Suspended</h2>
+                    <p style="color: #6b7280; margin-bottom: 16px;">
+                        Your account has been permanently banned from CHICHI.
+                    </p>
+                    <div style="background: #fef2f2; padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: left;">
+                        <div style="font-size: 13px; color: #991b1b; font-weight: 600;">Reason:</div>
+                        <div style="font-size: 14px; color: #7f1d1d;">${banData.reason || 'Violation of terms of service'}</div>
+                        ${banData.bannedAt ? `<div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Banned on: ${banData.bannedAt}</div>` : ''}
+                        ${banData.bannedBy ? `<div style="font-size: 12px; color: #6b7280;">Banned by: ${banData.bannedBy}</div>` : ''}
+                    </div>
+                    <button onclick="window.location.reload()" style="
+                        background: var(--primary);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 10px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        width: 100%;
+                    ">OK</button>
+                </div>
+            </div>
+        `;
+        
+        var existing = document.getElementById('bannedScreen');
+        if (existing) existing.remove();
+        
+        var div = document.createElement('div');
+        div.id = 'bannedScreen';
+        div.innerHTML = html;
+        document.body.appendChild(div);
+    },
+
+    // ============================================
+    // ACTIVITY TRACKING SYSTEM
+    // ============================================
+
+    initActivityTracking: function() {
+        var self = this;
+        
+        // Track page views
+        this.trackPageView();
+        
+        // Track clicks
+        document.addEventListener('click', function(e) {
+            var target = e.target;
+            var tagName = target.tagName.toLowerCase();
+            var text = target.textContent ? target.textContent.substring(0, 50) : '';
+            var id = target.id || '';
+            var className = target.className || '';
+            
+            self.logUserActivity('click', {
+                tag: tagName,
+                text: text,
+                id: id,
+                className: className,
+                path: window.location.pathname
+            });
+        });
+        
+        // Track scroll
+        var scrollTimeout;
+        window.addEventListener('scroll', function() {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(function() {
+                var scrollPercent = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+                if (scrollPercent > 0 && scrollPercent % 25 === 0) {
+                    self.logUserActivity('scroll', 'Scrolled to ' + scrollPercent + '%');
+                }
+            }, 500);
+        });
+        
+        // Track time spent
+        var startTime = Date.now();
+        window.addEventListener('beforeunload', function() {
+            var timeSpent = Math.round((Date.now() - startTime) / 1000);
+            self.logUserActivity('session_end', 'Time spent: ' + timeSpent + ' seconds');
+        });
+        
+        console.log('📊 Activity tracking initialized');
+    },
+
+    logUserActivity: function(action, details) {
+        if (!this.user && !this.isGuest) return;
+        
+        var userId = this.user ? this.user.uid : 'guest';
+        var userName = this.user ? (this.profile.name || this.user.email || 'User') : 'Guest';
+        
+        var safeDetails = typeof details === 'string' ? details : JSON.stringify(details);
+        if (safeDetails.length > 200) {
+            safeDetails = safeDetails.substring(0, 200) + '...';
+        }
+        
+        var activityData = {
+            userId: userId,
+            userName: userName,
+            userEmail: this.user ? this.user.email : 'guest@chichi.com',
+            action: action,
+            details: safeDetails,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            time: new Date().toLocaleString('en-KE'),
+            userAgent: navigator.userAgent.substring(0, 200),
+            screen: window.screen.width + 'x' + window.screen.height,
+            page: window.location.pathname,
+            isAdmin: this.isAdmin || false
+        };
+        
+        db.ref('activityLogs').push(activityData).catch(function(err) {
+            console.log('⚠️ Failed to log activity:', err.message);
+        });
+        
+        this.checkForSuspiciousActivity(action, details);
+    },
+
+    // ============================================
+    // SUSPICIOUS ACTIVITY DETECTION
+    // ============================================
+
+    initSuspiciousActivityDetection: function() {
+        var self = this;
+        
+        this.actionTimestamps = {};
+        
+        console.log('🛡️ Suspicious activity detection initialized');
+    },
+
+    checkForSuspiciousActivity: function(action, details) {
+        var self = this;
+        var userId = this.user ? this.user.uid : 'guest';
+        var now = Date.now();
+        
+        // Monitor rapid actions
+        var key = action + '_' + userId;
+        if (!this.actionTimestamps[key]) {
+            this.actionTimestamps[key] = [];
+        }
+        this.actionTimestamps[key].push(now);
+        this.actionTimestamps[key] = this.actionTimestamps[key].filter(function(t) {
+            return now - t < 10000;
+        });
+        
+        if (this.actionTimestamps[key].length > 10) {
+            this.reportSuspiciousActivity(
+                'Rapid ' + action + ' - ' + this.actionTimestamps[key].length + ' times in 10 seconds',
+                'high',
+                { action: action, count: this.actionTimestamps[key].length }
+            );
+            this.actionTimestamps[key] = [];
+        }
+        
+        // Check for specific suspicious patterns
+        var detailsStr = typeof details === 'string' ? details.toLowerCase() : JSON.stringify(details).toLowerCase();
+        var suspiciousPatterns = [
+            { pattern: 'delete', action: 'post', severity: 'high' },
+            { pattern: 'block', action: 'user', severity: 'high' },
+            { pattern: 'spam', action: 'post', severity: 'high' },
+            { pattern: 'hack', action: 'attempt', severity: 'critical' },
+            { pattern: 'inappropriate', action: 'content', severity: 'high' },
+            { pattern: 'malicious', action: 'script', severity: 'critical' },
+            { pattern: 'phishing', action: 'link', severity: 'critical' },
+            { pattern: 'abuse', action: 'report', severity: 'high' },
+            { pattern: 'fraud', action: 'payment', severity: 'critical' }
+        ];
+        
+        for (var i = 0; i < suspiciousPatterns.length; i++) {
+            var pattern = suspiciousPatterns[i];
+            if (detailsStr.includes(pattern.pattern) || detailsStr.includes(pattern.action)) {
+                this.reportSuspiciousActivity(
+                    'Suspicious pattern detected: ' + pattern.pattern + ' in ' + pattern.action,
+                    pattern.severity,
+                    { action: action, details: details }
+                );
+                break;
+            }
+        }
+        
+        // Check for rapid posting (more than 5 posts in 5 minutes)
+        if (action === 'create_post' || action === 'post') {
+            this.checkRapidActivity('create_post', 5, 5, 'Rapid posting detected');
+        }
+        
+        // Check for mass following (more than 20 follows in 5 minutes)
+        if (action === 'follow') {
+            this.checkRapidActivity('follow', 20, 5, 'Mass following detected');
+        }
+    },
+
+    checkRapidActivity: function(action, threshold, minutes, message) {
+        var self = this;
+        var userId = this.user ? this.user.uid : null;
+        if (!userId) return;
+        
+        var timeWindow = minutes * 60 * 1000;
+        var cutoffTime = Date.now() - timeWindow;
+        
+        db.ref('activityLogs').orderByChild('userId').equalTo(userId).once('value', function(snapshot) {
+            var count = 0;
+            snapshot.forEach(function(child) {
+                var activity = child.val();
+                if (activity.action === action && activity.timestamp > cutoffTime) {
+                    count++;
+                }
+            });
+            
+            if (count > threshold) {
+                self.reportSuspiciousActivity(
+                    message + ': ' + count + ' ' + action + 's in ' + minutes + ' minutes',
+                    'medium',
+                    { action: action, count: count, minutes: minutes }
+                );
+            }
+        });
+    },
+
+    reportSuspiciousActivity: function(reason, severity, data) {
+        if (this.suspiciousActivityDetected) return;
+        this.suspiciousActivityDetected = true;
+        
+        console.log('🚨 SUSPICIOUS ACTIVITY DETECTED:', reason);
+        console.log('   Severity:', severity);
+        console.log('   Data:', data);
+        
+        var self = this;
+        var userId = this.user ? this.user.uid : 'unknown';
+        var userName = this.user ? (this.profile.name || this.user.email || 'Unknown') : 'Guest';
+        
+        var reportData = {
+            userId: userId,
+            userName: userName,
+            userEmail: this.user ? this.user.email : 'guest@chichi.com',
+            reason: reason,
+            severity: severity || 'medium',
+            data: data || {},
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            time: new Date().toLocaleString('en-KE'),
+            status: 'pending'
+        };
+        
+        db.ref('suspiciousActivity').push(reportData);
+        
+        if (this.isAdmin) {
+            this.toast('🚨 Suspicious activity detected: ' + reason, 'error');
+        }
+        
+        this.sendAdminNotification('🚨 Suspicious Activity: ' + reason, severity);
+        
+        setTimeout(function() {
+            self.suspiciousActivityDetected = false;
+        }, 30000);
+    },
+
+    sendAdminNotification: function(message, severity) {
+        var colors = {
+            low: '#22c55e',
+            medium: '#f59e0b',
+            high: '#ef4444',
+            critical: '#dc2626'
+        };
+        
+        var color = colors[severity] || '#ef4444';
+        
+        if (this.isAdmin) {
+            this.toast('🚨 ' + message, 'error');
+        }
+        
+        db.ref('adminNotifications').push({
+            message: message,
+            severity: severity || 'medium',
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            time: new Date().toLocaleString('en-KE'),
+            read: false
+        });
+    },
+
+    // ============================================
+    // ADMIN - SUSPICIOUS ACTIVITY
+    // ============================================
+
+    loadSuspiciousActivity: function() {
+        var self = this;
+        var html = '';
+        
+        db.ref('suspiciousActivity').orderByChild('timestamp').limitToLast(50).once('value', function(snapshot) {
+            var activities = [];
+            snapshot.forEach(function(child) {
+                activities.push({
+                    id: child.key,
+                    ...child.val()
+                });
+            });
+            
+            activities.reverse();
+            
+            if (activities.length === 0) {
+                html = '<div style="text-align: center; color: #22c55e; padding: 20px;">✅ No suspicious activity detected</div>';
+            } else {
+                activities.forEach(function(act) {
+                    var severityColor = act.severity === 'critical' ? '#dc2626' :
+                                       act.severity === 'high' ? '#ef4444' :
+                                       act.severity === 'medium' ? '#f59e0b' : '#22c55e';
+                    
+                    html += `
+                        <div style="padding: 12px; border-bottom: 1px solid var(--border); border-left: 4px solid ${severityColor}; margin-bottom: 4px; ${act.status === 'resolved' ? 'opacity: 0.5;' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.9rem;">${act.userName || 'Unknown'}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-light);">${act.reason || 'No reason'}</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-light);">${act.time || 'N/A'} ${act.status === 'resolved' ? '✅ Resolved' : ''}</div>
+                                </div>
+                                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                    <span style="padding: 2px 8px; border-radius: 8px; background: ${severityColor}20; color: ${severityColor}; font-size: 0.7rem; font-weight: 600;">${(act.severity || 'medium').toUpperCase()}</span>
+                                    ${act.userId && act.userId !== 'unknown' && act.status !== 'resolved' ? `
+                                        <button onclick="app.banUserFromAdmin('${act.userId}', '${act.userName || 'User'}')" style="padding: 4px 10px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: 600;">🚫 Ban</button>
+                                        <button onclick="app.resolveSuspiciousActivity('${act.id}')" style="padding: 4px 10px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: 600;">✅ Resolve</button>
+                                    ` : ''}
+                                    ${act.status === 'resolved' ? '<span style="font-size: 0.7rem; color: #22c55e;">✅ Resolved</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('suspiciousActivityList').innerHTML = html;
+        }).catch(function(err) {
+            document.getElementById('suspiciousActivityList').innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Error loading suspicious activity</div>';
+        });
+    },
+
+    resolveSuspiciousActivity: function(activityId) {
+        if (!confirm('Mark this suspicious activity as resolved?')) return;
+        
+        var self = this;
+        db.ref('suspiciousActivity/' + activityId + '/status').set('resolved').then(function() {
+            self.toast('✅ Activity marked as resolved', 'success');
+            self.loadSuspiciousActivity();
+            self.logUserActivity('admin_resolve_activity', 'Resolved suspicious activity: ' + activityId);
+        }).catch(function(err) {
+            self.toast('❌ Error: ' + err.message, 'error');
+        });
+    },
+
+    // ============================================
+    // ADMIN - NOTIFICATIONS
+    // ============================================
+
+    loadAdminNotifications: function() {
+        var self = this;
+        var html = '';
+        
+        db.ref('adminNotifications').orderByChild('timestamp').limitToLast(20).once('value', function(snapshot) {
+            var notifications = [];
+            snapshot.forEach(function(child) {
+                notifications.push({
+                    id: child.key,
+                    ...child.val()
+                });
+            });
+            
+            notifications.reverse();
+            
+            if (notifications.length === 0) {
+                html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No notifications</div>';
+            } else {
+                notifications.forEach(function(notif) {
+                    var severityColor = notif.severity === 'critical' ? '#dc2626' :
+                                       notif.severity === 'high' ? '#ef4444' :
+                                       notif.severity === 'medium' ? '#f59e0b' : '#22c55e';
+                    
+                    html += `
+                        <div style="padding: 12px; border-bottom: 1px solid var(--border); border-left: 4px solid ${severityColor}; margin-bottom: 4px; ${notif.read ? 'opacity: 0.6;' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.9rem;">${notif.message || 'No message'}</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-light);">${notif.time || 'N/A'} • ${notif.read ? '✅ Read' : '📩 Unread'}</div>
+                                </div>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span style="padding: 2px 8px; border-radius: 8px; background: ${severityColor}20; color: ${severityColor}; font-size: 0.7rem; font-weight: 600;">${(notif.severity || 'medium').toUpperCase()}</span>
+                                    ${!notif.read ? `<button onclick="app.markNotificationRead('${notif.id}')" style="padding: 4px 8px; background: #0088cc; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.7rem;">Mark Read</button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('adminNotificationsList').innerHTML = html;
+        }).catch(function(err) {
+            document.getElementById('adminNotificationsList').innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Error loading notifications</div>';
+        });
+    },
+
+    markNotificationRead: function(notificationId) {
+        var self = this;
+        db.ref('adminNotifications/' + notificationId + '/read').set(true).then(function() {
+            self.loadAdminNotifications();
+        }).catch(function(err) {
+            self.toast('❌ Error: ' + err.message, 'error');
+        });
+    },
+
+    // ============================================
+    // DARK MODE
+    // ============================================
+
+    loadDarkModePreference: function() {
+        var darkMode = localStorage.getItem('chichi-dark-mode');
+        var toggle = document.getElementById('darkModeToggle');
+        
+        if (darkMode === 'enabled') {
+            document.documentElement.classList.add('dark-mode');
+            if (toggle) toggle.checked = true;
+        } else {
+            document.documentElement.classList.remove('dark-mode');
+            if (toggle) toggle.checked = false;
+        }
+    },
+
+    toggleDarkMode: function() {
+        var root = document.documentElement;
+        var toggle = document.getElementById('darkModeToggle');
+        
+        if (toggle && toggle.checked) {
+            root.classList.add('dark-mode');
+            localStorage.setItem('chichi-dark-mode', 'enabled');
+            this.toast('🌙 Dark mode enabled', 'success');
+        } else {
+            root.classList.remove('dark-mode');
+            localStorage.setItem('chichi-dark-mode', 'disabled');
+            this.toast('☀️ Light mode enabled', 'success');
+        }
+    },
+
+    // ============================================
+    // HEADER MENU (3 dots)
+    // ============================================
+
+    showHeaderMenu: function() {
+        var menu = document.getElementById('headerMenu');
+        if (menu) {
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+    },
+    
+    closeHeaderMenu: function() {
+        var menu = document.getElementById('headerMenu');
+        if (menu) {
+            menu.style.display = 'none';
+        }
+    },
+
+    // ============================================
+    // AUTO-POST SYSTEM
+    // ============================================
+
+    loadPostedHistory: function() {
+        var savedHistory = localStorage.getItem('chichi_posted_history');
+        if (savedHistory) {
+            try {
+                this.postedHistory = JSON.parse(savedHistory);
+                console.log('📚 Loaded posted history:', this.postedHistory.length, 'posts');
+            } catch(e) {
+                this.postedHistory = [];
+            }
+        }
+        
+        var savedTime = localStorage.getItem('chichi_last_post_time');
+        if (savedTime) {
+            this.lastPostTime = parseInt(savedTime);
+            console.log('⏰ Last post time:', new Date(this.lastPostTime).toLocaleTimeString());
+        }
+        
+        var today = new Date().toDateString();
+        var savedDate = localStorage.getItem('chichi_last_post_date');
+        if (savedDate !== today) {
+            console.log('📅 New day detected! Resetting posted history...');
+            this.postedHistory = [];
+            localStorage.setItem('chichi_last_post_date', today);
+            this.savePostedHistory();
+        }
+    },
+
+    savePostedHistory: function() {
+        localStorage.setItem('chichi_posted_history', JSON.stringify(this.postedHistory));
+        localStorage.setItem('chichi_last_post_time', this.lastPostTime.toString());
+        localStorage.setItem('chichi_last_post_date', new Date().toDateString());
+    },
+
+    getAvailableTemplates: function() {
+        var allTemplates = POST_TEMPLATES.slice();
+        var postedTexts = this.postedHistory.map(function(item) { return item.text; });
+        
+        var available = allTemplates.filter(function(template) {
+            return !postedTexts.includes(template.text);
+        });
+        
+        return available;
+    },
+
+    getRandomImage: function(keyword) {
+        console.log('📸 Fetching image for:', keyword);
+        
+        return new Promise(function(resolve, reject) {
+            var unsplashUrl = 'https://api.unsplash.com/photos/random?query=' + encodeURIComponent(keyword) + '&orientation=landscape';
+            
+            fetch(unsplashUrl, {
+                headers: {
+                    'Authorization': 'Client-ID 0Gsd_TnIf0UngbQD6aLSR-u6pTQf__o5W93K8Q30G7Q'
+                }
+            })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('Unsplash API error');
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                if (data && data.urls && data.urls.regular) {
+                    resolve(data.urls.regular);
+                } else {
+                    throw new Error('No image from Unsplash');
+                }
+            })
+            .catch(function() {
+                var width = 800 + Math.floor(Math.random() * 400);
+                var height = 600 + Math.floor(Math.random() * 300);
+                var seed = 'person' + Date.now() + Math.random();
+                var url = 'https://picsum.photos/seed/' + seed + '/' + width + '/' + height;
+                resolve(url);
+            });
+        });
+    },
+
+    uploadImageToCloudinary: function(imageUrl) {
+        console.log('📤 Uploading image to Cloudinary...');
+        
+        return new Promise(function(resolve, reject) {
+            fetch(imageUrl)
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch image');
+                    }
+                    return response.blob();
+                })
+                .then(function(blob) {
+                    var formData = new FormData();
+                    formData.append('file', blob);
+                    formData.append('upload_preset', UPLOAD_PRESET || 'chichi_photos');
+                    
+                    return fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        return response.json().then(function(data) {
+                            throw new Error(data.error ? data.error.message : 'Upload failed');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (data.secure_url) {
+                        console.log('✅ Image uploaded:', data.secure_url);
+                        resolve(data.secure_url);
+                    } else {
+                        reject(new Error('No URL returned'));
+                    }
+                })
+                .catch(function(err) {
+                    console.error('❌ Upload error:', err);
+                    reject(err);
+                });
+        });
+    },
+
+    performAutoPost: function() {
+        var self = this;
+        
+        console.log('🤖 Checking for auto-post...');
+        
+        if (!self.user || self.user.email !== 'support-chichi@gmail.com') {
+            console.log('⚠️ Support account not logged in. Skipping auto-post.');
+            return;
+        }
+        
+        var now = Date.now();
+        var minutesSinceLastPost = (now - self.lastPostTime) / (1000 * 60);
+        
+        if (minutesSinceLastPost < 10 && self.postedHistory.length > 0) {
+            var remainingMinutes = Math.round(10 - minutesSinceLastPost);
+            console.log('⏳ Next post in:', remainingMinutes, 'minutes');
+            return;
+        }
+        
+        var availableTemplates = self.getAvailableTemplates();
+        
+        if (availableTemplates.length === 0) {
+            console.log('🔄 All templates used! Resetting history...');
+            self.postedHistory = [];
+            self.savePostedHistory();
+            availableTemplates = POST_TEMPLATES.slice();
+        }
+        
+        var randomIndex = Math.floor(Math.random() * availableTemplates.length);
+        var selected = availableTemplates[randomIndex];
+        
+        console.log('📝 Selected post:', selected.text.substring(0, 50) + '...');
+        console.log('📂 Category:', selected.category);
+        console.log('🖼️ Image keyword:', selected.imageKeyword);
+        
+        self.getRandomImage(selected.imageKeyword).then(function(imageUrl) {
+            return self.uploadImageToCloudinary(imageUrl);
+        }).then(function(finalImageUrl) {
+            var postData = {
+                userId: self.user.uid,
+                userName: 'SUPPORT@CHICHI',
+                userPhoto: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png',
+                photoUrl: finalImageUrl,
+                caption: selected.text,
+                hashtags: ['#CHICHI', '#AutoPost', '#' + selected.category.replace(/\s/g, '')],
+                likes: {},
+                comments: [],
+                commentedUsers: {},
+                downloads: 0,
+                isAutoPost: true,
+                isSupportPost: true,
+                category: selected.category,
+                source: 'CHICHI AI',
+                createdAt: new Date().toLocaleString('en-KE'),
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            db.ref('posts').push(postData).then(function() {
+                console.log('✅ Auto-post published!');
+                self.toast('🤖 New post from SUPPORT@CHICHI!', 'success');
+                
+                self.postedHistory.push({
+                    text: selected.text,
+                    category: selected.category,
+                    timestamp: Date.now()
+                });
+                self.lastPostTime = Date.now();
+                self.savePostedHistory();
+                
+                setTimeout(function() {
+                    self.loadPosts();
+                }, 500);
+                
+            }).catch(function(err) {
+                console.error('❌ Error publishing:', err);
+            });
+        }).catch(function(err) {
+            console.error('❌ Image error:', err);
+            setTimeout(function() {
+                self.performAutoPost();
+            }, 30000);
+        });
+    },
+
+    startAutoPostScheduler: function() {
+        var self = this;
+        
+        console.log('⏰ Starting auto-post scheduler (checks every 60 seconds)...');
+        
+        if (!self.user || self.user.email !== 'support-chichi@gmail.com') {
+            console.log('⚠️ Support account not logged in. Cannot start scheduler.');
+            return;
+        }
+        
+        self.loadPostedHistory();
+        
+        var now = Date.now();
+        var minutesSinceLastPost = (now - self.lastPostTime) / (1000 * 60);
+        var hasNoPostsToday = self.postedHistory.length === 0;
+        
+        if (hasNoPostsToday || minutesSinceLastPost >= 10) {
+            console.log('📝 Starting with an immediate post...');
+            setTimeout(function() {
+                self.performAutoPost();
+            }, 3000);
+        } else {
+            console.log('⏳ Next post in:', Math.round(10 - minutesSinceLastPost), 'minutes');
+        }
+        
+        if (self.autoPostInterval) {
+            clearInterval(self.autoPostInterval);
+        }
+        
+        self.autoPostInterval = setInterval(function() {
+            console.log('⏰ Scheduler check...');
+            self.performAutoPost();
+        }, 60000);
+        
+        console.log('✅ Scheduler running! Checking every 60 seconds.');
+    },
+
+    stopAutoPostScheduler: function() {
+        if (this.autoPostInterval) {
+            clearInterval(this.autoPostInterval);
+            this.autoPostInterval = null;
+            console.log('⏹️ Auto-post scheduler stopped');
+        }
+    },
+
+    triggerAutoPost: function() {
+        var self = this;
+        
+        if (!self.user || self.user.email !== 'support-chichi@gmail.com') {
+            self.toast('⚠️ Please login as support-chichi@gmail.com', 'error');
+            return;
+        }
+        
+        console.log('🚀 Manual auto-post triggered!');
+        self.performAutoPost();
+    },
+
+    // ============================================
+    // TRIVIA SYSTEM - KSh 3 per correct answer, 5 second timer
+    // ============================================
+
+    startTriviaTimer: function() {
+        var self = this;
+        
+        if (this.triviaInterval) {
+            clearInterval(this.triviaInterval);
+        }
+        
+        this.checkTriviaStatus();
+        
+        this.triviaInterval = setInterval(function() {
+            self.checkTriviaStatus();
+        }, 60000);
+        
+        console.log('🧠 Trivia timer started - checking every minute');
+    },
+
+    checkTriviaStatus: function() {
+        if (!this.user || this.isGuest) return;
+        
+        var self = this;
+        var userId = this.user.uid;
+        var today = new Date().toDateString();
+        
+        db.ref('users/' + userId + '/triviaAnswered').once('value', function(snapshot) {
+            var answered = snapshot.val() || [];
+            var answeredToday = false;
+            
+            for (var i = 0; i < answered.length; i++) {
+                if (answered[i].date === today) {
+                    answeredToday = true;
+                    break;
+                }
+            }
+            
+            if (!answeredToday) {
+                db.ref('users/' + userId + '/pendingTrivia').once('value', function(snap) {
+                    var pending = snap.val();
+                    
+                    if (pending && pending.question) {
+                        self.showTriviaQuestion(pending);
+                    } else {
+                        self.generateTriviaQuestion();
+                    }
+                });
+            } else {
+                console.log('✅ User already answered today\'s trivia');
+                db.ref('users/' + userId + '/pendingTrivia').remove();
+            }
+        });
+    },
+
+    generateTriviaQuestion: function() {
+        if (!this.user || this.isGuest) return;
+        
+        var self = this;
+        var userId = this.user.uid;
+        var today = new Date().toDateString();
+        
+        db.ref('users/' + userId + '/triviaAnswered').once('value', function(snapshot) {
+            var answered = snapshot.val() || [];
+            var answeredToday = false;
+            
+            for (var i = 0; i < answered.length; i++) {
+                if (answered[i].date === today) {
+                    answeredToday = true;
+                    break;
+                }
+            }
+            
+            if (answeredToday) return;
+            
+            var unanswered = TRIVIA_QUESTIONS.filter(function(q, index) {
+                var questionAnswered = false;
+                for (var j = 0; j < answered.length; j++) {
+                    if (answered[j].questionIndex === index) {
+                        questionAnswered = true;
+                        break;
+                    }
+                }
+                return !questionAnswered;
+            });
+            
+            if (unanswered.length === 0) {
+                db.ref('users/' + userId + '/triviaAnswered').set([]);
+                unanswered = TRIVIA_QUESTIONS.slice();
+            }
+            
+            var randomIndex = Math.floor(Math.random() * unanswered.length);
+            var question = unanswered[randomIndex];
+            var questionIndex = TRIVIA_QUESTIONS.indexOf(question);
+            
+            var pendingData = {
+                question: question.question,
+                options: question.options,
+                correct: question.correct,
+                questionIndex: questionIndex,
+                timestamp: Date.now()
+            };
+            
+            db.ref('users/' + userId + '/pendingTrivia').set(pendingData, function() {
+                self.showTriviaQuestion(pendingData);
+            });
+        });
+    },
+
+    showTriviaQuestion: function(questionData) {
+        if (!this.user || this.isGuest) return;
+        
+        var self = this;
+        this.currentTrivia = questionData;
+        this.triviaAnswered = false;
+        
+        var existing = document.getElementById('triviaModal');
+        if (existing) {
+            existing.remove();
+        }
+        
+        var shuffledOptions = questionData.options.slice();
+        var correctIndex = questionData.correct;
+        var correctValue = questionData.options[correctIndex];
+        var shuffledCorrectIndex = shuffledOptions.indexOf(correctValue);
+        
+        var optionsHtml = '';
+        shuffledOptions.forEach(function(option, index) {
+            optionsHtml += `
+                <button class="trivia-option" onclick="app.answerTrivia(${index})" style="
+                    display: block;
+                    width: 100%;
+                    padding: 12px 16px;
+                    margin: 6px 0;
+                    background: white;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                    text-align: left;
+                    transition: all 0.3s;
+                    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
+                    color: #1a202c;
+                " onmouseover="this.style.borderColor='#0088cc'; this.style.background='#f0f7ff'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'">
+                    ${option}
+                </button>
+            `;
+        });
+        
+        this.currentTrivia.shuffledCorrectIndex = shuffledCorrectIndex;
+        
+        var modalHTML = `
+            <div id="triviaModal" class="modal-overlay active" style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10002;
+                background: rgba(0,0,0,0.7);
+                backdrop-filter: blur(4px);
+            ">
+                <div style="
+                    background: white;
+                    border-radius: 24px;
+                    max-width: 450px;
+                    width: 92%;
+                    padding: 24px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    animation: smoothFadeIn 0.3s ease;
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 28px;">🧠</span>
+                            <h3 style="margin: 0; font-weight: 700; color: #1a202c;">Trivia Challenge</h3>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="background: #0088cc; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">KSh 3</span>
+                            <span id="triviaTimer" style="background: #ef4444; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">5s</span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <p style="font-size: 16px; font-weight: 600; color: #1a202c; line-height: 1.5;">${questionData.question}</p>
+                        <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">Correct answer earns KSh 3</p>
+                    </div>
+                    
+                    <div id="triviaOptions">
+                        ${optionsHtml}
+                    </div>
+                    
+                    <div id="triviaResult" style="display: none; text-align: center; padding: 12px; border-radius: 12px; margin-top: 12px;"></div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        var timeLeft = 5;
+        var timerDisplay = document.getElementById('triviaTimer');
+        
+        if (this.triviaTimer) {
+            clearInterval(this.triviaTimer);
+        }
+        
+        this.triviaTimer = setInterval(function() {
+            timeLeft--;
+            if (timerDisplay) {
+                timerDisplay.textContent = timeLeft + 's';
+                if (timeLeft <= 2) {
+                    timerDisplay.style.background = '#ef4444';
+                }
+            }
+            
+            if (timeLeft <= 0) {
+                clearInterval(self.triviaTimer);
+                self.triviaTimer = null;
+                
+                if (!self.triviaAnswered) {
+                    self.triviaAnswered = true;
+                    
+                    document.querySelectorAll('.trivia-option').forEach(function(btn, index) {
+                        btn.disabled = true;
+                        btn.style.cursor = 'not-allowed';
+                        if (index === self.currentTrivia.shuffledCorrectIndex) {
+                            btn.style.borderColor = '#22c55e';
+                            btn.style.background = '#dcfce7';
+                        }
+                    });
+                    
+                    var resultDiv = document.getElementById('triviaResult');
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = `
+                        <div style="color: #ef4444; font-weight: 700; font-size: 18px;">⏰ Time\'s Up!</div>
+                        <div style="color: #6b7280; font-size: 14px;">The correct answer was: ${self.currentTrivia.options[self.currentTrivia.correct]}</div>
+                    `;
+                    resultDiv.style.background = '#fee2e2';
+                    
+                    setTimeout(function() {
+                        var modal = document.getElementById('triviaModal');
+                        if (modal) modal.remove();
+                    }, 3000);
+                }
+            }
+        }, 1000);
+    },
+
+    answerTrivia: function(selectedIndex) {
+        if (this.triviaAnswered || !this.currentTrivia) return;
+        if (!this.user || this.isGuest) return;
+        
+        if (this.triviaTimer) {
+            clearInterval(this.triviaTimer);
+            this.triviaTimer = null;
+        }
+        
+        this.triviaAnswered = true;
+        var self = this;
+        var userId = this.user.uid;
+        var correct = this.currentTrivia.shuffledCorrectIndex === selectedIndex;
+        var today = new Date().toDateString();
+        
+        document.querySelectorAll('.trivia-option').forEach(function(btn, index) {
+            btn.disabled = true;
+            btn.style.cursor = 'not-allowed';
+            if (index === self.currentTrivia.shuffledCorrectIndex) {
+                btn.style.borderColor = '#22c55e';
+                btn.style.background = '#dcfce7';
+            } else if (index === selectedIndex && !correct) {
+                btn.style.borderColor = '#ef4444';
+                btn.style.background = '#fee2e2';
+            }
+        });
+        
+        var resultDiv = document.getElementById('triviaResult');
+        resultDiv.style.display = 'block';
+        
+        if (correct) {
+            resultDiv.innerHTML = `
+                <div style="color: #22c55e; font-weight: 700; font-size: 18px;">✅ Correct!</div>
+                <div style="color: #6b7280; font-size: 14px;">You earned KSh 3!</div>
+            `;
+            resultDiv.style.background = '#dcfce7';
+            
+            self.balance += 3;
+            db.ref('users/' + userId + '/balance').set(self.balance);
+            
+            var balanceDisplay = document.getElementById('balanceDisplay');
+            if (balanceDisplay) {
+                balanceDisplay.textContent = 'KSh ' + self.balance.toFixed(2);
+            }
+            
+            self.toast('🎉 Correct! +KSh 3 added to your balance!', 'success');
+        } else {
+            resultDiv.innerHTML = `
+                <div style="color: #ef4444; font-weight: 700; font-size: 18px;">❌ Wrong answer</div>
+                <div style="color: #6b7280; font-size: 14px;">The correct answer was: ${self.currentTrivia.options[self.currentTrivia.correct]}</div>
+            `;
+            resultDiv.style.background = '#fee2e2';
+            self.toast('❌ Wrong answer! Try again next time.', 'error');
+        }
+        
+        var answeredData = {
+            date: today,
+            questionIndex: self.currentTrivia.questionIndex,
+            correct: correct
+        };
+        
+        db.ref('users/' + userId + '/triviaAnswered').once('value', function(snapshot) {
+            var answered = snapshot.val() || [];
+            answered.push(answeredData);
+            db.ref('users/' + userId + '/triviaAnswered').set(answered);
+        });
+        
+        db.ref('users/' + userId + '/pendingTrivia').remove();
+        
+        setTimeout(function() {
+            var modal = document.getElementById('triviaModal');
+            if (modal) modal.remove();
+        }, 4000);
+    },
+
+    // ============================================
+    // EARNING PAGE
+    // ============================================
+
+    renderEarn: function() {
+        console.log('💰 Rendering earn page...');
+        
+        var earnContainer = document.getElementById('earnContainer');
+        if (!earnContainer) {
+            console.error('❌ Earn container not found!');
+            return;
+        }
+        
+        var html = `
+            <div style="padding: 16px;">
+                <div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 16px; padding: 20px; margin-bottom: 20px; color: white; text-align: center;">
+                    <div style="font-size: 40px; margin-bottom: 8px;">💰</div>
+                    <div style="font-size: 24px; font-weight: 700;">Your Balance</div>
+                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">KSh ${this.balance.toFixed(2)}</div>
+                    <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 30px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
+                </div>
+                
+                <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
+                    <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
+                        <span>🧠</span> Trivia Challenge
+                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">KSh 3</span>
+                    </h3>
+                    <p style="color: #6b7280; font-size: 14px; margin-bottom: 12px;">Answer hard trivia questions and earn KSh 3 for each correct answer! Only 5 seconds per question.</p>
+                    <button onclick="app.checkTriviaStatus()" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">🎯 Start Trivia</button>
+                </div>
+                
+                <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <h3 style="margin: 0 0 12px 0;">📊 Your Stats</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 11px; color: #6b7280;">Total Earned</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">KSh ${this.balance.toFixed(2)}</div>
+                        </div>
+                        <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 11px; color: #6b7280;">Questions Answered</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;" id="triviaCount">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        earnContainer.innerHTML = html;
+        
+        if (this.user && this.user.uid) {
+            db.ref('users/' + this.user.uid + '/triviaAnswered').once('value', function(snapshot) {
+                var answered = snapshot.val() || [];
+                var countDisplay = document.getElementById('triviaCount');
+                if (countDisplay) {
+                    countDisplay.textContent = answered.length;
+                }
+            });
+        }
+    },
+
+    // ============================================
+    // SET ONLINE STATUS
+    // ============================================
+
+    setOnlineStatus: function() {
+        if (!this.user || this.isGuest) return;
+        
+        var self = this;
+        db.ref('users/' + this.user.uid + '/lastSeen').set(firebase.database.ServerValue.TIMESTAMP);
+        
+        if (this.onlineInterval) {
+            clearInterval(this.onlineInterval);
+        }
+        this.onlineInterval = setInterval(() => {
+            if (self.user) {
+                db.ref('users/' + self.user.uid + '/lastSeen').set(firebase.database.ServerValue.TIMESTAMP);
+            }
+        }, 30000);
+    },
+
+    // ============================================
+    // UPDATE LOGOUT BUTTON
+    // ============================================
 
     updateLogoutButton: function() {
         var logoutBtn = document.querySelector('[onclick="app.showLogout()"]');
@@ -189,6 +1861,10 @@ var app = {
         }
         return true;
     },
+
+    // ============================================
+    // SHOW AUTH / APP
+    // ============================================
 
     showAuth: function() {
         var loading = document.getElementById('loadingScreen');
@@ -321,7 +1997,13 @@ var app = {
         } else {
             if (toggle) toggle.checked = false;
         }
+        
+        this.loadDarkModePreference();
     },
+
+    // ============================================
+    // LOAD PROFILE
+    // ============================================
 
     loadProfile: function() {
         var self = this;
@@ -346,6 +2028,7 @@ var app = {
                 }
                 
                 self.checkAndShowHashtagPopup();
+                self.renderProfile();
             }
         });
     },
@@ -435,22 +2118,21 @@ var app = {
             this.clearUnreadBadge();
         } else if (view === 'explore') {
             this.loadExplore();
-        } else if (view === 'groups') {
-            this.renderGroups();
+        } else if (view === 'earn') {
+            this.renderEarn();
         }
 
         var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
         if (view === 'feed') navItems[0].classList.add('active');
         else if (view === 'explore') navItems[1].classList.add('active');
         else if (view === 'messages') navItems[2].classList.add('active');
-        else if (view === 'groups') navItems[3].classList.add('active');
+        else if (view === 'earn') navItems[3].classList.add('active');
         else if (view === 'profile') navItems[4].classList.add('active');
     },
 
     goBack: function() {
         if (!this.backPressCount) {
             this.backPressCount = 0;
-            this.lastBackPressTime = 0;
         }
        
         var currentView = this.getCurrentView();
@@ -500,11 +2182,15 @@ var app = {
                 if (viewId === 'exploreView') return 'explore';
                 if (viewId === 'messagesView') return 'messages';
                 if (viewId === 'profileView') return 'profile';
-                if (viewId === 'groupsView') return 'groups';
+                if (viewId === 'earnView') return 'earn';
             }
         }
         return 'feed';
     },
+
+    // ============================================
+    // AUTH HANDLERS
+    // ============================================
 
     handleLogin: function(e) {
         e.preventDefault();
@@ -528,6 +2214,7 @@ var app = {
             .then(result => {
                 console.log('✅ Login successful:', result.user.email);
                 self.toast('✅ Login successful!', 'success');
+                self.logUserActivity('login_success', 'User logged in: ' + email);
             })
             .catch(err => {
                 console.error('❌ Login error:', err.message);
@@ -535,12 +2222,14 @@ var app = {
                 if (loginText) loginText.style.display = 'inline';
                 if (loginBtn) loginBtn.disabled = false;
                 self.toast('❌ ' + err.message, 'error');
+                self.logUserActivity('login_failed', 'Failed login attempt: ' + email + ' - ' + err.message);
             });
     },
 
     handleSignup: function(e) {
         e.preventDefault();
         var name = document.getElementById('signupName').value;
+        var username = document.getElementById('signupUsername').value;
         var email = document.getElementById('signupEmail').value;
         var pass = document.getElementById('signupPassword').value;
         var signupBtn = document.getElementById('signupBtn');
@@ -551,6 +2240,16 @@ var app = {
             this.toast('Password must be 6+ characters', 'error');
             return;
         }
+        
+        if (!username || username.length < 3) {
+            this.toast('Username must be at least 3 characters', 'error');
+            return;
+        }
+        
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            this.toast('Username can only contain letters, numbers, and underscores', 'error');
+            return;
+        }
 
         if (signupSpinner) signupSpinner.style.display = 'inline';
         if (signupText) signupText.style.display = 'none';
@@ -558,66 +2257,30 @@ var app = {
 
         var self = this;
         
-        // Auto-detect location in background (no prompt)
-        var locationData = { city: 'Unknown', lat: 0, lng: 0 };
-        
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    var lat = position.coords.latitude;
-                    var lng = position.coords.longitude;
-                    locationData.lat = lat;
-                    locationData.lng = lng;
-                    
-                    self.reverseGeocode(lat, lng).then(function(city) {
-                        locationData.city = city;
-                        document.getElementById('signupLocation').value = city;
-                        if (document.getElementById('locationStatus')) {
-                            document.getElementById('locationStatus').innerHTML = '✅ ' + city;
-                        }
-                    }).catch(function() {
-                        // Silent fail
-                    });
-                },
-                function() {
-                    // Silent fail - user denied
-                    console.log('📍 Location not provided by user');
-                },
-                { timeout: 5000, enableHighAccuracy: false }
-            );
-        }
-        
         auth.createUserWithEmailAndPassword(email, pass).then(function(r) {
             var userData = {
                 name: name,
+                username: username,
                 email: email,
                 bio: '',
                 profilePhoto: '',
                 balance: 0,
                 followers: 0,
                 following: 0,
-                location: locationData.city || 'Unknown',
-                coordinates: {
-                    latitude: locationData.lat || 0,
-                    longitude: locationData.lng || 0
-                },
                 hashtags: [],
+                triviaAnswered: [],
                 createdAt: new Date().toLocaleString('en-KE'),
                 lastSeen: firebase.database.ServerValue.TIMESTAMP
             };
             
             db.ref('users/' + r.user.uid).set(userData).then(function() {
                 self.toast('Account created! Please select your interests', 'success');
+                self.logUserActivity('signup', 'New user signed up: ' + email);
                 
                 setTimeout(function() {
                     self.showMandatoryHashtagSelection();
                 }, 500);
                 
-                setTimeout(function() {
-                    self.loadSignupHeatmap();
-                }, 1000);
-                
-                // Re-enable signup button after success
                 if (signupSpinner) signupSpinner.style.display = 'none';
                 if (signupText) signupText.style.display = 'inline';
                 if (signupBtn) signupBtn.disabled = false;
@@ -635,78 +2298,6 @@ var app = {
             self.toast(err.message, 'error');
         });
     },
-    
-    detectUserLocation: function() {
-        var self = this;
-        return new Promise((resolve, reject) => {
-            if (!navigator.geolocation) {
-                console.warn('Geolocation not supported');
-                reject({message: 'Geolocation not supported'});
-                return;
-            }
-            
-            var statusEl = document.getElementById('locationStatus');
-            if (statusEl) statusEl.innerHTML = '🔄 Detecting your location...';
-            
-            navigator.geolocation.getCurrentPosition(
-                position => {
-                    var lat = position.coords.latitude;
-                    var lng = position.coords.longitude;
-                    console.log('📍 Location detected:', lat, lng);
-                    
-                    if (statusEl) statusEl.innerHTML = '🌐 Converting coordinates...';
-                    
-                    self.reverseGeocode(lat, lng).then(city => {
-                        console.log('✅ City detected:', city);
-                        if (statusEl) statusEl.innerHTML = '✅ ' + city;
-                        
-                        document.getElementById('signupLocation').value = city;
-                        
-                        resolve({
-                            city: city,
-                            lat: lat,
-                            lng: lng
-                        });
-                    }).catch(err => {
-                        console.error('Reverse geocoding failed:', err);
-                        if (statusEl) statusEl.innerHTML = '⚠️ Location not available';
-                        reject(err);
-                    });
-                },
-                error => {
-                    console.error('❌ Geolocation error:', error.message);
-                    if (statusEl) statusEl.innerHTML = '❌ ' + error.message;
-                    reject(error);
-                },
-                {
-                    timeout: 5000,
-                    enableHighAccuracy: false
-                }
-            );
-        });
-    },
-    
-    reverseGeocode: function(lat, lng) {
-        return new Promise((resolve, reject) => {
-            var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng;
-            
-            fetch(url)
-                .then(r => r.json())
-                .then(data => {
-                    var city = data.address.city || 
-                               data.address.town || 
-                               data.address.village || 
-                               data.address.county ||
-                               'Unknown';
-                    console.log('🌍 Reverse geocoded address:', data.address);
-                    resolve(city);
-                })
-                .catch(err => {
-                    console.error('Nominatim error:', err);
-                    reject(err);
-                });
-        });
-    },
 
     signInWithGoogle: function() {
         var self = this;
@@ -717,17 +2308,22 @@ var app = {
                 if (!snap.exists()) {
                     db.ref('users/' + user.uid).set({
                         name: user.displayName || 'User',
+                        username: user.displayName.toLowerCase().replace(/\s/g, '') || 'user',
                         email: user.email,
                         bio: '',
                         profilePhoto: user.photoURL || '',
                         balance: 0,
                         followers: 0,
                         following: 0,
-                        createdAt: new Date().toLocaleString('en-KE')
+                        triviaAnswered: [],
+                        createdAt: new Date().toLocaleString('en-KE'),
+                        lastSeen: firebase.database.ServerValue.TIMESTAMP
                     });
                     self.toast('Account created with Google!', 'success');
+                    self.logUserActivity('google_signup', 'New user signed up with Google: ' + user.email);
                 } else {
                     self.toast('Welcome back!', 'success');
+                    self.logUserActivity('google_login', 'User logged in with Google: ' + user.email);
                 }
             });
         }).catch(err => this.toast('Google sign-in failed: ' + err.message, 'error'));
@@ -755,10 +2351,15 @@ var app = {
         auth.sendPasswordResetEmail(email).then(() => {
             self.toast('Password reset link sent to ' + email, 'success');
             self.closeForgotPasswordModal();
+            self.logUserActivity('password_reset', 'Password reset requested for: ' + email);
         }).catch(err => {
             self.toast('Error: ' + err.message, 'error');
         });
     },
+
+    // ============================================
+    // ADMIN FUNCTIONS
+    // ============================================
 
     openAdminModal: function() {
         document.getElementById('adminModal').classList.add('active');
@@ -775,8 +2376,10 @@ var app = {
         if (pass === ADMIN_PASSWORD) {
             this.closeAdminModal();
             this.openAdminPortal();
+            this.logUserActivity('admin_login', 'Admin logged in');
         } else {
-            this.toast('Wrong password', 'error');
+            this.toast('❌ Wrong password', 'error');
+            this.logUserActivity('admin_login_failed', 'Failed admin login attempt');
             document.getElementById('adminPassword').value = '';
             document.getElementById('adminPassword').focus();
         }
@@ -790,7 +2393,10 @@ var app = {
         this.loadAdminDashboard();
         this.loadAdminUsers();
         this.loadAdminPosts();
+        this.loadAdminWithdrawals();
         this.loadActivityLog();
+        this.loadSuspiciousActivity();
+        this.loadAdminNotifications();
     },
 
     closeAdminPortal: function() {
@@ -805,7 +2411,7 @@ var app = {
         document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
        
         var buttons = document.querySelectorAll('.admin-tab');
-        var tabMap = ['dashboard', 'users', 'posts', 'withdrawals', 'logs'];
+        var tabMap = ['dashboard', 'users', 'posts', 'withdrawals', 'logs', 'suspicious', 'notifications'];
         var tabIndex = tabMap.indexOf(tab);
         if (tabIndex >= 0) {
             buttons[tabIndex].classList.add('active');
@@ -816,7 +2422,9 @@ var app = {
             'users': 'adminUsers',
             'posts': 'adminPosts',
             'withdrawals': 'adminWithdrawalsTab',
-            'logs': 'adminLogs'
+            'logs': 'adminLogs',
+            'suspicious': 'adminSuspiciousTab',
+            'notifications': 'adminNotificationsTab'
         };
        
         var contentId = contentMap[tab];
@@ -826,8 +2434,74 @@ var app = {
        
         if (tab === 'users') this.loadAdminUsers();
         if (tab === 'posts') this.loadAdminPosts();
+        if (tab === 'withdrawals') this.loadAdminWithdrawals();
         if (tab === 'logs') this.loadActivityLog();
+        if (tab === 'suspicious') this.loadSuspiciousActivity();
+        if (tab === 'notifications') this.loadAdminNotifications();
     },
+
+    // ============================================
+    // ADMIN - DASHBOARD
+    // ============================================
+
+    loadAdminDashboard: function() {
+        var self = this;
+       
+        var userCount = Object.keys(this.users || {}).length;
+        var postCount = (this.posts || []).length;
+       
+        document.getElementById('adminUserCount').textContent = userCount;
+        document.getElementById('adminPostCount').textContent = postCount;
+       
+        db.ref('bannedUsers').once('value', function(snap) {
+            var bannedCount = snap.numChildren() || 0;
+            document.getElementById('adminBannedCount').textContent = bannedCount;
+        });
+       
+        db.ref('withdrawals').once('value', snap => {
+            var withdrawals = [];
+            snap.forEach(child => {
+                withdrawals.push({
+                    id: child.key,
+                    ...child.val()
+                });
+            });
+           
+            var pendingCount = withdrawals.filter(w => w.status === 'pending').length;
+            var approvedCount = withdrawals.filter(w => w.status === 'approved').length;
+           
+            document.getElementById('adminPendingCount').textContent = pendingCount;
+            document.getElementById('adminApprovedCount').textContent = approvedCount;
+           
+            var html = '';
+            if (withdrawals.length === 0) {
+                html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No withdrawal requests</div>';
+            } else {
+                var recent = withdrawals.slice(0, 5);
+                recent.forEach(w => {
+                    var statusClass = w.status || 'pending';
+                    html += `
+                        <div class="withdrawal-card ${statusClass}" style="margin-bottom: 8px;">
+                            <div class="withdrawal-header">
+                                <div class="withdrawal-user">${w.userName || 'Unknown'}</div>
+                                <div class="withdrawal-status ${statusClass}">${(w.status || 'pending').toUpperCase()}</div>
+                            </div>
+                            <div class="withdrawal-details">
+                                <div>KSh ${w.amount || 0} • ${w.method || 'M-Pesa'}</div>
+                                <div style="font-size: 0.75rem; margin-top: 4px;">${w.createdAt || 'N/A'}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+           
+            document.getElementById('adminWithdrawals').innerHTML = html;
+        });
+    },
+
+    // ============================================
+    // ADMIN - USERS
+    // ============================================
 
     loadAdminUsers: function() {
         var self = this;
@@ -842,146 +2516,84 @@ var app = {
             html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No users yet</div>';
         } else {
             html = '<div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">';
-            userArray.forEach(u => {
-                html += `
-                    <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name}</div>
-                            <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Joined: ${u.user.createdAt}</div>
+            
+            db.ref('bannedUsers').once('value', function(bannedSnap) {
+                var bannedUsers = bannedSnap.val() || {};
+                
+                userArray.forEach(u => {
+                    var isBanned = bannedUsers[u.uid] ? true : false;
+                    var banData = bannedUsers[u.uid] || {};
+                    
+                    html += `
+                        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; ${isBanned ? 'background: #fef2f2;' : ''}">
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name} ${isBanned ? '🚫' : ''}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Joined: ${u.user.createdAt}</div>
+                                <div style="font-size: 0.75rem; color: var(--primary);">Balance: KSh ${(u.user.balance || 0).toFixed(2)}</div>
+                                ${isBanned ? `<div style="font-size: 0.7rem; color: #ef4444;">Banned: ${banData.reason || 'No reason'}</div>` : ''}
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">${u.user.followers || 0} followers</span>
+                                <button onclick="app.viewUserActivity('${u.uid}')" style="padding: 6px 12px; background: var(--border); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">View</button>
+                                ${isBanned ? `
+                                    <button onclick="app.unbanUser('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Unban</button>
+                                ` : `
+                                    <button onclick="app.banUserFromAdmin('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🚫 Ban</button>
+                                `}
+                                <button onclick="app.deleteUserByAdmin('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🗑️</button>
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">${u.user.followers || 0} followers</span>
-                            <button onclick="app.viewUserActivity('${u.uid}')" style="padding: 6px 12px; background: var(--border); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">View</button>
-                            <button onclick="app.deleteUserByAdmin('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🗑️ Delete</button>
-                        </div>
-                    </div>
-                `;
+                    `;
+                });
+                
+                html += '</div>';
+                document.getElementById('adminUsersList').innerHTML = html;
             });
-            html += '</div>';
         }
-       
-        document.getElementById('adminUsersList').innerHTML = html;
     },
 
-    searchUsers: function() {
-        var query = document.getElementById('userSearchInput').value.toLowerCase().trim();
-        if (!query) {
-            this.loadAdminUsers();
+    banUserFromAdmin: function(uid, userName) {
+        var reason = prompt('Enter reason for banning ' + userName + ':');
+        if (!reason || reason.trim() === '') {
+            this.toast('⚠️ Please provide a reason', 'error');
             return;
         }
-
-        var html = '';
-        var results = [];
-       
-        for (var uid in this.users) {
-            var u = this.users[uid];
-            if (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)) {
-                results.push({ uid: uid, user: u });
-            }
+        
+        if (!confirm('⚠️ Ban user "' + userName + '"?\n\nReason: ' + reason + '\n\nThis will permanently block their access.')) {
+            return;
         }
-
-        if (results.length === 0) {
-            html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No users found</div>';
-        } else {
-            html = '<div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">';
-            results.forEach(u => {
-                html += `
-                    <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name}</div>
-                            <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
-                        </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="app.viewUserActivity('${u.uid}')" style="padding: 6px 12px; background: var(--border); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">View</button>
-                            <button onclick="app.deleteUserByAdmin('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🗑️ Delete</button>
-                        </div>
-                    </div>
-                `;
-            });
-            html += '</div>';
-        }
-       
-        document.getElementById('adminUsersList').innerHTML = html;
-    },
-
-    viewUserActivity: function(uid) {
-        var user = this.users[uid];
-        if (!user) return;
-       
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = `<div class="modal">
-            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-            <h2 style="margin-bottom: 16px;">${user.name}</h2>
-            <div style="background: var(--light); padding: 12px; border-radius: 10px; margin-bottom: 16px;">
-                <div style="font-size: 0.8rem; color: var(--text-light); line-height: 1.6;">
-                    <div>Email: ${user.email}</div>
-                    <div>Balance: KSh ${(user.balance || 0).toFixed(2)}</div>
-                    <div>Followers: ${user.followers || 0}</div>
-                    <div>Following: ${user.following || 0}</div>
-                    <div>Joined: ${user.createdAt}</div>
-                </div>
-            </div>
-        </div>`;
-        document.body.appendChild(modal);
-    },
-
-    deleteUserByAdmin: function(uid, userName) {
+        
         var self = this;
-       
-        if (!confirm(`⚠️ Delete user "${userName}"?\n\nAll posts, messages, and data will be removed.\nThis CANNOT be undone.`)) {
-            return;
-        }
-       
-        if (!confirm('Final confirmation: Really delete this user permanently?')) {
-            return;
-        }
-       
-        this.toast('Deleting user ' + userName + '...', 'success');
-       
-        var deletionPromises = [];
-       
-        deletionPromises.push(
-            db.ref('users/' + uid).remove()
-        );
-       
-        deletionPromises.push(
-            db.ref('posts').orderByChild('userId').equalTo(uid).once('value', snapshot => {
-                var deletePromises = [];
-                snapshot.forEach(post => {
-                    deletePromises.push(db.ref('posts/' + post.key).remove());
-                });
-                return Promise.all(deletePromises);
-            })
-        );
-       
-        deletionPromises.push(
-            db.ref('chats').once('value', snapshot => {
-                var deletePromises = [];
-                snapshot.forEach(chat => {
-                    var chatKey = chat.key;
-                    if (chatKey.includes(uid)) {
-                        deletePromises.push(db.ref('chats/' + chatKey).remove());
-                    }
-                });
-                return Promise.all(deletePromises);
-            })
-        );
-       
-        Promise.all(deletionPromises).then(() => {
-            self.toast(`User "${userName}" deleted successfully`, 'success');
-           
-            setTimeout(() => {
-                self.loadAdminUsers();
-                self.loadExplore();
-                self.loadMessages();
-            }, 500);
-           
-        }).catch(err => {
-            self.toast('Error deleting user: ' + err.message, 'error');
+        db.ref('bannedUsers/' + uid).set({
+            reason: reason.trim(),
+            bannedAt: new Date().toLocaleString('en-KE'),
+            bannedBy: self.user ? self.user.email : 'Admin'
+        }).then(function() {
+            self.toast('✅ User "' + userName + '" has been banned', 'success');
+            self.loadAdminUsers();
+            self.logUserActivity('admin_ban', 'Banned user: ' + userName + ' for: ' + reason);
+        }).catch(function(err) {
+            self.toast('❌ Error banning user: ' + err.message, 'error');
         });
     },
+
+    unbanUser: function(uid, userName) {
+        if (!confirm('Unban user "' + userName + '"?')) return;
+        
+        var self = this;
+        db.ref('bannedUsers/' + uid).remove().then(function() {
+            self.toast('✅ User "' + userName + '" has been unbanned', 'success');
+            self.loadAdminUsers();
+            self.logUserActivity('admin_unban', 'Unbanned user: ' + userName);
+        }).catch(function(err) {
+            self.toast('❌ Error unbanning user: ' + err.message, 'error');
+        });
+    },
+
+    // ============================================
+    // ADMIN - POSTS
+    // ============================================
 
     loadAdminPosts: function() {
         var html = '';
@@ -989,17 +2601,21 @@ var app = {
             html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No posts yet</div>';
         } else {
             this.posts.forEach(p => {
+                var likes = (p.likes && Object.keys(p.likes).length) || 0;
+                var comments = (p.comments || []).length;
+                var isSupportPost = p.isSupportPost || p.isAutoPost || p.userName === 'SUPPORT@CHICHI';
+                
                 html += `
-                    <div style="background: white; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="background: white; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); ${isSupportPost ? 'border-left: 3px solid #0088cc;' : ''}">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <div style="font-weight: 700; font-size: 0.95rem;">${p.userName}</div>
+                            <div style="font-weight: 700; font-size: 0.95rem;">${p.userName} ${isSupportPost ? '🤖' : ''}</div>
                             <div style="font-size: 0.75rem; color: var(--text-light);">${p.createdAt}</div>
                         </div>
-                        <div style="font-size: 0.9rem; margin-bottom: 8px; color: var(--text-light); font-family: 'Poppins', sans-serif;">${p.caption.substring(0, 100)}...</div>
-                        <div style="display: flex; gap: 8px;">
-                            <span style="font-size: 0.75rem; color: var(--text-light);">Likes: ${Object.keys(p.likes || {}).length}</span>
-                            <span style="font-size: 0.75rem; color: var(--text-light);">Comments: ${(p.comments || []).length}</span>
-                            <button onclick="app.adminDeletePost('${p.id}')" style="margin-left: auto; padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Delete</button>
+                        <div style="font-size: 0.9rem; margin-bottom: 8px; color: var(--text-light);">${p.caption.substring(0, 100)}${p.caption.length > 100 ? '...' : ''}</div>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <span style="font-size: 0.75rem; color: var(--text-light);">❤️ ${likes}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-light);">💬 ${comments}</span>
+                            <button onclick="app.adminDeletePost('${p.id}')" style="margin-left: auto; padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🗑️</button>
                         </div>
                     </div>
                 `;
@@ -1028,55 +2644,20 @@ var app = {
         if (modal) {
             modal.remove();
         }
-        this.toast('Post deleted', 'success');
+        this.toast('✅ Post deleted', 'success');
         this.loadAdminPosts();
+        this.loadPosts();
+        this.logUserActivity('admin_delete_post', 'Admin deleted post: ' + id);
     },
 
-    loadActivityLog: function() {
-        var html = '';
-        var activities = [];
-       
-        this.posts.forEach(p => {
-            activities.push({
-                time: p.createdAt,
-                type: 'Post',
-                user: p.userName,
-                action: 'Created a post'
-            });
-        });
+    // ============================================
+    // ADMIN - WITHDRAWALS
+    // ============================================
 
-        activities.sort((a, b) => new Date(b.time) - new Date(a.time));
-
-        if (activities.length === 0) {
-            html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No activity yet</div>';
-        } else {
-            activities.slice(0, 20).forEach(act => {
-                html += `
-                    <div style="padding: 12px; border-bottom: 1px solid var(--border);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div style="font-weight: 600; font-size: 0.9rem;">${act.user}</div>
-                                <div style="font-size: 0.8rem; color: var(--text-light);">${act.action}</div>
-                            </div>
-                            <div style="font-size: 0.75rem; color: var(--text-light);">${act.time}</div>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-       
-        document.getElementById('activityLogList').innerHTML = html;
-    },
-
-    loadAdminDashboard: function() {
+    loadAdminWithdrawals: function() {
         var self = this;
-       
-        var userCount = Object.keys(this.users || {}).length;
-        var postCount = (this.posts || []).length;
-       
-        document.getElementById('adminUserCount').textContent = userCount;
-        document.getElementById('adminPostCount').textContent = postCount;
-       
+        var html = '';
+        
         db.ref('withdrawals').once('value', snap => {
             var withdrawals = [];
             snap.forEach(child => {
@@ -1085,46 +2666,51 @@ var app = {
                     ...child.val()
                 });
             });
-           
+            
             withdrawals.sort((a, b) => {
-                var dateA = new Date(b.createdAt || 0);
-                var dateB = new Date(a.createdAt || 0);
-                return dateA - dateB;
+                return (b.timestamp || 0) - (a.timestamp || 0);
             });
-           
-            var pendingCount = withdrawals.filter(w => w.status === 'pending').length;
-            var approvedCount = withdrawals.filter(w => w.status === 'approved').length;
-           
-            document.getElementById('adminPendingCount').textContent = pendingCount;
-            document.getElementById('adminApprovedCount').textContent = approvedCount;
-           
-            var html = '';
+            
             if (withdrawals.length === 0) {
-                html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No withdrawal requests</div>';
+                html = '<div style="text-align: center; color: #6b7280; padding: 40px 20px;">💳 No withdrawal requests</div>';
             } else {
                 withdrawals.forEach(w => {
+                    var statusClass = w.status || 'pending';
+                    var statusText = (w.status || 'pending').toUpperCase();
+                    var statusColor = statusClass === 'pending' ? '#f59e0b' : 
+                                     statusClass === 'approved' ? '#22c55e' : '#ef4444';
+                    
                     html += `
-                        <div class="withdrawal-card ${w.status}">
+                        <div class="withdrawal-card ${statusClass}" style="margin-bottom: 10px;">
                             <div class="withdrawal-header">
-                                <div class="withdrawal-user">${w.userName}</div>
-                                <div class="withdrawal-status ${w.status}">${w.status.toUpperCase()}</div>
+                                <div class="withdrawal-user">👤 ${w.userName || 'Unknown User'}</div>
+                                <div class="withdrawal-status ${statusClass}" style="background: ${statusColor}20; color: ${statusColor}; padding: 4px 12px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">${statusText}</div>
                             </div>
-                            <div class="withdrawal-details">
-                                <div>KSh ${w.amount} • ${w.method} • ${w.account}</div>
-                                <div style="font-size: 0.75rem; margin-top: 4px;">${w.createdAt}</div>
+                            <div class="withdrawal-details" style="margin: 8px 0;">
+                                <div style="font-size: 0.9rem; font-weight: 600;">💰 KSh ${(w.amount || 0).toFixed(2)}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-light);">📱 ${w.method || 'M-Pesa'} • ${w.account || 'N/A'}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 2px;">📧 ${w.userEmail || 'No email'}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-light); margin-top: 2px;">📅 ${w.createdAt || 'N/A'}</div>
                             </div>
-                            ${w.status === 'pending' ? `
-                                <div class="withdrawal-actions">
-                                    <button class="admin-approve" onclick="app.approveWithdrawal('${w.id}')">Approve</button>
-                                    <button class="admin-reject" onclick="app.rejectWithdrawal('${w.id}')">Reject</button>
+                            ${statusClass === 'pending' ? `
+                                <div class="withdrawal-actions" style="display: flex; gap: 8px; margin-top: 8px;">
+                                    <button class="admin-approve" onclick="app.approveWithdrawal('${w.id}')" style="flex: 1; padding: 8px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">✅ Approve</button>
+                                    <button class="admin-reject" onclick="app.rejectWithdrawal('${w.id}')" style="flex: 1; padding: 8px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">❌ Reject</button>
                                 </div>
-                            ` : ''}
+                            ` : `
+                                <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-light);">
+                                    ${statusClass === 'approved' ? '✅ Approved' : '❌ Rejected'}
+                                </div>
+                            `}
                         </div>
                     `;
                 });
             }
-           
-            document.getElementById('adminWithdrawals').innerHTML = html;
+            
+            document.getElementById('adminWithdrawalsList').innerHTML = html;
+        }).catch(err => {
+            console.error('Error loading withdrawals:', err);
+            document.getElementById('adminWithdrawalsList').innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Error loading withdrawals</div>';
         });
     },
 
@@ -1132,9 +2718,14 @@ var app = {
         var self = this;
         db.ref('withdrawals/' + withdrawalId).update({
             status: 'approved'
+        }).then(() => {
+            self.toast('✅ Withdrawal approved', 'success');
+            self.loadAdminWithdrawals();
+            self.loadAdminDashboard();
+            self.logUserActivity('admin_approve_withdrawal', 'Approved withdrawal: ' + withdrawalId);
+        }).catch(err => {
+            self.toast('❌ Error: ' + err.message, 'error');
         });
-        self.toast('Approved', 'success');
-        self.loadAdminDashboard();
     },
 
     rejectWithdrawal: function(withdrawalId) {
@@ -1144,16 +2735,97 @@ var app = {
                 var withdrawal = snap.val();
                 db.ref('withdrawals/' + withdrawalId).update({
                     status: 'rejected'
+                }).then(() => {
+                    db.ref('users/' + withdrawal.userId + '/balance').once('value', balanceSnap => {
+                        var currentBalance = balanceSnap.val() || 0;
+                        db.ref('users/' + withdrawal.userId + '/balance').set(currentBalance + (withdrawal.amount || 0));
+                    });
+                    self.toast('✅ Withdrawal rejected and refunded', 'success');
+                    self.loadAdminWithdrawals();
+                    self.loadAdminDashboard();
+                    self.logUserActivity('admin_reject_withdrawal', 'Rejected withdrawal: ' + withdrawalId);
                 });
-                db.ref('users/' + withdrawal.userId + '/balance').once('value', balanceSnap => {
-                    var currentBalance = balanceSnap.val() || 0;
-                    db.ref('users/' + withdrawal.userId + '/balance').set(currentBalance + withdrawal.amount);
-                });
-                self.toast('Rejected & refunded', 'success');
-                self.loadAdminDashboard();
             }
         });
     },
+
+    // ============================================
+    // ADMIN - ACTIVITY LOGS
+    // ============================================
+
+    loadActivityLog: function() {
+        var self = this;
+        var html = '';
+        
+        db.ref('activityLogs').orderByChild('timestamp').limitToLast(100).once('value', function(snapshot) {
+            var activities = [];
+            snapshot.forEach(function(child) {
+                activities.push({
+                    id: child.key,
+                    ...child.val()
+                });
+            });
+            
+            activities.reverse();
+            
+            if (activities.length === 0) {
+                html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No activity logged yet</div>';
+            } else {
+                activities.forEach(function(act) {
+                    var actionIcon = {
+                        'login': '🔐',
+                        'login_success': '✅',
+                        'login_failed': '❌',
+                        'signup': '📝',
+                        'google_signup': '📝',
+                        'google_login': '🔐',
+                        'click': '👆',
+                        'scroll': '📜',
+                        'session_end': '⏱️',
+                        'create_post': '📄',
+                        'delete_post': '🗑️',
+                        'like_post': '❤️',
+                        'comment': '💬',
+                        'follow': '👥',
+                        'unfollow': '👥',
+                        'admin_login': '⚙️',
+                        'admin_ban': '🚫',
+                        'admin_unban': '✅',
+                        'admin_delete_post': '🗑️',
+                        'admin_approve_withdrawal': '✅',
+                        'admin_reject_withdrawal': '❌',
+                        'admin_resolve_activity': '✅',
+                        'password_reset': '🔑'
+                    }[act.action] || '📌';
+                    
+                    html += `
+                        <div style="padding: 10px 12px; border-bottom: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.85rem;">${actionIcon} ${act.userName || 'Guest'}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-light);">${act.action} - ${act.details || 'N/A'}</div>
+                                    <div style="font-size: 0.65rem; color: var(--text-light);">📧 ${act.userEmail || 'N/A'} • ${act.page || '/'}</div>
+                                    ${act.isAdmin ? '<span style="font-size: 0.6rem; color: #0088cc;">👑 Admin</span>' : ''}
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 0.7rem; color: var(--text-light);">${act.time || 'N/A'}</div>
+                                    <div style="font-size: 0.6rem; color: var(--text-light);">${act.screen || 'N/A'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('activityLogList').innerHTML = html;
+        }).catch(function(err) {
+            document.getElementById('activityLogList').innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Error loading activity log</div>';
+        });
+    },
+
+    // ============================================
+    // SEARCH
+    // ============================================
 
     openSearchModal: function() {
         document.getElementById('searchModalOverlay').classList.add('active');
@@ -1178,7 +2850,7 @@ var app = {
         for (var uid in this.users) {
             if (!this.user || uid !== this.user.uid) {
                 var u = this.users[uid];
-                if (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)) {
+                if (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query) || (u.username && u.username.toLowerCase().includes(query))) {
                     results.push({ uid: uid, user: u });
                 }
             }
@@ -1232,7 +2904,7 @@ var app = {
     },
 
     // ============================================
-    // CREATE POST MODAL - FIXED
+    // CREATE POST
     // ============================================
 
     showCreateModal: function() {
@@ -1240,7 +2912,6 @@ var app = {
         var modal = document.getElementById('createModal');
         if (!modal) {
             console.error('❌ createModal not found!');
-            // Try to find it by class as fallback
             modal = document.querySelector('.modal-overlay#createModal');
             if (!modal) {
                 this.toast('Error opening post creator', 'error');
@@ -1252,7 +2923,6 @@ var app = {
         modal.style.zIndex = '9999';
         console.log('✅ Create modal opened');
         
-        // Focus on caption input after a short delay
         setTimeout(function() {
             var captionInput = document.getElementById('captionInput');
             if (captionInput) captionInput.focus();
@@ -1348,6 +3018,7 @@ var app = {
                 self.balance += 1;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
                 self.toast('Post published', 'success');
+                self.logUserActivity('create_post', 'Created a new post');
                 
                 if (shareSpinner) shareSpinner.style.display = 'none';
                 if (shareText) shareText.style.display = 'inline';
@@ -1370,6 +3041,10 @@ var app = {
             if (sharePostBtn) sharePostBtn.disabled = false;
         });
     },
+
+    // ============================================
+    // STORIES FUNCTIONS
+    // ============================================
 
     loadStories: function() {
         if (!this.user || this.isGuest) return;
@@ -1460,8 +3135,9 @@ var app = {
                     </div>
                     <div class="story-modal-content">
                         <div class="story-form-group">
-                            <label class="story-form-label">Story Image *</label>
-                            <input type="file" id="storyImageInput" accept="image/*" class="story-file-input">
+                            <label class="story-form-label">Story Images (Select multiple) *</label>
+                            <input type="file" id="storyImageInput" accept="image/*" multiple class="story-file-input">
+                            <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">You can select multiple images at once</div>
                         </div>
                         <div class="story-form-group">
                             <label class="story-form-label">🎵 Music Name</label>
@@ -1475,7 +3151,7 @@ var app = {
                     <div class="story-modal-footer">
                         <button class="story-btn-cancel" onclick="document.getElementById('storyModalOverlay').remove()">Cancel</button>
                         <button class="story-btn-upload" id="storyUploadBtn" onclick="app.uploadStory()">
-                            <span class="story-btn-text">📤 Upload Story</span>
+                            <span class="story-btn-text">📤 Upload Stories</span>
                             <div class="story-spinner"></div>
                         </button>
                     </div>
@@ -1499,9 +3175,9 @@ var app = {
         var musicNameInput = document.getElementById('storyMusicNameInput');
         var captionInput = document.getElementById('storyCaptionInput');
         var uploadBtn = document.getElementById('storyUploadBtn');
-       
-        if (!imageInput || !imageInput.files || !imageInput.files[0]) {
-            this.toast('⚠️ Please select an image', 'error');
+        
+        if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
+            this.toast('⚠️ Please select at least one image', 'error');
             return;
         }
         
@@ -1509,70 +3185,81 @@ var app = {
             this.toast('⚠️ Please login first', 'error');
             return;
         }
-       
+        
         if (uploadBtn) uploadBtn.classList.add('loading');
         
-        this.toast('📤 Uploading story...', 'info');
-       
-        var formData = new FormData();
-        formData.append('file', imageInput.files[0]);
-        formData.append('upload_preset', UPLOAD_PRESET || 'chichi_photos');
-       
-        fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
-            method: 'POST',
-            body: formData
-        })
-        .then(r => {
-            if (!r.ok) {
-                return r.json().then(errData => {
-                    console.error('Cloudinary error details:', errData);
-                    throw new Error(errData.error?.message || 'Upload failed: ' + r.status);
-                });
-            }
-            return r.json();
-        })
-        .then(data => {
-            if (!data.secure_url) {
-                throw new Error('No image URL returned');
-            }
-            
+        this.toast('📤 Uploading stories...', 'info');
+        
+        var files = imageInput.files;
+        var uploadPromises = [];
+        
+        for (var i = 0; i < files.length; i++) {
+            var promise = new Promise(function(resolve, reject) {
+                var formData = new FormData();
+                formData.append('file', files[i]);
+                formData.append('upload_preset', UPLOAD_PRESET || 'chichi_photos');
+                
+                fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(r => {
+                    if (!r.ok) {
+                        return r.json().then(errData => {
+                            throw new Error(errData.error?.message || 'Upload failed: ' + r.status);
+                        });
+                    }
+                    return r.json();
+                })
+                .then(data => {
+                    if (data.secure_url) {
+                        resolve(data.secure_url);
+                    } else {
+                        reject(new Error('No image URL returned'));
+                    }
+                })
+                .catch(reject);
+            });
+            uploadPromises.push(promise);
+        }
+        
+        Promise.all(uploadPromises).then(function(imageUrls) {
             var musicName = musicNameInput ? musicNameInput.value.trim() : 'Audio';
             var caption = captionInput ? captionInput.value.trim() : '';
             
-            var storyId = 'story_' + Date.now();
-            var storyData = {
-                image: data.secure_url,
-                musicUrl: '',
-                musicName: musicName || 'Audio',
-                caption: caption || '',
-                createdAt: new Date().getTime(),
-                views: 0,
-                authorUid: self.user.uid,
-                authorName: self.user.displayName || 'Anonymous',
-                userName: self.profile ? (self.profile.name || 'User') : 'User',
-                userPhoto: self.profile ? (self.profile.profilePhoto || '') : ''
-            };
+            var savePromises = [];
             
-            if (!db) throw new Error('Database not initialized');
-            
-            db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData, function(err) {
-                if (err) {
-                    console.error('Firebase error:', err);
-                    self.toast('❌ Error saving story: ' + err.message, 'error');
-                    if (uploadBtn) uploadBtn.classList.remove('loading');
-                } else {
-                    self.toast('✅ Story uploaded successfully!', 'success');
-                    setTimeout(() => {
-                        var modal = document.getElementById('storyModalOverlay');
-                        if (modal) modal.remove();
-                        self.loadStories();
-                    }, 500);
-                }
+            imageUrls.forEach(function(imageUrl, index) {
+                var storyId = 'story_' + Date.now() + '_' + index;
+                var storyData = {
+                    image: imageUrl,
+                    musicUrl: '',
+                    musicName: musicName || 'Audio',
+                    caption: caption || '',
+                    createdAt: new Date().getTime() + index,
+                    views: 0,
+                    authorUid: self.user.uid,
+                    authorName: self.user.displayName || 'Anonymous',
+                    userName: self.profile ? (self.profile.name || 'User') : 'User',
+                    userPhoto: self.profile ? (self.profile.profilePhoto || '') : ''
+                };
+                
+                var promise = db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData);
+                savePromises.push(promise);
             });
-        })
-        .catch(err => {
+            
+            return Promise.all(savePromises);
+        }).then(function() {
+            self.toast('✅ ' + imageUrls.length + ' stories uploaded successfully!', 'success');
+            self.logUserActivity('story_upload', 'Uploaded ' + imageUrls.length + ' stories');
+            setTimeout(() => {
+                var modal = document.getElementById('storyModalOverlay');
+                if (modal) modal.remove();
+                self.loadStories();
+            }, 500);
+        }).catch(function(err) {
             console.error('Upload error:', err);
-            this.toast('❌ Upload failed: ' + err.message, 'error');
+            self.toast('❌ Upload failed: ' + err.message, 'error');
             if (uploadBtn) uploadBtn.classList.remove('loading');
         });
     },
@@ -1582,6 +3269,7 @@ var app = {
         
         var self = this;
         var user = this.users[userId] || { name: 'User' };
+        var isOwnStory = this.user && userId === this.user.uid;
         
         db.ref('stories/' + userId + '/' + storyId).once('value', function(snapshot) {
             var story = snapshot.val();
@@ -1612,6 +3300,26 @@ var app = {
                 animation: smoothFadeIn 0.3s ease;
             `;
             
+            var deleteBtn = isOwnStory ? `
+                <button onclick="event.stopPropagation(); app.deleteStory('${storyId}', '${userId}')" style="
+                    position: absolute;
+                    top: 70px;
+                    right: 16px;
+                    z-index: 10;
+                    background: rgba(239, 68, 68, 0.9);
+                    color: white;
+                    border: none;
+                    border-radius: 50%;
+                    width: 36px;
+                    height: 36px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">🗑️</button>
+            ` : '';
+            
             viewer.innerHTML = `
                 <div style="position: absolute; top: 16px; left: 16px; right: 16px; z-index: 10; display: flex; gap: 4px;">
                     <div style="flex: 1; height: 3px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
@@ -1629,6 +3337,8 @@ var app = {
                     </div>
                 </div>
                 
+                ${deleteBtn}
+                
                 <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; width: 100%;">
                     <img src="${story.image}" style="max-width: 100%; max-height: 70vh; border-radius: 12px; object-fit: contain; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
                 </div>
@@ -1644,7 +3354,7 @@ var app = {
             
             var progressBar = document.getElementById('storyProgressBar');
             var startTime = Date.now();
-            var duration = 5000;
+            var duration = 10000;
             
             var progressInterval = setInterval(function() {
                 var elapsed = Date.now() - startTime;
@@ -1661,7 +3371,7 @@ var app = {
             
             viewer.addEventListener('click', function(e) {
                 var target = e.target;
-                if (target.tagName === 'IMG') {
+                if (target.tagName === 'IMG' || target.tagName === 'BUTTON') {
                     return;
                 }
                 clearInterval(progressInterval);
@@ -1679,6 +3389,20 @@ var app = {
         });
     },
 
+    deleteStory: function(storyId, userId) {
+        if (!confirm('Delete this story?')) return;
+        
+        var self = this;
+        db.ref('stories/' + userId + '/' + storyId).remove().then(function() {
+            self.toast('✅ Story deleted', 'success');
+            self.loadStories();
+            var viewer = document.querySelector('[style*="z-index: 9999;"]');
+            if (viewer) viewer.remove();
+        }).catch(function(err) {
+            self.toast('❌ Error deleting story: ' + err.message, 'error');
+        });
+    },
+
     formatTimeAgo: function(date) {
         var now = new Date();
         var diff = now - date;
@@ -1693,6 +3417,10 @@ var app = {
         if (days < 7) return days + 'd ago';
         return date.toLocaleDateString();
     },
+
+    // ============================================
+    // NOTIFICATIONS
+    // ============================================
 
     notifyNewMessage: function(senderName, messageText) {
         var cleanMessage = messageText ? messageText.substring(0, 150) : '📷 Image';
@@ -1791,11 +3519,16 @@ var app = {
         }
     },
 
+    // ============================================
+    // MESSAGES & CHAT
+    // ============================================
+
     loadMessages: function() {
         var self = this;
         console.log('💬 Loading messages for user:', this.user ? this.user.uid : 'guest');
         
-        if (!this.user || this.isGuest) {
+        if (!this.user || this.isGuest || !this.user.uid) {
+            console.log('⚠️ User not logged in - showing guest message');
             var html = `
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 40px 20px; text-align: center;">
                     <div style="font-size: 64px; margin-bottom: 16px;">💬</div>
@@ -1806,27 +3539,26 @@ var app = {
                     <button onclick="app.showLoginPage()" style="background: var(--primary); color: white; border: none; padding: 14px 40px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px;">🚀 Sign Up / Login</button>
                 </div>
             `;
-            document.getElementById('messagesView').innerHTML = html;
+            var container = document.getElementById('messageList');
+            if (container) {
+                container.innerHTML = html;
+            }
             return;
         }
         
+        console.log('✅ User logged in - loading messages for:', this.user.uid);
         this.loadBlockedUsers();
         
         var html = '';
-        
-        if (!this.chatMessages) {
-            this.chatMessages = {};
-        }
-        
         var conversations = [];
         
-        db.ref('messages').once('value', snapshot => {
+        db.ref('messages').once('value', function(snapshot) {
             console.log('📡 Messages snapshot received');
             
             if (snapshot.val()) {
                 console.log('✅ Messages found:', Object.keys(snapshot.val()).length, 'conversations');
                 
-                Object.keys(snapshot.val()).forEach(chatKey => {
+                Object.keys(snapshot.val()).forEach(function(chatKey) {
                     if (chatKey.includes(self.user.uid)) {
                         var parts = chatKey.split('_');
                         var otherUserId = parts[0] === self.user.uid ? parts[1] : parts[0];
@@ -1842,16 +3574,16 @@ var app = {
                         var unreadCount = 0;
                         
                         if (messages && typeof messages === 'object') {
-                            Object.keys(messages).forEach(msgId => {
+                            Object.keys(messages).forEach(function(msgId) {
                                 var msg = messages[msgId];
                                 
                                 if (msg && !msg.deleted) {
-                                    if (msg.text) {
+                                    if (msg.text || msg.image) {
                                         hasTextMessages = true;
-                                        lastMessage = msg.text.substring(0, 50);
+                                        lastMessage = msg.text ? msg.text.substring(0, 50) : '📷 Image';
                                         lastTimestamp = msg.timestamp || 0;
                                         
-                                        if (msg.senderId !== self.user.uid && !msg.read) {
+                                        if (msg.sender !== self.user.uid && !msg.read) {
                                             unreadCount++;
                                         }
                                     }
@@ -1875,14 +3607,16 @@ var app = {
                 console.log('📭 No messages found in database');
             }
             
-            conversations.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+            conversations.sort(function(a, b) {
+                return b.lastTimestamp - a.lastTimestamp;
+            });
             
             console.log('✅ Total conversations:', conversations.length);
             
             if (conversations.length > 0) {
-                conversations.forEach(conv => {
-                    var unreadBadge = conv.unreadCount > 0 ? `<div class="message-item-unread">${conv.unreadCount}</div>` : '<div style="width: 20px;"></div>';
-                    var avatarStyle = conv.user.profilePhoto ? `background-image: url('${conv.user.profilePhoto}'); background-size: cover; background-position: center;` : '';
+                conversations.forEach(function(conv) {
+                    var unreadBadge = conv.unreadCount > 0 ? '<div class="message-item-unread">' + conv.unreadCount + '</div>' : '<div style="width: 20px;"></div>';
+                    var avatarStyle = conv.user.profilePhoto ? 'background-image: url(\'' + conv.user.profilePhoto + '\'); background-size: cover; background-position: center;' : '';
                     
                     html += `
                         <div class="message-item" onclick="app.openChatFromSearch('${conv.uid}', '${conv.user.name}')">
@@ -1901,7 +3635,14 @@ var app = {
                     `;
                 });
             } else {
-                html = '<div style="text-align: center; color: #6b7280; padding: 60px 16px; font-size: 15px;">No conversations yet<br><br>Go find someone to chat with! 💬</div>';
+                html = `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+                        <div style="font-size: 18px; font-weight: 600; color: #1a202c; margin-bottom: 8px;">No conversations yet</div>
+                        <div style="font-size: 14px; color: #6b7280; margin-bottom: 16px;">Go find someone to chat with!</div>
+                        <button onclick="app.switchView('explore')" style="background: var(--primary); color: white; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">🔍 Find Friends</button>
+                    </div>
+                `;
             }
             
             var container = document.getElementById('messageList');
@@ -1909,7 +3650,7 @@ var app = {
                 container.innerHTML = html;
                 console.log('✅ Messages rendered:', conversations.length);
             }
-        }).catch(err => {
+        }).catch(function(err) {
             console.error('❌ Error loading messages:', err);
             self.toast('Error loading messages', 'error');
         });
@@ -1927,7 +3668,7 @@ var app = {
         }
         
         var allViews = document.querySelectorAll('.view');
-        allViews.forEach(view => {
+        allViews.forEach(function(view) {
             view.classList.remove('active');
             view.style.display = 'none !important';
             view.style.visibility = 'hidden';
@@ -1976,7 +3717,7 @@ var app = {
         var self = this;
         var chatKey = [this.user.uid, uid].sort().join('_');
         
-        setTimeout(() => {
+        setTimeout(function() {
             self.loadChatMessages();
             self.markAsRead(uid);
             document.getElementById('chatMessageInput').focus();
@@ -2023,44 +3764,42 @@ var app = {
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
        
         if (!this.chatMessages) this.chatMessages = {};
-        if (!this.lastMessageCount) this.lastMessageCount = {};
        
         if (this.chatMessagesListener) {
             db.ref('chats/' + key + '/messages').off();
         }
        
-        db.ref('chats/' + key + '/messages').once('value').then(snapshot => {
+        db.ref('chats/' + key + '/messages').once('value').then(function(snapshot) {
             var messages = [];
-            snapshot.forEach(c => {
+            snapshot.forEach(function(c) {
                 var m = c.val();
                 if (m && (m.text || m.image)) {
                     messages.push(m);
                 }
             });
            
-            messages.sort((a, b) => {
+            messages.sort(function(a, b) {
                 return (a.timestamp || 0) - (b.timestamp || 0);
             });
            
             self.chatMessages[key] = messages;
-            self.lastMessageCount[key] = messages.length;
            
             self.displayChatMessages(messages, key);
            
-            self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', snap => {
+            self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
                 var m = snap.val();
                 if (m && (m.text || m.image) && m.sender !== self.user.uid) {
                     self.notifyNewMessage(self.currentChat.name, m.text || '📷 Image');
                    
-                    db.ref('chats/' + key + '/messages').once('value').then(s => {
+                    db.ref('chats/' + key + '/messages').once('value').then(function(s) {
                         var updated = [];
-                        s.forEach(c => {
+                        s.forEach(function(c) {
                             var msg = c.val();
                             if (msg && (msg.text || msg.image)) {
                                 updated.push(msg);
                             }
                         });
-                        updated.sort((a, b) => {
+                        updated.sort(function(a, b) {
                             return (a.timestamp || 0) - (b.timestamp || 0);
                         });
                         self.chatMessages[key] = updated;
@@ -2068,7 +3807,7 @@ var app = {
                     });
                 }
             });
-        }).catch(err => {
+        }).catch(function(err) {
             console.error('❌ Error loading messages:', err);
             self.toast('Error: ' + err.message, 'error');
         });
@@ -2093,7 +3832,7 @@ var app = {
         var html = '';
         var lastDate = '';
        
-        messages.forEach((m, idx) => {
+        messages.forEach(function(m, idx) {
             if (!m || (!m.text && !m.image)) return;
            
             var side = m.sender === self.user.uid ? 'own' : 'other';
@@ -2113,7 +3852,7 @@ var app = {
                 }
                
                 if (dateStr !== lastDate) {
-                    html += `<div class="message-date-divider">${dateStr}</div>`;
+                    html += '<div class="message-date-divider">' + dateStr + '</div>';
                     lastDate = dateStr;
                 }
             }
@@ -2122,38 +3861,37 @@ var app = {
             if (m.image) {
                 if (Array.isArray(m.image)) {
                     content += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">';
-                    m.image.forEach((img, i) => {
+                    m.image.forEach(function(img, i) {
                         if (i < 4) {
-                            content += `<img src="${img}" style="width: 100%; border-radius: 8px; cursor: pointer;" onclick="app.viewFullImage('${img}')">`;
+                            content += '<img src="' + img + '" style="width: 100%; border-radius: 8px; cursor: pointer;" onclick="app.viewFullImage(\'' + img + '\')">';
                         }
                     });
                     content += '</div>';
                 } else {
-                    content += `<img src="${m.image}" style="max-width: 180px; border-radius: 12px; cursor: pointer;" onclick="app.viewFullImage('${m.image}')">`;
+                    content += '<img src="' + m.image + '" style="max-width: 180px; border-radius: 12px; cursor: pointer;" onclick="app.viewFullImage(\'' + m.image + '\')">';
                 }
             }
             if (m.text) {
-                content += `<div>${m.text}</div>`;
+                content += '<div>' + m.text + '</div>';
             }
             
             var otherUserName = self.currentChat.name || 'User';
             var otherUserInitial = otherUserName.charAt(0).toUpperCase();
-            var senderName = side === 'own' ? 'You' : otherUserName;
             var showAvatar = side === 'other';
             var readReceipt = side === 'own' ? (m.read ? '✓✓' : '✓') : '';
             
             html += `
                 <div class="message-group ${side}">
-                    ${showAvatar ? `<div class="message-avatar" style="${self.users[self.currentChat.uid] && self.users[self.currentChat.uid].profilePhoto ? 'background-image: url(' + self.users[self.currentChat.uid].profilePhoto + '); background-size: cover; background-position: center;' : ''}">${!self.users[self.currentChat.uid] || !self.users[self.currentChat.uid].profilePhoto ? otherUserInitial : ''}</div>` : ''}
+                    ${showAvatar ? '<div class="message-avatar" style="' + (self.users[self.currentChat.uid] && self.users[self.currentChat.uid].profilePhoto ? 'background-image: url(' + self.users[self.currentChat.uid].profilePhoto + '); background-size: cover; background-position: center;' : '') + '">' + (!self.users[self.currentChat.uid] || !self.users[self.currentChat.uid].profilePhoto ? otherUserInitial : '') + '</div>' : ''}
                     <div class="message-wrapper">
-                        ${side === 'other' ? `<div class="message-sender">${senderName}</div>` : ''}
+                        ${side === 'other' ? '<div class="message-sender">' + otherUserName + '</div>' : ''}
                         <div class="message-bubble">
-                            ${m.text ? `<div>${m.text}</div>` : ''}
-                            ${m.image ? `<img src="${m.image}" style="max-width: 100%; border-radius: 12px; cursor: pointer;" onclick="app.viewFullImage('${m.image}')">` : ''}
+                            ${m.text ? '<div>' + m.text + '</div>' : ''}
+                            ${m.image ? '<img src="' + m.image + '" style="max-width: 100%; border-radius: 12px; cursor: pointer;" onclick="app.viewFullImage(\'' + m.image + '\')">' : ''}
                         </div>
                         <div class="message-meta">
                             <span>${timestamp}</span>
-                            ${readReceipt ? `<span class="message-read-receipt">${readReceipt}</span>` : ''}
+                            ${readReceipt ? '<span class="message-read-receipt">' + readReceipt + '</span>' : ''}
                         </div>
                     </div>
                 </div>
@@ -2163,8 +3901,8 @@ var app = {
         var chatMessagesView = document.getElementById('chatMessages');
         if (chatMessagesView) {
             chatMessagesView.innerHTML = html;
-            setTimeout(() => chatMessagesView.scrollTop = chatMessagesView.scrollHeight, 50);
-            setTimeout(() => chatMessagesView.scrollTop = chatMessagesView.scrollHeight, 150);
+            setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 50);
+            setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 150);
         }
     },
 
@@ -2205,11 +3943,10 @@ var app = {
         var messageRef = db.ref('messages/' + key).push();
         messageRef.set({
             text: text,
-            senderId: self.user.uid,
             sender: self.user.uid,
             timestamp: firebase.database.ServerValue.TIMESTAMP,
             read: false
-        }).then(() => {
+        }).then(function() {
             console.log('✅ Message sent');
             
             db.ref('chats/' + key + '/messages/' + messageRef.key).set({
@@ -2221,7 +3958,7 @@ var app = {
             
             tempMessage.pending = false;
             self.displayChatMessages(self.chatMessages[key], key);
-        }).catch(err => {
+        }).catch(function(err) {
             console.error('❌ Error sending message:', err);
             self.toast('Error sending message', 'error');
             
@@ -2244,16 +3981,16 @@ var app = {
             uploadPromises.push(self.uploadChatImage(files[i]));
         }
        
-        Promise.all(uploadPromises).then(urls => {
+        Promise.all(uploadPromises).then(function(urls) {
             self.sendChatImages(urls);
             document.getElementById('chatImageInput').value = '';
-        }).catch(err => {
+        }).catch(function(err) {
             self.toast('Image upload failed', 'error');
         });
     },
 
     uploadChatImage: function(file) {
-        return new Promise((resolve, reject) => {
+        return new Promise(function(resolve, reject) {
             var formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', 'chichi_photos');
@@ -2261,7 +3998,7 @@ var app = {
             fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
                 method: 'POST',
                 body: formData
-            }).then(r => r.json()).then(d => {
+            }).then(function(r) { return r.json(); }).then(function(d) {
                 if (d.secure_url) {
                     resolve(d.secure_url);
                 } else {
@@ -2284,9 +4021,9 @@ var app = {
             sender: self.user.uid,
             image: imageUrls.length === 1 ? imageUrls[0] : imageUrls,
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        }).then(() => {
+        }).then(function() {
             self.toast('Image sent! 📸', 'success');
-        }).catch(err => {
+        }).catch(function(err) {
             self.toast('Failed to send image', 'error');
         });
     },
@@ -2300,8 +4037,8 @@ var app = {
         }
        
         var messagesRef = db.ref('chats/' + key + '/messages');
-        messagesRef.once('value', snap => {
-            snap.forEach(childSnap => {
+        messagesRef.once('value', function(snap) {
+            snap.forEach(function(childSnap) {
                 var m = childSnap.val();
                 if (m && m.sender !== self.user.uid && !m.read) {
                     childSnap.ref.update({ read: true });
@@ -2313,24 +4050,14 @@ var app = {
     },
 
     updateUnreadBadge: function() {
-        var self = this;
         var unreadCount = 0;
-        var unrepliedUsers = [];
        
         if (this.unreadMessages) {
-            Object.entries(this.unreadMessages).forEach(([chatKey, data]) => {
+            Object.entries(this.unreadMessages).forEach(function([chatKey, data]) {
                 if (data && data.count && data.count > 0) {
                     unreadCount += data.count;
-                    if (data.userName) {
-                        unrepliedUsers.push(data.userName + ' (' + data.count + ')');
-                    }
                 }
             });
-        }
-       
-        if (unrepliedUsers.length > 0) {
-            console.log('%c🔴 PEOPLE WAITING FOR YOUR REPLY:', 'color: #ff4444; font-weight: bold;');
-            unrepliedUsers.forEach(user => console.log('   👤 ' + user));
         }
        
         console.log('🔄 Badge update: Total unread=' + unreadCount);
@@ -2343,7 +4070,6 @@ var app = {
                 badge.textContent = unreadCount;
                 badge.style.display = 'flex';
                 badge.style.opacity = '1';
-                console.log('✅ Badge SHOWN with count:', unreadCount);
                 if (dot) {
                     dot.style.display = 'block';
                     dot.style.opacity = '1';
@@ -2356,8 +4082,6 @@ var app = {
                     dot.style.opacity = '0';
                 }
             }
-        } else {
-            console.warn('⚠️ Badge element not found in DOM!');
         }
        
         return unreadCount;
@@ -2380,12 +4104,24 @@ var app = {
         document.body.appendChild(modal);
     },
 
+    // ============================================
+    // WITHDRAWAL
+    // ============================================
+
     showWithdrawModal: function() {
-        if (this.balance < 20) {
-            this.toast('Minimum 20 KSh', 'error');
+        if (this.balance < 1) {
+            this.toast('❌ You have no balance to withdraw', 'error');
             return;
         }
         document.getElementById('withdrawModal').classList.add('active');
+        document.getElementById('withdrawAmount').value = this.balance;
+        document.getElementById('withdrawAmount').max = this.balance;
+        document.getElementById('withdrawAmount').min = 1;
+        
+        var balanceDisplay = document.getElementById('withdrawBalanceDisplay');
+        if (balanceDisplay) {
+            balanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+        }
     },
 
     closeWithdrawModal: function() {
@@ -2394,8 +4130,23 @@ var app = {
 
     processWithdrawal: function() {
         var amount = parseFloat(document.getElementById('withdrawAmount').value);
-        if (amount < 20 || amount > this.balance) {
-            this.toast('Invalid amount', 'error');
+        var minAmount = 1;
+        
+        if (isNaN(amount) || amount < minAmount) {
+            this.toast('❌ Minimum withdrawal is KSh ' + minAmount, 'error');
+            return;
+        }
+        
+        if (amount > this.balance) {
+            this.toast('❌ Insufficient balance. You have KSh ' + this.balance.toFixed(2), 'error');
+            return;
+        }
+        
+        var method = document.getElementById('paymentMethod').value;
+        var account = document.getElementById('accountNumber').value.trim();
+        
+        if (!account) {
+            this.toast('❌ Please enter your account details', 'error');
             return;
         }
 
@@ -2405,140 +4156,44 @@ var app = {
             userName: this.profile.name,
             userEmail: this.user.email,
             amount: amount,
-            method: document.getElementById('paymentMethod').value,
-            account: document.getElementById('accountNumber').value,
+            method: method,
+            account: account,
             status: 'pending',
-            createdAt: new Date().toLocaleString('en-KE')
+            createdAt: new Date().toLocaleString('en-KE'),
+            timestamp: firebase.database.ServerValue.TIMESTAMP
         });
 
         this.balance -= amount;
         db.ref('users/' + this.user.uid + '/balance').set(this.balance);
-        this.toast('Withdrawal requested!', 'success');
+        
+        var balanceDisplay = document.getElementById('balanceDisplay');
+        if (balanceDisplay) {
+            balanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+        }
+        
+        this.toast('✅ Withdrawal request submitted! KSh ' + amount.toFixed(2), 'success');
         this.closeWithdrawModal();
         document.getElementById('withdrawAmount').value = '';
         document.getElementById('accountNumber').value = '';
+        this.renderProfile();
+        this.logUserActivity('withdrawal_request', 'Requested withdrawal of KSh ' + amount);
     },
 
-    watchAd: function() {
-        this.toast('Earning features coming soon!', 'info');
-        return;
-    },
-
-    getAdsRemaining: function() {
-        return 0;
-    },
-
-    showHeaderMenu: function() {
-        var menu = document.getElementById('headerMenu');
-        if (menu) {
-            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-        }
-    },
-    
-    closeHeaderMenu: function() {
-        var menu = document.getElementById('headerMenu');
-        if (menu) {
-            menu.style.display = 'none';
-        }
-    },
-
-    showLogout: function() {
-        document.getElementById('logoutModal').classList.add('active');
-    },
-
-    closeLogout: function() {
-        document.getElementById('logoutModal').classList.remove('active');
-    },
-
-    confirmLogout: function() {
-        this.justLogout();
-    },
-
-    justLogout: function() {
-        auth.signOut();
-        document.getElementById('logoutModal').classList.remove('active');
-        this.showAuth();
-        this.toast('Logged out successfully', 'success');
-    },
-
-    deleteAccountPermanently: function() {
-        var self = this;
-       
-        if (!confirm('⚠️ WARNING: This will PERMANENTLY DELETE your account and all your data!\n\nAll posts, messages, and profile info will be removed.\nThis CANNOT be undone.\n\nAre you absolutely sure?')) {
-            return;
-        }
-       
-        if (!confirm('Final confirmation: Delete everything? Click OK to proceed.')) {
-            return;
-        }
-       
-        this.toast('Deleting account... Please wait...', 'success');
-       
-        var uid = this.user.uid;
-        var deletionPromises = [];
-       
-        deletionPromises.push(
-            db.ref('users/' + uid).remove()
-        );
-       
-        deletionPromises.push(
-            db.ref('posts').orderByChild('userId').equalTo(uid).once('value', snapshot => {
-                var deletePromises = [];
-                snapshot.forEach(post => {
-                    deletePromises.push(db.ref('posts/' + post.key).remove());
-                });
-                return Promise.all(deletePromises);
-            })
-        );
-       
-        deletionPromises.push(
-            db.ref('chats').once('value', snapshot => {
-                var deletePromises = [];
-                snapshot.forEach(chat => {
-                    var chatKey = chat.key;
-                    if (chatKey.includes(uid)) {
-                        deletePromises.push(db.ref('chats/' + chatKey).remove());
-                    }
-                });
-                return Promise.all(deletePromises);
-            })
-        );
-       
-        Promise.all(deletionPromises).then(() => {
-            self.toast('Data deleted successfully. Removing account...', 'success');
-           
-            setTimeout(() => {
-                auth.currentUser.delete().then(() => {
-                    self.toast('Account permanently deleted', 'success');
-                    auth.signOut();
-                    document.getElementById('logoutModal').classList.remove('active');
-                    self.showAuth();
-                    setTimeout(() => {
-                        self.toast('Your account has been completely removed', 'success');
-                    }, 500);
-                }).catch(err => {
-                    if (err.code === 'auth/requires-recent-login') {
-                        self.toast('Please log in again before deleting your account', 'error');
-                        auth.signOut();
-                        self.showAuth();
-                    } else {
-                        self.toast('Error: ' + err.message, 'error');
-                    }
-                });
-            }, 1000);
-           
-        }).catch(err => {
-            self.toast('Error deleting data: ' + err.message, 'error');
-        });
-    },
+    // ============================================
+    // TOAST
+    // ============================================
 
     toast: function(msg, type) {
         var el = document.createElement('div');
         el.className = 'toast ' + type;
         el.textContent = msg;
         document.body.appendChild(el);
-        setTimeout(() => el.remove(), 3000);
+        setTimeout(function() { el.remove(); }, 3000);
     },
+
+    // ============================================
+    // CONSENT
+    // ============================================
 
     initConsent: function() {
         var consentGiven = localStorage.getItem('userConsent');
@@ -2549,8 +4204,8 @@ var app = {
 
     checkUserLocation: function() {
         fetch('https://ipapi.co/json/')
-            .then(response => response.json())
-            .then(data => {
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
                 var eaaCountries = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'];
                 var ukSwissCountries = ['GB', 'CH'];
                
@@ -2558,7 +4213,7 @@ var app = {
                     document.getElementById('consentBanner').classList.add('show');
                 }
             })
-            .catch(() => {
+            .catch(function() {
                 document.getElementById('consentBanner').classList.add('show');
             });
     },
@@ -2635,9 +4290,13 @@ var app = {
         this.toast('Consent preferences saved', 'success');
     },
 
+    // ============================================
+    // NOTIFICATION PREFERENCES
+    // ============================================
+
     initNotifications: function() {
         if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission().then(permission => {
+            Notification.requestPermission().then(function(permission) {
                 if (permission === 'granted') {
                     console.log('✅ Notification permission granted');
                 } else {
@@ -2649,7 +4308,7 @@ var app = {
         }
        
         var self = this;
-        setTimeout(() => {
+        setTimeout(function() {
             self.trackUnreadMessages();
             console.log('✅ Notifications configured and tracking started');
         }, 500);
@@ -2715,303 +4374,11 @@ var app = {
     },
 
     // ============================================
-    // GROUPS FEATURE
+    // GROUPS (Now Earn Page)
     // ============================================
 
-    groups: {},
-    userGroups: [],
-    currentGroup: null,
-
     loadGroups: function() {
-        if (!this.user || this.isGuest) return;
-        
-        var self = this;
-        console.log('📁 Loading groups...');
-        
-        db.ref('groups').on('value', snapshot => {
-            self.groups = snapshot.val() || {};
-            console.log('✅ Groups loaded:', Object.keys(self.groups).length);
-            
-            self.userGroups = [];
-            for (var groupId in self.groups) {
-                var group = self.groups[groupId];
-                if (group.members && group.members[self.user.uid]) {
-                    self.userGroups.push({
-                        id: groupId,
-                        name: group.name,
-                        photo: group.photo,
-                        memberCount: Object.keys(group.members || {}).length
-                    });
-                }
-            }
-            
-            console.log('👥 User is in', self.userGroups.length, 'groups');
-            
-            if (document.getElementById('groupsView') && 
-                document.getElementById('groupsView').classList.contains('active')) {
-                self.renderGroups();
-            }
-        });
-    },
-
-    renderGroups: function() {
-        console.log('🎨 Rendering groups view...');
-        
-        var html = '';
-        
-        if (this.userGroups.length === 0) {
-            html += `
-                <div style="text-align: center; padding: 40px 20px;">
-                    <div style="font-size: 48px; margin-bottom: 12px;">👥</div>
-                    <div style="font-weight: 600; margin-bottom: 8px; color: var(--text);">No Groups Yet</div>
-                    <div style="color: #6b7280; margin-bottom: 20px;">Join or create a group to connect</div>
-                    <button class="btn-primary" onclick="app.showCreateGroupModal()" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Create Your First Group</button>
-                </div>
-            `;
-        } else {
-            this.userGroups.forEach(group => {
-                html += `
-                    <div class="group-card" onclick="app.openGroup('${group.id}')">
-                        <div class="group-photo">${group.name.charAt(0)}</div>
-                        <div class="group-info">
-                            <div class="group-name">${group.name}</div>
-                            <div class="group-members">${group.memberCount} members</div>
-                        </div>
-                        <div class="group-arrow">→</div>
-                    </div>
-                `;
-            });
-        }
-        
-        var groupsList = document.getElementById('groupsList');
-        if (groupsList) {
-            groupsList.innerHTML = html;
-        }
-    },
-
-    showCreateGroupModal: function() {
-        var modalHTML = `
-            <div class="modal-overlay" id="createGroupModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 9999;">
-                <div class="modal-box" style="max-width: 500px; width: 90%; background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid #eee;">
-                        <h3 style="margin: 0;">Create Group</h3>
-                        <button onclick="document.getElementById('createGroupModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button>
-                    </div>
-                    
-                    <div style="padding: 16px;">
-                        <input type="text" id="groupName" placeholder="Group name" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; font-size: 16px; box-sizing: border-box;">
-                        
-                        <textarea id="groupDescription" placeholder="Group description" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; font-size: 16px; min-height: 80px; box-sizing: border-box;"></textarea>
-                        
-                        <div style="margin-bottom: 16px;">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">Group Type</label>
-                            <label style="display: flex; align-items: center; margin-bottom: 8px;">
-                                <input type="radio" name="groupType" value="public" checked style="margin-right: 8px;"> Public (Anyone can join)
-                            </label>
-                            <label style="display: flex; align-items: center;">
-                                <input type="radio" name="groupType" value="private" style="margin-right: 8px;"> Private (Invite only)
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 12px; justify-content: flex-end; padding: 16px; border-top: 1px solid #eee;">
-                        <button onclick="document.getElementById('createGroupModal').remove()" style="padding: 10px 20px; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; background: white;">Cancel</button>
-                        <button onclick="app.createGroup()" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Create</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-    },
-
-    createGroup: function() {
-        var name = document.getElementById('groupName').value.trim();
-        var description = document.getElementById('groupDescription').value.trim();
-        var typeRadio = document.querySelector('input[name="groupType"]:checked');
-        
-        if (!name) {
-            this.toast('Enter group name', 'error');
-            return;
-        }
-        
-        if (!typeRadio) {
-            this.toast('Select group type', 'error');
-            return;
-        }
-        
-        var type = typeRadio.value;
-        
-        if (!this.user || !this.user.uid) {
-            this.toast('You must be logged in', 'error');
-            return;
-        }
-        
-        var self = this;
-        var groupId = db.ref('groups').push().key;
-        
-        var groupData = {
-            name: name,
-            description: description,
-            type: type,
-            photo: '',
-            createdBy: self.user.uid,
-            members: {},
-            posts: {},
-            createdAt: new Date().toLocaleString('en-KE'),
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
-        
-        groupData.members[self.user.uid] = true;
-        
-        db.ref('groups/' + groupId).set(groupData)
-            .then(() => {
-                console.log('✅ Group created successfully:', groupId);
-                self.toast('✅ Group created! 🎉', 'success');
-                
-                var modal = document.getElementById('createGroupModal');
-                if (modal) {
-                    modal.remove();
-                }
-                
-                self.groups[groupId] = groupData;
-                self.renderGroups();
-            })
-            .catch(err => {
-                console.error('❌ Error creating group:', err);
-                self.toast('❌ Error: ' + err.message, 'error');
-            });
-    },
-
-    openGroup: function(groupId) {
-        console.log('📂 Opening group:', groupId);
-        
-        this.currentGroup = this.groups[groupId];
-        if (!this.currentGroup) {
-            this.toast('Group not found', 'error');
-            return;
-        }
-        
-        var memberCount = Object.keys(this.currentGroup.members || {}).length;
-        
-        var html = `
-            <div style="padding: 16px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px;">
-                <button onclick="app.renderGroups(); app.switchView('groups')" style="background: none; border: none; font-size: 24px; cursor: pointer;">←</button>
-                <div>
-                    <h2 style="margin: 0;">${this.currentGroup.name}</h2>
-                    <div style="color: #6b7280; font-size: 14px;">👥 ${memberCount} members</div>
-                </div>
-            </div>
-            
-            <div style="padding: 16px; background: white; margin-bottom: 16px;">
-                <div style="text-align: center; margin-bottom: 16px;">
-                    <div style="font-size: 48px; margin-bottom: 12px;">👥</div>
-                    <div style="font-size: 18px; font-weight: 600;">${this.currentGroup.name}</div>
-                    <div style="color: #6b7280; margin-bottom: 12px;">${this.currentGroup.description || 'No description'}</div>
-                </div>
-                
-                <div style="display: flex; gap: 8px;">
-                    <button onclick="app.toast('Coming soon', 'info')" class="btn-primary" style="flex: 1; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">📧 Invite</button>
-                    <button onclick="app.showGroupMembers('${groupId}')" class="btn-secondary" style="flex: 1; padding: 10px; background: #f3f4f6; color: #374151; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">👥 Members</button>
-                </div>
-            </div>
-            
-            <div class="group-posts" id="groupPosts">
-                <!-- Group posts will load here -->
-            </div>
-        `;
-        
-        var groupView = document.getElementById('groupsView');
-        if (groupView) {
-            groupView.innerHTML = html;
-            this.loadGroupPosts(groupId);
-        }
-    },
-
-    loadGroupPosts: function(groupId) {
-        var self = this;
-        db.ref('posts').orderByChild('timestamp').on('value', snapshot => {
-            var postsHtml = '';
-            
-            snapshot.forEach(postSnapshot => {
-                var post = postSnapshot.val();
-                post.id = postSnapshot.key;
-                
-                if (post.groupId === groupId) {
-                    var likes = (post.likes && Object.keys(post.likes).length) || 0;
-                    postsHtml += `
-                        <div class="post" id="post-${post.id}" style="background: white; border-radius: 12px; margin-bottom: 16px; overflow: hidden; border: 1px solid #eee;">
-                            <div class="post-header" style="padding: 12px 16px; border-bottom: 1px solid #eee;">
-                                <div style="display: flex; align-items: center;">
-                                    <div class="post-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 12px;">${!post.userPhoto ? post.userName.charAt(0) : ''}</div>
-                                    <div>
-                                        <div class="post-name" style="font-weight: 600;">${post.userName}</div>
-                                        <div class="post-time" style="font-size: 12px; color: #6b7280;">${post.createdAt}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <img src="${post.photoUrl}" class="post-image" style="width: 100%; display: block;">
-                            <div style="padding: 12px 16px;">
-                                <div class="post-caption" style="margin-bottom: 8px;">${post.caption}</div>
-                                <div class="post-stats" style="color: #6b7280; font-size: 14px; margin-bottom: 12px;">${likes} likes</div>
-                                <div class="post-actions" style="display: flex; gap: 12px;">
-                                    <button class="post-action" onclick="app.likePost('${post.id}')" style="flex: 1; padding: 8px; background: #f3f4f6; border: none; border-radius: 8px; cursor: pointer;">❤️ Like</button>
-                                    <button class="post-action" onclick="app.toast('Coming soon', 'info')" style="flex: 1; padding: 8px; background: #f3f4f6; border: none; border-radius: 8px; cursor: pointer;">💬 Comment</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-            
-            if (postsHtml === '') {
-                postsHtml = '<div style="text-align: center; padding: 40px; color: #6b7280;">No posts yet. Be the first to post!</div>';
-            }
-            
-            var groupPosts = document.getElementById('groupPosts');
-            if (groupPosts) {
-                groupPosts.innerHTML = postsHtml;
-            }
-        });
-    },
-
-    showGroupMembers: function(groupId) {
-        console.log('👥 Showing group members...');
-        
-        var group = this.groups[groupId];
-        if (!group || !group.members) return;
-        
-        var membersHtml = '<div style="padding: 20px;"><h3>Group Members</h3><div style="margin-top: 16px;">';
-        
-        for (var uid in group.members) {
-            var member = this.users[uid];
-            if (member) {
-                membersHtml += `
-                    <div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee;">
-                        <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 12px;">
-                            ${member.name.charAt(0)}
-                        </div>
-                        <div>
-                            <div style="font-weight: 600;">${member.name}</div>
-                            <div style="font-size: 12px; color: #6b7280;">${member.email}</div>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-        
-        membersHtml += '</div></div>';
-        
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 9999;';
-        modal.innerHTML = `
-            <div class="modal-box" style="max-width: 500px; width: 90%; background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); position: relative; max-height: 80vh; overflow-y: auto;">
-                <button onclick="this.closest('.modal-overlay').remove()" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 24px; cursor: pointer; z-index: 10;">✕</button>
-                ${membersHtml}
-            </div>
-        `;
-        document.body.appendChild(modal);
+        this.renderEarn();
     },
 
     // ============================================
@@ -3042,7 +4409,7 @@ var app = {
             clearTimeout(this.typingTimeout);
         }
         
-        this.typingTimeout = setTimeout(() => {
+        this.typingTimeout = setTimeout(function() {
             self.stopTyping(chatUid);
         }, 2000);
     },
@@ -3064,7 +4431,7 @@ var app = {
         var self = this;
         var chatKey = [this.user.uid, chatUid].sort().join('_');
         
-        db.ref('messages/' + chatKey + '/typing').on('value', snapshot => {
+        db.ref('messages/' + chatKey + '/typing').on('value', function(snapshot) {
             var typingUsers = [];
             
             if (snapshot.val()) {
@@ -3090,7 +4457,7 @@ var app = {
                     if (typingUsers.length > 2) {
                         names += ' +' + (typingUsers.length - 2);
                     }
-                    typingIndicator.innerHTML = `<div style="color: #6b7280; font-size: 13px; font-style: italic; padding: 4px 0;">${names} ${typingUsers.length === 1 ? 'is' : 'are'} typing...</div>`;
+                    typingIndicator.innerHTML = '<div style="color: #6b7280; font-size: 13px; font-style: italic; padding: 4px 0;">' + names + ' ' + (typingUsers.length === 1 ? 'is' : 'are') + ' typing...</div>';
                     typingIndicator.style.display = 'block';
                 } else {
                     typingIndicator.style.display = 'none';
@@ -3117,7 +4484,7 @@ var app = {
     setupTypingCleanup: function() {
         if (!this.user) return;
         var userTypingRef = db.ref('.info/connected');
-        userTypingRef.on('value', snapshot => {
+        userTypingRef.on('value', function(snapshot) {
             if (snapshot.val() === false) {
                 console.log('⚠️ User going offline');
             }
@@ -3157,7 +4524,7 @@ var app = {
                         🚨 Report User
                     </button>
                     
-                    <button onclick="app.toggleTheme()" style="width:100%;padding:14px 16px;border:none;border-bottom:1px solid #f0f0f0;background:none;text-align:left;cursor:pointer;font-size:15px;border-radius:8px;transition:0.2s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='none'">
+                    <button onclick="app.toggleDarkMode()" style="width:100%;padding:14px 16px;border:none;border-bottom:1px solid #f0f0f0;background:none;text-align:left;cursor:pointer;font-size:15px;border-radius:8px;transition:0.2s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='none'">
                         🌓 Toggle Theme
                     </button>
                     
@@ -3180,15 +4547,17 @@ var app = {
         if (!this.user) return;
         
         var self = this;
-        db.ref('users/' + this.user.uid + '/blocked/' + userId).set(true, err => {
+        db.ref('users/' + this.user.uid + '/blocked/' + userId).set(true, function(err) {
             if (err) {
                 self.toast('❌ Error blocking user', 'error');
             } else {
                 self.toast('✅ User blocked', 'success');
                 self.blockedUsers[userId] = true;
-                document.querySelector('.modal-overlay.active')?.remove();
+                var modal = document.querySelector('.modal-overlay.active');
+                if (modal) modal.remove();
                 self.closeChatView();
                 self.loadMessages();
+                self.logUserActivity('block_user', 'Blocked user: ' + userId);
             }
         });
     },
@@ -3197,13 +4566,14 @@ var app = {
         if (!this.user) return;
         
         var self = this;
-        db.ref('users/' + this.user.uid + '/blocked/' + userId).remove(err => {
+        db.ref('users/' + this.user.uid + '/blocked/' + userId).remove(function(err) {
             if (err) {
                 self.toast('❌ Error unblocking user', 'error');
             } else {
                 self.toast('✅ User unblocked', 'success');
                 delete self.blockedUsers[userId];
                 self.loadMessages();
+                self.logUserActivity('unblock_user', 'Unblocked user: ' + userId);
             }
         });
     },
@@ -3224,37 +4594,16 @@ var app = {
             reason: reason.trim(),
             timestamp: firebase.database.ServerValue.TIMESTAMP,
             status: 'pending'
-        }, err => {
+        }, function(err) {
             if (err) {
                 self.toast('❌ Error submitting report', 'error');
             } else {
                 self.toast('✅ Report submitted to admin', 'success');
-                document.querySelector('.modal-overlay.active')?.remove();
+                self.logUserActivity('report_user', 'Reported user: ' + userName + ' for: ' + reason);
+                var modal = document.querySelector('.modal-overlay.active');
+                if (modal) modal.remove();
             }
         });
-    },
-
-    toggleTheme: function() {
-        var root = document.documentElement;
-        var currentBg = getComputedStyle(root).getPropertyValue('--bg').trim();
-        
-        if (currentBg === '#ffffff' || currentBg === 'white') {
-            root.style.setProperty('--bg', '#1a1a2e');
-            root.style.setProperty('--light', '#16213e');
-            root.style.setProperty('--text', '#ffffff');
-            root.style.setProperty('--text-light', '#a0aec0');
-            root.style.setProperty('--border', '#2d3748');
-            this.toast('🌙 Dark theme enabled', 'success');
-        } else {
-            root.style.setProperty('--bg', '#ffffff');
-            root.style.setProperty('--light', '#f9fafb');
-            root.style.setProperty('--text', '#111827');
-            root.style.setProperty('--text-light', '#6b7280');
-            root.style.setProperty('--border', '#e5e7eb');
-            this.toast('☀️ Light theme enabled', 'success');
-        }
-        
-        document.querySelector('.modal-overlay.active')?.remove();
     },
 
     clearChat: function(userId) {
@@ -3263,12 +4612,14 @@ var app = {
         var self = this;
         var chatKey = [this.user.uid, userId].sort().join('_');
         
-        db.ref('chats/' + chatKey + '/messages').remove(err => {
+        db.ref('chats/' + chatKey + '/messages').remove(function(err) {
             if (err) {
                 self.toast('❌ Error clearing chat', 'error');
             } else {
                 self.toast('✅ Chat cleared', 'success');
-                document.querySelector('.modal-overlay.active')?.remove();
+                self.logUserActivity('clear_chat', 'Cleared chat with user: ' + userId);
+                var modal = document.querySelector('.modal-overlay.active');
+                if (modal) modal.remove();
                 self.closeChatView();
                 self.loadMessages();
             }
@@ -3278,17 +4629,17 @@ var app = {
     loadBlockedUsers: function() {
         if (!this.user) return;
         
-        db.ref('users/' + this.user.uid + '/blocked').once('value', snapshot => {
+        db.ref('users/' + this.user.uid + '/blocked').once('value', function(snapshot) {
             if (snapshot.val()) {
-                Object.keys(snapshot.val()).forEach(userId => {
+                Object.keys(snapshot.val()).forEach(function(userId) {
                     this.blockedUsers[userId] = true;
-                });
+                }.bind(this));
             }
-        });
+        }.bind(this));
     },
 
     // ============================================
-    // ABOUT US - Anthony Onchari
+    // ABOUT US
     // ============================================
 
     showAbout: function() {
@@ -3514,31 +4865,14 @@ var app = {
     loadExplore: function() {
         var self = this;
         console.log('🔍 Explore: Loading heatmap and trending');
-        
-        var container = document.getElementById('exploreUsersList');
-        if (container) {
-            container.innerHTML = '';
-            container.style.display = 'none';
-        }
-        
-        var resultsSection = document.getElementById('exploreSearchResults');
-        if (resultsSection) {
-            resultsSection.style.display = 'none';
-        }
-        
-        var searchInput = document.getElementById('exploreSearchInput');
-        if (searchInput) {
-            searchInput.value = '';
-        }
-        
-        this.loadSignupHeatmap();
-        this.renderTrendingInExplore();
-        this.setupTrendingRefresh();
-        this.showHashtagSuggestions();
+        self.loadSignupHeatmap();
+        self.renderTrendingInExplore();
+        self.setupTrendingRefresh();
+        self.showHashtagSuggestions();
     },
 
     // ============================================
-    // GLOBAL SIGNUP HEATMAP - WITH BLINKING DOTS
+    // HEATMAP
     // ============================================
 
     loadSignupHeatmap: function() {
@@ -3560,17 +4894,26 @@ var app = {
                 zoomControl: false,
                 attributionControl: false,
                 fadeAnimation: true,
-                zoomAnimation: true
+                zoomAnimation: true,
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                dragging: false,
+                touchZoom: false,
+                boxZoom: false,
+                keyboard: false,
+                zoomSnap: 0.1
             }).setView([20, 0], 2);
             
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '©OpenStreetMap, ©CartoDB',
+                attribution: '',
                 subdomains: 'abcd',
-                maxZoom: 19
+                maxZoom: 2,
+                minZoom: 2,
+                noWrap: true
             }).addTo(map);
             
+            map.setZoom(2);
             this.heatmapMap = map;
-            L.control.zoom({ position: 'topright' }).addTo(map);
         }
         
         this.updateHeatmapStats();
@@ -3583,20 +4926,31 @@ var app = {
     },
 
     updateHeatmapStats: function() {
+        var self = this;
         var totalUsers = Object.keys(this.users || {}).length;
         var onlineCount = 0;
+        var now = new Date().getTime();
+        var fiveMinutesAgo = now - (5 * 60 * 1000);
+        
+        console.log('📊 Updating heatmap stats...');
+        console.log('   Total users:', totalUsers);
         
         for (var uid in this.users) {
             var user = this.users[uid];
-            if (user && user.lastSeen) {
-                var lastSeen = new Date(user.lastSeen);
-                var now = new Date();
-                var diffMinutes = (now - lastSeen) / 1000 / 60;
-                if (diffMinutes < 5) {
-                    onlineCount++;
+            if (user) {
+                if (user.lastSeen) {
+                    var lastSeen = user.lastSeen;
+                    if (typeof lastSeen === 'string') {
+                        lastSeen = new Date(lastSeen).getTime();
+                    }
+                    if (lastSeen && lastSeen > fiveMinutesAgo) {
+                        onlineCount++;
+                    }
                 }
             }
         }
+        
+        console.log('   Online users:', onlineCount);
         
         var totalElement = document.getElementById('totalSignups');
         if (totalElement) {
@@ -3605,13 +4959,55 @@ var app = {
         
         var onlineElement = document.getElementById('onlineCount');
         if (onlineElement) {
-            this.animateNumber(onlineElement, onlineCount || Math.floor(Math.random() * 1000) + 100);
+            this.animateNumber(onlineElement, onlineCount);
         }
         
         var growthElement = document.getElementById('signupGrowth');
         if (growthElement) {
-            var growth = (Math.random() * 10 + 2).toFixed(1);
-            growthElement.textContent = '+' + growth + '%';
+            var today = new Date().toDateString();
+            var yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            var yesterdayStr = yesterday.toDateString();
+            
+            var todayCount = 0;
+            var yesterdayCount = 0;
+            
+            for (var uid in this.users) {
+                var user = this.users[uid];
+                if (user && user.createdAt) {
+                    var userDate = new Date(user.createdAt).toDateString();
+                    if (userDate === today) {
+                        todayCount++;
+                    } else if (userDate === yesterdayStr) {
+                        yesterdayCount++;
+                    }
+                }
+            }
+            
+            var growth = 0;
+            if (yesterdayCount > 0) {
+                growth = ((todayCount - yesterdayCount) / yesterdayCount) * 100;
+            } else if (todayCount > 0) {
+                growth = 100;
+            }
+            
+            growthElement.textContent = (growth > 0 ? '+' : '') + growth.toFixed(1) + '%';
+        }
+        
+        var rateElement = document.getElementById('liveSignupRate');
+        if (rateElement) {
+            var today = new Date().toDateString();
+            var todayCount = 0;
+            for (var uid in this.users) {
+                var user = this.users[uid];
+                if (user && user.createdAt) {
+                    var userDate = new Date(user.createdAt).toDateString();
+                    if (userDate === today) {
+                        todayCount++;
+                    }
+                }
+            }
+            rateElement.textContent = '+' + todayCount;
         }
     },
 
@@ -3635,250 +5031,105 @@ var app = {
     },
 
     renderHeatmapDots: function() {
-        console.log('📍 Rendering heatmap dots...');
-        
         var dotsContainer = document.getElementById('heatmapDots');
-        var activityFeed = document.getElementById('recentActivityFeed');
-        var liveCountElement = document.getElementById('liveAccountCount');
+        if (!dotsContainer) return;
+        if (!this.users) return;
         
-        if (!dotsContainer) {
-            console.error('Dots container not found!');
+        var usersArray = Object.keys(this.users).map(function(uid) { return { uid: uid, user: this.users[uid] }; }.bind(this));
+        
+        if (usersArray.length === 0) {
+            dotsContainer.innerHTML = '';
             return;
         }
         
-        var locationData = {};
-        var recentActivities = [];
-        var totalUsers = 0;
+        var html = '';
+        var totalUsers = usersArray.length;
+        var dotSize = Math.min(4 + (totalUsers / 200), 8);
         
-        if (this.users && Object.keys(this.users).length > 0) {
-            totalUsers = Object.keys(this.users).length;
-            var userArray = Object.keys(this.users).map(uid => ({ uid: uid, user: this.users[uid] }));
-            
-            userArray.sort(function(a, b) {
-                var dateA = new Date(a.user.createdAt || 0);
-                var dateB = new Date(b.user.createdAt || 0);
-                return dateB - dateA;
-            });
-            
-            userArray.forEach(function(item) {
-                var user = item.user;
-                if (user && user.location && user.location !== 'Unknown' && user.coordinates) {
-                    var lat = user.coordinates.latitude || 0;
-                    var lng = user.coordinates.longitude || 0;
-                    
-                    if (lat !== 0 && lng !== 0) {
-                        var key = user.location + '_' + lat + '_' + lng;
-                        if (!locationData[key]) {
-                            locationData[key] = {
-                                location: user.location,
-                                lat: lat,
-                                lng: lng,
-                                count: 0,
-                                users: []
-                            };
-                        }
-                        locationData[key].count++;
-                        locationData[key].users.push(user.name);
-                    }
-                }
-            });
-            
-            userArray.slice(0, 10).forEach(function(item) {
-                var user = item.user;
-                if (user && user.location && user.location !== 'Unknown') {
-                    var time = user.createdAt || new Date().toLocaleString('en-KE');
-                    recentActivities.push({
-                        name: user.name,
-                        location: user.location,
-                        time: time
-                    });
-                }
-            });
-        }
+        var locations = [
+            { lat: -1.286389, lng: 36.817223 },
+            { lat: -4.043477, lng: 39.668206 },
+            { lat: 0.313611, lng: 32.581111 },
+            { lat: -1.9441, lng: 30.0619 },
+            { lat: -3.361378, lng: 36.674448 },
+            { lat: -0.091702, lng: 34.767956 },
+            { lat: -0.2861, lng: 36.0711 },
+            { lat: -1.3216, lng: 36.8831 },
+            { lat: -0.4667, lng: 35.2833 },
+            { lat: 0.0494, lng: 34.7486 },
+            { lat: -0.4861, lng: 35.2972 },
+            { lat: -2.2698, lng: 37.8020 },
+            { lat: -1.4542, lng: 37.8098 },
+            { lat: -0.1264, lng: 37.7344 },
+            { lat: -1.2860, lng: 36.8140 },
+            { lat: -3.3165, lng: 36.4530 },
+            { lat: -0.9400, lng: 38.0660 },
+            { lat: 0.4700, lng: 34.9700 },
+            { lat: 34.052235, lng: -118.243683 },
+            { lat: 40.712776, lng: -74.005974 },
+            { lat: 51.507351, lng: -0.127758 },
+            { lat: 48.856613, lng: 2.352222 },
+            { lat: 35.689487, lng: 139.691711 },
+            { lat: 37.566535, lng: 126.977969 },
+            { lat: -33.868820, lng: 151.209296 },
+            { lat: -23.550520, lng: -46.633308 },
+            { lat: 19.076090, lng: 72.877426 },
+            { lat: 31.230416, lng: 121.473701 },
+            { lat: 6.524379, lng: 3.379206 },
+            { lat: -26.204103, lng: 28.047305 }
+        ];
         
-        // UPDATE LIVE COUNTER
-        if (liveCountElement) {
-            this.animateNumber(liveCountElement, totalUsers);
-        }
-        
-        // Update live signup rate
-        var rateElement = document.getElementById('liveSignupRate');
-        if (rateElement) {
-            var today = new Date().toDateString();
-            var todayCount = 0;
-            for (var uid in this.users) {
-                var user = this.users[uid];
-                if (user && user.createdAt) {
-                    var userDate = new Date(user.createdAt).toDateString();
-                    if (userDate === today) {
-                        todayCount++;
-                    }
-                }
+        usersArray.forEach(function(u, index) {
+            var loc = locations[index % locations.length];
+            var baseLat = loc.lat + (Math.random() - 0.5) * 1.5;
+            var baseLng = loc.lng + (Math.random() - 0.5) * 1.5;
+            
+            var dotColor = 'rgba(0, 136, 204, 0.7)';
+            if (u.user && u.user.online) {
+                dotColor = 'rgba(0, 212, 170, 0.9)';
             }
-            rateElement.textContent = '+' + todayCount;
-        }
-        
-        // Render dots on map with BLINKING effect
-        dotsContainer.innerHTML = '';
-        var dotIndex = 0;
-        var dotCount = Object.keys(locationData).length;
-        
-        for (var key in locationData) {
-            var data = locationData[key];
-            var dot = document.createElement('div');
-            var lat = data.lat;
-            var lng = data.lng;
             
-            var x = ((lng + 180) / 360) * 100;
-            var y = ((90 - lat) / 180) * 100;
-            
-            var size = 10 + Math.min(data.count * 3, 22);
-            var brightness = Math.min(0.5 + data.count * 0.08, 1);
-            
-            var colors = ['#00D4FF', '#00FF88', '#FF6B6B', '#FFD93D', '#A66CFF'];
-            var colorIndex = Math.min(data.count - 1, colors.length - 1);
-            var color = colors[colorIndex] || '#00D4FF';
-            
-            var blinkDuration = 1.2 + Math.random() * 1.5;
-            var delay = dotIndex * 0.08;
-            
-            dot.style.cssText = `
+            var dotStyle = `
                 position: absolute;
-                left: ${x}%;
-                top: ${y}%;
-                width: ${size}px;
-                height: ${size}px;
-                background: ${color};
+                width: ${dotSize}px;
+                height: ${dotSize}px;
+                background: ${dotColor};
                 border-radius: 50%;
-                box-shadow: 0 0 ${size * 1.5}px ${color}, 0 0 ${size * 3}px ${color}40;
-                transform: translate(-50%, -50%);
-                z-index: 10;
-                cursor: pointer;
-                animation: heatmapBlink ${blinkDuration}s infinite;
-                animation-delay: ${delay}s;
-                border: 2px solid rgba(255,255,255,${Math.min(0.3 + data.count * 0.05, 0.6)});
-                pointer-events: auto;
-                transition: all 0.3s ease;
+                left: ${50 + (baseLng / 30)}%;
+                top: ${50 - (baseLat / 15)}%;
+                box-shadow: 0 0 ${dotSize * 2}px ${dotColor};
+                transition: all 0.5s ease;
+                animation: pulse 2s infinite;
             `;
             
-            dot.onmouseover = function() {
-                this.style.transform = 'translate(-50%, -50%) scale(1.5)';
-                this.style.zIndex = '20';
-            };
-            dot.onmouseout = function() {
-                this.style.transform = 'translate(-50%, -50%) scale(1)';
-                this.style.zIndex = '10';
-            };
-            
-            dot.onclick = function(loc, count, users) {
-                return function() {
-                    var userList = users.slice(0, 5).join(', ');
-                    if (users.length > 5) {
-                        userList += ' and ' + (users.length - 5) + ' more';
-                    }
-                    app.toast(`📍 ${loc}: ${count} signup${count !== 1 ? 's' : ''}\n👤 ${userList}`, 'info');
-                };
-            }(data.location, data.count, data.users);
-            
-            dotsContainer.appendChild(dot);
-            dotIndex++;
-        }
+            html += '<div style="' + dotStyle + '" title="' + (u.user ? u.user.name : 'User') + '"></div>';
+        });
         
-        if (dotCount === 0) {
-            dotsContainer.innerHTML = `
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.3); font-size: 14px; text-align: center;">
-                    <div style="font-size: 32px; margin-bottom: 8px;">🌍</div>
-                    Waiting for signups...
-                </div>
-            `;
-        }
-        
-        // Render activity feed
-        if (activityFeed) {
-            var html = '';
-            if (recentActivities.length === 0) {
-                html = '<div style="text-align: center; color: #6b7280; padding: 20px; font-size: 13px;">No recent activity</div>';
-            } else {
-                recentActivities.slice(0, 8).forEach(function(activity) {
-                    var time = activity.time;
-                    var formattedTime = 'Just now';
-                    if (typeof time === 'string' && time.includes(' ')) {
-                        var parts = time.split(' ');
-                        if (parts.length >= 2) {
-                            formattedTime = parts[1] + ' ' + parts[2];
-                        }
-                    }
-                    html += `
-                        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
-                            <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px; flex-shrink: 0;">
-                                ${activity.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div style="flex: 1;">
-                                <div style="font-size: 13px; font-weight: 600; color: #1a202c;">${activity.name}</div>
-                                <div style="font-size: 12px; color: #6b7280;">📍 ${activity.location}</div>
-                            </div>
-                            <div style="font-size: 11px; color: #9ca3af;">${formattedTime}</div>
-                        </div>
-                    `;
-                });
-            }
-            activityFeed.innerHTML = html;
-        }
-        
-        console.log('✅ Heatmap rendered:', dotCount, 'locations,', totalUsers, 'total users');
-    },
-
-    getLocationCoordinates: function(location) {
-        var locations = {
-            'New York': { x: 12, y: 25 },
-            'London': { x: 42, y: 18 },
-            'Paris': { x: 43, y: 17 },
-            'Berlin': { x: 48, y: 16 },
-            'Moscow': { x: 58, y: 12 },
-            'Istanbul': { x: 52, y: 28 },
-            'Dubai': { x: 62, y: 35 },
-            'Mumbai': { x: 68, y: 38 },
-            'Bangkok': { x: 75, y: 42 },
-            'Singapore': { x: 78, y: 48 },
-            'Hong Kong': { x: 82, y: 38 },
-            'Tokyo': { x: 88, y: 28 },
-            'Sydney': { x: 85, y: 72 },
-            'Nairobi': { x: 58, y: 55 },
-            'Lagos': { x: 48, y: 58 },
-            'Cairo': { x: 55, y: 42 },
-            'São Paulo': { x: 28, y: 62 },
-            'Mexico City': { x: 18, y: 48 },
-            'Los Angeles': { x: 8, y: 32 },
-            'Toronto': { x: 18, y: 20 }
-        };
-        
-        return locations[location] || { x: 50 + (Math.random() - 0.5) * 60, y: 40 + (Math.random() - 0.5) * 40 };
+        dotsContainer.innerHTML = html;
     },
 
     setupHeatmapListener: function() {
         console.log('🔄 Setting up heatmap listener...');
         
-        db.ref('users').on('value', snapshot => {
+        db.ref('users').on('value', function(snapshot) {
             if (!this.users) this.users = {};
             this.users = {};
             
-            snapshot.forEach(child => {
+            snapshot.forEach(function(child) {
                 this.users[child.key] = child.val();
-            });
+            }.bind(this));
             
             console.log('📊 Users updated, re-rendering heatmap...');
             this.updateHeatmapStats();
             this.renderHeatmapDots();
             this.showHashtagSuggestions();
             
-            // Update live counter
             var liveCountElement = document.getElementById('liveAccountCount');
             if (liveCountElement) {
                 var totalUsers = Object.keys(this.users).length;
                 this.animateNumber(liveCountElement, totalUsers);
             }
             
-            // Update live signup rate
             var rateElement = document.getElementById('liveSignupRate');
             if (rateElement) {
                 var today = new Date().toDateString();
@@ -3894,7 +5145,7 @@ var app = {
                 }
                 rateElement.textContent = '+' + todayCount;
             }
-        });
+        }.bind(this));
     },
 
     showHashtagSuggestions: function() {
@@ -3968,7 +5219,7 @@ var app = {
                 html += `
                     <div style="display: flex; align-items: center; padding: 10px; background: #f7fafc; border-radius: 10px; margin-bottom: 8px; gap: 12px;">
                         <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 16px; flex-shrink: 0; overflow: hidden;">
-                            ${match.user.profilePhoto ? `<img src="${match.user.profilePhoto}" style="width:100%;height:100%;object-fit:cover;">` : match.user.name.charAt(0).toUpperCase()}
+                            ${match.user.profilePhoto ? '<img src="' + match.user.profilePhoto + '" style="width:100%;height:100%;object-fit:cover;">' : match.user.name.charAt(0).toUpperCase()}
                         </div>
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-weight: 600; font-size: 14px; color: #1a202c;">${match.user.name}</div>
@@ -4000,11 +5251,11 @@ var app = {
         var now = new Date();
         var weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         
-        this.posts.forEach(post => {
+        this.posts.forEach(function(post) {
             var postDate = new Date(post.timestamp || post.createdAt);
             if (postDate >= weekAgo) {
                 if (post.hashtags) {
-                    post.hashtags.forEach(tag => {
+                    post.hashtags.forEach(function(tag) {
                         hashtagCount[tag] = (hashtagCount[tag] || 0) + 1;
                     });
                 }
@@ -4012,12 +5263,14 @@ var app = {
         });
         
         this.trendingHashtags = Object.keys(hashtagCount)
-            .map(tag => ({
-                name: tag,
-                count: hashtagCount[tag],
-                posts: this.posts.filter(p => p.hashtags && p.hashtags.includes(tag)).length
-            }))
-            .sort((a, b) => b.count - a.count)
+            .map(function(tag) {
+                return {
+                    name: tag,
+                    count: hashtagCount[tag],
+                    posts: this.posts.filter(function(p) { return p.hashtags && p.hashtags.includes(tag); }).length
+                };
+            }.bind(this))
+            .sort(function(a, b) { return b.count - a.count; })
             .slice(0, 15);
         
         console.log('✅ Trending hashtags calculated:', this.trendingHashtags.length);
@@ -4059,7 +5312,7 @@ var app = {
         
         var html = '';
         
-        this.trendingHashtags.forEach((trend, index) => {
+        this.trendingHashtags.forEach(function(trend, index) {
             var rankEmoji = ['🥇', '🥈', '🥉'][index] || '•';
             
             html += `
@@ -4087,7 +5340,7 @@ var app = {
         
         this.calculateTrendingHashtags();
         
-        setInterval(() => {
+        setInterval(function() {
             console.log('🔄 Auto-refreshing trending hashtags...');
             self.calculateTrendingHashtags();
             if (document.getElementById('trendingList')) {
@@ -4128,15 +5381,15 @@ var app = {
             return;
         }
        
-        userIds.forEach(uid => {
+        userIds.forEach(function(uid) {
             if (uid !== self.user.uid) {
                 var key = [self.user.uid, uid].sort().join('_');
                 var userName = (this.users[uid] || {}).name || 'User';
                 var messagesRef = db.ref('chats/' + key + '/messages');
                
-                messagesRef.orderByChild('timestamp').once('value', s => {
+                messagesRef.orderByChild('timestamp').once('value', function(s) {
                     var count = 0;
-                    s.forEach(c => {
+                    s.forEach(function(c) {
                         var m = c.val();
                         if (m && (m.text || m.image)) {
                             count++;
@@ -4146,7 +5399,7 @@ var app = {
                     console.log('📊 ' + userName + ': ' + count + ' messages (baseline)');
                 });
                
-                messagesRef.orderByChild('timestamp').on('child_added', childSnap => {
+                messagesRef.orderByChild('timestamp').on('child_added', function(childSnap) {
                     var m = childSnap.val();
                     if (!m) return;
                    
@@ -4161,11 +5414,11 @@ var app = {
                     }
                 });
                
-                messagesRef.on('value', s => {
+                messagesRef.on('value', function(s) {
                     var unreadCount = 0;
                     var messages = [];
                    
-                    s.forEach(c => {
+                    s.forEach(function(c) {
                         var m = c.val();
                         if (m && (m.text || m.image)) {
                             messages.push(m);
@@ -4185,7 +5438,7 @@ var app = {
                     self.loadMessages();
                 });
             }
-        });
+        }.bind(this));
     },
 
     // ============================================
@@ -4212,7 +5465,7 @@ var app = {
         var items = document.querySelectorAll('.message-item');
         var searchQuery = query.toLowerCase().trim();
        
-        items.forEach(item => {
+        items.forEach(function(item) {
             var nameEl = item.querySelector('.message-item-name');
             var previewEl = item.querySelector('.message-item-preview');
             var name = (nameEl ? nameEl.textContent : '').toLowerCase();
@@ -4229,7 +5482,7 @@ var app = {
     filterMessages: function(filter) {
         console.log('🔍 Filtering messages:', filter);
         
-        document.querySelectorAll('.message-filter-tab').forEach(tab => {
+        document.querySelectorAll('.message-filter-tab').forEach(function(tab) {
             tab.classList.remove('active');
         });
         if (event && event.target) {
@@ -4262,11 +5515,11 @@ var app = {
         
         var audio = document.getElementById('themeMusic');
         if (audio) {
-            audio.addEventListener('ended', () => {
+            audio.addEventListener('ended', function() {
                 if (document.getElementById('musicToggle') && document.getElementById('musicToggle').checked) {
                     this.playNextSong();
                 }
-            });
+            }.bind(this));
         }
     },
 
@@ -4300,22 +5553,22 @@ var app = {
         audio.volume = 0;
         audio.loop = false;
        
-        audio.play().then(() => {
-            var fadeIn = setInterval(() => {
+        audio.play().then(function() {
+            var fadeIn = setInterval(function() {
                 if (audio.volume < 0.3) {
                     audio.volume += 0.05;
                 } else {
                     clearInterval(fadeIn);
                 }
             }, 200);
-        }).catch(err => {
+        }).catch(function(err) {
             console.log('Could not play audio:', err);
         });
     },
 
     stopBackgroundMusic: function() {
         var audio = document.getElementById('themeMusic');
-        var fadeOut = setInterval(() => {
+        var fadeOut = setInterval(function() {
             if (audio.volume > 0) {
                 audio.volume -= 0.05;
             } else {
@@ -4352,9 +5605,9 @@ var app = {
         this.loadStories();
        
         console.log('📮 Loading posts from Firebase...');
-        db.ref('posts').orderByChild('timestamp').limitToLast(50).on('value', s => {
+        db.ref('posts').orderByChild('timestamp').limitToLast(50).on('value', function(s) {
             var p = [];
-            s.forEach(c => {
+            s.forEach(function(c) {
                 var post = c.val();
                 if (post) {
                     post.id = c.key;
@@ -4363,12 +5616,16 @@ var app = {
             });
             self.posts = p;
             self.renderFeed();
-        }, err => {
+        }, function(err) {
             console.error('❌ Error loading posts:', err.message);
             self.posts = [];
             self.renderFeed();
         });
     },
+
+    // ============================================
+    // RENDER FEED - NO BLUE BORDER ON SUPPORT POSTS
+    // ============================================
 
     renderFeed: function() {
         var feedContainer = document.getElementById('feedContainer');
@@ -4380,15 +5637,26 @@ var app = {
         if (this.posts.length === 0) {
             html = '<div style="text-align: center; color: #6b7280; padding: 40px 16px;">No posts yet. Start creating!</div>';
         } else {
-            this.posts.forEach(p => {
+            this.posts.forEach(function(p) {
                 var likes = (p.likes && Object.keys(p.likes).length) || 0;
                 var downloads = p.downloads || 0;
                 var comments = (p.comments && p.comments.length) || 0;
                 var userLiked = this.user && p.likes && p.likes[this.user.uid];
                 var isOwnPost = this.user && p.userId === this.user.uid;
-               
-                html += `
-                    <div class="post" id="post-${p.id}">
+                
+                var isSupportPost = false;
+                if (p.isSupportPost === true || p.isAutoPost === true) {
+                    isSupportPost = true;
+                }
+                if (p.userName === 'SUPPORT@CHICHI') {
+                    isSupportPost = true;
+                }
+                if (p.source === 'CHICHI AI' || p.source === 'AutoPost') {
+                    isSupportPost = true;
+                }
+                
+                var postHtml = `
+                    <div class="post" id="post-${p.id}" style="${isSupportPost ? 'border-radius: 12px;' : ''}">
                         <div class="post-header">
                             <div class="post-user">
                                 <div class="post-avatar" style="background-image: url(${p.userPhoto || ''}); cursor: pointer;" onclick="app.viewUserProfile('${p.userId}')">${!p.userPhoto ? p.userName.charAt(0).toUpperCase() : ''}</div>
@@ -4397,11 +5665,17 @@ var app = {
                                     <div class="post-time">${p.createdAt}</div>
                                 </div>
                             </div>
-                            ${isOwnPost ? `<button class="post-menu" onclick="app.deletePost('${p.id}')">🗑️</button>` : ''}
+                            ${isOwnPost ? '<button class="post-menu" onclick="app.deletePost(\'' + p.id + '\')">🗑️</button>' : ''}
                         </div>
-                        <img src="${p.photoUrl}" class="post-image">
+                        ${isSupportPost ? '<div style="background: #0088cc; color: white; padding: 4px 12px; font-size: 11px; font-weight: 700; display: inline-block; margin: 8px 16px 0; border-radius: 20px;">🤖 Generated by CHICHI AI</div>' : ''}
+                        <img src="${p.photoUrl}" class="post-image" style="${isSupportPost ? 'border-radius: 0;' : ''}">
                         <div class="post-caption">${p.caption}</div>
+                        ${isSupportPost ? '<div style="padding: 0 16px 8px; font-size: 11px; color: #0088cc; font-style: italic;">✨ Generated by CHICHI AI • ' + (p.category || 'Support') + '</div>' : ''}
                         <div class="post-stats">${likes} likes · ${downloads} saves · ${comments} comments</div>
+                `;
+                
+                if (!isSupportPost) {
+                    postHtml += `
                         <div class="post-actions">
                             <button class="post-action ${userLiked ? 'liked' : ''}" onclick="app.likePost('${p.id}')">
                                 ${userLiked ? '❤️ Liked' : '🤍 Like'}
@@ -4410,20 +5684,35 @@ var app = {
                             <button class="post-action" onclick="app.viewComments('${p.id}')">💬 Comment</button>
                             <button class="post-action" onclick="app.sharePost('${p.id}', '${p.caption.replace(/'/g, "\\'")}')">📤 Share</button>
                         </div>
-                    </div>
-                `;
-            });
+                    `;
+                } else {
+                    postHtml += `
+                        <div style="padding: 8px 16px 16px; display: flex; gap: 12px; border-top: 1px solid #eee; margin-top: 4px;">
+                            <span style="font-size: 13px; color: #6b7280;">❤️ ${likes} likes</span>
+                            <span style="font-size: 13px; color: #6b7280;">💾 ${downloads} saves</span>
+                            <span style="font-size: 13px; color: #6b7280;">💬 ${comments} comments</span>
+                        </div>
+                    `;
+                }
+                
+                postHtml += '</div>';
+                html += postHtml;
+            }.bind(this));
         }
        
         feedContainer.style.display = 'block';
         feedContainer.innerHTML = html;
     },
 
+    // ============================================
+    // LIKE POST
+    // ============================================
+
     likePost: function(id) {
         if (!this.requireAuth('like posts')) return;
         
         var self = this;
-        db.ref('posts/' + id).once('value', s => {
+        db.ref('posts/' + id).once('value', function(s) {
             var post = s.val();
             var likes = post.likes || {};
            
@@ -4437,6 +5726,7 @@ var app = {
            
             db.ref('posts/' + id + '/likes').set(likes);
             self.renderFeed();
+            self.logUserActivity('like_post', 'Liked post: ' + id);
         });
     },
 
@@ -4446,6 +5736,7 @@ var app = {
             link.href = url;
             link.download = 'photo.jpg';
             link.click();
+            this.logUserActivity('download_post', 'Downloaded post: ' + id);
         } catch (err) {
             this.toast('Download failed', 'error');
         }
@@ -4462,28 +5753,22 @@ var app = {
                 title: 'CHICHI',
                 text: shareText,
                 url: shareUrl
-            }).catch(err => console.log('Share cancelled'));
+            }).catch(function(err) { console.log('Share cancelled'); });
         } else {
             var text = shareText + '\n' + shareUrl;
-            navigator.clipboard.writeText(text).then(() => {
+            navigator.clipboard.writeText(text).then(function() {
                 this.toast('Post link copied to clipboard! 📋', 'success');
-            }).catch(err => {
+                this.logUserActivity('share_post', 'Shared post: ' + id);
+            }.bind(this)).catch(function(err) {
                 this.toast('Share link: ' + shareUrl, 'info');
-            });
+            }.bind(this));
         }
     },
 
     deletePost: function(id) {
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
-        modal.innerHTML = `<div class="logout-card">
-            <h3>Delete Post?</h3>
-            <p>This cannot be undone</p>
-            <div class="logout-buttons">
-                <button class="logout-cancel" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-                <button class="logout-confirm" onclick="app.confirmDeletePost('${id}')">Delete</button>
-            </div>
-        </div>`;
+        modal.innerHTML = '<div class="logout-card">\n            <h3>Delete Post?</h3>\n            <p>This cannot be undone</p>\n            <div class="logout-buttons">\n                <button class="logout-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button>\n                <button class="logout-confirm" onclick="app.confirmDeletePost(\'' + id + '\')">Delete</button>\n            </div>\n        </div>';
         document.body.appendChild(modal);
     },
 
@@ -4497,8 +5782,8 @@ var app = {
             post.style.transition = 'all 0.3s ease';
         }
        
-        db.ref('posts/' + id).remove().then(() => {
-            setTimeout(() => {
+        db.ref('posts/' + id).remove().then(function() {
+            setTimeout(function() {
                 if (post && post.parentNode) {
                     post.remove();
                 }
@@ -4508,24 +5793,25 @@ var app = {
             if (modal) modal.remove();
            
             this.toast('Post deleted', 'success');
+            this.logUserActivity('delete_post', 'Deleted post: ' + id);
            
-            setTimeout(() => {
+            setTimeout(function() {
                 self.loadPosts();
             }, 100);
-        }).catch(err => {
+        }.bind(this)).catch(function(err) {
             if (post) {
                 post.style.opacity = '1';
                 post.style.transform = 'translateY(0)';
             }
             this.toast('Error deleting post: ' + err.message, 'error');
-        });
+        }.bind(this));
     },
 
     viewComments: function(id) {
         if (!this.requireAuth('comment')) return;
         
         var self = this;
-        db.ref('posts/' + id).once('value', s => {
+        db.ref('posts/' + id).once('value', function(s) {
             var post = s.val();
             var comments = post.comments || [];
             var commentedUsers = post.commentedUsers || {};
@@ -4535,29 +5821,18 @@ var app = {
             if (comments.length === 0) {
                 html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No comments yet</div>';
             } else {
-                comments.forEach(c => {
-                    html += `<div style="background: var(--light); padding: 12px; border-radius: 12px; margin-bottom: 8px;">
-                        <div style="font-weight: 600; font-size: 0.9rem;">${c.user}</div>
-                        <div style="font-size: 0.85rem; margin: 4px 0;">${c.text}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-light);">${c.time}</div>
-                    </div>`;
+                comments.forEach(function(c) {
+                    html += '<div style="background: var(--light); padding: 12px; border-radius: 12px; margin-bottom: 8px;">\n                        <div style="font-weight: 600; font-size: 0.9rem;">' + c.user + '</div>\n                        <div style="font-size: 0.85rem; margin: 4px 0;">' + c.text + '</div>\n                        <div style="font-size: 0.75rem; color: var(--text-light);">' + c.time + '</div>\n                    </div>';
                 });
             }
 
-            html += `<div style="border-top: 1px solid var(--border); padding-top: 12px; display: flex; gap: 8px;">
-                <input type="text" id="commentInput" placeholder="Add comment..." style="flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 10px 12px;">
-                <button onclick="app.submitComment('${id}')" style="background: ${userCommented ? '#d1d5db' : 'var(--primary)'}; color: ${userCommented ? 'var(--text-light)' : 'white'}; border: none; border-radius: 20px; padding: 10px 16px; cursor: pointer; font-weight: 600; ${userCommented ? 'cursor: not-allowed;' : ''}">${userCommented ? '✓ Earned' : 'Post'}</button>
-            </div>`;
+            html += '<div style="border-top: 1px solid var(--border); padding-top: 12px; display: flex; gap: 8px;">\n                <input type="text" id="commentInput" placeholder="Add comment..." style="flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 10px 12px;">\n                <button onclick="app.submitComment(\'' + id + '\')" style="background: ' + (userCommented ? '#d1d5db' : 'var(--primary)') + '; color: ' + (userCommented ? 'var(--text-light)' : 'white') + '; border: none; border-radius: 20px; padding: 10px 16px; cursor: pointer; font-weight: 600; ' + (userCommented ? 'cursor: not-allowed;' : '') + '">' + (userCommented ? '✓ Earned' : 'Post') + '</button>\n            </div>';
 
             var modal = document.createElement('div');
             modal.className = 'modal-overlay active';
-            modal.innerHTML = `<div class="modal">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <h2 style="font-weight: 700; margin-bottom: 16px;">Comments</h2>
-                <div style="max-height: 400px; overflow-y: auto; margin-bottom: 16px;">${html}</div>
-            </div>`;
+            modal.innerHTML = '<div class="modal">\n                <div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>\n                <h2 style="font-weight: 700; margin-bottom: 16px;">Comments</h2>\n                <div style="max-height: 400px; overflow-y: auto; margin-bottom: 16px;">' + html + '</div>\n            </div>';
             document.body.appendChild(modal);
-        });
+        }.bind(this));
     },
 
     submitComment: function(id) {
@@ -4565,7 +5840,7 @@ var app = {
         if (!text) return;
 
         var self = this;
-        db.ref('posts/' + id).once('value', s => {
+        db.ref('posts/' + id).once('value', function(s) {
             var post = s.val();
             var comments = post.comments || [];
             var commentedUsers = post.commentedUsers || {};
@@ -4596,6 +5871,7 @@ var app = {
             }
             self.toast('Comment added', 'success');
             self.renderFeed();
+            self.logUserActivity('comment', 'Commented on post: ' + id);
         });
     },
 
@@ -4604,45 +5880,21 @@ var app = {
             this.switchView('profile');
         } else {
             var self = this;
-            db.ref('users/' + uid).once('value', s => {
+            db.ref('users/' + uid).once('value', function(s) {
                 if (s.exists()) {
                     var user = s.val();
                     var isFollowing = this.following[uid] || false;
                     var unreadCount = this.getUnreadCountForUser(uid);
-                    var msgBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">${unreadCount}</span>` : '';
+                    var msgBadge = unreadCount > 0 ? '<span style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">' + unreadCount + '</span>' : '';
                    
-                    var html = `
-                        <div class="profile-header">
-                            <div class="profile-top">
-                                <div class="profile-avatar-large" style="background-image: url(${user.profilePhoto || ''});">${!user.profilePhoto ? user.name.charAt(0).toUpperCase() : ''}</div>
-                                <div class="profile-info">
-                                    <div class="profile-name">${user.name || 'User'}</div>
-                                    <div class="profile-email">${user.email}</div>
-                                    <div class="profile-stats">
-                                        <div class="profile-stat"><div class="profile-stat-value">-</div><div class="profile-stat-label">Posts</div></div>
-                                        <div class="profile-stat"><div class="profile-stat-value">${user.followers || 0}</div><div class="profile-stat-label">Followers</div></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div style="display: flex; gap: 8px; margin-top: 12px;">
-                                <button class="follow-btn" onclick="app.toggleFollow('${uid}', '${user.name}')" style="background: ${isFollowing ? '#ff4444' : 'var(--primary)'}; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1;">${isFollowing ? '✕ Unfollow' : '✓ Follow'}</button>
-                                <button class="follow-btn" onclick="app.openChatFromSearch('${uid}', '${user.name}')" style="background: #2E5BFF; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1; position: relative;">
-                                    💬 Message
-                                    ${msgBadge}
-                                </button>
-                            </div>
-                        </div>
-                    `;
+                    var html = '\n                        <div class="profile-header">\n                            <div class="profile-top">\n                                <div class="profile-avatar-large" style="background-image: url(' + (user.profilePhoto || '') + ');">' + (!user.profilePhoto ? user.name.charAt(0).toUpperCase() : '') + '</div>\n                                <div class="profile-info">\n                                    <div class="profile-name">' + (user.name || 'User') + '</div>\n                                    <div class="profile-email">' + user.email + '</div>\n                                    <div class="profile-stats">\n                                        <div class="profile-stat"><div class="profile-stat-value">-</div><div class="profile-stat-label">Posts</div></div>\n                                        <div class="profile-stat"><div class="profile-stat-value">' + (user.followers || 0) + '</div><div class="profile-stat-label">Followers</div></div>\n                                    </div>\n                                </div>\n                            </div>\n                            <div style="display: flex; gap: 8px; margin-top: 12px;">\n                                <button class="follow-btn" onclick="app.toggleFollow(\'' + uid + '\', \'' + user.name + '\')" style="background: ' + (isFollowing ? '#ff4444' : 'var(--primary)') + '; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1;">' + (isFollowing ? '✕ Unfollow' : '✓ Follow') + '</button>\n                                <button class="follow-btn" onclick="app.openChatFromSearch(\'' + uid + '\', \'' + user.name + '\')" style="background: #2E5BFF; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: 0.3s; flex: 1; position: relative;">\n                                    💬 Message\n                                    ' + msgBadge + '\n                                </button>\n                            </div>\n                        </div>\n                    ';
                    
                     var modal = document.createElement('div');
                     modal.className = 'modal-overlay active';
-                    modal.innerHTML = `<div class="modal">
-                        <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                        ${html}
-                    </div>`;
+                    modal.innerHTML = '<div class="modal">\n                        <div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>\n                        ' + html + '\n                    </div>';
                     document.body.appendChild(modal);
                 }
-            });
+            }.bind(this));
         }
     },
 
@@ -4658,14 +5910,16 @@ var app = {
        
         if (isFollowing) {
             delete this.following[uid];
+            this.logUserActivity('unfollow', 'Unfollowed user: ' + name);
         } else {
             this.following[uid] = true;
             this.balance += 0.05;
             db.ref('users/' + this.user.uid + '/balance').set(this.balance);
+            this.logUserActivity('follow', 'Followed user: ' + name);
         }
        
         db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
-        db.ref('users/' + uid + '/followers').once('value', s => {
+        db.ref('users/' + uid + '/followers').once('value', function(s) {
             var followers = (s.val() || 0) + (isFollowing ? -1 : 1);
             db.ref('users/' + uid + '/followers').set(followers);
         });
@@ -4681,7 +5935,26 @@ var app = {
         }
     },
 
+    // ============================================
+    // RENDER PROFILE
+    // ============================================
+
     renderProfile: function() {
+        var profileContent = document.getElementById('profileContent');
+        if (!profileContent) {
+            console.error('❌ profileContent element not found!');
+            var profileView = document.getElementById('profileView');
+            if (profileView) {
+                var content = document.createElement('div');
+                content.id = 'profileContent';
+                profileView.appendChild(content);
+                profileContent = content;
+            } else {
+                console.error('❌ profileView also not found!');
+                return;
+            }
+        }
+        
         if (!this.user || this.isGuest) {
             var html = `
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 40px 20px; text-align: center;">
@@ -4694,11 +5967,11 @@ var app = {
                     <button onclick="app.switchView('feed')" style="background: white; color: var(--primary); border: 2px solid var(--primary); padding: 12px 32px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px;">Back to Feed</button>
                 </div>
             `;
-            document.getElementById('profileView').innerHTML = html;
+            profileContent.innerHTML = html;
             return;
         }
         
-        var userPosts = this.posts.filter(p => p.userId === this.user.uid).length;
+        var userPosts = this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this)).length;
 
         var html = `
             <div class="profile-header">
@@ -4722,23 +5995,12 @@ var app = {
             </div>
             <div style="margin: 16px;">
                 <div class="balance-card">
-                    <div class="balance-label">Your Balance</div>
+                    <div class="balance-label">💰 Your Balance</div>
                     <div class="balance-amount" id="balanceDisplay">KSh ${this.balance.toFixed(2)}</div>
                     <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
                 </div>
-                <div style="padding: 16px; text-align: center; color: var(--text-light); font-size: 0.85rem;">
-                    <div style="font-weight: 600; color: var(--primary); margin-bottom: 8px;">💰 Earn Money</div>
-                    <div style="line-height: 1.6; margin-bottom: 12px;">
-                        Exciting earning features coming soon! We're designing the best way for you to earn.
-                    </div>
-                </div>
-                <button class="btn-submit" style="width: 100%; margin-bottom: 12px; background: #ccc; cursor: not-allowed; opacity: 0.6;" disabled>⏳ Coming Soon</button>
-                <div style="text-align: center; font-size: 0.75rem; color: var(--text-light);">
-                    Check back soon for new earning opportunities!
-                </div>
             </div>
-            </div>
-
+            
             <div style="padding: 16px;">
                 <button style="width: 100%; padding: 12px; background: white; border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-weight: 600; cursor: pointer; transition: 0.3s; margin-bottom: 12px;" onclick="app.showNotificationPreferences()">🔔 Notification Settings</button>
                 <button style="width: 100%; padding: 12px; background: white; border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-weight: 600; cursor: pointer; transition: 0.3s;" onclick="app.showLogout()">🚪 Logout</button>
@@ -4748,10 +6010,10 @@ var app = {
             <div id="profilePosts"></div>
         `;
 
-        document.getElementById('profileContent').innerHTML = html;
+        profileContent.innerHTML = html;
 
         var postsHtml = '';
-        this.posts.filter(p => p.userId === this.user.uid).forEach(p => {
+        this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this)).forEach(function(p) {
             var likes = (p.likes && Object.keys(p.likes).length) || 0;
             postsHtml += `
                 <div class="post" id="post-${p.id}">
@@ -4777,17 +6039,21 @@ var app = {
         });
 
         if (postsHtml === '') postsHtml = '<div style="text-align: center; color: #6b7280; padding: 20px;">No posts yet</div>';
-        document.getElementById('profilePosts').innerHTML = postsHtml;
+        var profilePosts = document.getElementById('profilePosts');
+        if (profilePosts) {
+            profilePosts.innerHTML = postsHtml;
+        }
     },
 
     unfollowUser: function(uid, name) {
         delete this.following[uid];
         db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
-        db.ref('users/' + uid + '/followers').once('value', s => {
+        db.ref('users/' + uid + '/followers').once('value', function(s) {
             var followers = Math.max(0, (s.val() || 0) - 1);
             db.ref('users/' + uid + '/followers').set(followers);
         });
         this.renderProfile();
+        this.logUserActivity('unfollow', 'Unfollowed user: ' + name);
     },
 
     showFollowing: function() {
@@ -4801,7 +6067,7 @@ var app = {
                 if (this.users[uid]) {
                     var u = this.users[uid];
                     var unreadCount = this.getUnreadCountForUser(uid);
-                    var msgBadge = unreadCount > 0 ? `<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">${unreadCount}</span>` : '';
+                    var msgBadge = unreadCount > 0 ? '<span style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);">' + unreadCount + '</span>' : '';
                    
                     html += `
                         <div class="following-item">
@@ -4832,43 +6098,12 @@ var app = {
         var self = this;
        
         var overlay = document.createElement('div');
-        overlay.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:flex-end;justify-content:center;`;
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:flex-end;justify-content:center;';
        
         var modal = document.createElement('div');
-        modal.style.cssText = `width:100%;max-width:450px;max-height:85vh;background:white;border-radius:28px 28px 0 0;overflow-y:scroll;overflow-x:hidden;padding:20px;box-sizing:border-box;-webkit-overflow-scrolling:touch;`;
+        modal.style.cssText = 'width:100%;max-width:450px;max-height:85vh;background:white;border-radius:28px 28px 0 0;overflow-y:scroll;overflow-x:hidden;padding:20px;box-sizing:border-box;-webkit-overflow-scrolling:touch;';
        
-        modal.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"><h2 style="margin: 0; font-weight: 700;">Edit Your Profile</h2><button onclick="this.closest('div').closest('div').parentElement.parentElement.remove()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button></div>
-           
-            <div style="text-align: center; margin-bottom: 24px;">
-                <div id="editProfilePhotoPreview" style="background-image: url(${this.profile.profilePhoto || ''}); background-size: cover; background-position: center; width: 120px; height: 120px; border-radius: 50%; margin: 0 auto; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; color: white; background-color: var(--primary);" onclick="document.getElementById('editProfilePhotoInput').click()">
-                    ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
-                    <div style="position: absolute; bottom: 0; right: 0; background: var(--primary); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 3px solid white;">📷</div>
-                </div>
-                <input type="file" id="editProfilePhotoInput" accept="image/*" style="display: none;" onchange="app.previewEditProfilePhoto(event)">
-                <div style="font-size: 0.8rem; color: var(--text-light); margin-top: 8px;">Tap avatar to change photo</div>
-            </div>
-           
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Name</label>
-                <input type="text" id="editProfileName" value="${this.profile.name || ''}" placeholder="Your full name" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
-            </div>
-           
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Email</label>
-                <input type="email" id="editProfileEmail" value="${this.user.email || ''}" placeholder="Your email" disabled style="background: #f3f4f6; cursor: not-allowed; width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
-                <div style="font-size: 0.75rem; color: #999; margin-top: 4px;">Cannot change email</div>
-            </div>
-           
-            <div style="margin-bottom: 24px;">
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Bio</label>
-                <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-family: inherit; font-size: 1rem; resize: vertical; box-sizing: border-box;">${this.profile.bio || ''}</textarea>
-            </div>
-           
-            <div style="display: flex; gap: 12px; margin-top: 24px;">
-                <button onclick="this.closest('div').closest('div').parentElement.parentElement.remove()" style="flex: 1; padding: 12px; background: #e5e7eb; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">Cancel</button>
-                <button onclick="app.saveProfileChanges()" style="flex: 1; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">Save Changes</button>
-            </div>
-        `;
+        modal.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"><h2 style="margin: 0; font-weight: 700;">Edit Your Profile</h2><button onclick="this.closest(\'div\').closest(\'div\').parentElement.parentElement.remove()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button></div>\n           \n            <div style="text-align: center; margin-bottom: 24px;">\n                <div id="editProfilePhotoPreview" style="background-image: url(' + (this.profile.profilePhoto || '') + '); background-size: cover; background-position: center; width: 120px; height: 120px; border-radius: 50%; margin: 0 auto; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; color: white; background-color: var(--primary);" onclick="document.getElementById(\'editProfilePhotoInput\').click()">\n                    ' + (!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : '') + '\n                    <div style="position: absolute; bottom: 0; right: 0; background: var(--primary); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 3px solid white;">📷</div>\n                </div>\n                <input type="file" id="editProfilePhotoInput" accept="image/*" style="display: none;" onchange="app.previewEditProfilePhoto(event)">\n                <div style="font-size: 0.8rem; color: var(--text-light); margin-top: 8px;">Tap avatar to change photo</div>\n            </div>\n           \n            <div style="margin-bottom: 16px;">\n                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Name</label>\n                <input type="text" id="editProfileName" value="' + (this.profile.name || '') + '" placeholder="Your full name" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">\n            </div>\n           \n            <div style="margin-bottom: 16px;">\n                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Email</label>\n                <input type="email" id="editProfileEmail" value="' + (this.user.email || '') + '" placeholder="Your email" disabled style="background: #f3f4f6; cursor: not-allowed; width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">\n                <div style="font-size: 0.75rem; color: #999; margin-top: 4px;">Cannot change email</div>\n            </div>\n           \n            <div style="margin-bottom: 24px;">\n                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Bio</label>\n                <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-family: inherit; font-size: 1rem; resize: vertical; box-sizing: border-box;">' + (this.profile.bio || '') + '</textarea>\n            </div>\n           \n            <div style="display: flex; gap: 12px; margin-top: 24px;">\n                <button onclick="this.closest(\'div\').closest(\'div\').parentElement.parentElement.remove()" style="flex: 1; padding: 12px; background: #e5e7eb; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">Cancel</button>\n                <button onclick="app.saveProfileChanges()" style="flex: 1; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1rem;">Save Changes</button>\n            </div>\n        ';
        
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
@@ -4879,10 +6114,10 @@ var app = {
         if (!file) return;
        
         var reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = function(e) {
             document.getElementById('editProfilePhotoPreview').style.backgroundImage = 'url(' + e.target.result + ')';
             this.editProfilePhoto = e.target.result;
-        };
+        }.bind(this);
         reader.readAsDataURL(file);
     },
 
@@ -4900,7 +6135,7 @@ var app = {
        
         if (this.editProfilePhoto && this.editProfilePhoto.startsWith('data:')) {
             var formData = new FormData();
-            fetch(this.editProfilePhoto).then(res => res.blob()).then(blob => {
+            fetch(this.editProfilePhoto).then(function(res) { return res.blob(); }).then(function(blob) {
                 formData.append('file', blob);
                 formData.append('upload_preset', 'chichi_photos');
                 formData.append('cloud_name', 'u1uilb6f');
@@ -4908,7 +6143,7 @@ var app = {
                 fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
                     method: 'POST',
                     body: formData
-                }).then(res => res.json()).then(data => {
+                }).then(function(res) { return res.json(); }).then(function(data) {
                     if (data.secure_url) {
                         self.profile.name = name;
                         self.profile.bio = bio;
@@ -4925,8 +6160,9 @@ var app = {
                             modal.remove();
                         }
                         self.renderProfile();
+                        self.logUserActivity('update_profile', 'Updated profile');
                     }
-                }).catch(err => {
+                }).catch(function(err) {
                     self.toast('Photo upload failed', 'error');
                 });
             });
@@ -4943,6 +6179,7 @@ var app = {
                 modal.remove();
             }
             this.renderProfile();
+            this.logUserActivity('update_profile', 'Updated profile');
         }
     },
 
@@ -4960,26 +6197,27 @@ var app = {
         var input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
-        input.onchange = e => {
+        input.onchange = function(e) {
             var file = e.target.files[0];
             if (file) {
                 self.toast('Uploading photo...', 'success');
                 var formData = new FormData();
                 formData.append('file', file);
                 formData.append('upload_preset', UPLOAD_PRESET);
-                fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+                fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', {
                     method: 'POST',
                     body: formData
                 })
-                .then(r => r.json())
-                .then(data => {
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
                     self.profile.profilePhoto = data.secure_url;
                     db.ref('users/' + self.user.uid + '/profilePhoto').set(data.secure_url);
                     self.toast('Photo updated!', 'success');
                     self.renderProfile();
                     self.loadMessages();
+                    self.logUserActivity('update_profile_photo', 'Updated profile photo');
                 })
-                .catch(err => self.toast('Upload failed', 'error'));
+                .catch(function(err) { self.toast('Upload failed', 'error'); });
             }
         };
         input.click();
@@ -4990,10 +6228,7 @@ var app = {
         if (this.profile.profilePhoto) {
             var modal = document.createElement('div');
             modal.className = 'modal-overlay active';
-            modal.innerHTML = `<div class="modal" style="max-width: 400px;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <img src="${this.profile.profilePhoto}" style="width: 100%; border-radius: 16px;">
-            </div>`;
+            modal.innerHTML = '<div class="modal" style="max-width: 400px;">\n                <div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>\n                <img src="' + this.profile.profilePhoto + '" style="width: 100%; border-radius: 16px;">\n            </div>';
             document.body.appendChild(modal);
         } else {
             this.toast('No profile photo yet', 'error');
@@ -5004,7 +6239,7 @@ var app = {
         var self = this;
         console.log('📥 loadUsers() called - Setting up listener on /users');
        
-        db.ref('users').on('value', s => {
+        db.ref('users').on('value', function(s) {
             console.log('📥 Firebase /users callback fired!');
             var allUsers = s.val() || {};
             var oldUserCount = Object.keys(self.users).length;
@@ -5024,7 +6259,7 @@ var app = {
             if (oldUserCount === 0 && newUserCount > 0 && !self.unreadTrackingStarted) {
                 self.unreadTrackingStarted = true;
                 console.log('🔔 Users loaded for FIRST TIME! Starting unread message tracking...');
-                setTimeout(() => {
+                setTimeout(function() {
                     self.trackUnreadMessages();
                 }, 100);
             }
@@ -5032,7 +6267,7 @@ var app = {
             if (document.getElementById('exploreView').classList.contains('active')) {
                 self.loadExplore();
             }
-        }, err => {
+        }, function(err) {
             console.error('❌ ERROR loading users from Firebase:', err.code, err.message);
         });
     },
@@ -5044,7 +6279,7 @@ var app = {
         }
         
         var self = this;
-        db.ref('users/' + this.user.uid + '/following').once('value', s => {
+        db.ref('users/' + this.user.uid + '/following').once('value', function(s) {
             var following = s.val() || 0;
             self.following = following || {};
             self.loadStories();
@@ -5066,27 +6301,27 @@ var app = {
         for (var uid in this.users) {
             var user = this.users[uid];
             if (uid !== this.user.uid && user && user.name) {
-                if (user.name.toLowerCase().includes(searchQuery) || (user.email && user.email.toLowerCase().includes(searchQuery))) {
+                if (user.name.toLowerCase().includes(searchQuery) || (user.email && user.email.toLowerCase().includes(searchQuery)) || (user.username && user.username.toLowerCase().includes(searchQuery))) {
                     results.push({ uid: uid, user: user });
                 }
             }
         }
         
-        results.sort((a, b) => (b.user.followers || 0) - (a.user.followers || 0));
+        results.sort(function(a, b) { return (b.user.followers || 0) - (a.user.followers || 0); });
         
         var html = '';
         if (results.length === 0) {
             html = '<div style="text-align: center; color: #999; padding: 20px;">No users found</div>';
         } else {
-            results.slice(0, 10).forEach(u => {
+            results.slice(0, 10).forEach(function(u) {
                 var isFollowing = this.following[u.uid] || false;
                 var userTags = (u.user.hashtags || []).slice(0, 2);
-                var tagsDisplay = userTags.length > 0 ? userTags.join(' ') : '📝 No interests';
+                var tagsDisplay = userTags.length > 0 ? userTags.join(' ') : 'No interests';
                 
                 html += `
                     <div class="explore-search-user">
                         <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; flex-shrink: 0;">
-                            ${u.user.profilePhoto ? `<img src="${u.user.profilePhoto}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : u.user.name.charAt(0).toUpperCase()}
+                            ${u.user.profilePhoto ? '<img src="' + u.user.profilePhoto + '" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">' : u.user.name.charAt(0).toUpperCase()}
                         </div>
                         <div style="flex: 1;">
                             <div style="font-weight: 600; font-size: 15px;">${u.user.name}</div>
@@ -5096,11 +6331,142 @@ var app = {
                         <button onclick="app.openChatFromSearch('${u.uid}', '${u.user.name}')" style="background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">Message</button>
                     </div>
                 `;
-            });
+            }.bind(this));
         }
         
         resultsContainer.innerHTML = html;
         resultsSection.style.display = 'block';
+    },
+
+    // ============================================
+    // LOGOUT FUNCTIONS
+    // ============================================
+
+    showLogout: function() {
+        document.getElementById('logoutModal').classList.add('active');
+    },
+
+    closeLogout: function() {
+        document.getElementById('logoutModal').classList.remove('active');
+    },
+
+    confirmLogout: function() {
+        this.justLogout();
+    },
+
+    justLogout: function() {
+        auth.signOut();
+        document.getElementById('logoutModal').classList.remove('active');
+        this.showAuth();
+        this.toast('Logged out successfully', 'success');
+        if (this.onlineInterval) {
+            clearInterval(this.onlineInterval);
+            this.onlineInterval = null;
+        }
+        if (this.autoPostInterval) {
+            clearInterval(this.autoPostInterval);
+            this.autoPostInterval = null;
+        }
+        if (this.triviaInterval) {
+            clearInterval(this.triviaInterval);
+            this.triviaInterval = null;
+        }
+        this.logUserActivity('logout', 'User logged out');
+    },
+
+    deleteAccountPermanently: function() {
+        var self = this;
+       
+        if (!confirm('⚠️ WARNING: This will PERMANENTLY DELETE your account and all your data!\n\nAll posts, messages, and profile info will be removed.\nThis CANNOT be undone.\n\nAre you absolutely sure?')) {
+            return;
+        }
+       
+        if (!confirm('Final confirmation: Delete everything? Click OK to proceed.')) {
+            return;
+        }
+       
+        this.toast('Deleting account... Please wait...', 'success');
+       
+        var uid = this.user.uid;
+        var deletionPromises = [];
+       
+        deletionPromises.push(
+            db.ref('users/' + uid).remove()
+        );
+       
+        deletionPromises.push(
+            db.ref('posts').orderByChild('userId').equalTo(uid).once('value', function(snapshot) {
+                var deletePromises = [];
+                snapshot.forEach(function(post) {
+                    deletePromises.push(db.ref('posts/' + post.key).remove());
+                });
+                return Promise.all(deletePromises);
+            })
+        );
+       
+        deletionPromises.push(
+            db.ref('chats').once('value', function(snapshot) {
+                var deletePromises = [];
+                snapshot.forEach(function(chat) {
+                    var chatKey = chat.key;
+                    if (chatKey.includes(uid)) {
+                        deletePromises.push(db.ref('chats/' + chatKey).remove());
+                    }
+                });
+                return Promise.all(deletePromises);
+            })
+        );
+       
+        deletionPromises.push(
+            db.ref('stories/' + uid).remove()
+        );
+       
+        deletionPromises.push(
+            db.ref('withdrawals').orderByChild('userId').equalTo(uid).once('value', function(snapshot) {
+                var deletePromises = [];
+                snapshot.forEach(function(withdrawal) {
+                    deletePromises.push(db.ref('withdrawals/' + withdrawal.key).remove());
+                });
+                return Promise.all(deletePromises);
+            })
+        );
+       
+        deletionPromises.push(
+            db.ref('activityLogs').orderByChild('userId').equalTo(uid).once('value', function(snapshot) {
+                var deletePromises = [];
+                snapshot.forEach(function(log) {
+                    deletePromises.push(db.ref('activityLogs/' + log.key).remove());
+                });
+                return Promise.all(deletePromises);
+            })
+        );
+       
+        Promise.all(deletionPromises).then(function() {
+            self.toast('Data deleted successfully. Removing account...', 'success');
+           
+            setTimeout(function() {
+                auth.currentUser.delete().then(function() {
+                    self.toast('Account permanently deleted', 'success');
+                    auth.signOut();
+                    document.getElementById('logoutModal').classList.remove('active');
+                    self.showAuth();
+                    setTimeout(function() {
+                        self.toast('Your account has been completely removed', 'success');
+                    }, 500);
+                }).catch(function(err) {
+                    if (err.code === 'auth/requires-recent-login') {
+                        self.toast('Please log in again before deleting your account', 'error');
+                        auth.signOut();
+                        self.showAuth();
+                    } else {
+                        self.toast('Error: ' + err.message, 'error');
+                    }
+                });
+            }, 1000);
+           
+        }).catch(function(err) {
+            self.toast('Error deleting data: ' + err.message, 'error');
+        });
     }
 };
 
@@ -5111,6 +6477,15 @@ var app = {
 app.init();
 app.initMusic();
 
+setTimeout(function() {
+    if (app.user && app.user.email === 'support-chichi@gmail.com') {
+        console.log('🤖 Support account detected! Starting auto-post scheduler...');
+        app.startAutoPostScheduler();
+    }
+}, 3000);
+
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
-console.log('%c📱 All features: Stories, Chat, Heatmap, Hashtags, Explore, Groups, Music', 'color: #0088cc; font-size: 12px;');
+console.log('%c📱 Auto-posts every 10 minutes with unique content (never repeats)', 'color: #0088cc; font-size: 12px;');
+console.log('%c🧠 Trivia: KSh 3 per correct answer - 5 second timer!', 'color: #FFC24B; font-size: 12px;');
+console.log('%c🛡️ Suspicious activity detection active!', 'color: #ef4444; font-size: 12px;');
 console.log('%c👨‍💻 Built by Anthony Onchari - Version V01A.01', 'color: #6b7280; font-size: 11px;');
