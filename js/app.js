@@ -581,231 +581,6 @@ var app = {
     },
 
     // ============================================
-    // MUSIC FUNCTIONS
-    // ============================================
-
-    initMusic: function() {
-        var musicEnabled = localStorage.getItem('chichi-music-enabled') === 'true';
-        var toggle = document.getElementById('musicToggle');
-        var toggleLabel = toggle ? toggle.parentElement : null;
-       
-        if (musicEnabled) {
-            if (toggle) toggle.checked = true;
-            this.playBackgroundMusic();
-            if (toggleLabel) toggleLabel.classList.add('playing');
-        } else {
-            if (toggle) toggle.checked = false;
-            if (toggleLabel) toggleLabel.classList.remove('playing');
-        }
-        
-        var audio = document.getElementById('themeMusic');
-        if (audio) {
-            audio.addEventListener('ended', function() {
-                if (document.getElementById('musicToggle') && document.getElementById('musicToggle').checked) {
-                    this.playNextSong();
-                }
-            }.bind(this));
-        }
-    },
-
-    showMusicPlayer: function() {
-        var self = this;
-        
-        // Close any open menu dropdown
-        var headerMenu = document.getElementById('headerMenu');
-        if (headerMenu) headerMenu.style.display = 'none';
-        
-        // Auto-play music when opening modal
-        var toggle = document.getElementById('musicToggle');
-        if (!toggle.checked) {
-            toggle.checked = true;
-            this.playBackgroundMusic();
-        }
-        
-        // Create modal
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.style.zIndex = '9999';
-        
-        var isPlaying = toggle.checked;
-        var currentTrack = MUSIC_PLAYLIST[this.currentSongIndex] || '';
-        var trackName = currentTrack.split('/').pop().replace(/[0-9_]/g, '').replace('.m4a', '') || 'Unknown';
-        
-        modal.innerHTML = `
-            <div style="background: white; border-radius: 20px; padding: 28px; max-width: 400px; width: 95%; animation: slideUp 0.3s ease; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                    <h2 style="font-size: 18px; font-weight: 700; color: #1e293b; margin: 0;">Music Player</h2>
-                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">✕</button>
-                </div>
-                
-                <!-- Now Playing -->
-                <div style="background: #f0f4f8; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-                    <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">Now Playing</div>
-                    <div style="font-weight: 600; color: #1e293b; font-size: 14px;">${trackName}</div>
-                    <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Playing</div>
-                </div>
-                
-                <!-- Music Controls -->
-                <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 20px;">
-                    <button onclick="app.previousTrack()" style="background: #e2e8f0; color: #1e293b; border: none; padding: 12px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">← Previous</button>
-                    <button onclick="app.toggleMusic()" style="background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">Pause</button>
-                    <button onclick="app.nextTrack()" style="background: #e2e8f0; color: #1e293b; border: none; padding: 12px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">Next →</button>
-                </div>
-                
-                <!-- Upload Music -->
-                <div style="border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                    <h3 style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0;">Upload Your Music</h3>
-                    <input type="file" id="musicUploadInput" accept="audio/*" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px;">
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">Max size: 5MB</div>
-                    <button onclick="app.uploadCustomMusic()" style="width: 100%; background: #0088cc; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 10px;">Upload</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-    },
-
-    toggleMusic: function() {
-        var toggle = document.getElementById('musicToggle');
-        var isEnabled = toggle.checked;
-        var toggleLabel = toggle.parentElement;
-       
-        localStorage.setItem('chichi-music-enabled', isEnabled ? 'true' : 'false');
-       
-        if (isEnabled) {
-            this.isShuffleEnabled = true;
-            this.currentSongIndex = 0;
-            this.playBackgroundMusic();
-            if (toggleLabel) toggleLabel.classList.add('playing');
-            this.toast('Music ON', 'success');
-        } else {
-            this.stopBackgroundMusic();
-            if (toggleLabel) toggleLabel.classList.remove('playing');
-            this.toast('Music OFF', 'success');
-        }
-    },
-
-    nextTrack: function() {
-        this.currentSongIndex = this.getRandomSongIndex();
-        if (document.getElementById('musicToggle').checked) {
-            this.playBackgroundMusic();
-        }
-    },
-
-    previousTrack: function() {
-        this.currentSongIndex = (this.currentSongIndex - 1 + MUSIC_PLAYLIST.length) % MUSIC_PLAYLIST.length;
-        if (document.getElementById('musicToggle').checked) {
-            this.playBackgroundMusic();
-        }
-    },
-
-    uploadCustomMusic: function() {
-        var input = document.getElementById('musicUploadInput');
-        var file = input.files[0];
-        
-        if (!file) {
-            this.toast('Please select a file', 'error');
-            return;
-        }
-        
-        // Check file size (5MB max)
-        var maxSize = 5 * 1024 * 1024; // 5MB
-        if (file.size > maxSize) {
-            this.toast('File too large. Max 5MB allowed', 'error');
-            return;
-        }
-        
-        // Show upload progress
-        this.toast('Uploading music...', 'info');
-        
-        // Upload to Cloudinary
-        var formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', UPLOAD_PRESET);
-        
-        fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/auto/upload', {
-            method: 'POST',
-            body: formData
-        })
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            if (data.secure_url) {
-                // Save to user profile
-                app.profile.customMusic = data.secure_url;
-                db.ref('users/' + app.user.uid).update({ customMusic: data.secure_url });
-                app.toast('Music uploaded successfully!', 'success');
-                input.value = '';
-            }
-        })
-        .catch(function(err) {
-            console.error('Upload error:', err);
-            app.toast('Upload failed', 'error');
-        });
-    },
-
-    playBackgroundMusic: function() {
-        var audio = document.getElementById('themeMusic');
-        if (!audio) return;
-        
-        var musicUrl = MUSIC_PLAYLIST[this.currentSongIndex];
-       
-        audio.src = musicUrl;
-        audio.volume = 0;
-        audio.loop = false;
-       
-        audio.play().then(function() {
-            var fadeIn = setInterval(function() {
-                if (audio.volume < 0.3) {
-                    audio.volume += 0.05;
-                } else {
-                    clearInterval(fadeIn);
-                }
-            }, 200);
-        }).catch(function(err) {
-            console.log('Could not play audio:', err);
-        });
-    },
-
-    stopBackgroundMusic: function() {
-        var audio = document.getElementById('themeMusic');
-        if (!audio) return;
-        
-        audio.volume = Math.max(0, audio.volume - 0.05);
-        
-        var fadeOut = setInterval(function() {
-            if (!audio) {
-                clearInterval(fadeOut);
-                return;
-            }
-            
-            if (audio.volume > 0.05) {
-                audio.volume = Math.max(0, audio.volume - 0.05);
-            } else {
-                audio.volume = 0;
-                audio.pause();
-                clearInterval(fadeOut);
-            }
-        }, 200);
-    },
-
-    getRandomSongIndex: function() {
-        var randomIndex;
-        do {
-            randomIndex = Math.floor(Math.random() * MUSIC_PLAYLIST.length);
-        } while (randomIndex === this.currentSongIndex && MUSIC_PLAYLIST.length > 1);
-        return randomIndex;
-    },
-
-    playNextSong: function() {
-        if (this.isShuffleEnabled) {
-            this.currentSongIndex = this.getRandomSongIndex();
-        } else {
-            this.currentSongIndex = (this.currentSongIndex + 1) % MUSIC_PLAYLIST.length;
-        }
-        this.playBackgroundMusic();
-    },
-
-    // ============================================
     // LOAD SPINNER SETTINGS
     // ============================================
 
@@ -4411,15 +4186,6 @@ var app = {
             });
         }, 5000);
         
-        var musicEnabled = localStorage.getItem('chichi-music-enabled') === 'true';
-        var toggle = document.getElementById('musicToggle');
-       
-        if (musicEnabled) {
-            if (toggle) toggle.checked = true;
-        } else {
-            if (toggle) toggle.checked = false;
-        }
-        
         this.loadDarkModePreference();
     },
 
@@ -7437,8 +7203,6 @@ var app = {
                 </div>
                 
                 <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <button onclick="app.showMusicPlayer(); this.closest('.modal-overlay').remove();" style="width: 100%; text-align: left; padding: 16px 18px; border: none; background: #f8fafc; cursor: pointer; font-size: 15px; font-weight: 600; color: #1e293b; border-radius: 12px; transition: 0.2s;" onmouseover="this.style.background='#f0f4f8'" onmouseout="this.style.background='#f8fafc'">♪ Music Player</button>
-                    
                     <button onclick="app.refreshCurrentPage(); this.closest('.modal-overlay').remove();" style="width: 100%; text-align: left; padding: 16px 18px; border: none; background: #f8fafc; cursor: pointer; font-size: 15px; font-weight: 600; color: #1e293b; border-radius: 12px; transition: 0.2s;" onmouseover="this.style.background='#f0f4f8'" onmouseout="this.style.background='#f8fafc'">↻ Refresh Page</button>
                     
                     <button onclick="app.showAppSettings(); this.closest('.modal-overlay').remove();" style="width: 100%; text-align: left; padding: 16px 18px; border: none; background: #f8fafc; cursor: pointer; font-size: 15px; font-weight: 600; color: #1e293b; border-radius: 12px; transition: 0.2s;" onmouseover="this.style.background='#f0f4f8'" onmouseout="this.style.background='#f8fafc'">⚙️ Settings</button>
@@ -8058,7 +7822,6 @@ var app = {
 // ============================================
 
 app.init();
-app.initMusic();
 
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
 console.log('%c❤️ Like, Comment, Save & Share all posts!', 'color: #0088cc; font-size: 12px;');
