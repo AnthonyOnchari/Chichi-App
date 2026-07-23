@@ -366,7 +366,7 @@ console.log('✅ Configuration loaded successfully');
             <div style="padding: 16px; background: white; border-bottom: 1px solid #f0f0f0;">
                 <div style="display: flex; gap: 8px; background: #f5f5f5; border-radius: 24px; padding: 10px 16px; align-items: center;">
                     <span style="font-size: 20px;">🔍</span>
-                    <input type="text" id="exploreSearchInput" placeholder="Search users, posts, hashtags..." style="background: none; border: none; flex: 1; font-size: 15px; outline: none;" onkeyup="app.searchExploreUsers(this.value)">
+                    <input type="text" id="exploreSearchInput" placeholder="Search users, posts, hashtags..." style="background: none; border: none; flex: 1; font-size: 15px; outline: none;" onkeyup="if(window.app) app.searchExploreUsers(this.value)">
                 </div>
             </div>
             
@@ -418,7 +418,7 @@ console.log('✅ Configuration loaded successfully');
                 <h2>Messages</h2>
                 <div style="display: flex; background: #f0f0f0; border-radius: 24px; padding: 8px 12px; margin-bottom: 12px;">
                     <span style="font-size: 18px; margin-right: 8px;">🔍</span>
-                    <input type="text" placeholder="Search conversations..." id="messagesSearchInput" onkeyup="app.searchMessages(this.value)" style="background: none; border: none; flex: 1; font-size: 14px; outline: none;">
+                    <input type="text" placeholder="Search conversations..." id="messagesSearchInput" onkeyup="if(window.app) app.searchMessages(this.value)" style="background: none; border: none; flex: 1; font-size: 14px; outline: none;">
                 </div>
                 <div id="messagesFilterTabs">
                     <button class="message-filter-tab active" onclick="app.filterMessages('all')">All</button>
@@ -600,7 +600,7 @@ console.log('✅ Configuration loaded successfully');
         <!-- Users -->
         <div class="admin-tab-content" id="adminUsers">
             <div style="margin-bottom:16px;">
-                <input type="text" id="userSearchInput" placeholder="Search by name, email, or #hashtag..." class="form-input" onkeyup="app.searchUsers(this.value)" style="background: white; border: 2px solid #e5e7eb; padding: 12px; border-radius: 10px; font-size: 14px; transition: 0.2s;" onfocus="this.style.borderColor='#0088cc'; this.style.boxShadow='0 0 0 3px rgba(0,136,204,0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                <input type="text" id="userSearchInput" placeholder="Search by name, email, or #hashtag..." class="form-input" onkeyup="if(window.app) app.searchUsers(this.value)" style="background: white; border: 2px solid #e5e7eb; padding: 12px; border-radius: 10px; font-size: 14px; transition: 0.2s;" onfocus="this.style.borderColor='#0088cc'; this.style.boxShadow='0 0 0 3px rgba(0,136,204,0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
             </div>
             <div id="adminUsersList"></div>
         </div>
@@ -696,13 +696,26 @@ console.log('✅ Configuration loaded successfully');
     </div>
 </div>
 
-<script src="js/app.js"></script>
+<script src="js/app.js" defer></script>
 <script>
+    // Safe wrapper for app methods before app loads
+    window.appReady = false;
+    
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof app !== 'undefined' && app.init) { 
             app.init();
+            window.appReady = true;
         }
     });
+    
+    // Fallback if DOMContentLoaded already fired
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            window.appReady = true;
+        });
+    } else {
+        window.appReady = true;
+    }
 </script>
 
 </body>
