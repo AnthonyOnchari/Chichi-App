@@ -2588,7 +2588,7 @@ var app = {
             winAmount: winAmount,
             modal: modal,
             isSpinning: false,
-            winIndex: winIndex
+            winIndex: winSegmentIndex
         };
         
         // Ensure canvas exists before drawing
@@ -2658,7 +2658,13 @@ var app = {
     },
 
     startSpin: function() {
-        if (this._spinnerData && this._spinnerData.isSpinning) return;
+        // Safety check - ensure spinner data exists
+        if (!this._spinnerData) {
+            this.toast('⚠️ Spinner not ready. Please try again.', 'error');
+            return;
+        }
+        
+        if (this._spinnerData.isSpinning) return;
         
         var self = this;
         var spinBtn = document.getElementById('spinButton');
