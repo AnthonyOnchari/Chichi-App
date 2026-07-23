@@ -2525,10 +2525,31 @@ var app = {
             { value: 500, label: 'KSh 500', color: '#ec4899' }      // Pink
         ];
         
-        // Randomly place the win amount in one of the segments (but not Loss)
-        var winSegmentIndex = Math.floor(Math.random() * (segments.length - 1)) + 1;
-        segments[winSegmentIndex].value = winAmount;
-        segments[winSegmentIndex].label = 'KSh ' + winAmount;
+        // Find the segment that matches the win amount (or closest match)
+        var winSegmentIndex = 0;
+        if (winAmount === 0) {
+            winSegmentIndex = 0;  // Loss
+        } else if (winAmount <= 20) {
+            winSegmentIndex = 1;  // KSh 20
+        } else if (winAmount <= 50) {
+            winSegmentIndex = 2;  // KSh 50
+        } else if (winAmount <= 100) {
+            winSegmentIndex = 3;  // KSh 100
+        } else if (winAmount <= 200) {
+            winSegmentIndex = 4;  // KSh 200
+        } else {
+            winSegmentIndex = 5;  // KSh 500 or higher
+        }
+        
+        // Store the actual win value (not modified segment)
+        var actualWinValue = winAmount;
+        
+        // Update the winning segment's label to display the actual win amount
+        if (winAmount === 0) {
+            segments[winSegmentIndex].label = 'Loss';
+        } else {
+            segments[winSegmentIndex].label = 'KSh ' + winAmount;
+        }
         
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
@@ -2700,9 +2721,8 @@ var app = {
             winIndex = Math.floor(Math.random() * segments.length);
         }
         
-        // Make sure the segment at winIndex has the correct value
-        // This is the actual value that will be won
-        var actualWinValue = segments[winIndex].value;
+        // Use the actual winAmount (not segment value)
+        var actualWinValue = winAmount;
         
         var segmentAngle = (2 * Math.PI) / segments.length;
         // Calculate target rotation so the winning segment lands at the TOP pointer
