@@ -2,23 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CHICHI - Social Media</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="css/style.css">
     
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
     
-    <!-- LEAFLET MAP LIBRARY -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-    
-    <script src="config.js"></script>
+    <script src="js/config.js"></script>
 </head>
 <body>
 
@@ -62,7 +59,7 @@
             <form onsubmit="app.handleLogin(event)">
                 <div class="form-group">
                     <label class="form-label">Email</label>
-                    <input type="email" class="form-input" id="loginEmail" placeholder="your@email.com" required>
+                    <input type="text" class="form-input" id="loginEmail" placeholder="@username or email" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Password</label>
@@ -85,6 +82,17 @@
                 <button type="button" class="social-btn" onclick="app.signInWithGoogle()" style="width: 100%;">
                     <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
                 </button>
+                
+                <div style="margin-top: 16px; text-align: center;">
+                    <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                        <div style="padding: 0 12px; color: var(--text-light); font-size: 0.85rem;">Or browse</div>
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn-submit" onclick="app.continueAsGuest()" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none;">
+                    <span style="font-size: 1.2rem; margin-right: 8px;">👤</span> Continue as Guest
+                </button>
             </form>
         </div>
 
@@ -96,21 +104,17 @@
                     <input type="text" class="form-input" id="signupName" placeholder="Your Name" required>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" id="signupUsername" placeholder="@username" required>
+                    <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">3-20 characters, letters and numbers only</div>
+                </div>
+                <div class="form-group">
                     <label class="form-label">Email</label>
                     <input type="email" class="form-input" id="signupEmail" placeholder="your@email.com" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Password</label>
                     <input type="password" class="form-input" id="signupPassword" placeholder="Min 6 chars" required>
-                </div>
-                
-                <!-- LOCATION AUTO-DETECT -->
-                <div class="form-group">
-                    <label class="form-label">📍 Location (Auto-Detected)</label>
-                    <div id="locationStatus" style="padding: 10px; background: #f0f0f0; border-radius: 8px; text-align: center; color: #666; font-size: 14px; margin-bottom: 8px;">
-                        🔄 Detecting your location...
-                    </div>
-                    <input type="hidden" id="signupLocation">
                 </div>
                 
                 <button type="submit" class="btn-submit" id="signupBtn">
@@ -127,6 +131,17 @@
                 <button type="button" class="social-btn" onclick="app.signInWithGoogle()" style="width: 100%;">
                     <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
                 </button>
+                
+                <div style="margin-top: 16px; text-align: center;">
+                    <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                        <div style="padding: 0 12px; color: var(--text-light); font-size: 0.85rem;">Or browse</div>
+                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn-submit" onclick="app.continueAsGuest()" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none;">
+                    <span style="font-size: 1.2rem; margin-right: 8px;">👤</span> Continue as Guest
+                </button>
             </form>
         </div>
     </div>
@@ -134,35 +149,25 @@
 
 <!-- MAIN APP -->
 <div class="main-app" id="mainApp">
-    <!-- HEADER -->
     <div class="app-header">
-        <div class="header-left">
-            <div id="storiesList">
-                <!-- Stories will render here -->
-            </div>
-            <h1 class="header-title">CHICHI</h1>
+        <div class="header-left" style="gap: 6px;">
+            <!-- HEADER JUST SHOWS LOGO -->
+            <h1 class="header-title" style="font-size: 16px; font-weight: 800; letter-spacing: 1px;">CHICHI</h1>
         </div>
         
-        <div class="header-actions">
-            <label class="music-toggle-3d" title="Toggle music">
-                <input type="checkbox" id="musicToggle" onchange="app.toggleMusic()">
-                <div class="toggle-cube">
-                    <div class="toggle-face front">🔇</div>
-                    <div class="toggle-face back">🎵</div>
-                </div>
-            </label>
-            <button class="btn-icon" onclick="app.loadPosts()" id="refreshFeedBtn">↻</button>
-            <button class="btn-icon" onclick="app.showHeaderMenu()">⋯</button>
-        </div>
-        
-        <!-- HEADER MENU -->
-        <div id="headerMenu" style="display: none; position: fixed; top: 48px; right: 12px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 150px;">
-            <button onclick="app.openAdminModal(); app.closeHeaderMenu();" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f0f0f0;">⚙️ Admin</button>
-            <button onclick="app.showLogout(); app.closeHeaderMenu();" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #ef4444;">🚪 Logout</button>
+        <!-- ICONS CONTAINER CIRCLE -->
+        <div class="header-actions" style="background: #f0f4f8; border-radius: 50px; padding: 8px 16px; display: flex; gap: 8px; align-items: center; margin-left: 12px;">
+            <!-- MUSIC ICON -->
+            <button class="btn-icon" onclick="app.showMusicPlayer()" title="Music player" style="background: none; border: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #1e293b; font-size: 18px; transition: 0.2s; border-radius: 50%;" onmouseover="this.style.background='rgba(0,0,0,0.1)'" onmouseout="this.style.background='none'">♪</button>
+            
+            <!-- REFRESH ICON -->
+            <button class="btn-icon" onclick="app.refreshCurrentPage()" title="Refresh current page" style="background: none; border: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #1e293b; font-size: 18px; transition: 0.3s; border-radius: 50%;" onmouseover="this.style.background='rgba(0,0,0,0.1)'; this.style.transform='rotate(180deg)'" onmouseout="this.style.background='none'; this.style.transform='rotate(0)'" id="globalRefreshBtn">↻</button>
+            
+            <!-- MENU ICON -->
+            <button class="btn-icon" onclick="app.showHeaderMenuModal()" title="Menu" style="background: none; border: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #1e293b; font-size: 18px; transition: 0.2s; border-radius: 50%;" onmouseover="this.style.background='rgba(0,0,0,0.1)'" onmouseout="this.style.background='none'">⋯</button>
         </div>
     </div>
 
-    <!-- APP CONTENT -->
     <div class="app-content">
         <!-- FEED VIEW -->
         <div class="view active" id="feedView">
@@ -170,102 +175,66 @@
                 <div class="quick-post-avatar" id="quickPostAvatar">U</div>
                 <input type="text" class="quick-post-input" placeholder="Share something..." readonly>
             </div>
+            
+            <!-- INSTAGRAM-STYLE STORIES CAROUSEL -->
+            <div style="padding: 12px 16px; background: white; border-bottom: 1px solid #f0f0f0; overflow-x: auto; overflow-y: hidden;">
+                <div id="storiesCarousel" style="display: flex; gap: 12px; align-items: center; flex-wrap: nowrap; padding: 4px 0;">
+                    <!-- Stories will be rendered here by loadStories() -->
+                </div>
+            </div>
+            
             <div id="feedContainer"></div>
         </div>
 
         <!-- EXPLORE VIEW -->
         <div class="view" id="exploreView">
-            <div style="position: sticky; top: 0; z-index: 30; background: white; border-bottom: 1px solid #e0e0e0; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0;">🔍 Discover</h3>
-                <button style="background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 600;" onclick="app.loadExplore()">🔄 Refresh</button>
-            </div>
-            
             <!-- SEARCH BAR -->
             <div style="padding: 16px; background: white; border-bottom: 1px solid #f0f0f0;">
                 <div style="display: flex; gap: 8px; background: #f5f5f5; border-radius: 24px; padding: 10px 16px; align-items: center;">
                     <span style="font-size: 20px;">🔍</span>
-                    <input type="text" id="exploreSearchInput" placeholder="Search for a user..." style="background: none; border: none; flex: 1; font-size: 15px; outline: none;" onkeyup="app.searchExploreUsers(this.value)">
+                    <input type="text" id="exploreSearchInput" placeholder="Search users, posts, hashtags..." style="background: none; border: none; flex: 1; font-size: 15px; outline: none;" onkeyup="app.searchExploreUsers(this.value)">
                 </div>
             </div>
             
-            <!-- STATS CARDS -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px;">
-                <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 4px solid #0088cc;">
-                    <div style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Total Signups</div>
-                    <div style="font-size: 22px; font-weight: 800; color: #1a202c; margin: 4px 0;" id="totalSignups">0</div>
-                    <div style="font-size: 11px; color: #22c55e; display: flex; align-items: center; gap: 4px;">
-                        <span>↑</span> <span id="signupGrowth">+0%</span> <span style="color: #6b7280;">vs yesterday</span>
-                    </div>
-                </div>
-                <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 4px solid #f59e0b;">
-                    <div style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Currently Online</div>
-                    <div style="font-size: 22px; font-weight: 800; color: #1a202c; margin: 4px 0;" id="onlineCount">0</div>
-                    <div style="font-size: 11px; color: #6b7280;">Active now</div>
-                </div>
-            </div>
-            
-            <!-- LIVE MAP -->
-            <div style="padding: 0 16px 8px 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #1a202c;">🌍 Live Signups Map</h4>
-                    <span style="font-size: 11px; color: #22c55e; display: flex; align-items: center; gap: 4px;">
-                        <span id="liveDot" style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; display: inline-block; animation: livePulse 1.5s infinite;"></span>
-                        LIVE
-                    </span>
-                </div>
-            </div>
-            
-            <!-- MAP CONTAINER -->
-            <div id="signupMapContainer" style="margin: 0 16px 16px 16px; height: 320px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #0f1419; position: relative;">
-                <div id="leafletMap" style="width: 100%; height: 100%;"></div>
-                <div id="heatmapDots" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></div>
-            </div>
-            
-            <!-- LIVE COUNTER -->
-            <div style="padding: 0 16px 12px 16px;">
-                <div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 12px; padding: 16px 20px; box-shadow: 0 4px 16px rgba(0,136,204,0.3);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Total Accounts</div>
-                            <div style="font-size: 32px; font-weight: 800; color: white; margin-top: 2px;" id="liveAccountCount">0</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Live Signups</div>
-                            <div style="font-size: 18px; font-weight: 700; color: #4ade80; margin-top: 2px;">
-                                <span id="liveSignupRate">+0</span> <span style="font-size: 12px; color: rgba(255,255,255,0.6);">today</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="margin-top: 8px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
-                        <div id="liveProgressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #4ade80, #22d3ee); border-radius: 2px; transition: width 0.5s ease;"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: rgba(255,255,255,0.5);">
-                        <span>🚀 Growing</span>
-                        <span id="liveGrowthTime">Just now</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- RECENT ACTIVITY FEED -->
-            <div style="padding: 0 16px 16px 16px;">
-                <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #1a202c;">🕐 Recent Activity</h4>
-                        <span style="font-size: 11px; color: #6b7280;">Live feed</span>
-                    </div>
-                    <div id="recentActivityFeed" style="max-height: 200px; overflow-y: auto;">
-                        <div style="text-align: center; color: #6b7280; padding: 20px; font-size: 13px;">Loading activity...</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- TRENDING SECTION -->
-            <div id="trendingSection"></div>
-            
-            <!-- SEARCH RESULTS -->
-            <div id="exploreSearchResults" style="display: none; padding: 16px; border-top: 1px solid #f0f0f0;">
-                <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700;">Search Results</h4>
+            <!-- SEARCH RESULTS (Right below search) -->
+            <div id="exploreSearchResults" style="display: none; padding: 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #1e293b;">Search Results</h4>
                 <div id="exploreSearchResultsList"></div>
+            </div>
+            
+            <!-- QUICK DISCOVERY BUTTONS (Hidden when searching) -->
+            <div id="quickDiscoverySection" style="padding: 16px; background: white; border-bottom: 1px solid #f0f0f0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                <button onclick="app.showSimilarInterestsModal()" style="background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border: none; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(6,182,212,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    Similar
+                </button>
+                <button onclick="app.showFeaturedUsersModal()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(245,158,11,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    Featured
+                </button>
+                <button onclick="app.showTopCreatorsModal()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(139,92,246,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    Top Creators
+                </button>
+            </div>
+            
+            <!-- TRENDING HASHTAGS SECTION (Hidden when searching) -->
+            <div id="trendingSection" style="padding: 20px 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                    <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">Trending Now</h4>
+                    <button onclick="app.calculateTrendingHashtags(); app.renderTrendingInExplore();" style="background: none; border: none; color: var(--primary); cursor: pointer; font-size: 12px; font-weight: 600;">Refresh</button>
+                </div>
+                <div id="trendingHashtagsContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div style="text-align: center; color: #6b7280; padding: 30px;">Loading...</div>
+                </div>
+            </div>
+            
+            <!-- TRENDING POSTS SECTION (Hidden when searching) -->
+            <div id="postsSection" style="padding: 0 16px 20px 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                    <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">Trending Posts</h4>
+                    <span style="font-size: 12px; color: #6b7280;">Most liked</span>
+                </div>
+                <div id="trendingPostsContainer" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; background: #e2e8f0;">
+                    <div style="text-align: center; color: #6b7280; padding: 60px 20px; grid-column: 1/-1;">Loading...</div>
+                </div>
             </div>
         </div>
 
@@ -287,7 +256,7 @@
         </div>
 
         <!-- CHAT VIEW -->
-        <div class="view" id="chatView">
+        <div id="chatView">
             <div id="chatHeader">
                 <button id="chatBackBtn" onclick="app.closeChatView()">←</button>
                 <div id="chatHeaderAvatar"></div>
@@ -305,7 +274,7 @@
             <div id="chatInput">
                 <button class="attach-btn" onclick="document.getElementById('chatImageInput').click()" style="background:none;border:none;font-size:20px;cursor:pointer;padding:8px;opacity:0.6;">📎</button>
                 <input type="file" id="chatImageInput" style="display:none;" accept="image/*" multiple onchange="app.handleChatImageUpload(event)">
-                <input type="text" id="chatMessageInput" placeholder="Type a message..." oninput="app.onChatInputChange(event, window.currentChatUid)">
+                <input type="text" id="chatMessageInput" placeholder="Type a message..." oninput="app.onChatInputChange(event, window.currentChatUid)" onfocus="var chatMessages=document.getElementById('chatMessages');if(chatMessages){setTimeout(function(){chatMessages.scrollTop=chatMessages.scrollHeight;},50);}">
                 <button id="chatSendBtn" onclick="app.sendChatMessage()">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
                         <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -314,13 +283,9 @@
             </div>
         </div>
 
-        <!-- GROUPS VIEW -->
-        <div class="view" id="groupsView">
-            <div class="groups-header">
-                <h2 style="margin:0;">My Groups</h2>
-                <button class="btn-primary" onclick="app.showCreateGroupModal()">+ Create Group</button>
-            </div>
-            <div class="groups-list" id="groupsList"></div>
+        <!-- EARN VIEW -->
+        <div class="view" id="earnView">
+            <div id="earnContainer"></div>
         </div>
 
         <!-- PROFILE VIEW -->
@@ -329,47 +294,42 @@
         </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION -->
+    <!-- BOTTOM NAV -->
     <div class="bottom-nav">
         <div class="nav-wrapper">
             <div class="nav-item active" onclick="app.switchView('feed')">
                 <div class="nav-icon">🏠</div>
-                <div>Home</div>
+                <div class="nav-label">Home</div>
             </div>
             <div class="nav-item" onclick="app.switchView('explore')">
                 <div class="nav-icon">🔍</div>
-                <div>Explore</div>
+                <div class="nav-label">Explore</div>
             </div>
             <div class="nav-item" onclick="app.switchView('messages')" style="position: relative;">
                 <div class="nav-icon">💬</div>
-                <div>Chats</div>
+                <div class="nav-label">Chats</div>
                 <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
             </div>
             
-            <!-- FAB BUTTON -->
             <button class="fab-button" onclick="app.showCreateModal()">✚</button>
             
-            <div class="nav-item" onclick="app.switchView('groups')">
-                <div class="nav-icon">👥</div>
-                <div>Groups</div>
+            <div class="nav-item" onclick="app.switchView('earn')">
+                <div class="nav-icon">💰</div>
+                <div class="nav-label">Earn</div>
             </div>
             <div class="nav-item" onclick="app.switchView('profile')">
                 <div class="nav-icon">👤</div>
-                <div>Profile</div>
+                <div class="nav-label">Profile</div>
             </div>
             <div class="nav-item" onclick="app.showAbout()">
                 <div class="nav-icon">ℹ️</div>
-                <div>About</div>
+                <div class="nav-label">About</div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ============================================ -->
-<!-- ALL MODALS (Placed outside main app)          -->
-<!-- ============================================ -->
-
-<!-- FORGOT PASSWORD MODAL -->
+<!-- ALL MODALS -->
 <div class="modal-overlay" id="forgotPasswordModal">
     <div class="modal">
         <div class="modal-close"><button onclick="app.closeForgotPasswordModal()">✕</button></div>
@@ -382,7 +342,6 @@
     </div>
 </div>
 
-<!-- CREATE POST MODAL - FIXED -->
 <div class="modal-overlay" id="createModal">
     <div class="create-modal">
         <div class="modal-close">
@@ -399,10 +358,13 @@
             <span class="share-btn-text">Share Post</span>
             <span class="share-spinner" style="display: none; margin-left: 8px;">⏳</span>
         </button>
+        <button type="button" class="btn-submit" id="shareStoryBtn" onclick="app.createStory()" style="background: linear-gradient(135deg, #8b5cf6, #6366f1); margin-top: 12px;">
+            <span class="share-btn-text">Share Story</span>
+            <span class="share-spinner" style="display: none; margin-left: 8px;">⏳</span>
+        </button>
     </div>
 </div>
 
-<!-- ADMIN MODAL -->
 <div class="modal-overlay" id="adminModal">
     <div class="modal" style="max-width:600px;">
         <div class="modal-close"><button onclick="app.closeAdminModal()">✕</button></div>
@@ -415,7 +377,7 @@
     </div>
 </div>
 
-<!-- ADMIN PORTAL -->
+<!-- ADMIN PORTAL - UPDATED WITH NEW TABS -->
 <div class="admin-portal" id="adminPortal">
     <div class="admin-header">
         <h2>⚙️ Admin Portal</h2>
@@ -424,11 +386,17 @@
     <div class="admin-tabs">
         <button class="admin-tab active" onclick="app.switchAdminTab('dashboard')">📊 Dashboard</button>
         <button class="admin-tab" onclick="app.switchAdminTab('users')">👥 Users</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('incomplete')">⚠️ Incomplete</button>
         <button class="admin-tab" onclick="app.switchAdminTab('posts')">📝 Posts</button>
         <button class="admin-tab" onclick="app.switchAdminTab('withdrawals')">💰 Withdrawals</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('payments')">⭐ Upgrades</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('spinner')">🎰 Spinner</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('triviaplans')">📚 Trivia Plans</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('notifications')">🔔 Notifications</button>
         <button class="admin-tab" onclick="app.switchAdminTab('logs')">📋 Logs</button>
     </div>
     <div class="admin-content">
+        <!-- Dashboard -->
         <div class="admin-tab-content active" id="adminDashboard">
             <div class="admin-stat-grid">
                 <div class="admin-stat">
@@ -438,6 +406,10 @@
                 <div class="admin-stat">
                     <div class="admin-stat-value" id="adminPostCount">0</div>
                     <div class="admin-stat-label">Posts</div>
+                </div>
+                <div class="admin-stat">
+                    <div class="admin-stat-value" id="adminBannedCount">0</div>
+                    <div class="admin-stat-label">Banned Users</div>
                 </div>
                 <div class="admin-stat">
                     <div class="admin-stat-value" id="adminPendingCount">0</div>
@@ -450,25 +422,92 @@
             </div>
             <div id="adminWithdrawals"></div>
         </div>
+        
+        <!-- Users -->
         <div class="admin-tab-content" id="adminUsers">
             <div style="margin-bottom:16px;">
-                <input type="text" id="userSearchInput" placeholder="Search users..." class="form-input" onkeyup="app.searchUsers()">
+                <input type="text" id="userSearchInput" placeholder="Search by name, email, or #hashtag..." class="form-input" onkeyup="app.searchUsers(this.value)" style="background: white; border: 2px solid #e5e7eb; padding: 12px; border-radius: 10px; font-size: 14px; transition: 0.2s;" onfocus="this.style.borderColor='#0088cc'; this.style.boxShadow='0 0 0 3px rgba(0,136,204,0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
             </div>
             <div id="adminUsersList"></div>
         </div>
+        
+        <!-- Incomplete Users -->
+        <div class="admin-tab-content" id="adminIncomplete">
+            <div style="margin-bottom: 16px; padding: 12px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                <div style="font-size: 14px; color: #92400e;">⚠️ Users who signed up but haven't completed their profile</div>
+            </div>
+            <div id="incompleteUsersList"></div>
+        </div>
+        
+        <!-- Posts -->
         <div class="admin-tab-content" id="adminPosts">
             <div id="adminPostsList"></div>
         </div>
+        
+        <!-- Withdrawals -->
         <div class="admin-tab-content" id="adminWithdrawalsTab">
             <div id="adminWithdrawalsList"></div>
         </div>
+        
+        <!-- Payments/Upgrades -->
+        <div class="admin-tab-content" id="adminPaymentsTab">
+            <div id="paymentVerificationsList"></div>
+        </div>
+        
+        <!-- Spinner -->
+        <div class="admin-tab-content" id="adminSpinnerTab">
+            <div id="adminSpinnerControls"></div>
+        </div>
+        
+        <!-- Trivia Plans -->
+        <div class="admin-tab-content" id="adminTriviaPlansTab">
+            <div id="adminTriviaPlansList"></div>
+        </div>
+        
+        <!-- Suspicious Activity -->
+        <div class="admin-tab-content" id="adminSuspiciousTab">
+            <div id="suspiciousActivityList"></div>
+        </div>
+        
+        <!-- Notifications -->
+        <div class="admin-tab-content" id="adminNotificationsTab">
+            <div id="adminNotificationsList"></div>
+        </div>
+        
+        <!-- Logs -->
         <div class="admin-tab-content" id="adminLogs">
             <div id="activityLogList"></div>
         </div>
     </div>
 </div>
 
-<!-- LOGOUT MODAL -->
+<div class="modal-overlay" id="withdrawModal">
+    <div class="modal">
+        <div class="modal-close"><button onclick="app.closeWithdrawModal()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;">💰 Withdraw</h2>
+        <div style="background: #f0f7ff; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+            <div style="font-size: 14px; color: #1a202c;">Available Balance: <strong id="withdrawBalanceDisplay">KSh 0</strong></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Amount (KSh)</label>
+            <input type="number" class="form-input" id="withdrawAmount" placeholder="Enter amount" min="1" step="0.1">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Method</label>
+            <select class="form-input" id="paymentMethod">
+                <option value="M-Pesa">M-Pesa</option>
+                <option value="Airtel Money">Airtel Money</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Account/Phone</label>
+            <input type="text" class="form-input" id="accountNumber" placeholder="0712345678">
+        </div>
+        <button type="button" class="btn-submit" onclick="app.processWithdrawal()">Withdraw</button>
+    </div>
+</div>
+
 <div class="logout-modal" id="logoutModal">
     <div class="logout-card">
         <h3>Logout?</h3>
@@ -483,14 +522,14 @@
     </div>
 </div>
 
-<!-- AUDIO ELEMENT FOR MUSIC -->
 <audio id="themeMusic" preload="auto"></audio>
+<input type="checkbox" id="musicToggle" style="display: none;">
 
 <script src="js/app.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof app !== 'undefined' && app.init) { 
-            app.init(); 
+            app.init();
         }
     });
 </script>
