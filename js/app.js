@@ -2627,13 +2627,22 @@ var app = {
             ctx.lineWidth = 1.5;
             ctx.stroke();
             
+            // Draw text label
             ctx.save();
             ctx.translate(centerX, centerY);
-            ctx.rotate(startAngle + segmentAngle / 2);
+            
+            var textAngle = startAngle + segmentAngle / 2;
+            ctx.rotate(textAngle);
+            
+            // If text is in bottom half (90-270°), rotate 180° more to keep it readable
+            if (textAngle > Math.PI / 2 && textAngle < (3 * Math.PI) / 2) {
+                ctx.rotate(Math.PI);
+            }
+            
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = 'white';
-            ctx.font = 'bold 11px Arial';
+            ctx.font = 'bold 12px Arial';
             ctx.shadowColor = 'rgba(0,0,0,0.5)';
             ctx.shadowBlur = 3;
             
