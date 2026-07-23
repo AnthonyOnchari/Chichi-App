@@ -2515,50 +2515,20 @@ var app = {
     showSpinnerWheel: function(winAmount) {
         var self = this;
         
-        // GENERATE 50 SEGMENTS WITH VALUES UP TO 1000
-        var segmentValues = [];
-        var segmentColors = [
-            '#FF6B6B', '#FF8E72', '#FFA07A', '#FFB84D', '#FFD93D',
-            '#A6E3A1', '#5ECE5E', '#10B981', '#06B6D4', '#0EA5E9',
-            '#3B82F6', '#6366F1', '#7C3AED', '#A855F7', '#D946EF',
-            '#EC4899', '#F43F5E', '#FF1744', '#FF6F00', '#FFC107',
-            '#FFEB3B', '#CDDC39', '#9CCC65', '#7CB342', '#558B2F',
-            '#00897B', '#00796B', '#00695C', '#004D40', '#0D47A1',
-            '#1A237E', '#311B92', '#4A148C', '#880E4F', '#B71C1C'
+        // SIMPLIFIED WHEEL - 6 SEGMENTS ONLY
+        var segments = [
+            { value: 0, label: 'Loss', color: '#ef4444' },          // Red - Loss
+            { value: 20, label: 'KSh 20', color: '#f59e0b' },       // Amber
+            { value: 50, label: 'KSh 50', color: '#22c55e' },       // Green
+            { value: 100, label: 'KSh 100', color: '#3b82f6' },     // Blue
+            { value: 200, label: 'KSh 200', color: '#8b5cf6' },     // Purple
+            { value: 500, label: 'KSh 500', color: '#ec4899' }      // Pink
         ];
         
-        // Create 50 segments with varied values
-        var valuePool = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100, 
-                         0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100,
-                         150, 200, 250, 300, 400, 500, 0, 0, 0];
-        
-        // Shuffle values
-        for (var i = valuePool.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var temp = valuePool[i];
-            valuePool[i] = valuePool[j];
-            valuePool[j] = temp;
-        }
-        
-        // Ensure we have exactly 50 segments
-        while (segmentValues.length < 50) {
-            segmentValues.push(valuePool[segmentValues.length % valuePool.length]);
-        }
-        
-        // Place the win amount
-        var winIndex = Math.floor(Math.random() * 50);
-        segmentValues[winIndex] = winAmount;
-        
-        var segments = [];
-        for (var i = 0; i < 50; i++) {
-            var value = segmentValues[i];
-            var label = value === 0 ? 'Lost' : 'KSh ' + value;
-            segments.push({
-                value: value,
-                label: label,
-                color: segmentColors[i % segmentColors.length]
-            });
-        }
+        // Randomly place the win amount in one of the segments (but not Loss)
+        var winSegmentIndex = Math.floor(Math.random() * (segments.length - 1)) + 1;
+        segments[winSegmentIndex].value = winAmount;
+        segments[winSegmentIndex].label = 'KSh ' + winAmount;
         
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
