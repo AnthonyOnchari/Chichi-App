@@ -5850,8 +5850,8 @@ var app = {
             }
             this.renderProfile();
             this.logUserActivity('update_profile', 'Updated profile');
-        },
-    }
+        }
+    },
 
     switchEarnTab: function(tabName) {
         // Hide all earn content containers
