@@ -4005,206 +4005,182 @@ var app = {
     // RENDER PROFILE - WITH FULL PROFILE INFO
     // ============================================
 
-    renderProfile: function() {
-        var profileContent = document.getElementById('profileContent');
-        if (!profileContent) {
-            var profileView = document.getElementById('profileView');
-            if (profileView) {
-                var content = document.createElement('div');
-                content.id = 'profileContent';
-                profileView.appendChild(content);
-                profileContent = content;
-            } else {
-                return;
-            }
-        }
-        
-        if (!this.user || this.isGuest) {
-            var html = `
-                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 20px;text-align:center;">
-                    <div style="font-size:48px;margin-bottom:16px;">👤</div>
-                    <div style="font-size:20px;font-weight:600;margin-bottom:8px;color:var(--text);">No Profile Yet</div>
-                    <div style="font-size:14px;color:var(--text-light);margin-bottom:24px;line-height:1.5;">
-                        Sign up or log in to create your profile, earn rewards, and connect with others.
-                    </div>
-                    <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:14px 32px;border-radius:8px;font-weight:600;cursor:pointer;font-size:16px;margin-bottom:12px;">📝 Sign Up / Login</button>
-                    <button onclick="app.switchView('feed')" style="background:white;color:var(--primary);border:2px solid var(--primary);padding:12px 32px;border-radius:8px;font-weight:600;cursor:pointer;font-size:16px;">Back to Feed</button>
-                </div>
-            `;
-            profileContent.innerHTML = html;
+    // ============================================
+// RENDER PROFILE - FIXED
+// ============================================
+
+renderProfile: function() {
+    var profileContent = document.getElementById('profileContent');
+    if (!profileContent) {
+        var profileView = document.getElementById('profileView');
+        if (profileView) {
+            var content = document.createElement('div');
+            content.id = 'profileContent';
+            profileView.appendChild(content);
+            profileContent = content;
+        } else {
             return;
         }
-        
-        var userTier = 'free';
-        var tierData = EARNING_SETTINGS[userTier];
-        var username = this.profile.username || 'user';
-        var interests = this.profile.interests || [];
-        var bio = this.profile.bio || '';
-        var userPosts = this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this)).length;
-
+    }
+    
+    if (!this.user || this.isGuest) {
         var html = `
-            <div style="padding: 0; background: #f5f5f5; min-height: 100vh;">
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 20px;text-align:center;">
+                <div style="font-size:48px;margin-bottom:16px;">👤</div>
+                <div style="font-size:20px;font-weight:600;margin-bottom:8px;color:var(--text);">No Profile Yet</div>
+                <div style="font-size:14px;color:var(--text-light);margin-bottom:24px;line-height:1.5;">
+                    Sign up or log in to create your profile, earn rewards, and connect with others.
+                </div>
+                <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:14px 32px;border-radius:8px;font-weight:600;cursor:pointer;font-size:16px;margin-bottom:12px;">📝 Sign Up / Login</button>
+                <button onclick="app.switchView('feed')" style="background:white;color:var(--primary);border:2px solid var(--primary);padding:12px 32px;border-radius:8px;font-weight:600;cursor:pointer;font-size:16px;">Back to Feed</button>
+            </div>
+        `;
+        profileContent.innerHTML = html;
+        return;
+    }
+    
+    var userTier = 'free';
+    var tierData = EARNING_SETTINGS[userTier];
+    var username = this.profile.username || 'user';
+    var interests = this.profile.interests || [];
+    var bio = this.profile.bio || '';
+    var userPosts = this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this)).length;
+    var followers = this.profile.followers || 0;
+    var following = Object.keys(this.following).length;
+
+    var html = `
+        <div style="padding: 0; background: #f5f5f5; min-height: 100vh;">
+            
+            <!-- PROFILE HEADER WITH COVER -->
+            <div style="position: relative; width: 100%; background: #1a1a1a; overflow: hidden;">
                 
-                <!-- PROFILE CARD -->
-                <div style="width: 100%; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <!-- Cover Image -->
+                <div style="position: relative; width: 100%; height: 200px; background: linear-gradient(135deg, #2d1b69 0%, #3d2680 100%); overflow: hidden;">
+                    ${this.profile.coverImage ? `
+                        <img src="${this.profile.coverImage}" style="width:100%;height:100%;object-fit:cover;">
+                    ` : `
+                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:14px;">
+                            🌄
+                        </div>
+                    `}
                     
-                    <!-- COVER IMAGE SECTION -->
-                    <div style="position: relative; width: 100%; height: 280px; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; align-items: flex-end; justify-content: center; padding: 20px; cursor: pointer; overflow: hidden;" onclick="app.showCoverImageModal()">
-                        
-                        <!-- Cover Image -->
-                        ${this.profile.coverImage ? `
-                            <img src="${this.profile.coverImage}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
-                        ` : ''}
-                        
-                        <!-- Overlay -->
-                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: ${this.profile.coverImage ? 'rgba(0,0,0,0.2)' : 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'}; display: flex; align-items: center; justify-content: center;">
-                            <div style="text-align: center; color: white; font-size: 12px; opacity: 0.7;">📷 Click to change cover</div>
-                        </div>
-                        
-                        <!-- Social Icons (Top Right) -->
-                        <div style="position: absolute; top: 16px; right: 16px; display: flex; gap: 12px; z-index: 5;">
-                            <a href="#" style="color: white; font-size: 18px; text-decoration: none;">📷</a>
-                            <a href="#" style="color: white; font-size: 18px; text-decoration: none;">𝕏</a>
-                            <a href="#" style="color: white; font-size: 18px; text-decoration: none;">👍</a>
-                        </div>
-                        
-                        <!-- Back Button (Top Left) -->
-                        <div style="position: absolute; top: 16px; left: 16px; z-index: 5;">
-                            <button onclick="app.switchView('feed');" style="background: rgba(0,0,0,0.5); border: none; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px;">←</button>
-                        </div>
-                        
-                        <!-- Circular Profile Photo (Overlapping) -->
+                    <!-- Change Cover Button (Small, subtle) -->
+                    <button onclick="app.showCoverImageModal()" style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.5);color:white;border:none;padding:4px 10px;border-radius:12px;font-size:10px;cursor:pointer;backdrop-filter:blur(4px);">📷 Cover</button>
+                    
+                    <!-- Back Button -->
+                    <button onclick="app.switchView('feed');" style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.5);color:white;border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;backdrop-filter:blur(4px);">‹</button>
+                    
+                    <!-- Profile Photo (Overlapping) -->
+                    <div style="position:absolute;bottom:-50px;left:50%;transform:translateX(-50%);">
                         <div style="
-                            width: 140px;
-                            height: 140px;
+                            width: 100px;
+                            height: 100px;
                             border-radius: 50%;
-                            border: 6px solid white;
+                            border: 4px solid white;
                             background: linear-gradient(135deg, #667eea, #764ba2);
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            font-size: 60px;
+                            font-size: 40px;
                             color: white;
-                            font-weight: 800;
-                            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+                            font-weight: 700;
+                            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
                             background-image: ${this.profile.profilePhoto ? 'url(' + this.profile.profilePhoto + ')' : 'none'};
                             background-size: cover;
                             background-position: center;
                             cursor: pointer;
                             transition: transform 0.3s;
-                            margin-bottom: -70px;
-                            position: relative;
-                            z-index: 10;
-                        " onclick="event.stopPropagation(); app.showProfilePhotoModal()" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'" title="Click to change profile photo">
+                        " onclick="app.showProfilePhotoModal()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                             ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
-                            
-                            <!-- Photo Edit Badge -->
-                            <div style="position: absolute; bottom: 0; right: 0; background: #3b82f6; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; border: 3px solid white;">📷</div>
                         </div>
-                    </div>
-                    
-                    <!-- PROFILE INFO SECTION -->
-                    <div style="padding: 60px 24px 30px 24px; position: relative;">
-                        
-                        <!-- Follow Button (Top Right) -->
-                        <button onclick="alert('Follow feature coming soon!')" style="position: absolute; top: -35px; right: 24px; background: #1a1a1a; color: white; border: none; padding: 10px 28px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px;">Follow</button>
-                        
-                        <!-- Name with Checkmark -->
-                        <div style="text-align: center; margin-bottom: 6px;">
-                            <div style="font-size: 22px; font-weight: 700; color: #1a1a1a; display: inline-flex; align-items: center; gap: 6px;">
-                                ${this.profile.name || 'User'}
-                                <span style="color: #3b82f6; font-size: 18px;">✓</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Username -->
-                        <div style="text-align: center; color: #9ca3af; font-size: 14px; margin-bottom: 16px;">
-                            @${username}
-                        </div>
-                        
-                        <!-- Bio -->
-                        <div style="text-align: center; color: #4b5563; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-                            ${bio || 'No bio yet. Add one to tell others about yourself!'}
-                        </div>
-                        
-                        <!-- Stats -->
-                        <div style="display: flex; justify-content: center; gap: 24px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb;">
-                            <div style="text-align: center;">
-                                <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">0</div>
-                                <div style="font-size: 12px; color: #9ca3af;">Following</div>
-                            </div>
-                            <div style="text-align: center;">
-                                <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">0</div>
-                                <div style="font-size: 12px; color: #9ca3af;">Followers</div>
-                            </div>
-                        </div>
-                        
-                        <!-- About Me -->
-                        <div style="margin-bottom: 16px;">
-                            <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">About</div>
-                            <div style="font-size: 13px; color: #475569;">
-                                ${this.user.email}
-                            </div>
-                        </div>
-                        
-                        <!-- Interests -->
-                        ${interests && interests.length > 0 ? `
-                            <div style="margin-bottom: 16px;">
-                                <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Interests</div>
-                                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                                    ${interests.map(function(interest) {
-                                        var interestEmojis = {
-                                            'music': '🎵', 'sports': '⚽', 'travel': '✈️', 'art': '🎨', 'tech': '💻',
-                                            'food': '🍔', 'fitness': '💪', 'books': '📚', 'movies': '🎬', 'nature': '🌿',
-                                            'gaming': '🎮', 'photography': '📸', 'writing': '✍️', 'cooking': '👨‍🍳', 'yoga': '🧘',
-                                            'comedy': '😂', 'dance': '💃', 'fashion': '👗', 'science': '🔬', 'history': '📜',
-                                            'entrepreneurship': '💼', 'marketing': '📈', 'finance': '💰', 'startups': '🚀'
-                                        };
-                                        var emoji = interestEmojis[interest.toLowerCase()] || '✨';
-                                        return `<span style="background: #f3f4f6; padding: 4px 12px; border-radius: 12px; font-size: 12px; color: #4b5563;">${emoji} ${interest}</span>`;
-                                    }).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-                        
-                        <!-- Edit Profile Button -->
-                        <button onclick="app.showProfileSettings()" style="width: 100%; background: #f3f4f6; border: 1px solid #e5e7eb; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; color: #1a1a1a; font-size: 14px; transition: all 0.3s;">
-                            ⚙️ Edit Profile
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- INSTAGRAM-STYLE POSTS GRID -->
-                <div style="padding: 20px;">
-                    <div style="max-width: 1200px; margin: 0 auto;">
-                        <h3 style="font-size: 16px; font-weight: 700; color: #1a1a1a; margin-bottom: 16px;">📸 Posts</h3>
-                        
-                        ${this.posts && this.posts.filter(p => p.userId === this.user.uid).length > 0 ? `
-                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px;">
-                                ${this.posts.filter(p => p.userId === this.user.uid).map(p => `
-                                    <div style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #e5e7eb; cursor: pointer; group; transition: all 0.3s;" onclick="app.viewPostDetail('${p.id}')" onmouseover="this.style.filter='brightness(0.7)'" onmouseout="this.style.filter='brightness(1)'">
-                                        ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, #667eea, #764ba2);color:white;font-size:24px;">📸</div>`}
-                                        
-                                        <!-- Hover Stats Overlay -->
-                                        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; gap: 16px; opacity: 0;">
-                                            <div style="color: white; font-weight: 700; display: flex; align-items: center; gap: 4px;">❤️ ${(p.likes && Object.keys(p.likes).length) || 0}</div>
-                                            <div style="color: white; font-weight: 700; display: flex; align-items: center; gap: 4px;">💬 ${p.comments ? p.comments.length : 0}</div>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : `
-                            <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 12px;">
-                                <div style="font-size: 48px; margin-bottom: 12px;">📸</div>
-                                <div style="color: #64748b; font-size: 14px;">No posts yet. Start sharing your moments!</div>
-                            </div>
-                        `}
                     </div>
                 </div>
             </div>
-        `;
-        profileContent.innerHTML = html;
-    },
+            
+            <!-- PROFILE INFO -->
+            <div style="padding: 60px 16px 20px 16px; background: white; border-radius: 20px 20px 0 0; margin-top: -10px;">
+                
+                <!-- Name & Username -->
+                <div style="text-align: center; margin-bottom: 12px;">
+                    <div style="font-size: 20px; font-weight: 700; color: #1a1a1a; display: inline-flex; align-items: center; gap: 6px;">
+                        ${this.profile.name || 'User'}
+                        <span style="color: #3b82f6; font-size: 16px;">✓</span>
+                    </div>
+                    <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">@${username}</div>
+                </div>
+                
+                <!-- Bio -->
+                <div style="text-align: center; color: #4b5563; font-size: 13px; line-height: 1.5; margin-bottom: 16px; padding: 0 10px;">
+                    ${bio || 'No bio yet. Tap edit to add one!'}
+                </div>
+                
+                <!-- Followers / Following (3 columns) -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 12px;">
+                    <div style="text-align: center;">
+                        <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">${userPosts}</div>
+                        <div style="font-size: 11px; color: #9ca3af;">Posts</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">${followers}</div>
+                        <div style="font-size: 11px; color: #9ca3af;">Followers</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-weight: 700; color: #1a1a1a; font-size: 16px; cursor: pointer;" onclick="app.showFollowing()">${following}</div>
+                        <div style="font-size: 11px; color: #9ca3af;">Following</div>
+                    </div>
+                </div>
+                
+                <!-- About -->
+                <div style="margin-bottom: 12px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">About</div>
+                    <div style="font-size: 13px; color: #475569; word-break: break-all;">${this.user.email}</div>
+                </div>
+                
+                <!-- Interests -->
+                ${interests && interests.length > 0 ? `
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Interests</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            ${interests.map(function(interest) {
+                                var emojis = {
+                                    'music': '🎵', 'sports': '⚽', 'travel': '✈️', 'art': '🎨', 'tech': '💻',
+                                    'food': '🍔', 'fitness': '💪', 'books': '📚', 'movies': '🎬', 'nature': '🌿',
+                                    'gaming': '🎮', 'photography': '📸', 'writing': '✍️', 'cooking': '👨‍🍳', 'yoga': '🧘'
+                                };
+                                var emoji = emojis[interest.toLowerCase()] || '✨';
+                                return `<span style="background: #f1f5f9; padding: 4px 14px; border-radius: 12px; font-size: 12px; color: #4b5563;">${emoji} ${interest}</span>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- Edit Profile Button -->
+                <button onclick="app.showProfileSettings()" style="width: 100%; background: #f1f5f9; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; color: #1a1a1a; font-size: 14px; transition: all 0.3s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f1f5f9'">
+                    ✏️ Edit Profile
+                </button>
+            </div>
+            
+            <!-- POSTS GRID (3 columns) -->
+            <div style="padding: 16px;">
+                <div style="font-weight: 700; color: #1a1a1a; margin-bottom: 12px; font-size: 14px;">📸 Posts</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
+                    ${this.posts.filter(p => p.userId === this.user.uid).length > 0 ? 
+                        this.posts.filter(p => p.userId === this.user.uid).map(p => `
+                            <div style="position: relative; aspect-ratio: 1; background: #e5e7eb; border-radius: 4px; overflow: hidden; cursor: pointer;" onclick="app.viewPostDetail('${p.id}')">
+                                ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:20px;">📸</div>`}
+                            </div>
+                        `).join('') 
+                    : `
+                        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #9ca3af; font-size: 13px; background: white; border-radius: 8px;">
+                            No posts yet. Share your first moment!
+                        </div>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
+    profileContent.innerHTML = html;
+},
 
     // ============================================
     // COVER IMAGE MODAL - UPLOAD COVER
