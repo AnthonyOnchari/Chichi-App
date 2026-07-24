@@ -4043,147 +4043,121 @@ var app = {
         var userPosts = this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this)).length;
 
         var html = `
-            <div style="padding: 0; background: #f8f9fa; min-height: 100vh;">
+            <div style="padding: 20px; background: #f5f5f5; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;">
                 
-                <!-- PROFILE PHOTO CARD SECTION -->
-                <div style="width: 100%; background: white; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-bottom: 1px solid #e5e7eb;">
+                <!-- PROFILE CARD -->
+                <div style="width: 100%; max-width: 500px; background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
                     
-                    <!-- Main Profile Photo Card -->
-                    <div style="position: relative; cursor: pointer; margin-bottom: 20px;" onclick="app.showProfilePhotoModal()">
-                        <!-- Circular Photo with White Ring -->
+                    <!-- HEADER IMAGE SECTION -->
+                    <div style="position: relative; width: 100%; height: 280px; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; align-items: flex-end; justify-content: center; padding: 20px;">
+                        
+                        <!-- Social Icons (Top Right) -->
+                        <div style="position: absolute; top: 16px; right: 16px; display: flex; gap: 12px;">
+                            <a href="#" style="color: white; font-size: 18px; text-decoration: none;">📷</a>
+                            <a href="#" style="color: white; font-size: 18px; text-decoration: none;">𝕏</a>
+                            <a href="#" style="color: white; font-size: 18px; text-decoration: none;">👍</a>
+                        </div>
+                        
+                        <!-- Back Button (Top Left) -->
+                        <div style="position: absolute; top: 16px; left: 16px;">
+                            <button onclick="app.switchView('feed');" style="background: rgba(0,0,0,0.5); border: none; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px;">←</button>
+                        </div>
+                        
+                        <!-- Circular Profile Photo (Overlapping) -->
                         <div style="
-                            width: 180px;
-                            height: 180px;
+                            width: 140px;
+                            height: 140px;
                             border-radius: 50%;
                             border: 6px solid white;
-                            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-                            overflow: hidden;
                             background: linear-gradient(135deg, #667eea, #764ba2);
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            font-size: 70px;
+                            font-size: 60px;
                             color: white;
-                            font-weight: 700;
-                            transition: transform 0.3s;
+                            font-weight: 800;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
                             background-image: ${this.profile.profilePhoto ? 'url(' + this.profile.profilePhoto + ')' : 'none'};
                             background-size: cover;
                             background-position: center;
-                            filter: brightness(1.05);
-                        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            cursor: pointer;
+                            transition: transform 0.3s;
+                            margin-bottom: -70px;
+                            position: relative;
+                            z-index: 10;
+                        " onclick="app.showProfilePhotoModal()" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
                             ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
                         </div>
+                    </div>
+                    
+                    <!-- PROFILE INFO SECTION -->
+                    <div style="padding: 60px 24px 30px 24px; position: relative;">
                         
-                        <!-- Edit Icon Badge -->
-                        <div style="
-                            position: absolute;
-                            bottom: 8px;
-                            right: 8px;
-                            background: #3b82f6;
-                            border-radius: 50%;
-                            width: 44px;
-                            height: 44px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            color: white;
-                            font-size: 18px;
-                            border: 3px solid white;
-                            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-                            cursor: pointer;
-                        ">📷</div>
-                    </div>
-                    
-                    <!-- Name Below Photo -->
-                    <div style="text-align: center; margin-bottom: 8px;">
-                        <div style="font-size: 28px; font-weight: 800; color: #1e293b; margin: 0;">${this.profile.name || 'User'}</div>
-                    </div>
-                    
-                    <!-- Username Below Name -->
-                    <div style="text-align: center; margin-bottom: 16px;">
-                        <div style="font-size: 15px; color: #6b7280; font-weight: 500;">@${username}</div>
-                    </div>
-                    
-                    <!-- Tier Badge -->
-                    <div style="background: linear-gradient(135deg, #f0f4f8, #e8ecf1); padding: 8px 18px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 20px;">${tierData.badge} ${tierData.label}</div>
-                    
-                    <!-- Back & Settings Buttons -->
-                    <div style="display: flex; gap: 12px; width: 100%; max-width: 300px;">
-                        <button onclick="app.switchView('feed');" style="flex: 1; background: white; color: #3b82f6; border: 2px solid #3b82f6; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.3s;">← Back</button>
-                        <button onclick="app.showProfileSettings();" style="flex: 1; background: #3b82f6; color: white; border: 2px solid #3b82f6; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.3s;">⚙️ Edit</button>
-                    </div>
-                </div>
-                
-                <!-- PROFILE INFO CARD -->
-                <div style="background: white; padding: 20px 20px 100px 20px;">
-                    
-                    <!-- Bio / About Me -->
-                    <div style="background: #f8fafc; border-radius: 14px; padding: 16px; margin-bottom: 16px; border-left: 4px solid #3b82f6;">
-                        <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">📝 About Me</div>
-                        <div style="font-size: 14px; color: #1e293b; line-height: 1.6; min-height: 20px;">${bio || 'No bio yet. Tap edit to add one!'}</div>
-                    </div>
-                    
-                    <!-- Interests -->
-                    <div style="margin-bottom: 16px;">
-                        <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">🏷️ Interests</div>
+                        <!-- Follow Button (Top Right) -->
+                        <button onclick="alert('Follow feature coming soon!')" style="position: absolute; top: -35px; right: 24px; background: #1a1a1a; color: white; border: none; padding: 10px 28px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px;">Follow</button>
+                        
+                        <!-- Name with Checkmark -->
+                        <div style="text-align: center; margin-bottom: 6px;">
+                            <div style="font-size: 22px; font-weight: 700; color: #1a1a1a; display: inline-flex; align-items: center; gap: 6px;">
+                                ${this.profile.name || 'User'}
+                                <span style="color: #3b82f6; font-size: 18px;">✓</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Username -->
+                        <div style="text-align: center; color: #9ca3af; font-size: 14px; margin-bottom: 16px;">
+                            @${username}
+                        </div>
+                        
+                        <!-- Bio -->
+                        <div style="text-align: center; color: #4b5563; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+                            ${bio || 'No bio yet. Add one to tell others about yourself!'}
+                        </div>
+                        
+                        <!-- Stats -->
+                        <div style="display: flex; justify-content: center; gap: 24px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb;">
+                            <div style="text-align: center;">
+                                <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">0</div>
+                                <div style="font-size: 12px; color: #9ca3af;">Following</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">0</div>
+                                <div style="font-size: 12px; color: #9ca3af;">Followers</div>
+                            </div>
+                        </div>
+                        
+                        <!-- About Me -->
+                        <div style="margin-bottom: 16px;">
+                            <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">About</div>
+                            <div style="font-size: 13px; color: #475569;">
+                                ${this.user.email}
+                            </div>
+                        </div>
+                        
+                        <!-- Interests -->
                         ${interests && interests.length > 0 ? `
-                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                                ${interests.map(function(interest) {
-                                    var interestEmojis = {
-                                        'music': '🎵', 'sports': '⚽', 'travel': '✈️', 'art': '🎨', 'tech': '💻',
-                                        'food': '🍔', 'fitness': '💪', 'books': '📚', 'movies': '🎬', 'nature': '🌿',
-                                        'gaming': '🎮', 'photography': '📸', 'writing': '✍️', 'cooking': '👨‍🍳', 'yoga': '🧘',
-                                        'comedy': '😂', 'dance': '💃', 'fashion': '👗', 'science': '🔬', 'history': '📜',
-                                        'entrepreneurship': '💼', 'marketing': '📈', 'finance': '💰', 'startups': '🚀'
-                                    };
-                                    var emoji = interestEmojis[interest.toLowerCase()] || '✨';
-                                    return `<div style="background: linear-gradient(135deg, #e0e7ff, #dbeafe); border-radius: 18px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: #1e40af; display: flex; align-items: center; gap: 6px;"><span>${emoji}</span>${interest}</div>`;
-                                }).join('')}
+                            <div style="margin-bottom: 16px;">
+                                <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Interests</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                    ${interests.map(function(interest) {
+                                        var interestEmojis = {
+                                            'music': '🎵', 'sports': '⚽', 'travel': '✈️', 'art': '🎨', 'tech': '💻',
+                                            'food': '🍔', 'fitness': '💪', 'books': '📚', 'movies': '🎬', 'nature': '🌿',
+                                            'gaming': '🎮', 'photography': '📸', 'writing': '✍️', 'cooking': '👨‍🍳', 'yoga': '🧘',
+                                            'comedy': '😂', 'dance': '💃', 'fashion': '👗', 'science': '🔬', 'history': '📜',
+                                            'entrepreneurship': '💼', 'marketing': '📈', 'finance': '💰', 'startups': '🚀'
+                                        };
+                                        var emoji = interestEmojis[interest.toLowerCase()] || '✨';
+                                        return `<span style="background: #f3f4f6; padding: 4px 12px; border-radius: 12px; font-size: 12px; color: #4b5563;">${emoji} ${interest}</span>`;
+                                    }).join('')}
+                                </div>
                             </div>
-                        ` : `
-                            <div style="color: #94a3b8; font-size: 13px; padding: 12px; background: #f8fafc; border-radius: 10px;">No interests added yet</div>
-                        `}
-                    </div>
-                    
-                    <!-- Email -->
-                    <div style="background: #f8fafc; border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; border-left: 4px solid #10b981;">
-                        <span style="font-size: 18px;">📧</span>
-                        <span style="font-size: 13px; color: #475569; word-break: break-all;">${this.user.email}</span>
-                    </div>
-                    
-                    <!-- STATS GRID -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px;">
-                        <div style="text-align: center; padding: 16px; background: linear-gradient(135deg, #f0f4f8, #e8ecf1); border-radius: 14px;">
-                            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px;">Posts</div>
-                            <div style="font-size: 24px; font-weight: 800; color: #3b82f6;">${userPosts}</div>
-                        </div>
-                        <div style="text-align: center; padding: 16px; background: linear-gradient(135deg, #f0f4f8, #e8ecf1); border-radius: 14px;">
-                            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px;">Followers</div>
-                            <div style="font-size: 24px; font-weight: 800; color: #3b82f6;">0</div>
-                        </div>
-                        <div style="text-align: center; padding: 16px; background: linear-gradient(135deg, #f0f4f8, #e8ecf1); border-radius: 14px;">
-                            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px;">Following</div>
-                            <div style="font-size: 24px; font-weight: 800; color: #3b82f6;">0</div>
-                        </div>
-                    </div>
-                    
-                    <!-- My Posts Section -->
-                    <div style="margin-top: 24px;">
-                        <div style="font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 16px;">📸 My Posts</div>
-                        ${this.posts && this.posts.filter(p => p.userId === this.user.uid).length > 0 ? `
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                ${this.posts.filter(p => p.userId === this.user.uid).slice(0, 4).map(p => `
-                                    <div style="aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: #e5e7eb; cursor: pointer;" onclick="app.switchView('feed')">
-                                        ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, #667eea, #764ba2);color:white;font-size:24px;">📸</div>`}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : `
-                            <div style="text-align: center; padding: 40px 20px; background: #f8fafc; border-radius: 14px;">
-                                <div style="font-size: 48px; margin-bottom: 12px;">📝</div>
-                                <div style="color: #64748b; font-size: 14px;">No posts yet. Start sharing!</div>
-                            </div>
-                        `}
+                        ` : ''}
+                        
+                        <!-- Edit Profile Button -->
+                        <button onclick="app.showProfileSettings()" style="width: 100%; background: #f3f4f6; border: 1px solid #e5e7eb; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; color: #1a1a1a; font-size: 14px; transition: all 0.3s;">
+                            ⚙️ Edit Profile
+                        </button>
                     </div>
                 </div>
             </div>
