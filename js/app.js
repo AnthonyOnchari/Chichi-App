@@ -1,26 +1,4 @@
 // ============================================
-// SPINNER CONFIGURATION
-// ============================================
-
-const SPINNER_CONFIG = {
-    spinCost: 5,
-    maxWin: 40,
-    minWin: 1,
-    segments: [
-        { value: 0, label: '💔', weight: 25, color: '#ef4444' },
-        { value: 1, label: 'CC Points 1', weight: 15, color: '#f59e0b' },
-        { value: 2, label: 'CC Points 2', weight: 12, color: '#f59e0b' },
-        { value: 3, label: 'CC Points 3', weight: 10, color: '#f59e0b' },
-        { value: 5, label: 'CC Points 5', weight: 8, color: '#22c55e' },
-        { value: 10, label: 'CC Points 10', weight: 6, color: '#22c55e' },
-        { value: 15, label: 'CC Points 15', weight: 5, color: '#22c55e' },
-        { value: 20, label: 'CC Points 20', weight: 4, color: '#3b82f6' },
-        { value: 30, label: 'CC Points 30', weight: 3, color: '#3b82f6' },
-        { value: 40, label: 'CC Points 40', weight: 2, color: '#8b5cf6' }
-    ]
-};
-
-// ============================================
 // PREMIUM/VIP TIERS
 // ============================================
 
