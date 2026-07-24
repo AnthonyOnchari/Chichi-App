@@ -4174,7 +4174,7 @@ var app = {
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                 ${this.posts.filter(p => p.userId === this.user.uid).slice(0, 4).map(p => `
                                     <div style="aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: #e5e7eb; cursor: pointer;" onclick="app.switchView('feed')">
-                                        ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, #667eea, #764ba2);color:white;font-size:24px;">${p.text.charAt(0).toUpperCase()}</div>`}
+                                        ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, #667eea, #764ba2);color:white;font-size:24px;">📸</div>`}
                                     </div>
                                 `).join('')}
                             </div>
