@@ -3,7 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CHICHI - Social Media</title>
+    
+    <!-- SEO Meta Tags -->
+    <title>CHICHI - Connect, Play, Earn!</title>
+    <meta name="description" content="Chat with friends, share stories, play trivia, earn CC Points, and redeem gifts. A fun social platform for Kenyans.">
+    <meta name="keywords" content="social media, chat, trivia, Kenya, rewards, airtime, data">
+    <meta name="author" content="Anthony Onchari">
+    <meta name="theme-color" content="#1e293b">
+    
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="CHICHI - Connect, Play, Earn!">
+    <meta property="og:description" content="Chat with friends, share stories, play trivia, earn CC Points, and redeem gifts.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://chichi.buzz">
+    <meta property="og:image" content="https://chichi.buzz/images/og-image.png">
+    <meta property="og:site_name" content="CHICHI">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CHICHI - Connect, Play, Earn!">
+    <meta name="twitter:description" content="A fun social platform for Kenyans. Chat, share, play trivia, earn rewards.">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "CHICHI",
+      "description": "A fun social platform for Kenyans. Chat with friends, share stories, play trivia, earn CC Points, and redeem gifts.",
+      "url": "https://chichi.buzz",
+      "applicationCategory": "SocialNetworking",
+      "operatingSystem": "Android, iOS, Web"
+    }
+    </script>
+    
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     
@@ -459,7 +492,21 @@ console.log('✅ Configuration loaded successfully');
 
         <!-- EARN VIEW -->
         <div class="view" id="earnView">
-            <div id="earnContainer"></div>
+            <!-- Earn Page Sub-Tabs -->
+            <div class="earn-subtabs">
+                <button class="earn-subtab-btn active" onclick="app.switchEarnTab('feed')">Feed</button>
+                <button class="earn-subtab-btn" onclick="app.switchEarnTab('trivia')">Trivia</button>
+                <button class="earn-subtab-btn" onclick="app.switchEarnTab('wallet')">Wallet</button>
+                <button class="earn-subtab-btn" onclick="app.switchEarnTab('gifts')">Gifts</button>
+                <button class="earn-subtab-btn" onclick="app.switchEarnTab('premium')">Premium</button>
+            </div>
+            
+            <!-- Earn Content Container -->
+            <div id="earnContainer" class="earn-content-section"></div>
+            <div id="triviaContainer" class="earn-content-section hidden"></div>
+            <div id="walletContainer" class="earn-content-section hidden"></div>
+            <div id="giftsContainer" class="earn-content-section hidden"></div>
+            <div id="premiumContainer" class="earn-content-section hidden"></div>
         </div>
 
         <!-- PROFILE VIEW -->
