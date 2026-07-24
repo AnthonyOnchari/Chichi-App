@@ -31,64 +31,29 @@ if (!initFirebase()) {
     }, 500);
 }
 
+
 // ============================================
-// FALLBACK CONFIG - In case config.js doesn't load
+// CONFIG VALIDATION - Ensure config.js loaded first
 // ============================================
 
-// Ensure EARNING_SETTINGS is available
-if (typeof EARNING_SETTINGS === 'undefined') {
-    window.EARNING_SETTINGS = {
-        free: {
-            label: 'Free',
-            badge: '✨',
-            badgeColor: '#6b7280',
-            price: 0,
-            dailyQuestions: 5,
-            rewardPerQuestion: 0.50,
-            timerSeconds: 20,
-            adsPerQuestion: 0,
-            maxQuestions: 5,
-            bonus: '5 trivia questions/day',
-            questionsPerDay: 5
-        }
-    };
+// Wait for config.js to load (config.js is loaded BEFORE app.js in index.html)
+var configCheckTimeout = 0;
+function checkConfigLoaded() {
+    if (typeof TRIVIA_QUESTIONS !== 'undefined' && typeof GIFT_CATALOG !== 'undefined' && typeof EARNING_SETTINGS !== 'undefined') {
+        console.log('✅ Config loaded successfully');
+        console.log('🎁 GIFT_CATALOG:', GIFT_CATALOG.length, 'items');
+        console.log('🧠 TRIVIA_QUESTIONS:', TRIVIA_QUESTIONS.length, 'questions');
+        console.log('💰 EARNING_SETTINGS:', Object.keys(EARNING_SETTINGS).length, 'tiers');
+        return true;
+    }
+    
+    configCheckTimeout++;
+    if (configCheckTimeout > 100) {
+        console.error('❌ Config.js failed to load - app may not work correctly');
+        return false;
+    }
+    return false;
 }
-
-// Ensure TRIVIA_QUESTIONS is available
-if (typeof TRIVIA_QUESTIONS === 'undefined') {
-    window.TRIVIA_QUESTIONS = [
-        { question: "What is the capital of Kenya?", options: ["Nairobi", "Mombasa", "Kisumu", "Nakuru"], correct: 0 },
-        { question: "What is the largest ocean?", options: ["Atlantic", "Pacific", "Indian", "Arctic"], correct: 1 },
-        { question: "What is the smallest country?", options: ["Monaco", "Vatican City", "Liechtenstein", "San Marino"], correct: 1 },
-        { question: "What is the speed of light?", options: ["300,000 km/s", "150,000 km/s", "450,000 km/s", "100,000 km/s"], correct: 0 },
-        { question: "How many continents are there?", options: ["5", "6", "7", "8"], correct: 2 },
-        { question: "What is the tallest mountain?", options: ["K2", "Kilimanjaro", "Everest", "Denali"], correct: 2 },
-        { question: "Which planet is closest to the Sun?", options: ["Venus", "Mercury", "Mars", "Earth"], correct: 1 },
-        { question: "What is the boiling point of water?", options: ["50°C", "75°C", "100°C", "125°C"], correct: 2 },
-        { question: "Which planet is known as the Red Planet?", options: ["Jupiter", "Mars", "Saturn", "Venus"], correct: 1 },
-        { question: "What is the chemical formula for water?", options: ["H2O2", "H2O", "H3O", "HO2"], correct: 1 }
-    ];
-}
-
-// Ensure GIFT_CATALOG is available
-if (typeof GIFT_CATALOG === 'undefined') {
-    window.GIFT_CATALOG = [
-        { id: 'gift1', name: '🎮 Game Voucher', description: '$10 Gaming Gift Card', cost: 500, category: 'gaming', image: '🎮' },
-        { id: 'gift2', name: '📱 Phone Credit', description: 'Airtime/Data top-up', cost: 200, category: 'mobile', image: '📱' },
-        { id: 'gift3', name: '🍕 Pizza Coupon', description: 'Free medium pizza', cost: 300, category: 'food', image: '🍕' },
-        { id: 'gift4', name: '🎬 Movie Ticket', description: 'Cinema ticket voucher', cost: 400, category: 'entertainment', image: '🎬' },
-        { id: 'gift5', name: '☕ Coffee Voucher', description: 'Free coffee & pastry', cost: 150, category: 'food', image: '☕' }
-    ];
-}
-
-// Make sure variables are available as globals for app.js
-var EARNING_SETTINGS = window.EARNING_SETTINGS;
-var TRIVIA_QUESTIONS = window.TRIVIA_QUESTIONS;
-var GIFT_CATALOG = window.GIFT_CATALOG;
-
-console.log('✅ Fallback config loaded');
-console.log('🎁 GIFT_CATALOG:', GIFT_CATALOG ? GIFT_CATALOG.length : 'NOT SET');
-console.log('🧠 TRIVIA_QUESTIONS:', TRIVIA_QUESTIONS ? TRIVIA_QUESTIONS.length : 'NOT SET');
 
 // ============================================
 // APP OBJECT
