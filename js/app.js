@@ -1,33 +1,13 @@
 // ============================================
+// SPINNER CONFIGURATION
+// ============================================
+
+
+// ============================================
 // PREMIUM/VIP TIERS
 // ============================================
 
-const TIER_CONFIG = {
-    premium: {
-        label: '⭐ Premium',
-        price: 50,
-        badge: '⭐',
-        badgeColor: '#f59e0b',
-        dailyQuestions: 15,
-        rewardPerQuestion: 10.50,
-        timerSeconds: 30,
-        adsPerQuestion: 0,
-        maxQuestions: 15,
-        bonus: 'No ads + 5 extra questions/day'
-    },
-    vip: {
-        label: '👑 VIP',
-        price: 100,
-        badge: '👑',
-        badgeColor: '#8b5cf6',
-        dailyQuestions: 150,
-        rewardPerQuestion: 20.50,
-        timerSeconds: 45,
-        adsPerQuestion: 0,
-        maxQuestions: 150,
-        bonus: 'No ads + 15 extra questions/day + Exclusive content'
-    }
-};
+
 
 // ============================================
 // FIREBASE CONFIG
@@ -153,42 +133,6 @@ const POST_TEMPLATES = [
 // EARNING SETTINGS
 // ============================================
 
-const EARNING_SETTINGS = {
-    free: {
-        dailyQuestions: 5,
-        rewardPerQuestion: 0.50,
-        timerSeconds: 20,
-        adsPerQuestion: 2,
-        maxQuestions: 5,
-        label: 'Free Plan',
-        badge: null,
-        badgeColor: null
-    },
-    premium: {
-        dailyQuestions: 15,
-        rewardPerQuestion: 0.50,
-        timerSeconds: 30,
-        adsPerQuestion: 0,
-        maxQuestions: 15,
-        price: 50,
-        label: '⭐ Premium',
-        badge: '⭐',
-        bonus: 'No ads + 15 questions/day',
-        badgeColor: '#f59e0b'
-    },
-    vip: {
-        dailyQuestions: 150,
-        rewardPerQuestion: 0.50,
-        timerSeconds: 45,
-        adsPerQuestion: 0,
-        maxQuestions: 150,
-        price: 100,
-        label: '👑 VIP',
-        badge: '👑',
-        bonus: 'No ads + 150 questions/day + Exclusive content',
-        badgeColor: '#8b5cf6'
-    }
-};
 
 // ============================================
 // TRIVIA QUESTIONS
@@ -1319,7 +1263,7 @@ var app = {
                                 <div class="withdrawal-status ${w.status || 'pending'}">${(w.status || 'pending').toUpperCase()}</div>
                             </div>
                             <div class="withdrawal-details">
-                                <div>CC Points ${w.amount || 0} • ${w.method || 'M-Pesa'}</div>
+                                <div>KSh ${w.amount || 0} • ${w.method || 'M-Pesa'}</div>
                                 <div style="font-size: 0.75rem; margin-top: 4px;">${w.createdAt || 'N/A'}</div>
                             </div>
                         </div>
@@ -1365,7 +1309,7 @@ var app = {
                                 <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name} ${badgeDisplay} ${isBanned ? '🚫' : ''}</div>
                                 <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
                                 <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Joined: ${u.user.createdAt}</div>
-                                <div style="font-size: 0.75rem; color: var(--primary);">Balance: CC Points ${(u.user.balance || 0).toFixed(2)}</div>
+                                <div style="font-size: 0.75rem; color: var(--primary);">Balance: KSh ${(u.user.balance || 0).toFixed(2)}</div>
                                 <div style="font-size: 0.75rem; color: var(--primary);">Tier: ${tierData ? tierData.label : 'Free'}</div>
                                 ${isBanned ? `<div style="font-size: 0.7rem; color: #ef4444;">Banned: ${banData.reason || 'No reason'}</div>` : ''}
                             </div>
@@ -1518,7 +1462,7 @@ var app = {
                                 <div class="withdrawal-status ${statusClass}" style="background: ${statusColor}20; color: ${statusColor}; padding: 4px 12px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">${(w.status || 'pending').toUpperCase()}</div>
                             </div>
                             <div class="withdrawal-details" style="margin: 8px 0;">
-                                <div style="font-size: 0.9rem; font-weight: 600;">💰 CC Points ${(w.amount || 0).toFixed(2)}</div>
+                                <div style="font-size: 0.9rem; font-weight: 600;">💰 KSh ${(w.amount || 0).toFixed(2)}</div>
                                 <div style="font-size: 0.8rem; color: var(--text-light);">📱 ${w.method || 'M-Pesa'} • ${w.account || 'N/A'}</div>
                                 <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 2px;">📧 ${w.userEmail || 'No email'}</div>
                                 <div style="font-size: 0.7rem; color: var(--text-light); margin-top: 2px;">📅 ${w.createdAt || 'N/A'}</div>
@@ -1608,7 +1552,7 @@ var app = {
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
                                     <div style="font-weight: 600; font-size: 0.9rem;">${v.userName || 'Unknown'}</div>
-                                    <div style="font-size: 0.8rem; color: var(--text-light);">${v.tierName || 'Unknown tier'} - CC Points ${v.amount || 0}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-light);">${v.tierName || 'Unknown tier'} - KSh ${v.amount || 0}</div>
                                     <div style="font-size: 0.7rem; color: var(--text-light);">${v.time || 'N/A'}</div>
                                     <div style="font-size: 0.7rem; color: var(--text-light); margin-top: 4px; max-height: 60px; overflow-y: auto;">${v.confirmation || 'No message'}</div>
                                 </div>
@@ -1774,8 +1718,8 @@ var app = {
         window.ADMIN_SPINNER_OVERRIDES.forceWin = true;
         window.ADMIN_SPINNER_OVERRIDES.forceAmount = amount;
         
-        this.toast('✅ Next spin will force win CC Points ' + amount, 'success');
-        this.logUserActivity('admin_force_win', 'Forced win of CC Points ' + amount);
+        this.toast('✅ Next spin will force win KSh ' + amount, 'success');
+        this.logUserActivity('admin_force_win', 'Forced win of KSh ' + amount);
         document.getElementById('adminForceAmount').value = '';
     },
 
@@ -1832,7 +1776,7 @@ var app = {
             var totalAmount = 0;
             wins.forEach(function(w) {
                 var details = w.details || '';
-                var match = details.match(/CC Points (\d+)/);
+                var match = details.match(/KSh (\d+)/);
                 if (match) {
                     totalAmount += parseInt(match[1]);
                 }
@@ -1853,11 +1797,11 @@ var app = {
                     </div>
                     <div style="background: #f0f7ff; padding: 12px; border-radius: 8px; text-align: center;">
                         <div style="font-size: 11px; color: #6b7280;">Avg Win</div>
-                        <div style="font-size: 24px; font-weight: 700; color: #22c55e;">CC Points ${avgWin}</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #22c55e;">KSh ${avgWin}</div>
                     </div>
                 </div>
                 <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
-                    Total paid out: CC Points ${totalAmount} from ${totalSpins} spins
+                    Total paid out: KSh ${totalAmount} from ${totalSpins} spins
                 </div>
             `;
             
@@ -2083,29 +2027,18 @@ var app = {
                     <div style="font-size: 48px;">${tierData.badge || '⭐'}</div>
                     <div style="font-size: 24px; font-weight: 700;">${tierName}</div>
                     <div style="font-size: 14px; opacity: 0.9;">${tierData.bonus || ''}</div>
-                    <div style="font-size: 28px; font-weight: 800; margin-top: 8px;">99 KSh/month</div>
-                </div>
-                
-                <div style="background: #f0f7ff; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-                    <div style="font-size: 14px; font-weight: 600; color: #1a202c;">💳 Premium Benefits:</div>
-                    <div style="font-size: 13px; color: #6b7280; margin-top: 8px; line-height: 1.8;">
-                        ✅ 2x CC Points from trivia<br>
-                        ✅ No ads<br>
-                        ✅ Exclusive premium gifts<br>
-                        ✅ VIP status badge<br>
-                        ✅ 500 bonus CC Points each month
-                    </div>
+                    <div style="font-size: 28px; font-weight: 800; margin-top: 8px;">KSh ${price}/month</div>
                 </div>
                 
                 <div style="background: #fef3c7; padding: 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #f59e0b;">
                     <div style="font-size: 13px; color: #78350f; line-height: 1.6;">
-                        📱 Premium is purchased through Google Play In-App Purchase.<br>
+                        💳 Premium is purchased through Google Play In-App Purchase.<br>
                         <br>
-                        Click the button below to proceed with the secure payment.
+                        Click below to proceed with secure payment.
                     </div>
                 </div>
                 
-                <button onclick="app.upgradeToPremium('${tier}')" style="background: ${tierData.badgeColor || 'var(--primary)'}; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
+                <button onclick="this.closest('.modal-overlay').remove(); app.toast('✅ Redirecting to Google Play Store...', 'success');" style="background: ${tierData.badgeColor || 'var(--primary)'}; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
                     💳 Upgrade Now
                 </button>
                 
@@ -2117,363 +2050,19 @@ var app = {
         document.body.appendChild(modal);
     },
 
-    upgradeToPremium: function(tier) {
-        // In a real app, this would trigger Google Play's in-app purchase flow
-        // For now, show a success message
-        this.toast('✅ Redirecting to Google Play Store...', 'success');
-        
-        // Log the upgrade attempt
-        this.logUserActivity('upgrade_attempt', 'User initiated premium upgrade: ' + tier);
-        
-        // In production, integrate with Google Play Billing Library
-        // Example placeholder for future implementation
-    },
-
-    submitPaymentConfirmation: function(tier) {
-        // This function is deprecated - kept for backward compatibility
-        this.toast('⚠️ Please use Google Play Store for premium upgrades', 'info');
-        
-        var self = this;
-        var tierData = EARNING_SETTINGS[tier];
-        
-        db.ref('paymentVerifications').push({
-            userId: self.user.uid,
-            userName: self.profile.name || 'User',
-            userEmail: self.user.email,
-            tier: tier,
-            tierName: tierData.label,
-            amount: tierData.price,
-            confirmation: confirmation,
-            status: 'pending',
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            time: new Date().toLocaleString('en-KE')
-        }).then(function() {
-            self.toast('✅ Payment submitted! Admin will verify shortly.', 'success');
-            var modal = document.querySelector('.modal-overlay');
-            if (modal) modal.remove();
-            self.logUserActivity('payment_submit', 'Submitted payment for ' + tierData.label);
-        }).catch(function(err) {
-            self.toast('❌ Error: ' + err.message, 'error');
-        });
-    },
-
-    // ============================================
-    // SPINNER WHEEL - REAL SPINNING WHEEL
-    // ============================================
-
-    openSpinner: function() {
-        if (!this.user || this.isGuest) {
-            this.toast('⚠️ Please login first', 'error');
-            return;
-        }
-        
-        if (this.balance < SPINNER_CONFIG.spinCost) {
-            this.toast('❌ Insufficient balance. Need CC Points ' + SPINNER_CONFIG.spinCost, 'error');
-            return;
-        }
-        
-        if (window.ADMIN_SPINNER_OVERRIDES && window.ADMIN_SPINNER_OVERRIDES.disableSpins) {
-            this.toast('❌ Spins are currently disabled by admin', 'error');
-            return;
-        }
-        
-        this.balance -= SPINNER_CONFIG.spinCost;
-        db.ref('users/' + this.user.uid + '/balance').set(this.balance);
-        this.updateBalanceDisplays();
-        
-        var winAmount = this.determineSpinResult();
-        this.showSpinnerWheel(winAmount);
-    },
-
-    determineSpinResult: function() {
-        if (window.ADMIN_SPINNER_OVERRIDES && window.ADMIN_SPINNER_OVERRIDES.forceWin) {
-            var amount = window.ADMIN_SPINNER_OVERRIDES.forceAmount;
-            window.ADMIN_SPINNER_OVERRIDES.forceWin = false;
-            window.ADMIN_SPINNER_OVERRIDES.forceAmount = 0;
-            this.logUserActivity('admin_force_win_used', 'Forced win of CC Points ' + amount);
-            return Math.min(amount, SPINNER_CONFIG.maxWin);
-        }
-        
-        var segments = SPINNER_CONFIG.segments;
-        var totalWeight = segments.reduce(function(sum, seg) { return sum + seg.weight; }, 0);
-        var random = Math.random() * totalWeight;
-        var cumulative = 0;
-        
-        for (var i = 0; i < segments.length; i++) {
-            cumulative += segments[i].weight;
-            if (random <= cumulative) {
-                var value = segments[i].value;
-                if (value > SPINNER_CONFIG.maxWin) {
-                    return SPINNER_CONFIG.maxWin;
-                }
-                return value;
-            }
-        }
-        return 0;
-    },
-
-    showSpinnerWheel: function(winAmount) {
-        var self = this;
-        
-        var segments = [];
-        var segmentColors = [
-            '#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', 
-            '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#06b6d4',
-            '#84cc16', '#a855f7', '#ef4444', '#f59e0b', '#22c55e',
-            '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'
-        ];
-        
-        var prizeValues = [0, 1, 2, 3, 5, 10, 15, 20, 25, 30, 35, 40, 0, 5, 10, 15, 20, 25, 30, 35];
-        for (var i = prizeValues.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var temp = prizeValues[i];
-            prizeValues[i] = prizeValues[j];
-            prizeValues[j] = temp;
-        }
-        
-        var winIndex = Math.floor(Math.random() * 20);
-        prizeValues[winIndex] = winAmount;
-        
-        for (var i = 0; i < 20; i++) {
-            var value = prizeValues[i];
-            var label = value === 0 ? '💔' : 'CC Points ' + value;
-            segments.push({
-                value: value,
-                label: label,
-                color: segmentColors[i % segmentColors.length]
-            });
-        }
-        
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        modal.style.zIndex = '10050';
-        
-        var canvasSize = Math.min(window.innerWidth - 40, 380);
-        
-        modal.innerHTML = `
-            <div style="background: white; border-radius: 24px; padding: 20px; max-width: 420px; width: 95%; text-align: center; animation: smoothFadeIn 0.3s ease;">
-                <h3 style="margin: 0 0 4px 0; font-weight: 700;">🎰 Spin & Win!</h3>
-                <p style="color: #6b7280; font-size: 13px; margin-bottom: 12px;">Cost: CC Points ${SPINNER_CONFIG.spinCost} | Max Win: CC Points ${SPINNER_CONFIG.maxWin}</p>
-                
-                <div style="position: relative; margin: 0 auto; width: ${canvasSize}px; height: ${canvasSize}px;">
-                    <canvas id="spinnerCanvas" width="${canvasSize}" height="${canvasSize}" style="width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 4px 20px rgba(0,0,0,0.2);"></canvas>
-                    <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%);">
-                        <div style="width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent; border-top: 28px solid #ef4444; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));"></div>
-                    </div>
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;">
-                        <div style="width: 30px; height: 30px; background: #1a202c; border-radius: 50%; border: 4px solid white; box-shadow: 0 0 20px rgba(0,0,0,0.3);"></div>
-                    </div>
-                </div>
-                
-                <button id="spinButton" onclick="app.startSpin()" style="background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; padding: 14px 40px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 18px; margin-top: 16px; width: 100%;">
-                    🎰 SPIN
-                </button>
-                
-                <div id="spinResult" style="margin-top: 12px; font-size: 20px; font-weight: 700; min-height: 40px;"></div>
-                
-                <button onclick="this.closest('.modal-overlay').remove()" style="margin-top: 8px; background: none; border: none; color: #6b7280; cursor: pointer; font-size: 13px;">Close</button>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        this._spinnerData = {
-            segments: segments,
-            winAmount: winAmount,
-            modal: modal,
-            isSpinning: false
-        };
-        
-        this.drawSpinnerWheel(segments, 0);
-    },
-
-    drawSpinnerWheel: function(segments, rotation) {
-        var canvas = document.getElementById('spinnerCanvas');
-        if (!canvas) return;
-        
-        var ctx = canvas.getContext('2d');
-        var centerX = canvas.width / 2;
-        var centerY = canvas.height / 2;
-        var radius = Math.min(canvas.width, canvas.height) / 2 - 10;
-        var segmentAngle = (2 * Math.PI) / segments.length;
-        
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        for (var i = 0; i < segments.length; i++) {
-            var startAngle = i * segmentAngle + rotation;
-            var endAngle = startAngle + segmentAngle;
-            var segment = segments[i];
-            
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-            ctx.closePath();
-            
-            ctx.fillStyle = segment.color;
-            ctx.fill();
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            
-            ctx.save();
-            ctx.translate(centerX, centerY);
-            ctx.rotate(startAngle + segmentAngle / 2);
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 11px Arial';
-            ctx.shadowColor = 'rgba(0,0,0,0.5)';
-            ctx.shadowBlur = 3;
-            
-            var textRadius = radius * 0.65;
-            ctx.fillText(segment.label, textRadius, 0);
-            ctx.restore();
-        }
-        
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 8, 0, 2 * Math.PI);
-        ctx.fillStyle = '#1a202c';
-        ctx.fill();
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-    },
-
-    startSpin: function() {
-        if (this._spinnerData && this._spinnerData.isSpinning) return;
-        
-        var self = this;
-        var spinBtn = document.getElementById('spinButton');
-        var resultDiv = document.getElementById('spinResult');
-        
-        if (spinBtn) {
-            spinBtn.disabled = true;
-            spinBtn.textContent = '🌀 Spinning...';
-            spinBtn.style.opacity = '0.7';
-        }
-        
-        if (resultDiv) {
-            resultDiv.innerHTML = '';
-        }
-        
-        this._spinnerData.isSpinning = true;
-        
-        var segments = this._spinnerData.segments;
-        var winAmount = this._spinnerData.winAmount;
-        
-        var winSegmentIndex = 0;
-        for (var i = 0; i < segments.length; i++) {
-            if (segments[i].value === winAmount && winAmount > 0) {
-                winSegmentIndex = i;
-                break;
-            }
-        }
-        
-        if (winAmount === 0) {
-            var loseSegments = [];
-            for (var i = 0; i < segments.length; i++) {
-                if (segments[i].value === 0) {
-                    loseSegments.push(i);
-                }
-            }
-            winSegmentIndex = loseSegments[Math.floor(Math.random() * loseSegments.length)];
-        }
-        
-        var segmentAngle = (2 * Math.PI) / segments.length;
-        var targetRotation = (2 * Math.PI) * (5 + Math.random() * 4) + (winSegmentIndex / segments.length) * 2 * Math.PI;
-        var startTime = Date.now();
-        var duration = 5000 + Math.random() * 2000;
-        
-        function animateSpin() {
-            var elapsed = Date.now() - startTime;
-            var progress = Math.min(elapsed / duration, 1);
-            
-            var ease = 1 - Math.pow(1 - progress, 3);
-            var rotation = targetRotation * ease;
-            
-            self.drawSpinnerWheel(segments, rotation);
-            
-            if (progress < 1) {
-                requestAnimationFrame(animateSpin);
-            } else {
-                self._spinnerData.isSpinning = false;
-                
-                if (spinBtn) {
-                    spinBtn.style.display = 'none';
-                }
-                
-                self.showSpinResult(winAmount);
-            }
-        }
-        
-        animateSpin();
-    },
-
-    showSpinResult: function(winAmount) {
-        var resultDiv = document.getElementById('spinResult');
-        
-        if (winAmount > 0) {
-            this.balance += winAmount;
-            db.ref('users/' + this.user.uid + '/balance').set(this.balance);
-            this.updateBalanceDisplays();
-            
-            resultDiv.innerHTML = `
-                <div style="color: #22c55e; font-size: 28px;">🎉 You Won!</div>
-                <div style="color: #1a202c; font-size: 36px; font-weight: 800;">+CC Points ${winAmount}</div>
-                <div style="color: #6b7280; font-size: 14px; margin-top: 4px;">Balance: CC Points ${this.balance.toFixed(2)}</div>
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap;">
-                    <button onclick="app.spinAgain()" style="padding: 10px 24px; background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;">🔄 Spin Again</button>
-                    <button onclick="app.showWithdrawModal()" style="padding: 10px 24px; background: #22c55e; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;">💳 Withdraw</button>
-                    <button onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 24px; background: #f3f4f6; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;">Close</button>
-                </div>
-            `;
-            
-            this.toast('🎉 You won CC Points ' + winAmount + '!', 'success');
-            this.logUserActivity('spinner_win', 'Won CC Points ' + winAmount);
-        } else {
-            resultDiv.innerHTML = `
-                <div style="color: #ef4444; font-size: 28px;">😔 Better Luck Next Time!</div>
-                <div style="color: #6b7280; font-size: 14px;">You lost this round. Try again!</div>
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap;">
-                    <button onclick="app.spinAgain()" style="padding: 10px 24px; background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;">🔄 Spin Again</button>
-                    <button onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 24px; background: #f3f4f6; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;">Close</button>
-                </div>
-            `;
-            
-            this.logUserActivity('spinner_lose', 'Lost spin');
-        }
-        
-        this._spinnerData = null;
-    },
-
-    spinAgain: function() {
-        var modal = document.querySelector('.modal-overlay');
-        if (modal) {
-            modal.remove();
-        }
-        this.openSpinner();
-    },
 
     updateBalanceDisplays: function() {
         var balanceDisplay = document.getElementById('balanceDisplay');
         if (balanceDisplay) {
-            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
+            balanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
         }
         var earnBalanceDisplay = document.getElementById('earnBalanceDisplay');
         if (earnBalanceDisplay) {
-            earnBalanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
+            earnBalanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
         }
         var withdrawBalanceDisplay = document.getElementById('withdrawBalanceDisplay');
         if (withdrawBalanceDisplay) {
-            withdrawBalanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
+            withdrawBalanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
         }
     },
 
@@ -2846,10 +2435,9 @@ var app = {
                 <div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 16px; padding: 20px; margin-bottom: 20px; color: white; text-align: center;">
                     <div style="font-size: 40px; margin-bottom: 8px;">💰</div>
                     <div style="font-size: 24px; font-weight: 700;">Your Balance</div>
-                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${userBalance.toFixed(2)}</div>
+                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">KSh ${userBalance.toFixed(2)}</div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                         <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
-                        <button onclick="app.openSpinner()" style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
                         ${userTier !== 'vip' ? `<button onclick="app.showPremiumPayment('premium')" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Upgrade</button>` : ''}
                     </div>
                     <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
@@ -2861,12 +2449,12 @@ var app = {
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
                     <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
                         <span>🧠</span> Trivia Challenge
-                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">CC Points ${tierData.rewardPerQuestion}</span>
+                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">KSh ${tierData.rewardPerQuestion}</span>
                     </h3>
                     <div style="color: #6b7280; font-size: 13px; margin-bottom: 12px;">
                         <div>📝 Questions remaining: ${remaining}</div>
                         <div>⏱️ Timer: ${tierData.timerSeconds} seconds</div>
-                        <div>💰 Reward: CC Points ${tierData.rewardPerQuestion} per correct answer</div>
+                        <div>💰 Reward: KSh ${tierData.rewardPerQuestion} per correct answer</div>
                         ${tierData.adsPerQuestion > 0 ? `<div>📺 Ads: ${tierData.adsPerQuestion} per question</div>` : '<div>✨ No ads!</div>'}
                         ${tierData.bonus ? `<div>🎁 ${tierData.bonus}</div>` : ''}
                     </div>
@@ -2881,9 +2469,8 @@ var app = {
                         <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">Max ${SPINNER_CONFIG.maxWin}</span>
                     </h3>
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
-                        Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
+                        Cost: KSh ${SPINNER_CONFIG.spinCost} per spin • Max Win: KSh ${SPINNER_CONFIG.maxWin}
                     </div>
-                    <button onclick="app.openSpinner()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
                         🎯 Spin Now
                     </button>
                 </div>
@@ -2893,7 +2480,7 @@ var app = {
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Total Earned</div>
-                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">CC Points ${userBalance.toFixed(2)}</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">KSh ${userBalance.toFixed(2)}</div>
                         </div>
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Questions</div>
@@ -2949,10 +2536,9 @@ var app = {
                 <div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 16px; padding: 20px; margin-bottom: 20px; color: white; text-align: center;">
                     <div style="font-size: 40px; margin-bottom: 8px;">💰</div>
                     <div style="font-size: 24px; font-weight: 700;">Your Balance</div>
-                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
+                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">KSh ${this.balance.toFixed(2)}</div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                         <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
-                        <button onclick="app.openSpinner()" style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
                         ${userTier !== 'vip' ? `<button onclick="app.showPremiumPayment('premium')" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Upgrade</button>` : ''}
                     </div>
                     <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
@@ -2963,7 +2549,7 @@ var app = {
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
                     <h3 style="margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
                         <span>🧠</span> Trivia Challenge
-                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">CC Points ${tierData.rewardPerQuestion}</span>
+                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">KSh ${tierData.rewardPerQuestion}</span>
                     </h3>
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">
                         ⏱️ ${tierData.timerSeconds} seconds • ${remaining} questions left today
@@ -2987,9 +2573,8 @@ var app = {
                         <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">Max ${SPINNER_CONFIG.maxWin}</span>
                     </h3>
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
-                        Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
+                        Cost: KSh ${SPINNER_CONFIG.spinCost} per spin • Max Win: KSh ${SPINNER_CONFIG.maxWin}
                     </div>
-                    <button onclick="app.openSpinner()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
                         🎯 Spin Now
                     </button>
                 </div>
@@ -2999,7 +2584,7 @@ var app = {
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Total Earned</div>
-                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">CC Points ${this.balance.toFixed(2)}</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">KSh ${this.balance.toFixed(2)}</div>
                         </div>
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Questions</div>
@@ -3097,7 +2682,7 @@ var app = {
         if (correct) {
             resultArea.innerHTML = `
                 <div style="color: #22c55e; font-weight: 700; font-size: 18px;">✅ Correct!</div>
-                <div style="color: #6b7280; font-size: 14px;">You earned CC Points ${tierData.rewardPerQuestion.toFixed(2)}!</div>
+                <div style="color: #6b7280; font-size: 14px;">You earned KSh ${tierData.rewardPerQuestion.toFixed(2)}!</div>
             `;
             resultArea.style.background = '#dcfce7';
             
@@ -3106,10 +2691,10 @@ var app = {
             
             var balanceDisplay = document.getElementById('earnBalanceDisplay');
             if (balanceDisplay) {
-                balanceDisplay.textContent = 'CC Points ' + self.balance.toFixed(2);
+                balanceDisplay.textContent = 'KSh ' + self.balance.toFixed(2);
             }
             
-            self.toast('🎉 Correct! +CC Points ' + tierData.rewardPerQuestion.toFixed(2), 'success');
+            self.toast('🎉 Correct! +KSh ' + tierData.rewardPerQuestion.toFixed(2), 'success');
             self.incrementQuestionCount();
         } else {
             resultArea.innerHTML = `
@@ -3176,7 +2761,7 @@ var app = {
         var price = EARNING_SETTINGS[tier].price;
         var tierName = EARNING_SETTINGS[tier].label;
         
-        if (!confirm(`Upgrade to ${tierName} for CC Points ${price}/month?`)) {
+        if (!confirm(`Upgrade to ${tierName} for KSh ${price}/month?`)) {
             return;
         }
         
@@ -3185,7 +2770,7 @@ var app = {
         
         setTimeout(function() {
             if (self.balance < price) {
-                self.toast('❌ Insufficient balance. You need CC Points ' + price, 'error');
+                self.toast('❌ Insufficient balance. You need KSh ' + price, 'error');
                 return;
             }
             
@@ -3197,7 +2782,7 @@ var app = {
             self.toast('✅ Upgraded to ' + tierName + '! 🎉', 'success');
             self.renderEarn();
             self.loadProfile();
-            self.logUserActivity('upgrade_tier', 'Upgraded to ' + tierName + ' for CC Points ' + price);
+            self.logUserActivity('upgrade_tier', 'Upgraded to ' + tierName + ' for KSh ' + price);
         }, 1500);
     },
 
@@ -3516,7 +3101,7 @@ var app = {
                
                 var balanceDisplay = document.getElementById('balanceDisplay');
                 if (balanceDisplay) {
-                    balanceDisplay.textContent = 'CC Points ' + self.balance.toFixed(2);
+                    balanceDisplay.textContent = 'KSh ' + self.balance.toFixed(2);
                 }
                
                 var avatar = document.getElementById('quickPostAvatar');
@@ -3606,9 +3191,8 @@ var app = {
             <div style="margin:16px;">
                 <div class="balance-card">
                     <div class="balance-label">💰 Your Balance</div>
-                    <div class="balance-amount" id="balanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
+                    <div class="balance-amount" id="balanceDisplay">KSh ${this.balance.toFixed(2)}</div>
                     <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
-                    <button class="btn-withdraw" onclick="app.openSpinner()" style="background:#8b5cf6;margin-left:8px;">🎰 Spin</button>
                 </div>
             </div>
             
@@ -4907,7 +4491,7 @@ var app = {
         document.getElementById('withdrawAmount').min = 1;
         var balanceDisplay = document.getElementById('withdrawBalanceDisplay');
         if (balanceDisplay) {
-            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
+            balanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
         }
     },
 
@@ -4920,11 +4504,11 @@ var app = {
         var minAmount = 1;
         
         if (isNaN(amount) || amount < minAmount) {
-            this.toast('❌ Minimum withdrawal is CC Points ' + minAmount, 'error');
+            this.toast('❌ Minimum withdrawal is KSh ' + minAmount, 'error');
             return;
         }
         if (amount > this.balance) {
-            this.toast('❌ Insufficient balance. You have CC Points ' + this.balance.toFixed(2), 'error');
+            this.toast('❌ Insufficient balance. You have KSh ' + this.balance.toFixed(2), 'error');
             return;
         }
         
@@ -4953,15 +4537,15 @@ var app = {
         
         var balanceDisplay = document.getElementById('balanceDisplay');
         if (balanceDisplay) {
-            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
+            balanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
         }
         
-        this.toast('✅ Withdrawal request submitted! CC Points ' + amount.toFixed(2), 'success');
+        this.toast('✅ Withdrawal request submitted! KSh ' + amount.toFixed(2), 'success');
         this.closeWithdrawModal();
         document.getElementById('withdrawAmount').value = '';
         document.getElementById('accountNumber').value = '';
         this.renderProfile();
-        this.logUserActivity('withdrawal_request', 'Requested withdrawal of CC Points ' + amount);
+        this.logUserActivity('withdrawal_request', 'Requested withdrawal of KSh ' + amount);
     },
 
     // ============================================
@@ -5840,49 +5424,6 @@ var app = {
             this.renderProfile();
             this.logUserActivity('update_profile', 'Updated profile');
         }
-    },
-
-    switchEarnTab: function(tabName) {
-        // Hide all earn content containers
-        var earnContainer = document.getElementById('earnContainer');
-        var triviaContainer = document.getElementById('triviaContainer');
-        var walletContainer = document.getElementById('walletContainer');
-        var giftsContainer = document.getElementById('giftsContainer');
-        var premiumContainer = document.getElementById('premiumContainer');
-        
-        if (earnContainer) earnContainer.classList.add('hidden');
-        if (triviaContainer) triviaContainer.classList.add('hidden');
-        if (walletContainer) walletContainer.classList.add('hidden');
-        if (giftsContainer) giftsContainer.classList.add('hidden');
-        if (premiumContainer) premiumContainer.classList.add('hidden');
-        
-        // Remove active from all buttons
-        document.querySelectorAll('.earn-subtab-btn').forEach(function(btn) {
-            btn.classList.remove('active');
-        });
-        
-        // Show selected tab
-        var buttons = document.querySelectorAll('.earn-subtab-btn');
-        if (tabName === 'feed') {
-            if (earnContainer) earnContainer.classList.remove('hidden');
-            if (buttons[0]) buttons[0].classList.add('active');
-        } else if (tabName === 'trivia') {
-            if (triviaContainer) triviaContainer.classList.remove('hidden');
-            if (buttons[1]) buttons[1].classList.add('active');
-            this.loadTrivia();
-        } else if (tabName === 'wallet') {
-            if (walletContainer) walletContainer.classList.remove('hidden');
-            if (buttons[2]) buttons[2].classList.add('active');
-            this.loadWallet();
-        } else if (tabName === 'gifts') {
-            if (giftsContainer) giftsContainer.classList.remove('hidden');
-            if (buttons[3]) buttons[3].classList.add('active');
-            this.loadGifts();
-        } else if (tabName === 'premium') {
-            if (premiumContainer) premiumContainer.classList.remove('hidden');
-            if (buttons[4]) buttons[4].classList.add('active');
-            this.loadPremium();
-        }
     }
 };
 
@@ -5902,7 +5443,7 @@ setTimeout(function() {
 
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
 console.log('%c📱 Auto-posts every 10 minutes with unique content', 'color: #0088cc; font-size: 12px;');
-console.log('%c🧠 Trivia: CC Points 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
-console.log('%c🎰 Spin & Win: CC Points 5 per spin - Max CC Points 40!', 'color: #8b5cf6; font-size: 12px;');
+console.log('%c🧠 Trivia: KSh 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
+console.log('%c🎰 Spin & Win: KSh 5 per spin - Max KSh 40!', 'color: #8b5cf6; font-size: 12px;');
 console.log('%c🛡️ Suspicious activity detection active!', 'color: #ef4444; font-size: 12px;');
 console.log('%c👨‍💻 Built by Anthony Onchari - Version V01A.01', 'color: #6b7280; font-size: 11px;');
