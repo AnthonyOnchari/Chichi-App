@@ -34,11 +34,15 @@ var app = {
     isAdmin: false,
     backPressCount: 0,
     pendingTrivia: null,
-    _spinnerData: null,
-    isSpinning: false,
-    currentSongIndex: 0,
-    isShuffleEnabled: true,
     trendingHashtags: [],
+    engagementStats: {
+        lastLogin: null,
+        postsCount: 0,
+        commentsCount: 0,
+        likesCount: 0,
+        totalEarned: 0,
+        totalSpent: 0
+    },
 
     // ============================================
     // INIT
@@ -64,10 +68,10 @@ var app = {
         document.addEventListener('touch', interactionHandler, { once: false });
         document.addEventListener('keydown', interactionHandler, { once: false });
        
-        
-        
-        
-        
+        this.initConsent();
+        this.initActivityTracking();
+        this.initSuspiciousActivityDetection();
+        this.loadEngagementStats();
        
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
@@ -108,6 +112,8 @@ var app = {
                     if (s.exists()) {
                         self.profile = s.val();
                         self.balance = self.profile.balance || 0;
+                        // Track login
+                        self.trackLogin();
                     } else {
                         self.profile = {
                             name: u.displayName || 'User',
@@ -127,7 +133,7 @@ var app = {
                     self.showApp();
                     self.setOnlineStatus();
                     self.startTriviaTimer();
-                    
+                    self.logUserActivity('login', 'User logged in');
                     
                     setTimeout(function() {
                         var mainApp = document.getElementById('mainApp');
@@ -177,7 +183,6 @@ var app = {
                     }
                 });
                 
-                // Auto-scroll to latest message when input is focused
                 chatInput.addEventListener('focus', function() {
                     setTimeout(function() {
                         var chatMessages = document.getElementById('chatMessages');
@@ -225,9 +230,73 @@ var app = {
     },
 
     // ============================================
+    // ENGAGEMENT TRACKING
+    // ============================================
+
+    loadEngagementStats: function() {
+        var stats = localStorage.getItem('chichi_engagement_stats');
+        if (stats) {
+            try {
+                this.engagementStats = JSON.parse(stats);
+            } catch(e) { }
+        }
+    },
+
+    saveEngagementStats: function() {
+        localStorage.setItem('chichi_engagement_stats', JSON.stringify(this.engagementStats));
+    },
+
+    trackLogin: function() {
+        var today = new Date().toDateString();
+        this.engagementStats.lastLogin = today;
+        this.engagementStats.totalLogins = (this.engagementStats.totalLogins || 0) + 1;
+        this.saveEngagementStats();
+        
+        // Store in Firebase for analytics
+        if (this.user) {
+            db.ref('analytics/loginHistory/' + this.user.uid + '/' + Date.now()).set({
+                date: today,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+    },
+
+    trackRevenue: function(type, amount, item) {
+        if (!this.user) return;
+        var today = new Date().toDateString();
+        
+        // Track coin spending/earning
+        var revenueData = {
+            userId: this.user.uid,
+            userName: this.profile.name || 'User',
+            type: type, // 'earned' or 'spent'
+            amount: amount,
+            item: item || '',
+            date: today,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        db.ref('analytics/revenue').push(revenueData);
+        
+        // Update engagement stats
+        if (type === 'earned') {
+            this.engagementStats.totalEarned = (this.engagementStats.totalEarned || 0) + amount;
+        } else if (type === 'spent') {
+            this.engagementStats.totalSpent = (this.engagementStats.totalSpent || 0) + amount;
+        }
+        this.saveEngagementStats();
+    },
+
+    // ============================================
     // CONSENT FUNCTIONS
     // ============================================
 
+    initConsent: function() {
+        var consentGiven = localStorage.getItem('userConsent');
+        if (!consentGiven) {
+            this.checkUserLocation();
+        }
+    },
 
     checkUserLocation: function() {
         var self = this;
@@ -582,123 +651,6 @@ var app = {
     },
 
     // ============================================
-    // MUSIC FUNCTIONS
-    // ============================================
-
-    initMusic: function() {
-        var musicEnabled = localStorage.getItem('chichi-music-enabled') === 'true';
-        var toggle = document.getElementById('musicToggle');
-        var toggleLabel = toggle ? toggle.parentElement : null;
-       
-        if (musicEnabled) {
-            if (toggle) toggle.checked = true;
-            this.playBackgroundMusic();
-            if (toggleLabel) toggleLabel.classList.add('playing');
-        } else {
-            if (toggle) toggle.checked = false;
-            if (toggleLabel) toggleLabel.classList.remove('playing');
-        }
-        
-        var audio = document.getElementById('themeMusic');
-        if (audio) {
-            audio.addEventListener('ended', function() {
-                if (document.getElementById('musicToggle') && document.getElementById('musicToggle').checked) {
-                    this.playNextSong();
-                }
-            }.bind(this));
-        }
-    },
-
-    toggleMusic: function() {
-        var toggle = document.getElementById('musicToggle');
-        var isEnabled = toggle.checked;
-        var toggleLabel = toggle.parentElement;
-       
-        localStorage.setItem('chichi-music-enabled', isEnabled ? 'true' : 'false');
-       
-        if (isEnabled) {
-            this.isShuffleEnabled = true;
-            this.currentSongIndex = 0;
-            this.playBackgroundMusic();
-            if (toggleLabel) toggleLabel.classList.add('playing');
-            this.toast('🎵 Music ON - Shuffle Mode', 'success');
-        } else {
-            this.stopBackgroundMusic();
-            if (toggleLabel) toggleLabel.classList.remove('playing');
-            this.toast('🔇 Music OFF', 'success');
-        }
-    },
-
-    playBackgroundMusic: function() {
-        var audio = document.getElementById('themeMusic');
-        if (!audio) return;
-        
-        var musicUrl = MUSIC_PLAYLIST[this.currentSongIndex];
-       
-        audio.src = musicUrl;
-        audio.volume = 0;
-        audio.loop = false;
-       
-        audio.play().then(function() {
-            var fadeIn = setInterval(function() {
-                if (audio.volume < 0.3) {
-                    audio.volume += 0.05;
-                } else {
-                    clearInterval(fadeIn);
-                }
-            }, 200);
-        }).catch(function(err) {
-            console.log('Could not play audio:', err);
-        });
-    },
-
-    stopBackgroundMusic: function() {
-        var audio = document.getElementById('themeMusic');
-        var fadeOut = setInterval(function() {
-            if (audio.volume > 0) {
-                audio.volume -= 0.05;
-            } else {
-                audio.pause();
-                audio.volume = 0;
-                clearInterval(fadeOut);
-            }
-        }, 200);
-    },
-
-    getRandomSongIndex: function() {
-        var randomIndex;
-        do {
-            randomIndex = Math.floor(Math.random() * MUSIC_PLAYLIST.length);
-        } while (randomIndex === this.currentSongIndex && MUSIC_PLAYLIST.length > 1);
-        return randomIndex;
-    },
-
-    playNextSong: function() {
-        if (this.isShuffleEnabled) {
-            this.currentSongIndex = this.getRandomSongIndex();
-        } else {
-            this.currentSongIndex = (this.currentSongIndex + 1) % MUSIC_PLAYLIST.length;
-        }
-        this.playBackgroundMusic();
-    },
-
-    // ============================================
-    // LOAD SPINNER SETTINGS
-    // ============================================
-
-    loadSpinnerSettings: function() {
-        var self = this;
-        db.ref('adminSettings/spinner').once('value', function(snapshot) {
-            var settings = snapshot.val();
-            if (settings) {
-                if (settings.maxWin) SPINNER_CONFIG.maxWin = settings.maxWin;
-                if (settings.spinCost) SPINNER_CONFIG.spinCost = settings.spinCost;
-                console.log('🎰 Spinner settings loaded:', settings);
-            }
-        });
-    },
-
-    // ============================================
     // BANNED SCREEN
     // ============================================
 
@@ -750,7 +702,7 @@ var app = {
             scrollTimeout = setTimeout(function() {
                 var scrollPercent = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
                 if (scrollPercent > 0 && scrollPercent % 25 === 0) {
-                    
+                    self.logUserActivity('scroll', 'Scrolled to ' + scrollPercent + '%');
                 }
             }, 500);
         });
@@ -758,24 +710,51 @@ var app = {
         var startTime = Date.now();
         window.addEventListener('beforeunload', function() {
             var timeSpent = Math.round((Date.now() - startTime) / 1000);
-            
+            self.logUserActivity('session_end', 'Time spent: ' + timeSpent + ' seconds');
         });
         
         console.log('📊 Activity tracking initialized');
     },
 
     trackPageView: function() {
-        
+        this.logUserActivity('page_view', {
+            page: window.location.pathname,
+            title: document.title,
+            referrer: document.referrer || 'direct'
+        });
     },
 
+    logUserActivity: function(action, details) {
+        if (!this.user && !this.isGuest) return;
+        
+        var userId = this.user ? this.user.uid : 'guest';
+        var userName = this.user ? (this.profile.name || this.user.email || 'User') : 'Guest';
+        
+        var safeDetails = typeof details === 'string' ? details : JSON.stringify(details);
+        if (safeDetails.length > 200) {
+            safeDetails = safeDetails.substring(0, 200) + '...';
+        }
+        
+        db.ref('activityLogs').push({
+            userId: userId,
+            userName: userName,
+            userEmail: this.user ? this.user.email : 'guest@chichi.com',
+            action: action,
+            details: safeDetails,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            time: new Date().toLocaleString('en-KE'),
+            isAdmin: this.isAdmin || false
+        }).catch(function(err) {
+            console.log('⚠️ Failed to log activity:', err.message);
+        });
+        
+        this.checkForSuspiciousActivity(action, details);
+    },
 
     checkAndShowUsernameSetup: function() {
-        // Show username setup popup once for users without username
         if (!this.user) return;
         
         var hasUsername = this.profile && this.profile.username && this.profile.username.trim() !== '';
-        
-        // Check if we've already shown this in this session
         var shownUsernamePopup = sessionStorage.getItem('shownUsernamePopup_' + this.user.uid);
         
         if (!hasUsername && !shownUsernamePopup) {
@@ -796,7 +775,7 @@ var app = {
             <div style="background: white; border-radius: 20px; padding: 32px 28px; max-width: 440px; width: 95%; text-align: center; animation: slideUp 0.4s ease; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);">
                 <div style="font-size: 40px; margin-bottom: 16px;">👤</div>
                 <h2 style="font-size: 22px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0;">Create Your Username</h2>
-                <p style="font-size: 14px; color: #64748b; margin: 0 0 24px 0; line-height: 1.6;">You need a unique username to send and receive money, and be found by other users.</p>
+                <p style="font-size: 14px; color: #64748b; margin: 0 0 24px 0; line-height: 1.6;">You need a unique username to connect with other users.</p>
                 
                 <div style="margin-bottom: 20px;">
                     <input type="text" id="setupUsername" placeholder="e.g. anthony_onchari" maxlength="30" style="width: 100%; padding: 13px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 14px; font-family: inherit; box-sizing: border-box; transition: 0.2s;" onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none'" onkeyup="document.getElementById('usernameHint').textContent = '@' + this.value">
@@ -818,7 +797,6 @@ var app = {
         document.body.appendChild(modal);
         document.getElementById('setupUsername').focus();
         
-        // Allow Enter key to submit
         document.getElementById('setupUsername').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 self.saveNewUsername();
@@ -841,7 +819,6 @@ var app = {
         
         var self = this;
         
-        // Check if username is already taken
         db.ref('users').orderByChild('username').equalTo(username).once('value')
             .then(function(snapshot) {
                 if (snapshot.exists()) {
@@ -849,11 +826,10 @@ var app = {
                     return;
                 }
                 
-                // Save username
                 db.ref('users/' + self.user.uid + '/username').set(username);
                 self.profile.username = username;
                 self.toast('Username set to @' + username, 'success');
-                
+                self.logUserActivity('username_setup', 'Set username to ' + username);
                 document.getElementById('usernameSetupModal').remove();
             })
             .catch(function(err) {
@@ -863,14 +839,16 @@ var app = {
     },
 
     // ============================================
-    // SUSPICIOUS ACTIVITY DETECTION
+    // SUSPICIOUS ACTIVITY DETECTION (Simplified)
     // ============================================
 
+    initSuspiciousActivityDetection: function() {
+        this.actionTimestamps = {};
+        console.log('🛡️ Suspicious activity detection initialized');
+    },
 
     checkForSuspiciousActivity: function(action, details) {
-        // ✅ DISABLED: This feature was too noisy
-        return;
-        
+        // Lightweight version - only flag obvious spam patterns
         var self = this;
         var userId = this.user ? this.user.uid : 'guest';
         var now = Date.now();
@@ -884,73 +862,14 @@ var app = {
             return now - t < 10000;
         });
         
-        if (this.actionTimestamps[key].length > 10) {
+        if (this.actionTimestamps[key].length > 15) {
             this.reportSuspiciousActivity(
                 'Rapid ' + action + ' - ' + this.actionTimestamps[key].length + ' times in 10 seconds',
-                'high',
+                'medium',
                 { action: action, count: this.actionTimestamps[key].length }
             );
             this.actionTimestamps[key] = [];
         }
-        
-        var detailsStr = typeof details === 'string' ? details.toLowerCase() : JSON.stringify(details).toLowerCase();
-        var suspiciousPatterns = [
-            { pattern: 'delete', action: 'post', severity: 'high' },
-            { pattern: 'block', action: 'user', severity: 'high' },
-            { pattern: 'spam', action: 'post', severity: 'high' },
-            { pattern: 'hack', action: 'attempt', severity: 'critical' },
-            { pattern: 'inappropriate', action: 'content', severity: 'high' },
-            { pattern: 'malicious', action: 'script', severity: 'critical' },
-            { pattern: 'phishing', action: 'link', severity: 'critical' },
-            { pattern: 'abuse', action: 'report', severity: 'high' },
-            { pattern: 'fraud', action: 'payment', severity: 'critical' }
-        ];
-        
-        for (var i = 0; i < suspiciousPatterns.length; i++) {
-            var pattern = suspiciousPatterns[i];
-            if (detailsStr.includes(pattern.pattern) || detailsStr.includes(pattern.action)) {
-                this.reportSuspiciousActivity(
-                    'Suspicious pattern detected: ' + pattern.pattern,
-                    pattern.severity,
-                    { action: action, details: details }
-                );
-                break;
-            }
-        }
-        
-        if (action === 'create_post' || action === 'post') {
-            this.checkRapidActivity('create_post', 5, 5, 'Rapid posting detected');
-        }
-        if (action === 'follow') {
-            this.checkRapidActivity('follow', 20, 5, 'Mass following detected');
-        }
-    },
-
-    checkRapidActivity: function(action, threshold, minutes, message) {
-        var self = this;
-        var userId = this.user ? this.user.uid : null;
-        if (!userId) return;
-        
-        var timeWindow = minutes * 60 * 1000;
-        var cutoffTime = Date.now() - timeWindow;
-        
-        db.ref('activityLogs').orderByChild('userId').equalTo(userId).once('value', function(snapshot) {
-            var count = 0;
-            snapshot.forEach(function(child) {
-                var activity = child.val();
-                if (activity.action === action && activity.timestamp > cutoffTime) {
-                    count++;
-                }
-            });
-            
-            if (count > threshold) {
-                self.reportSuspiciousActivity(
-                    message + ': ' + count + ' ' + action + 's in ' + minutes + ' minutes',
-                    'medium',
-                    { action: action, count: count, minutes: minutes }
-                );
-            }
-        });
     },
 
     reportSuspiciousActivity: function(reason, severity, data) {
@@ -979,25 +898,13 @@ var app = {
             this.toast('🚨 Suspicious activity detected: ' + reason, 'error');
         }
         
-        this.sendAdminNotification('🚨 Suspicious Activity: ' + reason, severity);
-        
         setTimeout(function() {
             self.suspiciousActivityDetected = false;
         }, 30000);
     },
 
-    sendAdminNotification: function(message, severity) {
-        db.ref('adminNotifications').push({
-            message: message,
-            severity: severity || 'medium',
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            time: new Date().toLocaleString('en-KE'),
-            read: false
-        });
-    },
-
     // ============================================
-    // ADMIN FUNCTIONS
+    // ADMIN FUNCTIONS (Simplified)
     // ============================================
 
     openAdminModal: function() {
@@ -1015,10 +922,10 @@ var app = {
         if (pass === ADMIN_PASSWORD) {
             this.closeAdminModal();
             this.openAdminPortal();
-            
+            this.logUserActivity('admin_login', 'Admin logged in');
         } else {
             this.toast('❌ Wrong password', 'error');
-            
+            this.logUserActivity('admin_login_failed', 'Failed admin login attempt');
             document.getElementById('adminPassword').value = '';
             document.getElementById('adminPassword').focus();
         }
@@ -1032,12 +939,10 @@ var app = {
         this.loadAdminDashboard();
         this.loadAdminUsers();
         this.loadAdminPosts();
-        this.loadAdminWithdrawals();
         this.loadActivityLog();
         this.loadSuspiciousActivity();
         this.loadAdminNotifications();
-        this.loadPaymentVerifications();
-        this.loadAdminSpinnerControls();
+        this.loadAdminAnalytics();
     },
 
     closeAdminPortal: function() {
@@ -1052,7 +957,7 @@ var app = {
         document.querySelectorAll('.admin-tab-content').forEach(function(c) { c.classList.remove('active'); });
        
         var buttons = document.querySelectorAll('.admin-tab');
-        var tabMap = ['dashboard', 'users', 'incomplete', 'posts', 'withdrawals', 'payments', 'spinner', 'triviaplans', 'notifications', 'logs'];
+        var tabMap = ['dashboard', 'users', 'incomplete', 'posts', 'analytics', 'gifts', 'notifications', 'logs'];
         var tabIndex = tabMap.indexOf(tab);
         if (tabIndex >= 0) {
             buttons[tabIndex].classList.add('active');
@@ -1063,10 +968,8 @@ var app = {
             'users': 'adminUsers',
             'incomplete': 'adminIncomplete',
             'posts': 'adminPosts',
-            'withdrawals': 'adminWithdrawalsTab',
-            'payments': 'adminPaymentsTab',
-            'spinner': 'adminSpinnerTab',
-            'triviaplans': 'adminTriviaPlansTab',
+            'analytics': 'adminAnalytics',
+            'gifts': 'adminGifts',
             'notifications': 'adminNotificationsTab',
             'logs': 'adminLogs'
         };
@@ -1079,12 +982,9 @@ var app = {
         if (tab === 'users') this.loadAdminUsers();
         if (tab === 'incomplete') this.loadIncompleteUsers();
         if (tab === 'posts') this.loadAdminPosts();
-        if (tab === 'withdrawals') this.loadAdminWithdrawals();
-        if (tab === 'payments') this.loadPaymentVerifications();
-        if (tab === 'spinner') this.loadAdminSpinnerControls();
-        if (tab === 'triviaplans') this.loadAdminTriviaPlans();
+        if (tab === 'analytics') this.loadAdminAnalytics();
+        if (tab === 'gifts') this.loadAdminGifts();
         if (tab === 'logs') this.loadActivityLog();
-        if (tab === 'suspicious') this.loadSuspiciousActivity();
         if (tab === 'notifications') this.loadAdminNotifications();
     },
 
@@ -1098,71 +998,46 @@ var app = {
         var userCount = Object.keys(this.users || {}).length;
         var postCount = (this.posts || []).length;
         
-        // Calculate today's signups vs yesterday's
+        // Calculate today's signups
         var today = new Date().toLocaleDateString('en-KE');
-        var yesterday = new Date(new Date().setDate(new Date().getDate() - 1)).toLocaleDateString('en-KE');
         var todaySignups = 0;
-        var yesterdaySignups = 0;
         
         for (var uid in this.users) {
             var user = this.users[uid];
             if (user.createdAt) {
-                var createdDate = user.createdAt.split(',')[0]; // Get date part only
+                var createdDate = user.createdAt.split(',')[0];
                 if (createdDate === today) todaySignups++;
-                else if (createdDate === yesterday) yesterdaySignups++;
             }
         }
-        
-        var signupChange = yesterdaySignups > 0 ? Math.round(((todaySignups - yesterdaySignups) / yesterdaySignups) * 100) : (todaySignups > 0 ? 100 : 0);
        
         document.getElementById('adminUserCount').textContent = userCount;
         document.getElementById('adminPostCount').textContent = postCount;
         document.getElementById('adminSignupCount').textContent = todaySignups;
-        document.getElementById('adminSignupChange').textContent = (signupChange >= 0 ? '↑' : '↓') + Math.abs(signupChange) + '%';
-        document.getElementById('adminSignupChange').style.color = signupChange >= 0 ? '#22c55e' : '#ef4444';
        
+        // Load engagement stats
+        db.ref('analytics/revenue').once('value', function(snap) {
+            var totalEarned = 0;
+            var totalSpent = 0;
+            var transactions = 0;
+            
+            snap.forEach(function(child) {
+                var data = child.val();
+                if (data.type === 'earned') {
+                    totalEarned += data.amount || 0;
+                } else if (data.type === 'spent') {
+                    totalSpent += data.amount || 0;
+                }
+                transactions++;
+            });
+            
+            document.getElementById('adminTotalEarned').textContent = totalEarned.toFixed(2);
+            document.getElementById('adminTotalSpent').textContent = totalSpent.toFixed(2);
+            document.getElementById('adminTransactions').textContent = transactions;
+        });
+        
         db.ref('bannedUsers').once('value', function(snap) {
             var bannedCount = snap.numChildren() || 0;
             document.getElementById('adminBannedCount').textContent = bannedCount;
-        });
-       
-        db.ref('withdrawals').once('value', function(snap) {
-            var withdrawals = [];
-            snap.forEach(function(child) {
-                withdrawals.push({
-                    id: child.key,
-                    ...child.val()
-                });
-            });
-           
-            var pendingCount = withdrawals.filter(function(w) { return w.status === 'pending'; }).length;
-            var approvedCount = withdrawals.filter(function(w) { return w.status === 'approved'; }).length;
-           
-            document.getElementById('adminPendingCount').textContent = pendingCount;
-            document.getElementById('adminApprovedCount').textContent = approvedCount;
-           
-            var html = '';
-            if (withdrawals.length === 0) {
-                html = '<div style="text-align: center; color: #6b7280; padding: 20px;">No withdrawal requests</div>';
-            } else {
-                var recent = withdrawals.slice(0, 5);
-                recent.forEach(function(w) {
-                    html += `
-                        <div class="withdrawal-card ${w.status || 'pending'}" style="margin-bottom: 8px;">
-                            <div class="withdrawal-header">
-                                <div class="withdrawal-user">${w.userName || 'Unknown'}</div>
-                                <div class="withdrawal-status ${w.status || 'pending'}">${(w.status || 'pending').toUpperCase()}</div>
-                            </div>
-                            <div class="withdrawal-details">
-                                <div>CC Points ${w.amount || 0} • ${w.method || 'M-Pesa'}</div>
-                                <div style="font-size: 0.75rem; margin-top: 4px;">${w.createdAt || 'N/A'}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-           
-            document.getElementById('adminWithdrawals').innerHTML = html;
         });
     },
 
@@ -1179,7 +1054,6 @@ var app = {
         for (var uid in this.users) {
             userArray.push({ uid: uid, user: this.users[uid] });
             
-            // Find users without username
             var user = this.users[uid];
             if (!user.username || user.username.trim() === '') {
                 usersWithoutUsername.push({
@@ -1191,23 +1065,22 @@ var app = {
             }
         }
 
-        // Show warning for users without username
         if (usersWithoutUsername.length > 0) {
             html += `
                 <div style="background: #fef3c7; border: 1.5px solid #fbbf24; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
                     <div style="display: flex; gap: 12px; align-items: flex-start;">
                         <div style="font-size: 24px;">⚠️</div>
                         <div>
-                            <div style="font-weight: 700; color: #92400e; margin-bottom: 8px;">⚠️ ${usersWithoutUsername.length} User${usersWithoutUsername.length > 1 ? 's' : ''} Without Username</div>
-                            <div style="font-size: 13px; color: #78350f; margin-bottom: 12px;">These users won't appear in searches or transfers. Click below to fix them:</div>
+                            <div style="font-weight: 700; color: #92400e; margin-bottom: 8px;">${usersWithoutUsername.length} User${usersWithoutUsername.length > 1 ? 's' : ''} Without Username</div>
+                            <div style="font-size: 13px; color: #78350f; margin-bottom: 12px;">These users won't appear in searches. Click below to fix them:</div>
                             <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                                 ${usersWithoutUsername.map(u => `
                                     <div style="background: white; border-radius: 8px; padding: 8px 12px; font-size: 12px;">
                                         <span style="font-weight: 600; color: #1e293b;">${u.name}</span>
                                         <span style="color: #6b7280; font-size: 11px;">(${u.email})</span>
-                                        <button onclick="app.fixUserUsername('${u.uid}', '${u.name}', '${u.email}')" style="margin-left: 8px; padding: 4px 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; transition: 0.2s;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">Fix</button>
-                    </div>
-                `).join('')}
+                                        <button onclick="app.fixUserUsername('${u.uid}', '${u.name}', '${u.email}')" style="margin-left: 8px; padding: 4px 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px;">Fix</button>
+                                    </div>
+                                `).join('')}
                             </div>
                         </div>
                     </div>
@@ -1226,20 +1099,16 @@ var app = {
                 userArray.forEach(function(u) {
                     var isBanned = bannedUsers[u.uid] ? true : false;
                     var banData = bannedUsers[u.uid] || {};
-                    var userTier = u.user.tier || 'free';
-                    var tierData = EARNING_SETTINGS[userTier];
-                    var badgeDisplay = tierData && tierData.badge ? `<span style="margin-left: 4px;">${tierData.badge}</span>` : '';
                     var usernameDisplay = u.user.username ? `<div style="font-size: 0.75rem; color: #3b82f6; margin-top: 2px;">@${u.user.username}</div>` : '<div style="font-size: 0.75rem; color: #ef4444; margin-top: 2px;">❌ NO USERNAME</div>';
                     
                     html += `
                         <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; ${isBanned ? 'background: #fef2f2;' : ''}">
                             <div>
-                                <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name} ${badgeDisplay} ${isBanned ? '🚫' : ''}</div>
+                                <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name} ${isBanned ? '🚫' : ''}</div>
                                 <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
                                 ${usernameDisplay}
                                 <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Joined: ${u.user.createdAt}</div>
-                                <div style="font-size: 0.75rem; color: var(--primary);">Balance: CC Points ${(u.user.balance || 0).toFixed(2)}</div>
-                                <div style="font-size: 0.75rem; color: var(--primary);">Tier: ${tierData ? tierData.label : 'Free'}</div>
+                                <div style="font-size: 0.75rem; color: var(--primary);">💰 ${(u.user.balance || 0).toFixed(2)} Coins</div>
                                 ${isBanned ? `<div style="font-size: 0.7rem; color: #ef4444;">Banned: ${banData.reason || 'No reason'}</div>` : ''}
                             </div>
                             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -1248,7 +1117,6 @@ var app = {
                                     <button onclick="app.fixUserUsername('${u.uid}', '${u.user.name}', '${u.user.email}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Fix Username</button>
                                 ` : ''}
                                 <button onclick="app.showBalanceEditor('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">💰 Balance</button>
-                                <button onclick="app.viewUserActivity('${u.uid}')" style="padding: 6px 12px; background: var(--border); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">View</button>
                                 ${isBanned ? `
                                     <button onclick="app.unbanUser('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Unban</button>
                                 ` : `
@@ -1319,7 +1187,6 @@ var app = {
         
         var self = this;
         
-        // Check if username is taken
         db.ref('users').orderByChild('username').equalTo(username).once('value')
             .then(function(snapshot) {
                 if (snapshot.exists()) {
@@ -1330,12 +1197,11 @@ var app = {
                     }
                 }
                 
-                // Save username
                 db.ref('users/' + uid + '/username').set(username);
                 self.toast('✅ Username set to @' + username + ' for ' + name, 'success');
-                
+                self.logUserActivity('admin_fix_username', 'Admin set username to ' + username + ' for user ' + name);
                 document.getElementById('fixUsernameModal').remove();
-                self.loadAdminUsers(); // Reload users list
+                self.loadAdminUsers();
             })
             .catch(function(err) {
                 console.error('Error:', err);
@@ -1353,7 +1219,6 @@ var app = {
         db.ref('users').once('value', function(snapshot) {
             var allUsers = snapshot.val() || {};
             
-            // Find users missing name, email, or username
             for (var uid in allUsers) {
                 var u = allUsers[uid];
                 if (!u.name || !u.email || !u.username || u.username.trim() === '') {
@@ -1447,7 +1312,6 @@ var app = {
         
         db.ref('chats/' + chatKey + '/messages').push(messageData).then(function() {
             self.toast('✅ Message sent to ' + toName, 'success');
-            console.log('💬 Admin message sent to', toName);
         }).catch(function(err) {
             self.toast('❌ Error sending message: ' + err.message, 'error');
         });
@@ -1472,7 +1336,7 @@ var app = {
         }).then(function() {
             self.toast('✅ User "' + userName + '" has been banned', 'success');
             self.loadAdminUsers();
-            
+            self.logUserActivity('admin_ban', 'Banned user: ' + userName + ' for: ' + reason);
         }).catch(function(err) {
             self.toast('❌ Error banning user: ' + err.message, 'error');
         });
@@ -1485,7 +1349,7 @@ var app = {
         db.ref('bannedUsers/' + uid).remove().then(function() {
             self.toast('✅ User "' + userName + '" has been unbanned', 'success');
             self.loadAdminUsers();
-            
+            self.logUserActivity('admin_unban', 'Unbanned user: ' + userName);
         }).catch(function(err) {
             self.toast('❌ Error unbanning user: ' + err.message, 'error');
         });
@@ -1498,7 +1362,7 @@ var app = {
         db.ref('users/' + uid).remove().then(function() {
             self.toast('✅ User "' + userName + '" deleted', 'success');
             self.loadAdminUsers();
-            
+            self.logUserActivity('admin_delete_user', 'Deleted user: ' + userName);
         }).catch(function(err) {
             self.toast('❌ Error deleting user: ' + err.message, 'error');
         });
@@ -1543,608 +1407,349 @@ var app = {
         this.toast('✅ Post deleted', 'success');
         this.loadAdminPosts();
         this.loadPosts();
-        
+        this.logUserActivity('admin_delete_post', 'Admin deleted post: ' + id);
     },
 
     // ============================================
-    // ADMIN - WITHDRAWALS
+    // ADMIN - BALANCE EDITOR
     // ============================================
 
-    loadAdminWithdrawals: function() {
+    showBalanceEditor: function(uid, userName) {
         var self = this;
-        var html = '';
+        if (!uid) return;
         
-        db.ref('withdrawals').once('value', function(snap) {
-            var withdrawals = [];
-            snap.forEach(function(child) {
-                withdrawals.push({
-                    id: child.key,
-                    ...child.val()
-                });
-            });
+        db.ref('users/' + uid + '/balance').once('value', function(snap) {
+            var currentBalance = snap.val() || 0;
             
-            withdrawals.sort(function(a, b) {
-                return (b.timestamp || 0) - (a.timestamp || 0);
-            });
-            
-            if (withdrawals.length === 0) {
-                html = '<div style="text-align: center; color: #6b7280; padding: 40px 20px;">💳 No withdrawal requests</div>';
-            } else {
-                withdrawals.forEach(function(w) {
-                    var statusClass = w.status || 'pending';
-                    var statusColor = statusClass === 'pending' ? '#f59e0b' : 
-                                     statusClass === 'approved' ? '#22c55e' : '#ef4444';
+            var modal = document.createElement('div');
+            modal.id = 'balanceEditModal';
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = `
+                <div class="modal" style="max-width: 450px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="font-weight: 700; margin: 0;">Edit Balance</h2>
+                        <button onclick="document.getElementById('balanceEditModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                    </div>
                     
-                    html += `
-                        <div class="withdrawal-card ${statusClass}" style="margin-bottom: 10px;">
-                            <div class="withdrawal-header">
-                                <div class="withdrawal-user">👤 ${w.userName || 'Unknown User'}</div>
-                                <div class="withdrawal-status ${statusClass}" style="background: ${statusColor}20; color: ${statusColor}; padding: 4px 12px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">${(w.status || 'pending').toUpperCase()}</div>
-                            </div>
-                            <div class="withdrawal-details" style="margin: 8px 0;">
-                                <div style="font-size: 0.9rem; font-weight: 600;">💰 CC Points ${(w.amount || 0).toFixed(2)}</div>
-                                <div style="font-size: 0.8rem; color: var(--text-light);">📱 ${w.method || 'M-Pesa'} • ${w.account || 'N/A'}</div>
-                                <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 2px;">📧 ${w.userEmail || 'No email'}</div>
-                                <div style="font-size: 0.7rem; color: var(--text-light); margin-top: 2px;">📅 ${w.createdAt || 'N/A'}</div>
-                            </div>
-                            ${statusClass === 'pending' ? `
-                                <div class="withdrawal-actions" style="display: flex; gap: 8px; margin-top: 8px;">
-                                    <button class="admin-approve" onclick="app.approveWithdrawal('${w.id}')" style="flex: 1; padding: 8px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">✅ Approve</button>
-                                    <button class="admin-reject" onclick="app.rejectWithdrawal('${w.id}')" style="flex: 1; padding: 8px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">❌ Reject</button>
-                                </div>
-                            ` : `
-                                <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-light);">
-                                    ${statusClass === 'approved' ? '✅ Approved' : '❌ Rejected'}
-                                </div>
-                            `}
-                        </div>
-                    `;
-                });
-            }
-            
-            document.getElementById('adminWithdrawalsList').innerHTML = html;
-        });
-    },
-
-    approveWithdrawal: function(withdrawalId) {
-        var self = this;
-        db.ref('withdrawals/' + withdrawalId).update({
-            status: 'approved'
-        }).then(function() {
-            self.toast('✅ Withdrawal approved', 'success');
-            self.loadAdminWithdrawals();
-            self.loadAdminDashboard();
-            
-        }).catch(function(err) {
-            self.toast('❌ Error: ' + err.message, 'error');
-        });
-    },
-
-    rejectWithdrawal: function(withdrawalId) {
-        var self = this;
-        db.ref('withdrawals/' + withdrawalId).once('value', function(snap) {
-            if (snap.exists()) {
-                var withdrawal = snap.val();
-                db.ref('withdrawals/' + withdrawalId).update({
-                    status: 'rejected'
-                }).then(function() {
-                    db.ref('users/' + withdrawal.userId + '/balance').once('value', function(balanceSnap) {
-                        var currentBalance = balanceSnap.val() || 0;
-                        db.ref('users/' + withdrawal.userId + '/balance').set(currentBalance + (withdrawal.amount || 0));
-                    });
-                    self.toast('✅ Withdrawal rejected and refunded', 'success');
-                    self.loadAdminWithdrawals();
-                    self.loadAdminDashboard();
+                    <div style="background: #f0f7ff; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                        <div style="font-size: 12px; color: #0088cc; font-weight: 600; margin-bottom: 4px;">USER</div>
+                        <div style="font-weight: 700; font-size: 18px; color: #1a202c;">${userName || 'Unknown'}</div>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">UID: ${uid.substring(0, 20)}...</div>
+                    </div>
                     
-                });
-            }
-        });
-    },
-
-    // ============================================
-    // ADMIN - PAYMENT VERIFICATIONS
-    // ============================================
-
-    loadPaymentVerifications: function() {
-        var self = this;
-        var html = '';
-        var paymentsContainer = document.getElementById('paymentVerificationsList');
-        
-        if (!paymentsContainer) {
-            console.error('❌ Payments container not found');
-            return;
-        }
-        
-        paymentsContainer.innerHTML = '<div style="padding: 20px; text-align: center;">⏳ Loading upgrade requests...</div>';
-        
-        console.log('💳 Loading payment verifications...');
-        
-        db.ref('paymentVerifications').limitToLast(100).once('value', function(snapshot) {
-            try {
-                var verifications = [];
-                snapshot.forEach(function(child) {
-                    verifications.push({
-                        id: child.key,
-                        ...child.val()
-                    });
-                });
-                
-                // Sort by timestamp descending (newest first)
-                verifications.sort(function(a, b) {
-                    return (b.timestamp || 0) - (a.timestamp || 0);
-                });
-                
-                console.log('✅ Payment verifications loaded:', verifications.length);
-                
-                if (verifications.length === 0) {
-                    html = '<div style="text-align: center; color: #6b7280; padding: 32px 20px;"><div style="font-size: 40px; margin-bottom: 12px;">✅</div><div>No pending upgrade requests</div></div>';
-                } else {
-                    verifications.forEach(function(v) {
-                        var statusColor = v.status === 'pending' ? '#f59e0b' : 
-                                         v.status === 'approved' ? '#22c55e' : '#ef4444';
-                        var timestamp = new Date(v.timestamp || 0).toLocaleString();
-                        
-                        html += `
-                            <div style="padding: 14px 16px; border-bottom: 1px solid #e5e7eb; border-left: 4px solid ${statusColor}; background: ${v.status === 'pending' ? '#fffbeb' : 'white'}; transition: 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='${v.status === 'pending' ? '#fffbeb' : 'white'}'">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
-                                    <div style="flex: 1;">
-                                        <div style="font-weight: 600; font-size: 0.95rem; color: #1a202c;">${v.userName || 'Unknown User'}</div>
-                                        <div style="font-size: 0.85rem; color: #6b7280; margin-top: 4px;">📧 ${v.userEmail || 'N/A'}</div>
-                                        <div style="font-size: 0.85rem; color: #0088cc; margin-top: 4px; font-weight: 600;">⭐ Upgrading to: ${v.tierName || 'Unknown tier'}</div>
-                                        <div style="font-size: 0.85rem; color: #1a202c; margin-top: 4px; font-weight: 700;">💳 Amount: CC Points ${(v.amount || 0).toFixed(2)}</div>
-                                        <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 6px;">📝 ${v.confirmation || 'No verification message'}</div>
-                                        <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 4px;">🕐 ${timestamp}</div>
-                                    </div>
-                                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; flex-shrink: 0;">
-                                        <span style="padding: 4px 12px; border-radius: 8px; background: ${statusColor}20; color: ${statusColor}; font-size: 0.75rem; font-weight: 700; white-space: nowrap;">${(v.status || 'pending').toUpperCase()}</span>
-                                        ${v.status === 'pending' ? `
-                                            <button onclick="app.approvePayment('${v.id}', '${v.userId}', '${v.tier}')" style="padding: 6px 14px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 600; white-space: nowrap; transition: 0.2s;" onmouseover="this.style.background='#16a34a'" onmouseout="this.style.background='#22c55e'">✅ Approve</button>
-                                            <button onclick="app.rejectPayment('${v.id}')" style="padding: 6px 14px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 600; white-space: nowrap; transition: 0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">❌ Reject</button>
-                                        ` : '<span style="padding: 4px 12px; font-size: 0.75rem; font-weight: 600; color: #6b7280;">' + v.status.toUpperCase() + '</span>'}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-                
-                paymentsContainer.innerHTML = html;
-            } catch (err) {
-                console.error('❌ Error loading payments:', err);
-                paymentsContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">❌ Error: ' + err.message + '</div>';
-            }
-        }, function(err) {
-            console.error('❌ Firebase error:', err);
-            paymentsContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">❌ Firebase Error: ' + err.message + '</div>';
-        });
-    },
-
-    approvePayment: function(paymentId, userId, tier) {
-        var self = this;
-        
-        if (!confirm('Approve this payment and upgrade user to ' + tier + '?')) {
-            return;
-        }
-        
-        db.ref('paymentVerifications/' + paymentId + '/status').set('approved').then(function() {
-            db.ref('users/' + userId + '/tier').set(tier);
-            localStorage.setItem('chichi_user_tier_' + userId, tier);
-            
-            self.toast('✅ Payment approved and user upgraded!', 'success');
-            self.loadPaymentVerifications();
-            self.loadAdminUsers();
-            
-        }).catch(function(err) {
-            self.toast('❌ Error: ' + err.message, 'error');
-        });
-    },
-
-    rejectPayment: function(paymentId) {
-        var self = this;
-        
-        if (!confirm('Reject this payment?')) {
-            return;
-        }
-        
-        db.ref('paymentVerifications/' + paymentId + '/status').set('rejected').then(function() {
-            self.toast('✅ Payment rejected', 'success');
-            self.loadPaymentVerifications();
-            
-        }).catch(function(err) {
-            self.toast('❌ Error: ' + err.message, 'error');
-        });
-    },
-
-    // ============================================
-    // ADMIN - SPINNER CONTROLS
-    // ============================================
-
-    loadAdminSpinnerControls: function() {
-        var self = this;
-        var html = '';
-        
-        html = `
-            <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                <h3 style="margin: 0 0 12px 0;">🎰 Spinner Controls</h3>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-                    <div>
-                        <label style="font-size: 13px; font-weight: 600;">Max Win (KSh)</label>
-                        <input type="number" id="adminMaxWin" value="${SPINNER_CONFIG.maxWin}" class="form-input" style="margin-top: 4px; width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px;">
+                    <div style="background: #fef3c7; padding: 16px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+                        <div style="font-size: 12px; color: #92400e; font-weight: 600; margin-bottom: 4px;">CURRENT BALANCE</div>
+                        <div style="font-size: 28px; font-weight: 700; color: #92400e;">${currentBalance.toFixed(2)} Coins</div>
                     </div>
-                    <div>
-                        <label style="font-size: 13px; font-weight: 600;">Spin Cost (KSh)</label>
-                        <input type="number" id="adminSpinCost" value="${SPINNER_CONFIG.spinCost}" class="form-input" style="margin-top: 4px; width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px;">
+                    
+                    <div class="form-group">
+                        <label class="form-label">New Balance (Coins)</label>
+                        <input type="number" id="newBalanceInput" step="0.01" value="${currentBalance}" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px;" placeholder="0.00">
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">💡 Enter the exact balance you want (not a change amount)</div>
                     </div>
-                </div>
-                
-                <button onclick="app.saveSpinnerSettings()" style="background: var(--primary); color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; margin-bottom: 12px;">
-                    💾 Save Settings
-                </button>
-                
-                <div style="border-top: 1px solid var(--border); padding-top: 12px;">
-                    <div style="font-weight: 600; margin-bottom: 8px;">Force Win</div>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="number" id="adminForceAmount" placeholder="Amount" class="form-input" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px;">
-                        <button onclick="app.adminForceWin()" style="padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">⚡ Force Win</button>
+                    
+                    <div style="display: flex; gap: 8px; margin-top: 24px;">
+                        <button onclick="document.getElementById('balanceEditModal').remove()" style="flex: 1; padding: 12px; background: #e5e7eb; color: #1a202c; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Cancel</button>
+                        <button onclick="app.updateUserBalance('${uid}', document.getElementById('newBalanceInput').value, '${userName}')" style="flex: 1; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">✅ Save Balance</button>
                     </div>
-                </div>
-                
-                <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px;">
-                    <div style="font-weight: 600; margin-bottom: 8px;">Game Controls</div>
-                    <div style="display: flex; gap: 8px;">
-                        <button onclick="app.adminToggleSpins()" style="flex: 1; padding: 8px; background: ${window.ADMIN_SPINNER_OVERRIDES && window.ADMIN_SPINNER_OVERRIDES.disableSpins ? '#22c55e' : '#ef4444'}; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                            ${window.ADMIN_SPINNER_OVERRIDES && window.ADMIN_SPINNER_OVERRIDES.disableSpins ? '✅ Enable Spins' : '❌ Disable Spins'}
-                        </button>
-                    </div>
-                </div>
-                
-                <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px;">
-                    <div style="font-weight: 600; margin-bottom: 8px;">Win Odds Control</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                        <button onclick="app.setOdds('high')" style="padding: 6px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">🎯 High Wins</button>
-                        <button onclick="app.setOdds('normal')" style="padding: 6px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">⚖️ Normal</button>
-                        <button onclick="app.setOdds('low')" style="padding: 6px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">💀 Low Wins</button>
-                    </div>
-                </div>
-            </div>
-            
-            <div style="background: white; border-radius: 12px; padding: 16px;">
-                <h3 style="margin: 0 0 12px 0;">📊 Spinner Stats</h3>
-                <div id="spinnerStats"></div>
-            </div>
-        `;
-        
-        document.getElementById('adminSpinnerControls').innerHTML = html;
-        this.loadSpinnerStats();
-    },
-
-    saveSpinnerSettings: function() {
-        var maxWin = parseInt(document.getElementById('adminMaxWin').value);
-        var spinCost = parseInt(document.getElementById('adminSpinCost').value);
-        
-        if (isNaN(maxWin) || maxWin < 1) {
-            this.toast('⚠️ Invalid max win amount', 'error');
-            return;
-        }
-        if (isNaN(spinCost) || spinCost < 1) {
-            this.toast('⚠️ Invalid spin cost', 'error');
-            return;
-        }
-        
-        SPINNER_CONFIG.maxWin = maxWin;
-        SPINNER_CONFIG.spinCost = spinCost;
-        
-        db.ref('adminSettings/spinner').set({
-            maxWin: maxWin,
-            spinCost: spinCost,
-            updatedAt: new Date().toLocaleString('en-KE')
-        });
-        
-        this.toast('✅ Spinner settings saved!', 'success');
-        
-    },
-
-    adminForceWin: function() {
-        var amount = parseInt(document.getElementById('adminForceAmount').value);
-        
-        if (isNaN(amount) || amount < 1) {
-            this.toast('⚠️ Enter a valid amount', 'error');
-            return;
-        }
-        
-        if (amount > SPINNER_CONFIG.maxWin) {
-            this.toast('⚠️ Amount exceeds max win (' + SPINNER_CONFIG.maxWin + ')', 'error');
-            return;
-        }
-        
-        if (!window.ADMIN_SPINNER_OVERRIDES) {
-            window.ADMIN_SPINNER_OVERRIDES = {};
-        }
-        window.ADMIN_SPINNER_OVERRIDES.forceWin = true;
-        window.ADMIN_SPINNER_OVERRIDES.forceAmount = amount;
-        
-        this.toast('✅ Next spin will force win CC Points ' + amount, 'success');
-        
-        document.getElementById('adminForceAmount').value = '';
-    },
-
-    adminToggleSpins: function() {
-        if (!window.ADMIN_SPINNER_OVERRIDES) {
-            window.ADMIN_SPINNER_OVERRIDES = {};
-        }
-        window.ADMIN_SPINNER_OVERRIDES.disableSpins = !window.ADMIN_SPINNER_OVERRIDES.disableSpins;
-        this.loadAdminSpinnerControls();
-        this.toast(window.ADMIN_SPINNER_OVERRIDES.disableSpins ? '❌ Spins disabled' : '✅ Spins enabled', 'success');
-    },
-
-    setOdds: function(level) {
-        var oddsMap = {
-            'high': { winWeight: 15, loseWeight: 10 },
-            'normal': { winWeight: 10, loseWeight: 10 },
-            'low': { winWeight: 5, loseWeight: 20 }
-        };
-        
-        var odds = oddsMap[level];
-        if (!odds) return;
-        
-        SPINNER_CONFIG.segments.forEach(function(seg) {
-            if (seg.value === 0) {
-                seg.weight = odds.loseWeight;
-            } else {
-                seg.weight = odds.winWeight / (SPINNER_CONFIG.segments.length - 1);
-            }
-        });
-        
-        this.toast('✅ Odds set to: ' + level.toUpperCase(), 'success');
-        
-    },
-
-    loadSpinnerStats: function() {
-        var self = this;
-        
-        db.ref('activityLogs').orderByChild('action').once('value', function(snapshot) {
-            var wins = [];
-            var spins = [];
-            
-            snapshot.forEach(function(child) {
-                var activity = child.val();
-                if (activity.action === 'spinner_win') {
-                    wins.push(activity);
-                }
-                if (activity.action === 'spinner_lose') {
-                    spins.push(activity);
-                }
-            });
-            
-            var totalWins = wins.length;
-            var totalSpins = wins.length + spins.length;
-            var totalAmount = 0;
-            wins.forEach(function(w) {
-                var details = w.details || '';
-                var match = details.match(/CC Points (\d+)/);
-                if (match) {
-                    totalAmount += parseInt(match[1]);
-                }
-            });
-            
-            var winRate = totalSpins > 0 ? Math.round((totalWins / totalSpins) * 100) : 0;
-            var avgWin = totalWins > 0 ? Math.round(totalAmount / totalWins) : 0;
-            
-            var html = `
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
-                    <div style="background: #f0f7ff; padding: 12px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 11px; color: #6b7280;">Total Wins</div>
-                        <div style="font-size: 24px; font-weight: 700; color: #0088cc;">${totalWins}</div>
-                    </div>
-                    <div style="background: #f0f7ff; padding: 12px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 11px; color: #6b7280;">Win Rate</div>
-                        <div style="font-size: 24px; font-weight: 700; color: #f59e0b;">${winRate}%</div>
-                    </div>
-                    <div style="background: #f0f7ff; padding: 12px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 11px; color: #6b7280;">Avg Win</div>
-                        <div style="font-size: 24px; font-weight: 700; color: #22c55e;">CC Points ${avgWin}</div>
-                    </div>
-                </div>
-                <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
-                    Total paid out: CC Points ${totalAmount} from ${totalSpins} spins
                 </div>
             `;
             
-            var statsContainer = document.getElementById('spinnerStats');
-            if (statsContainer) {
-                statsContainer.innerHTML = html;
-            }
+            document.body.appendChild(modal);
+            document.getElementById('newBalanceInput').focus();
         });
     },
 
+    updateUserBalance: function(uid, newBalance, userName) {
+        var balance = parseFloat(newBalance);
+        
+        if (isNaN(balance) || balance < 0) {
+            this.toast('❌ Invalid balance amount', 'error');
+            return;
+        }
+        
+        db.ref('users/' + uid + '/balance').set(balance, function(err) {
+            if (err) {
+                this.toast('❌ Error: ' + err.message, 'error');
+            } else {
+                this.toast('✅ Balance updated to ' + balance.toFixed(2) + ' Coins', 'success');
+                document.getElementById('balanceEditModal').remove();
+                this.loadAdminUsers();
+            }
+        }.bind(this));
+    },
+
     // ============================================
-    // ADMIN - TRIVIA PLANS EDITOR
+    // ADMIN - ANALYTICS
     // ============================================
 
-    loadAdminTriviaPlans: function() {
+    loadAdminAnalytics: function() {
         var self = this;
         var html = '';
         
-        html = `
-            <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                <h3 style="margin: 0 0 16px 0;">📚 Manage Trivia Plans (Daily)</h3>
-                <div style="font-size: 13px; color: #64748b; margin-bottom: 16px; line-height: 1.6;">
-                    Edit daily question limits, rewards per question, and other settings for each plan tier.
-                </div>
-        `;
-        
-        // Iterate through each tier
-        ['free', 'premium', 'vip'].forEach(function(tier) {
-            var plan = EARNING_SETTINGS[tier];
-            var tierLabelMap = { 'free': 'Free', 'premium': 'Premium', 'vip': 'VIP' };
-            var tierColorMap = { 'free': '#6b7280', 'premium': '#3b82f6', 'vip': '#a855f7' };
+        // Get revenue stats
+        db.ref('analytics/revenue').once('value', function(snap) {
+            var earnedByType = {};
+            var spentByType = {};
+            var totalEarned = 0;
+            var totalSpent = 0;
+            var transactions = [];
+            
+            snap.forEach(function(child) {
+                var data = child.val();
+                if (data.type === 'earned') {
+                    totalEarned += data.amount || 0;
+                    var item = data.item || 'trivia';
+                    earnedByType[item] = (earnedByType[item] || 0) + data.amount;
+                } else if (data.type === 'spent') {
+                    totalSpent += data.amount || 0;
+                    var item = data.item || 'gift';
+                    spentByType[item] = (spentByType[item] || 0) + data.amount;
+                }
+                transactions.push(data);
+            });
             
             html += `
-                <div style="background: linear-gradient(135deg, ${tierColorMap[tier]}15, ${tierColorMap[tier]}08); border: 1.5px solid ${tierColorMap[tier]}40; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                    <h4 style="margin: 0 0 14px 0; color: ${tierColorMap[tier]}; font-weight: 700;">${tierLabelMap[tier]} Plan (Daily)</h4>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
-                        <div>
-                            <label style="font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 6px;">Questions Per Day</label>
-                            <input type="number" id="${tier}QuestionsPerDay" value="${plan.questionsPerDay}" min="1" max="100" class="form-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 6px;">Reward Per Question (KSh)</label>
-                            <input type="number" id="${tier}RewardPerQuestion" value="${plan.rewardPerQuestion}" min="0.1" step="0.1" class="form-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
-                        </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <div style="background: white; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase;">Total Earned</div>
+                        <div style="font-size: 28px; font-weight: 700; color: #22c55e;">${totalEarned.toFixed(2)}</div>
+                        <div style="font-size: 11px; color: #6b7280;">Coins</div>
                     </div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
-                        <div>
-                            <label style="font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 6px;">Timer (Seconds)</label>
-                            <input type="number" id="${tier}TimerSeconds" value="${plan.timerSeconds}" min="5" max="60" class="form-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 6px;">Ads Per Question</label>
-                            <input type="number" id="${tier}AdsPerQuestion" value="${plan.adsPerQuestion}" min="0" max="10" class="form-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
-                        </div>
+                    <div style="background: white; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase;">Total Spent</div>
+                        <div style="font-size: 28px; font-weight: 700; color: #ef4444;">${totalSpent.toFixed(2)}</div>
+                        <div style="font-size: 11px; color: #6b7280;">Coins</div>
                     </div>
-                    
-                    <button onclick="app.saveTriviaPlanSettings('${tier}')" style="width: 100%; background: ${tierColorMap[tier]}; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                        💾 Save ${tierLabelMap[tier]} Plan
-                    </button>
+                    <div style="background: white; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase;">Transactions</div>
+                        <div style="font-size: 28px; font-weight: 700; color: #3b82f6;">${transactions.length}</div>
+                        <div style="font-size: 11px; color: #6b7280;">Total</div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                    <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="font-weight: 600; margin-bottom: 12px;">📈 Earnings Breakdown</div>
+                        ${Object.keys(earnedByType).length === 0 ? '<div style="color: #6b7280; font-size: 13px;">No earnings data</div>' : 
+                            Object.keys(earnedByType).map(function(key) {
+                                return `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                                    <span>${key}</span>
+                                    <span style="font-weight: 600;">${earnedByType[key].toFixed(2)} Coins</span>
+                                </div>`;
+                            }).join('')
+                        }
+                    </div>
+                    <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="font-weight: 600; margin-bottom: 12px;">🛍️ Spending Breakdown</div>
+                        ${Object.keys(spentByType).length === 0 ? '<div style="color: #6b7280; font-size: 13px;">No spending data</div>' : 
+                            Object.keys(spentByType).map(function(key) {
+                                return `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                                    <span>${key}</span>
+                                    <span style="font-weight: 600;">${spentByType[key].toFixed(2)} Coins</span>
+                                </div>`;
+                            }).join('')
+                        }
+                    </div>
+                </div>
+                
+                <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="font-weight: 600; margin-bottom: 12px;">📊 Recent Transactions</div>
+                    ${transactions.slice(0, 10).map(function(tx) {
+                        var isEarned = tx.type === 'earned';
+                        return `<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                            <div>
+                                <span style="font-weight: 600;">${tx.userName || 'User'}</span>
+                                <span style="color: #6b7280; font-size: 12px; margin-left: 8px;">${tx.item || ''}</span>
+                            </div>
+                            <div>
+                                <span style="color: ${isEarned ? '#22c55e' : '#ef4444'}; font-weight: 600;">
+                                    ${isEarned ? '+' : '-'}${tx.amount.toFixed(2)} Coins
+                                </span>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                    ${transactions.length === 0 ? '<div style="color: #6b7280; text-align: center; padding: 20px;">No transactions yet</div>' : ''}
                 </div>
             `;
+            
+            document.getElementById('adminAnalytics').innerHTML = html;
         });
-        
-        html += `</div>`;
-        
-        document.getElementById('adminTriviaPlansList').innerHTML = html;
-    },
-    
-    saveTriviaPlanSettings: function(tier) {
-        var questionsPerDay = parseInt(document.getElementById(tier + 'QuestionsPerDay').value);
-        var rewardPerQuestion = parseFloat(document.getElementById(tier + 'RewardPerQuestion').value);
-        var timerSeconds = parseInt(document.getElementById(tier + 'TimerSeconds').value);
-        var adsPerQuestion = parseInt(document.getElementById(tier + 'AdsPerQuestion').value);
-        
-        // Validation
-        if (isNaN(questionsPerDay) || questionsPerDay < 1) {
-            this.toast('Questions per day must be at least 1', 'error');
-            return;
-        }
-        if (isNaN(rewardPerQuestion) || rewardPerQuestion < 0) {
-            this.toast('Reward must be 0 or higher', 'error');
-            return;
-        }
-        if (isNaN(timerSeconds) || timerSeconds < 5) {
-            this.toast('Timer must be at least 5 seconds', 'error');
-            return;
-        }
-        if (isNaN(adsPerQuestion) || adsPerQuestion < 0) {
-            this.toast('Ads per question must be 0 or higher', 'error');
-            return;
-        }
-        
-        // Update local settings
-        EARNING_SETTINGS[tier].questionsPerDay = questionsPerDay;
-        EARNING_SETTINGS[tier].rewardPerQuestion = rewardPerQuestion;
-        EARNING_SETTINGS[tier].timerSeconds = timerSeconds;
-        EARNING_SETTINGS[tier].adsPerQuestion = adsPerQuestion;
-        
-        // Save to localStorage for persistence
-        localStorage.setItem('EARNING_SETTINGS_' + tier, JSON.stringify({
-            questionsPerDay: questionsPerDay,
-            rewardPerQuestion: rewardPerQuestion,
-            timerSeconds: timerSeconds,
-            adsPerQuestion: adsPerQuestion
-        }));
-        
-        this.toast('✅ ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' plan updated!', 'success');
-        
     },
 
     // ============================================
-    // ADMIN - ACTIVITY LOGS
+    // ADMIN - GIFT CATALOG MANAGEMENT
     // ============================================
 
-    loadActivityLog: function() {
-        var self = this;
-        var html = '';
-        var logContainer = document.getElementById('activityLogList');
-        
-        if (!logContainer) {
-            console.error('❌ Activity log container not found');
-            return;
-        }
-        
-        logContainer.innerHTML = '<div style="padding: 20px; text-align: center;">⏳ Loading activity logs...</div>';
-        
-        console.log('📊 Loading activity logs...');
-        
-        db.ref('activityLogs').limitToLast(100).once('value', function(snapshot) {
-            try {
-                var activities = [];
-                snapshot.forEach(function(child) {
-                    activities.push({
-                        id: child.key,
-                        ...child.val()
-                    });
-                });
+    loadAdminGifts: function() {
+        var html = `
+            <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                <h3 style="margin: 0 0 16px 0;">🎁 Gift Catalog Management</h3>
+                <div style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
+                    Manage the gifts available for users to redeem with their Chichi Coins.
+                </div>
                 
-                // Sort by timestamp descending (newest first)
-                activities.sort(function(a, b) {
-                    return (b.timestamp || 0) - (a.timestamp || 0);
-                });
-                
-                console.log('✅ Activity logs loaded:', activities.length);
-                
-                if (activities.length === 0) {
-                    html = '<div style="text-align: center; color: #6b7280; padding: 20px;">📭 No activity logged yet</div>';
-                } else {
-                    activities.forEach(function(act) {
-                        var actionIcon = {
-                            'login': '🔐', 'login_success': '✅', 'login_failed': '❌',
-                            'signup': '📝', 'google_signup': '📝', 'google_login': '🔐',
-                            'click': '👆', 'scroll': '📜', 'session_end': '⏱️',
-                            'create_post': '📄', 'delete_post': '🗑️', 'like_post': '❤️',
-                            'comment': '💬', 'follow': '👥', 'unfollow': '👥',
-                            'admin_login': '⚙️', 'admin_ban': '🚫', 'admin_unban': '✅',
-                            'admin_delete_post': '🗑️', 'admin_approve_withdrawal': '✅',
-                            'admin_reject_withdrawal': '❌', 'admin_resolve_activity': '✅',
-                            'admin_approve_payment': '✅', 'admin_reject_payment': '❌',
-                            'admin_spinner_settings': '🎰', 'admin_force_win': '⚡',
-                            'admin_toggle_spins': '🔀', 'admin_set_odds': '🎯',
-                            'spinner_win': '🎉', 'spinner_lose': '😔',
-                            'payment_submit': '💳', 'password_reset': '🔑'
-                        }[act.action] || '📌';
-                        
-                        var timestamp = new Date(act.timestamp || 0).toLocaleString();
-                        
-                        html += `
-                            <div style="padding: 12px 14px; border-bottom: 1px solid #e5e7eb; background: white; transition: 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
-                                    <div style="flex: 1;">
-                                        <div style="font-weight: 600; font-size: 0.9rem; color: #1a202c;">${actionIcon} ${act.userName || 'System'}</div>
-                                        <div style="font-size: 0.85rem; color: #6b7280; margin-top: 4px;">${act.action.toUpperCase().replace(/_/g, ' ')}</div>
-                                        ${act.details ? `<div style="font-size: 0.8rem; color: #6b7280; margin-top: 2px;">📝 ${act.details}</div>` : ''}
-                                        ${act.userEmail ? `<div style="font-size: 0.75rem; color: #9ca3af; margin-top: 2px;">📧 ${act.userEmail}</div>` : ''}
-                                    </div>
-                                    <div style="text-align: right; font-size: 0.75rem; color: #9ca3af; white-space: nowrap;">
-                                        <div>${timestamp}</div>
-                                        ${act.isAdmin ? '<span style="background: #0088cc; color: white; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block;">👑 Admin</span>' : ''}
-                                    </div>
+                <div id="giftList">
+                    ${GIFT_CATALOG.map(function(gift) {
+                        return `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 14px;">${gift.image} ${gift.name}</div>
+                                    <div style="font-size: 12px; color: #6b7280;">${gift.description}</div>
+                                    <div style="font-size: 12px; color: #3b82f6; font-weight: 600;">${gift.cost} Coins</div>
+                                </div>
+                                <div>
+                                    <button onclick="app.editGift('${gift.id}')" style="padding: 4px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 4px;">✏️</button>
+                                    <button onclick="app.deleteGift('${gift.id}')" style="padding: 4px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
                                 </div>
                             </div>
                         `;
-                    });
-                }
+                    }).join('')}
+                </div>
                 
-                logContainer.innerHTML = html;
-            } catch (err) {
-                console.error('❌ Error loading activity logs:', err);
-                logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">❌ Error loading logs: ' + err.message + '</div>';
-            }
-        }, function(err) {
-            console.error('❌ Firebase error loading logs:', err);
-            logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">❌ Firebase error: ' + err.message + '</div>';
-        });
+                <button onclick="app.addGift()" style="width: 100%; margin-top: 12px; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">+ Add New Gift</button>
+            </div>
+        `;
+        
+        document.getElementById('adminGifts').innerHTML = html;
+    },
+
+    addGift: function() {
+        var self = this;
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `
+            <div class="modal" style="max-width: 450px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-weight: 700; margin: 0;">Add New Gift</h2>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Gift Name</label>
+                    <input type="text" id="newGiftName" class="form-input" placeholder="e.g., Game Voucher">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" id="newGiftDescription" class="form-input" placeholder="e.g., $10 Gaming Gift Card">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Emoji/Icon</label>
+                    <input type="text" id="newGiftEmoji" class="form-input" placeholder="🎮" maxlength="2">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cost (Coins)</label>
+                    <input type="number" id="newGiftCost" class="form-input" placeholder="500" min="1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <input type="text" id="newGiftCategory" class="form-input" placeholder="gaming, food, etc.">
+                </div>
+                
+                <button onclick="app.saveNewGift()" style="width: 100%; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Add Gift</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    saveNewGift: function() {
+        var name = document.getElementById('newGiftName').value.trim();
+        var description = document.getElementById('newGiftDescription').value.trim();
+        var emoji = document.getElementById('newGiftEmoji').value.trim();
+        var cost = parseInt(document.getElementById('newGiftCost').value);
+        var category = document.getElementById('newGiftCategory').value.trim();
+        
+        if (!name || !description || !cost || !category) {
+            this.toast('Please fill in all fields', 'error');
+            return;
+        }
+        
+        var newGift = {
+            id: 'gift_' + Date.now(),
+            name: name,
+            description: description,
+            image: emoji || '🎁',
+            cost: cost,
+            category: category
+        };
+        
+        GIFT_CATALOG.push(newGift);
+        this.toast('✅ Gift added successfully!', 'success');
+        document.querySelector('.modal-overlay').remove();
+        this.loadAdminGifts();
+    },
+
+    editGift: function(id) {
+        var gift = GIFT_CATALOG.find(function(g) { return g.id === id; });
+        if (!gift) {
+            this.toast('Gift not found', 'error');
+            return;
+        }
+        
+        var self = this;
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `
+            <div class="modal" style="max-width: 450px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-weight: 700; margin: 0;">Edit Gift</h2>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Gift Name</label>
+                    <input type="text" id="editGiftName" class="form-input" value="${gift.name}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" id="editGiftDescription" class="form-input" value="${gift.description}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Emoji/Icon</label>
+                    <input type="text" id="editGiftEmoji" class="form-input" value="${gift.image}" maxlength="2">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cost (Coins)</label>
+                    <input type="number" id="editGiftCost" class="form-input" value="${gift.cost}" min="1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <input type="text" id="editGiftCategory" class="form-input" value="${gift.category}">
+                </div>
+                
+                <button onclick="app.saveEditedGift('${id}')" style="width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Save Changes</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    saveEditedGift: function(id) {
+        var gift = GIFT_CATALOG.find(function(g) { return g.id === id; });
+        if (!gift) {
+            this.toast('Gift not found', 'error');
+            return;
+        }
+        
+        gift.name = document.getElementById('editGiftName').value.trim();
+        gift.description = document.getElementById('editGiftDescription').value.trim();
+        gift.image = document.getElementById('editGiftEmoji').value.trim() || '🎁';
+        gift.cost = parseInt(document.getElementById('editGiftCost').value);
+        gift.category = document.getElementById('editGiftCategory').value.trim();
+        
+        this.toast('✅ Gift updated!', 'success');
+        document.querySelector('.modal-overlay').remove();
+        this.loadAdminGifts();
+    },
+
+    deleteGift: function(id) {
+        if (!confirm('Delete this gift?')) return;
+        
+        var index = GIFT_CATALOG.findIndex(function(g) { return g.id === id; });
+        if (index > -1) {
+            GIFT_CATALOG.splice(index, 1);
+            this.toast('✅ Gift deleted', 'success');
+            this.loadAdminGifts();
+        }
     },
 
     // ============================================
@@ -2206,7 +1811,7 @@ var app = {
         db.ref('suspiciousActivity/' + activityId + '/status').set('resolved').then(function() {
             self.toast('✅ Activity marked as resolved', 'success');
             self.loadSuspiciousActivity();
-            
+            self.logUserActivity('admin_resolve_activity', 'Resolved suspicious activity: ' + activityId);
         }).catch(function(err) {
             self.toast('❌ Error: ' + err.message, 'error');
         });
@@ -2228,8 +1833,6 @@ var app = {
         
         notifContainer.innerHTML = '<div style="padding: 20px; text-align: center;">⏳ Loading notifications...</div>';
         
-        console.log('📬 Loading admin notifications...');
-        
         db.ref('adminNotifications').limitToLast(50).once('value', function(snapshot) {
             try {
                 var notifications = [];
@@ -2240,12 +1843,9 @@ var app = {
                     });
                 });
                 
-                // Sort by timestamp descending
                 notifications.sort(function(a, b) {
                     return (b.timestamp || 0) - (a.timestamp || 0);
                 });
-                
-                console.log('✅ Notifications loaded:', notifications.length);
                 
                 if (notifications.length === 0) {
                     html = '<div style="text-align: center; color: #6b7280; padding: 32px 20px;"><div style="font-size: 40px; margin-bottom: 12px;">📬</div><div>No notifications yet</div></div>';
@@ -2263,7 +1863,6 @@ var app = {
                                     <div style="flex: 1;">
                                         <div style="font-weight: 600; font-size: 0.9rem; color: #1a202c;">${notif.message || 'No message'}</div>
                                         <div style="font-size: 0.75rem; color: #6b7280; margin-top: 4px;">${timestamp}</div>
-                                        ${notif.details ? `<div style="font-size: 0.8rem; color: #6b7280; margin-top: 4px;">📝 ${notif.details}</div>` : ''}
                                     </div>
                                     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                                         <span style="padding: 4px 10px; border-radius: 8px; background: ${severityColor}20; color: ${severityColor}; font-size: 0.7rem; font-weight: 600; white-space: nowrap;">${(notif.severity || 'medium').toUpperCase()}</span>
@@ -2286,611 +1885,197 @@ var app = {
         });
     },
 
-    markNotificationRead: function(notificationId) {
-        var self = this;
-        db.ref('adminNotifications/' + notificationId + '/read').set(true).then(function() {
-            self.loadAdminNotifications();
-        }).catch(function(err) {
-            self.toast('❌ Error: ' + err.message, 'error');
-        });
-    },
-
     // ============================================
-    // ADMIN - BALANCE EDITOR
+    // ADMIN - ACTIVITY LOGS
     // ============================================
 
-    showBalanceEditor: function(uid, userName) {
+    loadActivityLog: function() {
         var self = this;
-        if (!uid) return;
+        var html = '';
+        var logContainer = document.getElementById('activityLogList');
         
-        db.ref('users/' + uid + '/balance').once('value', function(snap) {
-            var currentBalance = snap.val() || 0;
-            
-            var modal = document.createElement('div');
-            modal.id = 'balanceEditModal';
-            modal.className = 'modal-overlay active';
-            modal.innerHTML = `
-                <div class="modal" style="max-width: 450px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="font-weight: 700; margin: 0;">Edit Balance</h2>
-                        <button onclick="document.getElementById('balanceEditModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
-                    </div>
-                    
-                    <div style="background: #f0f7ff; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-                        <div style="font-size: 12px; color: #0088cc; font-weight: 600; margin-bottom: 4px;">USER</div>
-                        <div style="font-weight: 700; font-size: 18px; color: #1a202c;">${userName || 'Unknown'}</div>
-                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">UID: ${uid.substring(0, 20)}...</div>
-                    </div>
-                    
-                    <div style="background: #fef3c7; padding: 16px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
-                        <div style="font-size: 12px; color: #92400e; font-weight: 600; margin-bottom: 4px;">CURRENT BALANCE</div>
-                        <div style="font-size: 28px; font-weight: 700; color: #92400e;">CC Points ${currentBalance.toFixed(2)}</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">New Balance (KSh)</label>
-                        <input type="number" id="newBalanceInput" step="0.01" value="${currentBalance}" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px;" placeholder="0.00">
-                        <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">💡 Enter the exact balance you want (not a change amount)</div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 8px; margin-top: 24px;">
-                        <button onclick="document.getElementById('balanceEditModal').remove()" style="flex: 1; padding: 12px; background: #e5e7eb; color: #1a202c; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Cancel</button>
-                        <button onclick="app.updateUserBalance('${uid}', document.getElementById('newBalanceInput').value, '${userName}')" style="flex: 1; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">✅ Save Balance</button>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            document.getElementById('newBalanceInput').focus();
-        });
-    },
-
-    updateUserBalance: function(uid, newBalance, userName) {
-        var balance = parseFloat(newBalance);
-        
-        if (isNaN(balance) || balance < 0) {
-            this.toast('❌ Invalid balance amount', 'error');
+        if (!logContainer) {
+            console.error('❌ Activity log container not found');
             return;
         }
         
-        console.log('💰 Updating balance for', userName, 'to KSh', balance.toFixed(2));
+        logContainer.innerHTML = '<div style="padding: 20px; text-align: center;">⏳ Loading activity logs...</div>';
         
-        db.ref('users/' + uid + '/balance').set(balance, function(err) {
-            if (err) {
-                this.toast('❌ Error: ' + err.message, 'error');
-            } else {
-                this.toast('✅ Balance updated to CC Points ' + balance.toFixed(2), 'success');
-                document.getElementById('balanceEditModal').remove();
-                this.loadAdminUsers();
+        db.ref('activityLogs').limitToLast(100).once('value', function(snapshot) {
+            try {
+                var activities = [];
+                snapshot.forEach(function(child) {
+                    activities.push({
+                        id: child.key,
+                        ...child.val()
+                    });
+                });
+                
+                activities.sort(function(a, b) {
+                    return (b.timestamp || 0) - (a.timestamp || 0);
+                });
+                
+                if (activities.length === 0) {
+                    html = '<div style="text-align: center; color: #6b7280; padding: 20px;">📭 No activity logged yet</div>';
+                } else {
+                    activities.forEach(function(act) {
+                        var actionIcon = {
+                            'login': '🔐', 'login_success': '✅', 'login_failed': '❌',
+                            'signup': '📝', 'google_signup': '📝', 'google_login': '🔐',
+                            'click': '👆', 'scroll': '📜', 'session_end': '⏱️',
+                            'create_post': '📄', 'delete_post': '🗑️', 'like_post': '❤️',
+                            'comment': '💬', 'follow': '👥', 'unfollow': '👥',
+                            'admin_login': '⚙️', 'admin_ban': '🚫', 'admin_unban': '✅',
+                            'admin_delete_post': '🗑️', 'admin_resolve_activity': '✅'
+                        }[act.action] || '📌';
+                        
+                        var timestamp = new Date(act.timestamp || 0).toLocaleString();
+                        
+                        html += `
+                            <div style="padding: 12px 14px; border-bottom: 1px solid #e5e7eb; background: white; transition: 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; font-size: 0.9rem; color: #1a202c;">${actionIcon} ${act.userName || 'System'}</div>
+                                        <div style="font-size: 0.85rem; color: #6b7280; margin-top: 4px;">${act.action.toUpperCase().replace(/_/g, ' ')}</div>
+                                        ${act.details ? `<div style="font-size: 0.8rem; color: #6b7280; margin-top: 2px;">📝 ${act.details}</div>` : ''}
+                                        ${act.userEmail ? `<div style="font-size: 0.75rem; color: #9ca3af; margin-top: 2px;">📧 ${act.userEmail}</div>` : ''}
+                                    </div>
+                                    <div style="text-align: right; font-size: 0.75rem; color: #9ca3af; white-space: nowrap;">
+                                        <div>${timestamp}</div>
+                                        ${act.isAdmin ? '<span style="background: #0088cc; color: white; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block;">👑 Admin</span>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                logContainer.innerHTML = html;
+            } catch (err) {
+                console.error('❌ Error loading activity logs:', err);
+                logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">❌ Error loading logs: ' + err.message + '</div>';
             }
-        }.bind(this));
+        }, function(err) {
+            console.error('❌ Firebase error loading logs:', err);
+            logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">❌ Firebase error: ' + err.message + '</div>';
+        });
     },
 
     // ============================================
-    // PREMIUM PAYMENT FUNCTIONS
+    // GIFT CATALOG - User Facing
     // ============================================
 
-    showUpgradeTierSelector: function() {
-        var self = this;
-        if (!this.user) {
-            this.toast('⚠️ Please login first', 'error');
+    showGiftCatalog: function() {
+        if (!this.user || this.isGuest) {
+            this.toast('🔐 Sign up to redeem gifts', 'info');
+            this.showLoginPage();
             return;
         }
         
-        var currentTier = this.getUserTier();
-        var premiumData = EARNING_SETTINGS['premium'];
-        var vipData = EARNING_SETTINGS['vip'];
-        
+        var self = this;
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
-        modal.innerHTML = `
-            <div class="modal" style="max-width: 500px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="font-weight: 700; margin: 0;">⭐ Choose Your Tier</h2>
+        modal.style.alignItems = 'flex-start';
+        modal.style.paddingTop = '40px';
+        modal.style.overflowY = 'auto';
+        
+        var html = `
+            <div style="background: white; border-radius: 24px 24px 0 0; padding: 24px 20px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; margin: 0 auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <div>
+                        <h2 style="font-weight: 700; margin: 0; font-size: 22px;">🎁 Gift Catalog</h2>
+                        <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">Redeem your Chichi Coins for awesome rewards!</div>
+                    </div>
                     <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
-                    <!-- PREMIUM OPTION -->
-                    <div style="border: 2px solid #667eea; border-radius: 14px; padding: 16px; text-align: center; cursor: pointer; background: ${currentTier === 'premium' ? '#f0f7ff' : 'white'}; transition: 0.3s;" onclick="app.showPremiumPayment('premium'); document.querySelector('.modal-overlay').remove();" onmouseover="this.style.background='#f0f7ff';this.style.boxShadow='0 8px 16px rgba(102,126,234,0.2)'" onmouseout="this.style.background='${currentTier === 'premium' ? '#f0f7ff' : 'white'}';this.style.boxShadow='none'">
-                        <div style="font-size: 32px; margin-bottom: 8px;">⭐</div>
-                        <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px;">Premium</div>
-                        <div style="color: #6b7280; font-size: 12px; margin-bottom: 12px;">Better rewards</div>
-                        <div style="background: #f0f7ff; padding: 10px; border-radius: 8px; margin-bottom: 12px;">
-                            <div style="font-size: 18px; font-weight: 800; color: #667eea;">CC Points ${premiumData.price}</div>
-                            <div style="font-size: 11px; color: #6b7280;">/month</div>
+                <div style="background: linear-gradient(135deg, #f0f7ff, #e8f0fe); border-radius: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid #bfdbfe;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 13px; color: #1e293b; font-weight: 600;">Your Balance</div>
+                            <div style="font-size: 28px; font-weight: 800; color: #3b82f6;">${this.balance.toFixed(2)}</div>
+                            <div style="font-size: 11px; color: #6b7280;">Chichi Coins</div>
                         </div>
-                        <div style="font-size: 11px; color: #1a202c; text-align: left; line-height: 1.6; background: #fafafa; padding: 10px; border-radius: 8px;">
-                            ✅ +CC Points ${premiumData.rewardPerQuestion}/question<br>
-                            ✅ ${premiumData.questionsPerDay} daily questions<br>
-                            ✅ ${premiumData.adsPerQuestion === 0 ? 'No ads' : premiumData.adsPerQuestion + ' ads'}<br>
-                            ✅ ${premiumData.bonus}
-                        </div>
-                    </div>
-                    
-                    <!-- VIP OPTION -->
-                    <div style="border: 3px solid #f59e0b; border-radius: 14px; padding: 16px; text-align: center; cursor: pointer; background: ${currentTier === 'vip' ? '#fffbeb' : 'white'}; position: relative; transition: 0.3s;" onclick="app.showPremiumPayment('vip'); document.querySelector('.modal-overlay').remove();" onmouseover="this.style.background='#fffbeb';this.style.boxShadow='0 8px 16px rgba(245,158,11,0.3)'" onmouseout="this.style.background='${currentTier === 'vip' ? '#fffbeb' : 'white'}';this.style.boxShadow='none'">
-                        <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">BEST VALUE</div>
-                        <div style="font-size: 32px; margin-bottom: 8px;">👑</div>
-                        <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px;">VIP</div>
-                        <div style="color: #6b7280; font-size: 12px; margin-bottom: 12px;">Maximum rewards</div>
-                        <div style="background: linear-gradient(135deg, #fffbeb, #fee2e2); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
-                            <div style="font-size: 18px; font-weight: 800; color: #f59e0b;">CC Points ${vipData.price}</div>
-                            <div style="font-size: 11px; color: #6b7280;">/month</div>
-                        </div>
-                        <div style="font-size: 11px; color: #1a202c; text-align: left; line-height: 1.6; background: #fafafa; padding: 10px; border-radius: 8px;">
-                            ✅ +CC Points ${vipData.rewardPerQuestion}/question<br>
-                            ✅ ${vipData.questionsPerDay} daily questions<br>
-                            ✅ ${vipData.adsPerQuestion === 0 ? 'No ads' : vipData.adsPerQuestion + ' ads'}<br>
-                            ✅ ${vipData.bonus}
+                        <div style="text-align: right;">
+                            <div style="font-size: 12px; color: #6b7280;">Earn more by</div>
+                            <button onclick="app.switchView('earn'); document.querySelector('.modal-overlay').remove();" style="background: #3b82f6; color: white; border: none; padding: 6px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">Answering Trivia</button>
                         </div>
                     </div>
                 </div>
                 
-                <button onclick="this.closest('.modal-overlay').remove()" style="width: 100%; padding: 12px; background: #e5e7eb; color: #1a202c; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Maybe Later</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    ${GIFT_CATALOG.map(function(gift) {
+                        var canAfford = self.balance >= gift.cost;
+                        return `
+                            <div style="background: white; border-radius: 14px; padding: 16px; border: 2px solid ${canAfford ? '#22c55e' : '#e5e7eb'}; text-align: center; transition: 0.3s; ${canAfford ? 'box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);' : ''}">
+                                <div style="font-size: 40px; margin-bottom: 8px;">${gift.image}</div>
+                                <div style="font-weight: 700; font-size: 14px; color: #1e293b;">${gift.name}</div>
+                                <div style="font-size: 11px; color: #6b7280; margin: 4px 0;">${gift.description}</div>
+                                <div style="font-size: 13px; font-weight: 700; color: ${canAfford ? '#22c55e' : '#ef4444'}; margin: 8px 0;">
+                                    ${gift.cost} Coins
+                                    ${!canAfford ? '<span style="font-size: 10px; color: #ef4444; display: block;">Need ' + (gift.cost - self.balance).toFixed(0) + ' more</span>' : ''}
+                                </div>
+                                <button onclick="app.redeemGift('${gift.id}')" style="width: 100%; padding: 10px; background: ${canAfford ? '#22c55e' : '#e5e7eb'}; color: ${canAfford ? 'white' : '#9ca3af'}; border: none; border-radius: 8px; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; font-weight: 600; font-size: 13px; transition: 0.3s;" ${!canAfford ? 'disabled' : ''} onmouseover="if(${canAfford}){this.style.transform='scale(1.02)'}" onmouseout="if(${canAfford}){this.style.transform='scale(1)'}">
+                                    ${canAfford ? '🎁 Redeem' : '🔒 Locked'}
+                                </button>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                
+                <div style="margin-top: 16px; padding: 12px; background: #f8fafc; border-radius: 10px; font-size: 12px; color: #6b7280; text-align: center;">
+                    💡 Gifts are digital vouchers. Contact support for redemption details.
+                </div>
             </div>
         `;
         
+        modal.innerHTML = html;
         document.body.appendChild(modal);
     },
 
-    showPremiumPayment: function(tier) {
-        if (!this.user) {
-            this.toast('⚠️ Please login first', 'error');
+    redeemGift: function(giftId) {
+        var gift = GIFT_CATALOG.find(function(g) { return g.id === giftId; });
+        if (!gift) {
+            this.toast('Gift not found', 'error');
             return;
         }
         
-        var tierData = EARNING_SETTINGS[tier];
-        if (!tierData) {
-            this.toast('⚠️ Invalid tier', 'error');
+        if (this.balance < gift.cost) {
+            this.toast('Insufficient coins! Need ' + gift.cost + ' Coins', 'error');
             return;
         }
         
-        var price = tierData.price;
-        var tierName = tierData.label;
-        
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        modal.innerHTML = `
-            <div class="modal" style="max-width: 420px; border-radius: 20px; padding: 24px;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">✕</button></div>
-                <h2 style="font-weight: 700; margin-bottom: 16px; text-align: center;">${tierName} Upgrade</h2>
-                
-                <div style="background: linear-gradient(135deg, ${tierData.badgeColor || '#0088cc'}, ${tierData.badgeColor || '#006fa3'}); padding: 20px; border-radius: 12px; margin-bottom: 16px; color: white; text-align: center;">
-                    <div style="font-size: 48px;">${tierData.badge || '⭐'}</div>
-                    <div style="font-size: 24px; font-weight: 700;">${tierName}</div>
-                    <div style="font-size: 14px; opacity: 0.9;">${tierData.bonus || ''}</div>
-                    <div style="font-size: 28px; font-weight: 800; margin-top: 8px;">CC Points ${price}/month</div>
-                </div>
-                
-                <div style="background: #f0f7ff; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-                    <div style="font-size: 14px; font-weight: 600; color: #1a202c;">📱 How to Pay:</div>
-                    <div style="font-size: 13px; color: #6b7280; margin-top: 4px; line-height: 1.6;">
-                        1. Send CC Points ${price} to <strong style="color: #0088cc;">Till ${MPESA_TILL}</strong><br>
-                        2. Copy the M-Pesa confirmation message<br>
-                        3. Paste it below and submit
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">📋 M-Pesa Confirmation Message</label>
-                    <textarea id="paymentConfirmation" class="form-input" placeholder="Paste the M-Pesa confirmation message here..." style="min-height: 80px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;"></textarea>
-                </div>
-                
-                <button onclick="app.submitPaymentConfirmation('${tier}')" style="background: ${tierData.badgeColor || 'var(--primary)'}; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
-                    📤 Submit Payment
-                </button>
-                
-                <div style="margin-top: 12px; font-size: 12px; color: #6b7280; text-align: center;">
-                    ⏱️ Admin will verify and activate your account within 24 hours
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    },
-
-    submitPaymentConfirmation: function(tier) {
-        var confirmation = document.getElementById('paymentConfirmation').value.trim();
-        
-        if (!confirmation) {
-            this.toast('⚠️ Please paste the M-Pesa confirmation message', 'error');
+        if (!confirm(`Redeem "${gift.name}" for ${gift.cost} Chichi Coins?`)) {
             return;
         }
         
         var self = this;
-        var tierData = EARNING_SETTINGS[tier];
+        this.balance -= gift.cost;
+        db.ref('users/' + this.user.uid + '/balance').set(this.balance);
         
-        db.ref('paymentVerifications').push({
-            userId: self.user.uid,
-            userName: self.profile.name || 'User',
-            userEmail: self.user.email,
-            tier: tier,
-            tierName: tierData.label,
-            amount: tierData.price,
-            confirmation: confirmation,
-            status: 'pending',
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            time: new Date().toLocaleString('en-KE')
-        }).then(function() {
-            self.toast('✅ Payment submitted! Admin will verify shortly.', 'success');
-            var modal = document.querySelector('.modal-overlay');
-            if (modal) modal.remove();
-            
-        }).catch(function(err) {
-            self.toast('❌ Error: ' + err.message, 'error');
+        // Track redemption
+        db.ref('giftRedemptions').push({
+            userId: this.user.uid,
+            userName: this.profile.name || 'User',
+            userEmail: this.user.email,
+            giftId: gift.id,
+            giftName: gift.name,
+            giftDescription: gift.description,
+            giftCost: gift.cost,
+            createdAt: new Date().toLocaleString('en-KE'),
+            timestamp: firebase.database.ServerValue.TIMESTAMP
         });
-    },
-
-    // ============================================
-    // SPINNER WHEEL - REAL SPINNING WHEEL
-    // ============================================
-
-    openSpinner: function() {
-        if (!this.user || this.isGuest) {
-            this.toast('⚠️ Please login first', 'error');
-            return;
-        }
         
-        if (this.balance < SPINNER_CONFIG.spinCost) {
-            this.toast('❌ Insufficient balance. Need CC Points ' + SPINNER_CONFIG.spinCost, 'error');
-            return;
-        }
+        // Track revenue
+        this.trackRevenue('spent', gift.cost, 'gift_' + gift.name);
         
-        if (window.ADMIN_SPINNER_OVERRIDES && window.ADMIN_SPINNER_OVERRIDES.disableSpins) {
-            this.toast('❌ Spins are currently disabled by admin', 'error');
-            return;
-        }
-        
-        this.balance -= SPINNER_CONFIG.spinCost;
-        db.ref('users/' + this.user.uid + '/balance').set(this.balance);
         this.updateBalanceDisplays();
+        this.toast('🎉 Redeemed: ' + gift.name + '!', 'success');
+        this.logUserActivity('redeem_gift', 'Redeemed ' + gift.name + ' for ' + gift.cost + ' coins');
         
-        var winAmount = this.determineSpinResult();
-        this.showSpinnerWheel(winAmount);
-    },
-
-    determineSpinResult: function() {
-        if (window.ADMIN_SPINNER_OVERRIDES && window.ADMIN_SPINNER_OVERRIDES.forceWin) {
-            var amount = window.ADMIN_SPINNER_OVERRIDES.forceAmount;
-            window.ADMIN_SPINNER_OVERRIDES.forceWin = false;
-            window.ADMIN_SPINNER_OVERRIDES.forceAmount = 0;
-            
-            return Math.min(amount, SPINNER_CONFIG.maxWin);
-        }
-        
-        var segments = SPINNER_CONFIG.segments;
-        var totalWeight = segments.reduce(function(sum, seg) { return sum + seg.weight; }, 0);
-        var random = Math.random() * totalWeight;
-        var cumulative = 0;
-        
-        for (var i = 0; i < segments.length; i++) {
-            cumulative += segments[i].weight;
-            if (random <= cumulative) {
-                var value = segments[i].value;
-                if (value > SPINNER_CONFIG.maxWin) {
-                    return SPINNER_CONFIG.maxWin;
-                }
-                return value;
-            }
-        }
-        return 0;
-    },
-
-    showSpinnerWheel: function(winAmount) {
-        var self = this;
-        
-        // GENERATE 50 SEGMENTS WITH VALUES UP TO 1000
-        var segmentValues = [];
-        var segmentColors = [
-            '#FF6B6B', '#FF8E72', '#FFA07A', '#FFB84D', '#FFD93D',
-            '#A6E3A1', '#5ECE5E', '#10B981', '#06B6D4', '#0EA5E9',
-            '#3B82F6', '#6366F1', '#7C3AED', '#A855F7', '#D946EF',
-            '#EC4899', '#F43F5E', '#FF1744', '#FF6F00', '#FFC107',
-            '#FFEB3B', '#CDDC39', '#9CCC65', '#7CB342', '#558B2F',
-            '#00897B', '#00796B', '#00695C', '#004D40', '#0D47A1',
-            '#1A237E', '#311B92', '#4A148C', '#880E4F', '#B71C1C'
-        ];
-        
-        // Create 50 segments with varied values
-        var valuePool = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100, 
-                         0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100,
-                         150, 200, 250, 300, 400, 500, 0, 0, 0];
-        
-        // Shuffle values
-        for (var i = valuePool.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var temp = valuePool[i];
-            valuePool[i] = valuePool[j];
-            valuePool[j] = temp;
-        }
-        
-        // Ensure we have exactly 50 segments
-        while (segmentValues.length < 50) {
-            segmentValues.push(valuePool[segmentValues.length % valuePool.length]);
-        }
-        
-        // Place the win amount
-        var winIndex = Math.floor(Math.random() * 50);
-        segmentValues[winIndex] = winAmount;
-        
-        var segments = [];
-        for (var i = 0; i < 50; i++) {
-            var value = segmentValues[i];
-            var label = value === 0 ? 'Lost' : 'CC Points ' + value;
-            segments.push({
-                value: value,
-                label: label,
-                color: segmentColors[i % segmentColors.length]
-            });
-        }
-        
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.id = 'spinnerModal';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        modal.style.zIndex = '10050';
-        
-        var canvasSize = Math.min(window.innerWidth - 40, 380);
-        
-        modal.innerHTML = `
-            <div style="background: linear-gradient(135deg, white, #f9fafb); border-radius: 24px; padding: 24px; max-width: 460px; width: 95%; text-align: center; animation: smoothFadeIn 0.3s ease; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-                <h2 style="margin: 0 0 8px 0; font-weight: 700; font-size: 24px;">Spin & Win</h2>
-                <div style="display: flex; gap: 12px; justify-content: center; font-size: 12px; color: #6b7280; margin-bottom: 20px;">
-                    <div>Cost: CC Points ${SPINNER_CONFIG.spinCost}</div>
-                    <div>•</div>
-                    <div>Max: CC Points 1000</div>
-                </div>
-                
-                <!-- ENHANCED SPINNER FRAME -->
-                <div style="position: relative; margin: 0 auto; width: ${canvasSize}px; height: ${canvasSize}px; padding: 12px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 50%; box-shadow: 0 20px 50px rgba(239,68,68,0.4), inset 0 2px 10px rgba(255,255,255,0.3);">
-                    <!-- GOLDEN INNER RING -->
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: calc(100% - 8px); height: calc(100% - 8px); background: conic-gradient(from 0deg, #fbbf24, #f59e0b, #fbbf24, #f59e0b, #fbbf24); border-radius: 50%; padding: 3px; box-shadow: inset 0 2px 8px rgba(0,0,0,0.2), 0 0 20px rgba(245,158,11,0.5);">
-                        <div style="width: 100%; height: 100%; background: white; border-radius: 50%; overflow: hidden; box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);">
-                            <canvas id="spinnerCanvas" width="${canvasSize}" height="${canvasSize}" style="width: 100%; height: 100%; display: block;"></canvas>
-                        </div>
-                    </div>
-                    
-                    <!-- CENTER HUB -->
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
-                        <div style="width: 52px; height: 52px; background: radial-gradient(circle at 30% 30%, #fbbf24, #f59e0b); border-radius: 50%; border: 4px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.4), inset -2px -2px 8px rgba(0,0,0,0.2), inset 2px 2px 8px rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700;">0</div>
-                    </div>
-                    
-                    <!-- TOP POINTER -->
-                    <div style="position: absolute; top: -16px; left: 50%; transform: translateX(-50%); z-index: 20;">
-                        <div style="width: 0; height: 0; border-left: 18px solid transparent; border-right: 18px solid transparent; border-top: 32px solid #fbbf24; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));"></div>
-                    </div>
-                </div>
-                
-                <!-- SPIN BUTTON -->
-                <button id="spinButton" onclick="app.startSpin()" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; padding: 16px 48px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 18px; margin-top: 24px; width: 100%; box-shadow: 0 8px 16px rgba(34,197,94,0.3); transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 12px 24px rgba(34,197,94,0.5)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 8px 16px rgba(34,197,94,0.3)'">
-                    SPIN NOW
-                </button>
-                
-                <!-- RESULT DISPLAY -->
-                <div id="spinResult" style="margin-top: 16px; font-size: 24px; font-weight: 700; min-height: 40px; color: #1a202c; text-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
-                
-                <!-- CLOSE BUTTON -->
-                <button onclick="document.getElementById('spinnerModal').remove()" style="margin-top: 12px; background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 13px; font-weight: 500; transition: 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">Close Wheel</button>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        this._spinnerData = {
-            segments: segments,
-            winAmount: winAmount,
-            modal: modal,
-            isSpinning: false,
-            winIndex: winIndex
-        };
-        
-        // Ensure canvas exists before drawing
-        setTimeout(function() {
-            if (document.getElementById('spinnerCanvas')) {
-                self.drawSpinnerWheel(segments, 0);
-            }
-        }, 50);
-    },
-
-    drawSpinnerWheel: function(segments, rotation) {
-        var canvas = document.getElementById('spinnerCanvas');
-        if (!canvas) return;
-        
-        var ctx = canvas.getContext('2d');
-        var centerX = canvas.width / 2;
-        var centerY = canvas.height / 2;
-        var radius = Math.min(canvas.width, canvas.height) / 2 - 10;
-        var segmentAngle = (2 * Math.PI) / segments.length;
-        
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        for (var i = 0; i < segments.length; i++) {
-            var startAngle = i * segmentAngle + rotation;
-            var endAngle = startAngle + segmentAngle;
-            var segment = segments[i];
-            
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-            ctx.closePath();
-            
-            ctx.fillStyle = segment.color;
-            ctx.fill();
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            
-            ctx.save();
-            ctx.translate(centerX, centerY);
-            ctx.rotate(startAngle + segmentAngle / 2);
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 11px Arial';
-            ctx.shadowColor = 'rgba(0,0,0,0.5)';
-            ctx.shadowBlur = 3;
-            
-            var textRadius = radius * 0.65;
-            ctx.fillText(segment.label, textRadius, 0);
-            ctx.restore();
-        }
-        
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 8, 0, 2 * Math.PI);
-        ctx.fillStyle = '#1a202c';
-        ctx.fill();
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-    },
-
-    startSpin: function() {
-        if (this._spinnerData && this._spinnerData.isSpinning) return;
-        
-        var self = this;
-        var spinBtn = document.getElementById('spinButton');
-        var resultDiv = document.getElementById('spinResult');
-        
-        if (spinBtn) {
-            spinBtn.disabled = true;
-            spinBtn.textContent = 'Spinning...';
-            spinBtn.style.opacity = '0.7';
-        }
-        
-        if (resultDiv) {
-            resultDiv.innerHTML = '';
-        }
-        
-        this._spinnerData.isSpinning = true;
-        
-        var segments = this._spinnerData.segments;
-        var winAmount = this._spinnerData.winAmount;
-        var winIndex = this._spinnerData.winIndex;
-        
-        // Ensure win index is valid
-        if (winIndex < 0 || winIndex >= segments.length) {
-            winIndex = Math.floor(Math.random() * segments.length);
-        }
-        
-        // Make sure the segment at winIndex has the correct value
-        // This is the actual value that will be won
-        var actualWinValue = segments[winIndex].value;
-        
-        var segmentAngle = (2 * Math.PI) / segments.length;
-        var targetRotation = (2 * Math.PI) * (5 + Math.random() * 4) + (winIndex / segments.length) * 2 * Math.PI;
-        var startTime = Date.now();
-        var duration = 5000 + Math.random() * 2000;
-        
-        function animateSpin() {
-            var elapsed = Date.now() - startTime;
-            var progress = Math.min(elapsed / duration, 1);
-            
-            var ease = 1 - Math.pow(1 - progress, 3);
-            var rotation = targetRotation * ease;
-            
-            self.drawSpinnerWheel(segments, rotation);
-            
-            if (progress < 1) {
-                requestAnimationFrame(animateSpin);
-            } else {
-                self._spinnerData.isSpinning = false;
-                
-                if (spinBtn) {
-                    spinBtn.style.display = 'none';
-                }
-                
-                // Use actual win value from the segment, not the predetermined winAmount
-                self.showSpinResult(actualWinValue);
-            }
-        }
-        
-        animateSpin();
-    },
-
-    showSpinResult: function(winAmount) {
-        var resultDiv = document.getElementById('spinResult');
-        
-        if (winAmount > 0) {
-            this.balance += winAmount;
-            db.ref('users/' + this.user.uid + '/balance').set(this.balance);
-            this.updateBalanceDisplays();
-            
-            resultDiv.innerHTML = `
-                <div style="color: #22c55e; font-size: 28px; margin-bottom: 4px;">You Won!</div>
-                <div style="color: #1a202c; font-size: 42px; font-weight: 800;">+CC Points ${winAmount}</div>
-                <div style="color: #6b7280; font-size: 14px; margin-top: 8px;">Balance: CC Points ${this.balance.toFixed(2)}</div>
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
-                    <button onclick="app.spinAgain()" style="padding: 10px 24px; background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">Spin Again</button>
-                    <button onclick="app.showWithdrawModal()" style="padding: 10px 24px; background: #22c55e; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">Withdraw</button>
-                    <button onclick="document.getElementById('spinnerModal').remove()" style="padding: 10px 24px; background: #f3f4f6; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">Close</button>
-                </div>
-            `;
-            
-            this.toast('You won CC Points ' + winAmount + '!', 'success');
-            
-        } else {
-            resultDiv.innerHTML = `
-                <div style="color: #ef4444; font-size: 28px; margin-bottom: 4px;">Better Luck Next Time</div>
-                <div style="color: #1a202c; font-size: 36px; font-weight: 800;">You Lost</div>
-                <div style="color: #6b7280; font-size: 14px; margin-top: 8px;">Cost: CC Points ${SPINNER_CONFIG.spinCost}</div>
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
-                    <button onclick="app.spinAgain()" style="padding: 10px 24px; background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">Try Again</button>
-                    <button onclick="document.getElementById('spinnerModal').remove()" style="padding: 10px 24px; background: #f3f4f6; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">Close</button>
-                </div>
-            `;
-            
-            this.toast('Better luck next time!', 'info');
-            
-        }
-    },
-
-    spinAgain: function() {
-        var self = this;
-        // Remove current modal
-        var modal = document.getElementById('spinnerModal');
-        if (modal) modal.remove();
-        
-        // Check balance
-        if (this.balance < SPINNER_CONFIG.spinCost) {
-            this.toast('Insufficient balance. Need CC Points ' + SPINNER_CONFIG.spinCost, 'error');
-            return;
-        }
-        
-        // Deduct cost and spin again
-        this.balance -= SPINNER_CONFIG.spinCost;
-        db.ref('users/' + this.user.uid + '/balance').set(this.balance);
-        this.updateBalanceDisplays();
-        
-        var winAmount = this.determineSpinResult();
-        setTimeout(function() {
-            self.showSpinnerWheel(winAmount);
-        }, 300);
-    },
-
-    // Removed duplicate spinAgain function - now using the proper one above
-
-    updateBalanceDisplays: function() {
-        var balanceDisplay = document.getElementById('balanceDisplay');
-        if (balanceDisplay) {
-            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
-        }
-        var earnBalanceDisplay = document.getElementById('earnBalanceDisplay');
-        if (earnBalanceDisplay) {
-            earnBalanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
-        }
-        var withdrawBalanceDisplay = document.getElementById('withdrawBalanceDisplay');
-        if (withdrawBalanceDisplay) {
-            withdrawBalanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
-        }
+        // Close modal and refresh
+        document.querySelector('.modal-overlay').remove();
+        this.showGiftCatalog();
     },
 
     // ============================================
@@ -2943,46 +2128,10 @@ var app = {
     },
 
     // ============================================
-    // VIEW USER ACTIVITY
-    // ============================================
-
-    viewUserActivity: function(uid) {
-        var self = this;
-        db.ref('activityLogs').orderByChild('userId').equalTo(uid).limitToLast(20).once('value', function(snapshot) {
-            var activities = [];
-            snapshot.forEach(function(child) { activities.push(child.val()); });
-            activities.reverse();
-            
-            var user = self.users[uid] || { name: 'Unknown User' };
-            var html = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>';
-            html += '<h2 style="font-weight:700;margin-bottom:16px;">👤 ' + user.name + ' - Activity</h2>';
-            
-            if (activities.length === 0) {
-                html += '<div style="text-align:center;color:#6b7280;padding:20px;">No activity found</div>';
-            } else {
-                activities.forEach(function(act) {
-                    html += '<div style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;">';
-                    html += '<div style="font-weight:600;">' + act.action + '</div>';
-                    html += '<div style="color:#6b7280;font-size:12px;">' + act.details + '</div>';
-                    html += '<div style="color:#999;font-size:11px;">' + act.time + '</div>';
-                    html += '</div>';
-                });
-            }
-            
-            html += '</div>';
-            var modal = document.createElement('div');
-            modal.className = 'modal-overlay active';
-            modal.innerHTML = html;
-            document.body.appendChild(modal);
-        });
-    },
-
-    // ============================================
     // SEARCH USERS
     // ============================================
 
     searchUsers: function(query) {
-        // Get query from parameter or input field
         if (!query || query === '') {
             var input = document.getElementById('userSearchInput');
             query = input ? input.value : '';
@@ -3002,26 +2151,21 @@ var app = {
         var results = [];
         var self = this;
         
-        // Search through loaded users
         for (var uid in this.users) {
             if (!this.user || uid !== this.user.uid) {
                 var user = this.users[uid];
                 if (user && user.name) {
                     var matches = false;
                     
-                    // Search by first/last name
                     if (user.name.toLowerCase().includes(searchQuery)) {
                         matches = true;
                     }
-                    // Search by email
                     else if (user.email && user.email.toLowerCase().includes(searchQuery)) {
                         matches = true;
                     }
-                    // Search by username
                     else if (user.username && user.username.toLowerCase().includes(searchQuery)) {
                         matches = true;
                     }
-                    // Search by hashtags
                     else if (user.hashtags && Array.isArray(user.hashtags)) {
                         for (var i = 0; i < user.hashtags.length; i++) {
                             if (user.hashtags[i].toLowerCase().includes(searchQuery)) {
@@ -3038,7 +2182,6 @@ var app = {
             }
         }
         
-        // Sort by followers
         results.sort(function(a, b) { 
             return (b.user.followers || 0) - (a.user.followers || 0); 
         });
@@ -3047,9 +2190,9 @@ var app = {
         
         var html = '';
         if (results.length === 0) {
-            html = '<div style="text-align:center;color:#9ca3af;padding:32px 20px;"><div style="font-size:40px;margin-bottom:12px;">😞</div><div>No users found matching "' + query + '"</div><div style="font-size:12px;color:#6b7280;margin-top:8px;">Try searching with a different name, email, or hashtag</div></div>';
+            html = '<div style="text-align:center;color:#9ca3af;padding:32px 20px;"><div style="font-size:40px;margin-bottom:12px;">😞</div><div>No users found matching "' + query + '"</div></div>';
         } else {
-            html += '<div style="padding:12px 16px;background:linear-gradient(135deg,#f0f7ff,#f5f0ff);border-radius:8px;margin-bottom:12px;font-size:13px;color:#0088cc;font-weight:600;border-left:3px solid #0088cc;">✅ Found ' + results.length + ' ' + (results.length === 1 ? 'user' : 'users') + '</div>';
+            html += '<div style="padding:12px 16px;background:linear-gradient(135deg,#f0f7ff,#f5f0ff);border-radius:8px;margin-bottom:12px;font-size:13px;color:#0088cc;font-weight:600;">✅ Found ' + results.length + ' ' + (results.length === 1 ? 'user' : 'users') + '</div>';
             
             results.forEach(function(r) {
                 var isFollowing = self.following[r.uid] || false;
@@ -3058,14 +2201,10 @@ var app = {
                 
                 html += '<div class="search-user" style="display:flex;align-items:center;padding:14px;border-bottom:1px solid #e5e7eb;gap:12px;border-radius:8px;transition:0.2s;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'">';
                 html += '<div class="search-user-avatar" style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:20px;flex-shrink:0;background-image:url(' + (r.user.profilePhoto || '') + ');background-size:cover;background-position:center;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.08);">' + (!r.user.profilePhoto ? r.user.name.charAt(0).toUpperCase() : '') + '</div>';
-                html += '<div class="search-user-info" style="flex:1;min-width:0;" onclick="app.viewUserProfile(\'' + r.uid + '\')"  style="cursor:pointer;">';
+                html += '<div class="search-user-info" style="flex:1;min-width:0;" onclick="app.viewUserProfile(\'' + r.uid + '\')" style="cursor:pointer;">';
                 html += '<div class="search-user-name" style="font-weight:600;font-size:15px;color:#1a202c;">' + r.user.name + '</div>';
                 html += '<div class="search-user-email" style="font-size:12px;color:#6b7280;margin-top:2px;">📧 ' + r.user.email + '</div>';
-                html += '<div class="search-user-followers" style="font-size:11px;color:#9ca3af;margin-top:4px;">👥 ' + (r.user.followers || 0) + ' followers';
-                if (r.user.hashtags && r.user.hashtags.length > 0) {
-                    html += ' • 🏷️ ' + r.user.hashtags.slice(0, 2).join(', ');
-                }
-                html += '</div></div>';
+                html += '<div class="search-user-followers" style="font-size:11px;color:#9ca3af;margin-top:4px;">👥 ' + (r.user.followers || 0) + ' followers</div></div>';
                 html += '<div class="search-user-actions" style="display:flex;gap:6px;flex-shrink:0;">';
                 html += '<button class="search-msg-btn" onclick="app.openChatFromSearch(\'' + r.uid + '\', \'' + r.user.name + '\')" style="padding:8px 12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;position:relative;white-space:nowrap;">💬 ' + msgBadge + '</button>';
                 html += '<button class="search-view-btn" onclick="app.viewUserProfile(\'' + r.uid + '\')" style="padding:8px 12px;background:' + (isFollowing ? '#ef4444' : 'var(--primary)') + ';color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">' + (isFollowing ? '✓ Follow' : '+ Follow') + '</button>';
@@ -3077,7 +2216,6 @@ var app = {
     },
 
     searchExploreUsers: function(query) {
-        // Search function for explore page
         if (!query || query === '') {
             var input = document.getElementById('exploreSearchInput');
             query = input ? input.value : '';
@@ -3095,7 +2233,6 @@ var app = {
         }
         
         if (!query || query.trim() === '') {
-            // Show all sections when search is cleared
             resultsContainer.style.display = 'none';
             resultsList.innerHTML = '';
             if (quickDiscoverySection) quickDiscoverySection.style.display = 'grid';
@@ -3104,7 +2241,6 @@ var app = {
             return;
         }
         
-        // Hide all sections when searching
         if (quickDiscoverySection) quickDiscoverySection.style.display = 'none';
         if (trendingSection) trendingSection.style.display = 'none';
         if (postsSection) postsSection.style.display = 'none';
@@ -3115,26 +2251,21 @@ var app = {
         var results = [];
         var self = this;
         
-        // Search through loaded users
         for (var uid in this.users) {
             if (!this.user || uid !== this.user.uid) {
                 var user = this.users[uid];
                 if (user && user.name) {
                     var matches = false;
                     
-                    // Search by first/last name
                     if (user.name.toLowerCase().includes(searchQuery)) {
                         matches = true;
                     }
-                    // Search by email
                     else if (user.email && user.email.toLowerCase().includes(searchQuery)) {
                         matches = true;
                     }
-                    // Search by username
                     else if (user.username && user.username.toLowerCase().includes(searchQuery)) {
                         matches = true;
                     }
-                    // Search by hashtags
                     else if (user.hashtags && Array.isArray(user.hashtags)) {
                         for (var i = 0; i < user.hashtags.length; i++) {
                             if (user.hashtags[i].toLowerCase().includes(searchQuery)) {
@@ -3151,16 +2282,13 @@ var app = {
             }
         }
         
-        // Sort by followers
         results.sort(function(a, b) { 
             return (b.user.followers || 0) - (a.user.followers || 0); 
         });
         
-        console.log('✅ Found', results.length, 'results');
-        
         var html = '';
         if (results.length === 0) {
-            html = '<div style="text-align:center;color:#9ca3af;padding:32px 20px;"><div style="font-size:18px;margin-bottom:12px;">😔 No users found</div><div style="font-size:12px;color:#6b7280;margin-top:8px;">Try another search or check spelling</div></div>';
+            html = '<div style="text-align:center;color:#9ca3af;padding:32px 20px;"><div style="font-size:18px;margin-bottom:12px;">😔 No users found</div></div>';
         } else {
             html += '<div style="padding:12px 16px;background:linear-gradient(135deg,#f0f7ff,#f5f0ff);border-radius:8px;margin-bottom:12px;font-size:13px;color:#0088cc;font-weight:600;">Found ' + results.length + ' user' + (results.length === 1 ? '' : 's') + '</div>';
             
@@ -3289,31 +2417,17 @@ var app = {
     },
 
     // ============================================
-    // GET USER TIER
+    // GET USER TIER (Simplified - always free)
     // ============================================
 
     getUserTier: function() {
-        if (!this.user || !this.user.uid) return 'free';
-        
-        var tier = localStorage.getItem('chichi_user_tier_' + this.user.uid);
-        if (tier && tier in EARNING_SETTINGS) {
-            return tier;
-        }
-        
-        db.ref('users/' + this.user.uid + '/tier').once('value', function(snap) {
-            var tier = snap.val() || 'free';
-            if (tier in EARNING_SETTINGS) {
-                localStorage.setItem('chichi_user_tier_' + this.user.uid, tier);
-            }
-        }.bind(this));
-        
         return 'free';
     },
 
     getQuestionsRemaining: function() {
         if (!this.user) return 0;
         
-        var userTier = this.getUserTier();
+        var userTier = 'free';
         var tierData = EARNING_SETTINGS[userTier];
         var today = new Date().toDateString();
         var key = 'chichi_trivia_count_' + this.user.uid + '_' + today;
@@ -3406,7 +2520,7 @@ var app = {
         var earnContainer = document.getElementById('earnContainer');
         if (!earnContainer) return;
         
-        var userTier = this.getUserTier();
+        var userTier = 'free';
         var tierData = EARNING_SETTINGS[userTier];
         var remaining = this.getQuestionsRemaining();
         var userBalance = this.balance;
@@ -3414,98 +2528,55 @@ var app = {
         var streakCount = this.streakCount || 0;
         var username = this.profile.username || 'user';
         
-        var tierColors = {
-            'free': { bg: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', accent: '#64748b', light: '#f1f5f9' },
-            'premium': { bg: 'linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)', accent: '#3b82f6', light: '#eff6ff' },
-            'vip': { bg: 'linear-gradient(135deg, #7c2d12 0%, #5b21b6 100%)', accent: '#a855f7', light: '#faf5ff' }
-        };
-        
-        var tierColor = tierColors[userTier] || tierColors.free;
-        var tierLabel = tierData.label;
-        
         var html = `
             <div style="padding: 16px 16px 140px 16px; background: #ffffff; min-height: 100vh;">
                 
-                <!-- CREDIT CARD BALANCE CONTAINER -->
-                <div style="background: ${tierColor.bg}; border-radius: 24px; padding: 28px; margin-bottom: 28px; color: white; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2); position: relative; overflow: hidden;">
-                    <!-- Decorative circles -->
+                <!-- BALANCE CARD -->
+                <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 24px; padding: 28px; margin-bottom: 28px; color: white; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2); position: relative; overflow: hidden;">
                     <div style="position: absolute; top: -40px; right: -40px; width: 150px; height: 150px; background: rgba(255, 255, 255, 0.08); border-radius: 50%;"></div>
                     <div style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.05); border-radius: 50%;"></div>
                     
                     <div style="position: relative; z-index: 2;">
-                        <!-- Card Header -->
                         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 32px;">
                             <div>
-                                <div style="font-size: 11px; color: rgba(255,255,255,0.75); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; font-weight: 500;">CHICHI Card</div>
-                                <div style="font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 500;">${tierLabel}</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.75); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px;">CHICHI Wallet</div>
+                                <div style="font-size: 14px; color: rgba(255,255,255,0.9);">Free Tier</div>
                             </div>
                             <div style="text-align: right;">
-                                <div style="font-size: 11px; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 1px;">Daily Limit</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.75); text-transform: uppercase;">Daily Questions</div>
                                 <div style="font-size: 14px; color: white; font-weight: 700;">${remaining}/${tierData.questionsPerDay}</div>
                             </div>
                         </div>
                         
-                        <!-- Balance -->
                         <div style="margin-bottom: 24px;">
-                            <div style="font-size: 11px; color: rgba(255,255,255,0.75); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Account Balance</div>
-                            <div style="font-size: 42px; font-weight: 800; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">CC Points ${userBalance.toFixed(2)}</div>
+                            <div style="font-size: 11px; color: rgba(255,255,255,0.75); margin-bottom: 8px; text-transform: uppercase;">Coin Balance</div>
+                            <div style="font-size: 42px; font-weight: 800; letter-spacing: -1px;">${userBalance.toFixed(2)}</div>
+                            <div style="font-size: 13px; color: rgba(255,255,255,0.6);">Chichi Coins</div>
                         </div>
                         
-                        <!-- Card Footer with Username -->
                         <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2);">
                             <div>
                                 <div style="font-size: 10px; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Username</div>
                                 <div style="font-size: 16px; font-weight: 700;">@${username}</div>
                             </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 11px; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Member Since</div>
-                                <div style="font-size: 12px; color: rgba(255,255,255,0.9);">2024</div>
-                            </div>
+                            <button onclick="app.showGiftCatalog()" style="background: #f59e0b; color: #1e293b; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 13px; transition: 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                🎁 Gift Catalog
+                            </button>
                         </div>
                     </div>
                 </div>
                 
                 <!-- QUICK ACTIONS -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px;">
-                    <button onclick="app.showSendMoneyModal()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(59, 130, 246, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.2)'">
-                        Send Money
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 28px;">
+                    <button onclick="app.switchView('explore')" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 12px 8px; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 12px; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        🔍 Explore
                     </button>
-                    <button onclick="app.showWithdrawModal()" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(34, 197, 94, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(34, 197, 94, 0.2)'">
-                        Withdraw
+                    <button onclick="app.showGiftCatalog()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 12px 8px; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 12px; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        🎁 Gifts
                     </button>
-                </div>
-                
-                <div style="margin-bottom: 28px;">
-                    <button onclick="app.showTransactionHistory()" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(139, 92, 246, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(139, 92, 246, 0.2)'">
-                        📋 Transaction History
+                    <button onclick="app.showTransactionHistory()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; padding: 12px 8px; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 12px; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        📋 History
                     </button>
-                </div>
-                
-                <!-- CURRENT PLAN & UPGRADE -->
-                <div style="background: ${tierColor.light}; border: 1.5px solid ${tierColor.accent}; border-radius: 16px; padding: 20px; margin-bottom: 28px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                        <div>
-                            <div style="font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Current Plan</div>
-                            <div style="font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 6px;">${tierLabel}</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 12px; font-weight: 600; color: ${tierColor.accent};">DAILY</div>
-                            <div style="font-size: 13px; color: #64748b; margin-top: 4px;">+CC Points ${tierData.rewardPerQuestion}/question</div>
-                        </div>
-                    </div>
-                    
-                    <div style="background: white; border-radius: 10px; padding: 12px; font-size: 12px; color: #475569; margin-bottom: 14px; line-height: 1.6;">
-                        • ${tierData.questionsPerDay} questions daily<br>
-                        • CC Points ${tierData.rewardPerQuestion} per correct answer<br>
-                        • ${tierData.adsPerQuestion === 0 ? 'No ads' : tierData.adsPerQuestion + ' ads/question'}<br>
-                        • ${tierData.timerSeconds}s timer
-                    </div>
-                    
-                    ${userTier !== 'vip' ? `
-                        <button onclick="app.showUpgradeTierSelector()" style="width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                            Upgrade Plan
-                        </button>
-                    ` : '<div style="color: #10b981; text-align: center; font-weight: 600; font-size: 13px;">You have the best plan!</div>'}
                 </div>
                 
                 <!-- STATS SECTION -->
@@ -3523,52 +2594,44 @@ var app = {
                     </div>
                 </div>
                 
-                <!-- EARNING OPPORTUNITIES SECTION -->
-                <div style="margin-bottom: 28px;">
-                    <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Earn Money</div>
-                    
-                    <!-- TRIVIA CARD -->
-                    <div style="background: linear-gradient(135deg, #f0fdf4, #f0f9ff); border: 1.5px solid #86efac; border-radius: 16px; padding: 20px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.08);">
-                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
-                            <div>
-                                <div style="font-size: 16px; font-weight: 700; color: #15803d;">Knowledge Challenge</div>
-                                <div style="font-size: 13px; color: #4b5563; margin-top: 6px;">Answer questions, earn rewards</div>
-                            </div>
-                            <div style="background: #dcfce7; color: #15803d; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap;">+CC Points ${tierData.rewardPerQuestion}</div>
+                <!-- TRIVIA CARD -->
+                <div style="background: linear-gradient(135deg, #f0fdf4, #f0f9ff); border: 1.5px solid #86efac; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.08);">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                        <div>
+                            <div style="font-size: 16px; font-weight: 700; color: #15803d;">🧠 Knowledge Challenge</div>
+                            <div style="font-size: 13px; color: #4b5563; margin-top: 6px;">Answer questions, earn Chichi Coins</div>
                         </div>
-                        
-                        <div style="background: white; border-radius: 12px; padding: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
-                            <div style="font-size: 12px; color: #64748b;">
-                                <span style="font-weight: 600; color: #1e293b;">${remaining}</span> / ${tierData.questionsPerDay} remaining
-                            </div>
-                            <div style="font-size: 11px; color: #94a3b8;">Timer: ${tierData.timerSeconds}s</div>
-                        </div>
-                        
-                        <button onclick="app.generateTriviaQuestion()" style="width: 100%; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; padding: 13px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s; ${remaining <= 0 ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${remaining <= 0 ? 'disabled' : ''} onmouseover="if(${remaining > 0}) { this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(34, 197, 94, 0.3)'; }" onmouseout="if(${remaining > 0}) { this.style.transform='translateY(0)'; this.style.boxShadow='none'; }">
-                            ${remaining > 0 ? 'Start Challenge' : 'Limit Reached'}
-                        </button>
+                        <div style="background: #dcfce7; color: #15803d; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap;">+${tierData.rewardPerQuestion} Coins</div>
                     </div>
                     
-                    <!-- WHEEL CARD -->
-                    <div style="background: linear-gradient(135deg, #fef3c7, #fef9e7); border: 1.5px solid #fbbf24; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.08);">
-                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
-                            <div>
-                                <div style="font-size: 16px; font-weight: 700; color: #b45309;">Fortune Wheel</div>
-                                <div style="font-size: 13px; color: #4b5563; margin-top: 6px;">Spin for bonus prizes</div>
-                            </div>
-                            <div style="background: #fef3c7; color: #b45309; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap;">Cost: CC Points ${SPINNER_CONFIG.spinCost}</div>
+                    <div style="background: white; border-radius: 12px; padding: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-size: 12px; color: #64748b;">
+                            <span style="font-weight: 600; color: #1e293b;">${remaining}</span> / ${tierData.questionsPerDay} remaining
                         </div>
-                        
-                        <div style="background: white; border-radius: 12px; padding: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
-                            <div style="font-size: 12px; color: #64748b;">
-                                Try your luck
-                            </div>
-                            <div style="font-size: 11px; color: #94a3b8;">Balance required</div>
-                        </div>
-                        
-                        <button onclick="app.openSpinner()" style="width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 13px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(245, 158, 11, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                            Spin Wheel
-                        </button>
+                        <div style="font-size: 11px; color: #94a3b8;">Timer: ${tierData.timerSeconds}s</div>
+                    </div>
+                    
+                    <button onclick="app.generateTriviaQuestion()" style="width: 100%; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; padding: 13px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s; ${remaining <= 0 ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${remaining <= 0 ? 'disabled' : ''} onmouseover="if(${remaining > 0}) { this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(34, 197, 94, 0.3)'; }" onmouseout="if(${remaining > 0}) { this.style.transform='translateY(0)'; this.style.boxShadow='none'; }">
+                        ${remaining > 0 ? 'Start Challenge' : 'Limit Reached - Come Back Tomorrow'}
+                    </button>
+                </div>
+                
+                <!-- GIFT CATALOG PREVIEW -->
+                <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="margin: 0; font-size: 15px; font-weight: 700;">🎁 Available Gifts</h3>
+                        <button onclick="app.showGiftCatalog()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-weight: 600; font-size: 12px;">See All →</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                        ${GIFT_CATALOG.slice(0, 3).map(function(gift) {
+                            return `
+                                <div style="background: #f8fafc; border-radius: 10px; padding: 12px; text-align: center;">
+                                    <div style="font-size: 28px;">${gift.image}</div>
+                                    <div style="font-size: 11px; font-weight: 600; color: #1e293b; margin-top: 4px;">${gift.name}</div>
+                                    <div style="font-size: 10px; color: #6b7280;">${gift.cost} Coins</div>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
                 
@@ -3584,19 +2647,17 @@ var app = {
         var earnContainer = document.getElementById('earnContainer');
         if (!earnContainer) return;
         
-        // Ensure currentTrivia is set
         if (!this.currentTrivia && questionData) {
             this.currentTrivia = questionData;
             this.triviaAnswered = false;
-            console.log('🔧 Trivia data initialized');
         }
         
         if (!questionData) {
-            console.error('❌ No question data provided to renderEarnWithTrivia');
+            console.error('❌ No question data provided');
             return;
         }
         
-        var userTier = this.getUserTier();
+        var userTier = 'free';
         var tierData = EARNING_SETTINGS[userTier];
         var remaining = this.getQuestionsRemaining();
         
@@ -3628,21 +2689,19 @@ var app = {
                 <div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 16px; padding: 20px; margin-bottom: 20px; color: white; text-align: center;">
                     <div style="font-size: 40px; margin-bottom: 8px;">💰</div>
                     <div style="font-size: 24px; font-weight: 700;">Your Balance</div>
-                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
+                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">${this.balance.toFixed(2)} Coins</div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                        <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
-                        <button onclick="app.openSpinner()" style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
-                        ${userTier !== 'vip' ? `<button onclick="app.showPremiumPayment('premium')" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Upgrade</button>` : ''}
+                        <button onclick="app.showGiftCatalog()" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎁 Redeem Gifts</button>
                     </div>
                     <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
-                        ${tierData.label} - ${remaining} questions remaining today
+                        ${remaining} questions remaining today
                     </div>
                 </div>
                 
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
                     <h3 style="margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
                         <span>🧠</span> Trivia Challenge
-                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">CC Points ${tierData.rewardPerQuestion}</span>
+                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">+${tierData.rewardPerQuestion} Coins</span>
                     </h3>
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">
                         ⏱️ ${tierData.timerSeconds} seconds • ${remaining} questions left today
@@ -3661,16 +2720,19 @@ var app = {
                 </div>
                 
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
-                    <h3 style="margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
-                        <span>🎰</span> Spin & Win
-                        <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">Max ${SPINNER_CONFIG.maxWin}</span>
-                    </h3>
-                    <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
-                        Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
+                    <h3 style="margin: 0 0 12px 0;">🎁 Gift Catalog</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                        ${GIFT_CATALOG.slice(0, 3).map(function(gift) {
+                            return `
+                                <div style="background: #f8fafc; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer;" onclick="app.showGiftCatalog()">
+                                    <div style="font-size: 28px;">${gift.image}</div>
+                                    <div style="font-size: 11px; font-weight: 600; color: #1e293b; margin-top: 4px;">${gift.name}</div>
+                                    <div style="font-size: 10px; color: #6b7280;">${gift.cost} Coins</div>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
-                    <button onclick="app.openSpinner()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
-                        🎯 Spin Now
-                    </button>
+                    <button onclick="app.showGiftCatalog()" style="width: 100%; margin-top: 12px; padding: 10px; background: #f59e0b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">View All Gifts →</button>
                 </div>
                 
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
@@ -3678,7 +2740,7 @@ var app = {
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Total Earned</div>
-                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">CC Points ${this.balance.toFixed(2)}</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">${this.balance.toFixed(2)}</div>
                         </div>
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Questions</div>
@@ -3745,21 +2807,18 @@ var app = {
     },
 
     answerTriviaFromEarn: function(selectedIndex) {
-        console.log('🎯 Answer submitted:', selectedIndex, 'Current trivia:', this.currentTrivia ? 'YES' : 'NO', 'Already answered:', this.triviaAnswered);
+        console.log('🎯 Answer submitted:', selectedIndex);
         
         if (this.triviaAnswered) {
-            console.log('⚠️ Already answered this question');
             return;
         }
         
         if (!this.currentTrivia) {
-            console.error('❌ No trivia question loaded');
-            this.toast('Error: No question loaded. Try again.', 'error');
+            this.toast('Error: No question loaded.', 'error');
             return;
         }
         
         if (!this.user || this.isGuest) {
-            console.error('❌ User not authenticated');
             this.toast('Please log in to answer trivia', 'error');
             return;
         }
@@ -3772,7 +2831,7 @@ var app = {
         this.triviaAnswered = true;
         var self = this;
         var userId = this.user.uid;
-        var userTier = this.getUserTier();
+        var userTier = 'free';
         var tierData = EARNING_SETTINGS[userTier];
         var correct = this.currentTrivia.correct === selectedIndex;
         var today = new Date().toDateString();
@@ -3795,32 +2854,35 @@ var app = {
         if (correct) {
             resultArea.innerHTML = `
                 <div style="color: #22c55e; font-weight: 700; font-size: 18px;">✅ Correct!</div>
-                <div style="color: #6b7280; font-size: 14px;">You earned CC Points ${tierData.rewardPerQuestion.toFixed(2)}!</div>
+                <div style="color: #6b7280; font-size: 14px;">You earned ${tierData.rewardPerQuestion.toFixed(2)} Chichi Coins!</div>
             `;
             resultArea.style.background = '#dcfce7';
             
-            self.balance += tierData.rewardPerQuestion;
-            db.ref('users/' + userId + '/balance').set(self.balance);
+            this.balance += tierData.rewardPerQuestion;
+            db.ref('users/' + userId + '/balance').set(this.balance);
+            
+            // Track revenue
+            this.trackRevenue('earned', tierData.rewardPerQuestion, 'trivia');
             
             var balanceDisplay = document.getElementById('earnBalanceDisplay');
             if (balanceDisplay) {
-                balanceDisplay.textContent = 'CC Points ' + self.balance.toFixed(2);
+                balanceDisplay.textContent = this.balance.toFixed(2) + ' Coins';
             }
             
-            self.toast('🎉 Correct! +CC Points ' + tierData.rewardPerQuestion.toFixed(2), 'success');
-            self.incrementQuestionCount();
+            this.toast('🎉 Correct! +' + tierData.rewardPerQuestion.toFixed(2) + ' Coins', 'success');
+            this.incrementQuestionCount();
         } else {
             resultArea.innerHTML = `
                 <div style="color: #ef4444; font-weight: 700; font-size: 18px;">❌ Wrong answer</div>
-                <div style="color: #6b7280; font-size: 14px;">The correct answer was: ${self.currentTrivia.options[self.currentTrivia.correct]}</div>
+                <div style="color: #6b7280; font-size: 14px;">The correct answer was: ${this.currentTrivia.options[this.currentTrivia.correct]}</div>
             `;
             resultArea.style.background = '#fee2e2';
-            self.toast('❌ Wrong answer! Try again.', 'error');
+            this.toast('❌ Wrong answer! Try again.', 'error');
         }
         
         var answeredData = {
             date: today,
-            questionIndex: self.currentTrivia.questionIndex,
+            questionIndex: this.currentTrivia.questionIndex,
             correct: correct
         };
         
@@ -3853,49 +2915,6 @@ var app = {
                     `;
                 }
             }
-        }, 1500);
-    },
-
-    // ============================================
-    // UPGRADE USER
-    // ============================================
-
-    upgradeUser: function(tier) {
-        if (!this.user) {
-            this.toast('⚠️ Please login first', 'error');
-            return;
-        }
-        
-        if (!EARNING_SETTINGS[tier]) {
-            this.toast('⚠️ Invalid tier', 'error');
-            return;
-        }
-        
-        var price = EARNING_SETTINGS[tier].price;
-        var tierName = EARNING_SETTINGS[tier].label;
-        
-        if (!confirm(`Upgrade to ${tierName} for CC Points ${price}/month?`)) {
-            return;
-        }
-        
-        var self = this;
-        this.toast('⏳ Processing payment...', 'info');
-        
-        setTimeout(function() {
-            if (self.balance < price) {
-                self.toast('❌ Insufficient balance. You need CC Points ' + price, 'error');
-                return;
-            }
-            
-            self.balance -= price;
-            db.ref('users/' + self.user.uid + '/balance').set(self.balance);
-            db.ref('users/' + self.user.uid + '/tier').set(tier);
-            localStorage.setItem('chichi_user_tier_' + self.user.uid, tier);
-            
-            self.toast('✅ Upgraded to ' + tierName + '! 🎉', 'success');
-            self.renderEarn();
-            self.loadProfile();
-            
         }, 1500);
     },
 
@@ -3945,7 +2964,6 @@ var app = {
         var self = this;
         console.log('📝 Loading next trivia question...');
         
-        // Reset state
         this.triviaAnswered = false;
         this.currentTrivia = null;
         if (this.triviaTimer) {
@@ -3953,10 +2971,7 @@ var app = {
             this.triviaTimer = null;
         }
         
-        // Generate new question
         this.generateTriviaQuestion(function() {
-            // Callback - question loaded, now render
-            console.log('✅ New question ready, rendering...');
             self.renderEarn();
         });
     },
@@ -3970,19 +2985,15 @@ var app = {
         var remaining = this.getQuestionsRemaining();
         if (remaining <= 0) {
             this.toast('✅ All questions answered for today! Come back tomorrow.', 'info');
-            console.log('📊 No questions remaining today');
             return;
         }
         
         var self = this;
         var userId = this.user.uid;
         
-        console.log('🎯 Generating trivia question for user:', userId);
-        
         db.ref('users/' + userId + '/pendingTrivia').once('value', function(snap) {
             var pending = snap.val();
             if (pending && pending.question) {
-                console.log('📝 Loading pending trivia question');
                 self.displayTriviaInEarn(pending);
                 if (callback) callback();
                 return;
@@ -3990,7 +3001,6 @@ var app = {
             
             db.ref('users/' + userId + '/triviaAnswered').once('value', function(snapshot) {
                 var answered = snapshot.val() || [];
-                console.log('✅ Already answered:', answered.length, 'questions');
                 
                 var unanswered = TRIVIA_QUESTIONS.filter(function(q, index) {
                     for (var j = 0; j < answered.length; j++) {
@@ -4001,10 +3011,7 @@ var app = {
                     return true;
                 });
                 
-                console.log('📚 Unanswered questions:', unanswered.length);
-                
                 if (unanswered.length === 0) {
-                    console.log('🔄 All questions answered, resetting');
                     db.ref('users/' + userId + '/triviaAnswered').set([]);
                     unanswered = TRIVIA_QUESTIONS.slice();
                 }
@@ -4026,14 +3033,11 @@ var app = {
                     timestamp: Date.now()
                 };
                 
-                console.log('💾 Saving trivia question:', pendingData.question);
-                
                 db.ref('users/' + userId + '/pendingTrivia').set(pendingData, function(err) {
                     if (err) {
                         console.error('❌ Error saving trivia:', err);
                         self.toast('Error loading question. Try again.', 'error');
                     } else {
-                        console.log('✅ Trivia saved, displaying...');
                         self.displayTriviaInEarn(pendingData);
                         if (callback) callback();
                     }
@@ -4060,8 +3064,6 @@ var app = {
             return;
         }
         
-        console.log('🎯 Displaying trivia:', questionData.question);
-        
         this.currentTrivia = questionData;
         this.triviaAnswered = false;
         
@@ -4072,12 +3074,10 @@ var app = {
         }
         
         if (!earnView.classList.contains('active')) {
-            console.log('⚠️ Earn view not active, storing as pending');
             this.pendingTrivia = questionData;
             return;
         }
         
-        console.log('✅ Earn view active, rendering trivia');
         this.pendingTrivia = null;
         this.renderEarnWithTrivia(questionData);
     },
@@ -4210,8 +3210,6 @@ var app = {
             self.requestNotificationPermission();
         }, 1500);
        
-        console.log('🚀 Starting app initialization sequence...');
-       
         self.loadPosts();
         self.loadStories();
         self.loadUsers();
@@ -4221,11 +3219,8 @@ var app = {
         self.calculateTrendingHashtags();
        
         setTimeout(function() {
-            console.log('🔔 Checking if tracking is active...');
             if (!self.unreadTrackingActive) {
                 console.log('⚠️ WARNING: Unread tracking not active yet!');
-            } else {
-                console.log('✅ Unread tracking is active.');
             }
         }, 100);
        
@@ -4243,7 +3238,6 @@ var app = {
                                 var notifyKey = key + '_' + m.timestamp;
                                 if (!self.notifiedMessages[notifyKey]) {
                                     var userName = (self.users[uid] || {}).name || 'User';
-                                    console.log('🔔 [POLL] NEW MESSAGE from ' + userName);
                                     self.notifyNewMessage(userName, m.text || '📷 Image');
                                     self.notifiedMessages[notifyKey] = true;
                                 }
@@ -4253,15 +3247,6 @@ var app = {
                 }
             });
         }, 5000);
-        
-        var musicEnabled = localStorage.getItem('chichi-music-enabled') === 'true';
-        var toggle = document.getElementById('musicToggle');
-       
-        if (musicEnabled) {
-            if (toggle) toggle.checked = true;
-        } else {
-            if (toggle) toggle.checked = false;
-        }
         
         this.loadDarkModePreference();
     },
@@ -4279,7 +3264,7 @@ var app = {
                
                 var balanceDisplay = document.getElementById('balanceDisplay');
                 if (balanceDisplay) {
-                    balanceDisplay.textContent = 'CC Points ' + self.balance.toFixed(2);
+                    balanceDisplay.textContent = self.balance.toFixed(2) + ' Coins';
                 }
                
                 var avatar = document.getElementById('quickPostAvatar');
@@ -4305,7 +3290,6 @@ var app = {
     renderProfile: function() {
         var profileContent = document.getElementById('profileContent');
         if (!profileContent) {
-            console.error('❌ profileContent element not found!');
             var profileView = document.getElementById('profileView');
             if (profileView) {
                 var content = document.createElement('div');
@@ -4313,7 +3297,6 @@ var app = {
                 profileView.appendChild(content);
                 profileContent = content;
             } else {
-                console.error('❌ profileView also not found!');
                 return;
             }
         }
@@ -4334,11 +3317,8 @@ var app = {
             return;
         }
         
-        var userTier = this.getUserTier();
+        var userTier = 'free';
         var tierData = EARNING_SETTINGS[userTier];
-        var badgeDisplay = tierData && tierData.badge ? tierData.badge : '';
-        var tierColor = { 'free': '#6b7280', 'premium': '#3b82f6', 'vip': '#a855f7' }[userTier] || '#6b7280';
-        var tierLabel = tierData ? tierData.label : 'Free';
         
         var userPosts = this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this)).length;
         var interests = this.profile.interests ? (Array.isArray(this.profile.interests) ? this.profile.interests : Object.keys(this.profile.interests)) : [];
@@ -4363,7 +3343,6 @@ var app = {
                 <!-- PROFILE INFO CARD -->
                 <div style="background: white; border-radius: 24px 24px 0 0; margin-top: -24px; position: relative; z-index: 10; padding: 24px 20px;">
                     
-                    <!-- NAME & BASIC INFO -->
                     <div style="margin-bottom: 20px;">
                         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
                             <div>
@@ -4371,13 +3350,12 @@ var app = {
                                 <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Email: ${this.user.email}</div>
                             </div>
                             <div style="text-align: right;">
-                                <div style="font-size: 28px;">${badgeDisplay}</div>
-                                <div style="font-size: 11px; background: ${tierColor}; color: white; padding: 4px 12px; border-radius: 12px; margin-top: 4px; font-weight: 600;">${tierLabel}</div>
+                                <div style="font-size: 28px;">✨</div>
+                                <div style="font-size: 11px; background: #6b7280; color: white; padding: 4px 12px; border-radius: 12px; margin-top: 4px; font-weight: 600;">Free</div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- ABOUT SECTION (SMALLER) -->
                     ${this.profile.bio ? `
                         <div style="background: #f8fafc; border-radius: 12px; padding: 12px; margin-bottom: 16px;">
                             <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">About</div>
@@ -4385,7 +3363,6 @@ var app = {
                         </div>
                     ` : ''}
                     
-                    <!-- INTERESTS SECTION -->
                     ${interests.length > 0 ? `
                         <div style="margin-bottom: 16px;">
                             <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Interests</div>
@@ -4403,7 +3380,6 @@ var app = {
                         </div>
                     ` : ''}
                     
-                    <!-- STATS GRID (REDESIGNED) -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; padding: 16px; background: linear-gradient(135deg, #f0f4f8, #e8ecf1); border-radius: 14px;">
                         <div style="text-align: center; padding: 8px;">
                             <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 6px;">Posts</div>
@@ -4419,7 +3395,6 @@ var app = {
                         </div>
                     </div>
                     
-                    <!-- MY POSTS SECTION -->
                     <div style="margin-top: 20px;">
                         <div style="font-weight: 700; margin-bottom: 14px; color: #1e293b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📸 My Posts</div>
                         <div id="profilePosts"></div>
@@ -4473,7 +3448,7 @@ var app = {
             db.ref('users/' + uid + '/followers').set(followers);
         });
         this.renderProfile();
-        
+        this.logUserActivity('unfollow', 'Unfollowed user: ' + name);
     },
 
     // ============================================
@@ -4558,7 +3533,7 @@ var app = {
         this.showApp();
         this.switchView('feed');
         this.loadPosts();
-        
+        this.logUserActivity('guest_access', 'User browsing as guest');
     },
 
     // ============================================
@@ -4588,9 +3563,7 @@ var app = {
        
         try {
             localStorage.setItem('chichiCurrentView', view);
-        } catch (e) {
-            console.log('localStorage not available');
-        }
+        } catch (e) {}
        
         document.querySelectorAll('.view').forEach(function(v) {
             v.classList.remove('active');
@@ -4632,7 +3605,6 @@ var app = {
             var self = this;
             setTimeout(function() {
                 if (self.pendingTrivia && self.pendingTrivia.question) {
-                    console.log('📝 Loading pending trivia in Earn view');
                     self.currentTrivia = self.pendingTrivia;
                     self.triviaAnswered = false;
                     self.renderEarnWithTrivia(self.pendingTrivia);
@@ -4718,7 +3690,6 @@ var app = {
         var self = this;
         this.loadStories();
        
-        console.log('📮 Loading posts from Firebase...');
         db.ref('posts').orderByChild('timestamp').limitToLast(50).on('value', function(s) {
             var p = [];
             s.forEach(function(c) {
@@ -4816,11 +3787,14 @@ var app = {
                 likes[self.user.uid] = true;
                 self.balance += 0.2;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
+                self.trackRevenue('earned', 0.2, 'like');
+                self.engagementStats.likesCount = (self.engagementStats.likesCount || 0) + 1;
+                self.saveEngagementStats();
             }
            
             db.ref('posts/' + id + '/likes').set(likes);
             self.renderFeed();
-            
+            self.logUserActivity('like_post', 'Liked post: ' + id);
         });
     },
 
@@ -4834,7 +3808,7 @@ var app = {
             link.href = url;
             link.download = 'photo.jpg';
             link.click();
-            
+            this.logUserActivity('download_post', 'Downloaded post: ' + id);
         } catch (err) {
             this.toast('Download failed', 'error');
         }
@@ -4860,7 +3834,7 @@ var app = {
             var text = shareText + '\n' + shareUrl;
             navigator.clipboard.writeText(text).then(function() {
                 this.toast('Post link copied to clipboard! 📋', 'success');
-                
+                this.logUserActivity('share_post', 'Shared post: ' + id);
             }.bind(this)).catch(function(err) {
                 this.toast('Share link: ' + shareUrl, 'info');
             }.bind(this));
@@ -4973,7 +3947,7 @@ var app = {
                 
                 <div style="padding: 12px; background: #f0f7ff; border-radius: 10px; border-left: 4px solid #3b82f6;">
                     <div style="font-size: 13px; color: #0c4a6e; font-weight: 600;">App Version</div>
-                    <div style="font-size: 12px; color: #0c4a6e; margin-top: 4px;">CHICHI v01a.01</div>
+                    <div style="font-size: 12px; color: #0c4a6e; margin-top: 4px;">CHICHI V02A.01</div>
                 </div>
             </div>
         `;
@@ -5078,6 +4052,9 @@ var app = {
            
             self.balance += 0.5;
             db.ref('users/' + self.user.uid + '/balance').set(self.balance);
+            self.trackRevenue('earned', 0.5, 'comment');
+            self.engagementStats.commentsCount = (self.engagementStats.commentsCount || 0) + 1;
+            self.saveEngagementStats();
            
             var modal = document.querySelector('.modal-overlay');
             if (modal) {
@@ -5085,7 +4062,7 @@ var app = {
             }
             self.toast('Comment added', 'success');
             self.renderFeed();
-            
+            self.logUserActivity('comment', 'Commented on post: ' + id);
         });
     },
 
@@ -5132,12 +4109,13 @@ var app = {
        
         if (isFollowing) {
             delete this.following[uid];
-            
+            this.logUserActivity('unfollow', 'Unfollowed user: ' + name);
         } else {
             this.following[uid] = true;
             this.balance += 0.05;
             db.ref('users/' + this.user.uid + '/balance').set(this.balance);
-            
+            this.trackRevenue('earned', 0.05, 'follow');
+            this.logUserActivity('follow', 'Followed user: ' + name);
         }
        
         db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
@@ -5185,7 +4163,7 @@ var app = {
             clearInterval(this.triviaInterval);
             this.triviaInterval = null;
         }
-        
+        this.logUserActivity('logout', 'User logged out');
     },
 
     // ============================================
@@ -5230,14 +4208,6 @@ var app = {
         }));
        
         deletionPromises.push(db.ref('stories/' + uid).remove());
-       
-        deletionPromises.push(db.ref('withdrawals').orderByChild('userId').equalTo(uid).once('value', function(snapshot) {
-            var deletePromises = [];
-            snapshot.forEach(function(withdrawal) {
-                deletePromises.push(db.ref('withdrawals/' + withdrawal.key).remove());
-            });
-            return Promise.all(deletePromises);
-        }));
        
         Promise.all(deletionPromises).then(function() {
             self.toast('Data deleted successfully. Removing account...', 'success');
@@ -5306,7 +4276,6 @@ var app = {
     // ============================================
 
     calculateTrendingHashtags: function() {
-        console.log('📈 Calculating trending hashtags...');
         var hashtagCount = {};
         var now = new Date();
         var weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -5340,17 +4309,13 @@ var app = {
 
     loadExplore: function() {
         var self = this;
-        console.log('🔍 Explore: Loading discovery features');
         
-        // Preload all users for faster search
         if (!this.users || Object.keys(this.users).length === 0) {
             db.ref('users').once('value', function(snapshot) {
                 self.users = snapshot.val() || {};
-                console.log('✅ Loaded', Object.keys(self.users).length, 'users');
             });
         }
         
-        // Load main page sections only
         setTimeout(function() {
             self.renderTrendingHashtagsExplore();
             self.renderTrendingPosts();
@@ -5378,7 +4343,6 @@ var app = {
             return;
         }
         
-        // Find users with similar interests
         var similarUsers = Object.keys(this.users)
             .filter(function(uid) { return uid !== self.user.uid; })
             .map(function(uid) {
@@ -5440,7 +4404,6 @@ var app = {
     showFeaturedUsersModal: function() {
         var self = this;
         
-        // Get random users (excluding current user)
         var usersArray = Object.keys(this.users)
             .filter(function(uid) { return uid !== (self.user && self.user.uid); })
             .map(function(uid) { return { uid: uid, ...self.users[uid] }; })
@@ -5490,7 +4453,6 @@ var app = {
     showTopCreatorsModal: function() {
         var self = this;
         
-        // Get top creators by followers
         var creators = Object.keys(this.users)
             .filter(function(uid) { return uid !== (self.user && self.user.uid); })
             .map(function(uid) { 
@@ -5541,14 +4503,6 @@ var app = {
     },
 
     // ============================================
-    // FEATURED USERS (OLD - KEPT FOR REFERENCE)
-    // ============================================
-
-    renderFeaturedUsers: function() {
-        // Now handled by showFeaturedUsersModal()
-    },
-
-    // ============================================
     // RENDER TRENDING HASHTAGS IN EXPLORE
     // ============================================
 
@@ -5575,14 +4529,6 @@ var app = {
     },
 
     // ============================================
-    // TOP CREATORS
-    // ============================================
-
-    renderTopCreators: function() {
-        // Now handled by showTopCreatorsModal()
-    },
-
-    // ============================================
     // TRENDING POSTS
     // ============================================
 
@@ -5591,7 +4537,6 @@ var app = {
         var container = document.getElementById('trendingPostsContainer');
         if (!container) return;
         
-        // Get trending posts by likes
         var trendingPosts = (this.posts || [])
             .sort(function(a, b) {
                 var aLikes = (a.likes && Object.keys(a.likes).length) || 0;
@@ -5649,7 +4594,6 @@ var app = {
         
         db.ref('users/' + this.user.uid + '/following').set(this.following);
         
-        // Update follower count
         db.ref('users/' + uid + '/followers').once('value', function(snapshot) {
             var count = snapshot.val() || 0;
             var isFollowing = self.following && self.following[uid];
@@ -5657,61 +4601,11 @@ var app = {
             db.ref('users/' + uid + '/followers').set(newCount);
         });
         
-        // Refresh explore
         setTimeout(function() { self.renderFeaturedUsers(); self.renderTopCreators(); }, 300);
     },
 
-    // ============================================
-    // RENDER TRENDING IN EXPLORE
-    // ============================================
-
-    renderTrendingInExplore: function() {
-        if (this.trendingHashtags.length === 0) {
-            this.calculateTrendingHashtags();
-        }
-        
-        if (document.getElementById('trendingSection')) {
-            this.renderTrendingList();
-            return;
-        }
-        
-        var html = '<div id="trendingSection" style="padding:16px;border-bottom:1px solid #f0f0f0;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><h3 style="margin:0;font-size:18px;font-weight:700;">🔥 Trending Now</h3><button onclick="app.calculateTrendingHashtags(); app.renderTrendingList();" style="background:var(--primary);color:white;border:none;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;">Refresh</button></div><div id="trendingList" style="display:grid;gap:12px;"></div></div>';
-        
-        var exploreView = document.getElementById('exploreView');
-        if (exploreView) {
-            exploreView.insertAdjacentHTML('afterbegin', html);
-            this.renderTrendingList();
-        }
-    },
-
-    renderTrendingList: function() {
-        if (this.trendingHashtags.length === 0) {
-            this.calculateTrendingHashtags();
-            return;
-        }
-        
-        var html = '';
-        this.trendingHashtags.forEach(function(trend, index) {
-            var rankEmoji = ['🥇', '🥈', '🥉'][index] || '•';
-            html += '<div style="display:flex;align-items:center;padding:12px;background:white;border-radius:12px;cursor:pointer;transition:0.2s;border:1px solid #eee;" onclick="app.toast(\'View hashtag posts coming soon\', \'info\')" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'"><div style="font-size:20px;margin-right:12px;width:30px;text-align:center;">' + rankEmoji + '</div><div style="flex:1;"><div style="font-weight:600;color:var(--primary);">' + trend.name + '</div><div style="font-size:12px;color:#6b7280;">' + trend.posts + ' posts • ' + trend.count + ' mentions</div></div><div style="color:#9ca3af;font-size:18px;">→</div></div>';
-        });
-        
-        var trendingList = document.getElementById('trendingList');
-        if (trendingList) {
-            trendingList.innerHTML = html;
-        }
-    },
-
-    setupTrendingRefresh: function() {
-        var self = this;
-        this.calculateTrendingHashtags();
-        setInterval(function() {
-            self.calculateTrendingHashtags();
-            if (document.getElementById('trendingList')) {
-                self.renderTrendingList();
-            }
-        }, 60 * 60 * 1000);
-    },
+    renderFeaturedUsers: function() {},
+    renderTopCreators: function() {},
 
     // ============================================
     // LOAD STORIES
@@ -5855,7 +4749,7 @@ var app = {
             return Promise.all(savePromises);
         }).then(function() {
             self.toast('✅ Stories uploaded successfully!', 'success');
-            
+            self.logUserActivity('story_upload', 'Uploaded stories');
             setTimeout(function() {
                 var modal = document.getElementById('storyModalOverlay');
                 if (modal) modal.remove();
@@ -6006,7 +4900,6 @@ var app = {
     // ============================================
 
     loadSignupHeatmap: function() {
-        console.log('🗺️ Loading global signup heatmap...');
         var mapContainer = document.getElementById('signupMapContainer');
         if (!mapContainer) { return; }
         
@@ -6110,15 +5003,7 @@ var app = {
             }.bind(this));
             this.updateHeatmapStats();
             this.renderHeatmapDots();
-            // Removed: this.showHashtagSuggestions(); - Similar Interests now ONLY in modal
         }.bind(this));
-    },
-
-    showHashtagSuggestions: function() {
-        // DISABLED: Similar Interests section now ONLY appears in 🤝 modal
-        // (via showSimilarInterestsModal function)
-        // This function is kept for legacy compatibility only
-        return;
     },
 
     // ============================================
@@ -6130,216 +5015,9 @@ var app = {
     },
 
     // ============================================
-    // SHOW WITHDRAW MODAL
+    // SHOW TRANSACTION HISTORY
     // ============================================
 
-    showWithdrawModal: function() {
-        if (this.balance < 1) {
-            this.toast('❌ You have no balance to withdraw', 'error');
-            return;
-        }
-        document.getElementById('withdrawModal').classList.add('active');
-        document.getElementById('withdrawAmount').value = this.balance;
-        document.getElementById('withdrawAmount').max = this.balance;
-        document.getElementById('withdrawAmount').min = 1;
-        var balanceDisplay = document.getElementById('withdrawBalanceDisplay');
-        if (balanceDisplay) {
-            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
-        }
-    },
-
-    closeWithdrawModal: function() {
-        document.getElementById('withdrawModal').classList.remove('active');
-    },
-
-    showSendMoneyModal: function() {
-        if (this.balance < 1) {
-            this.toast('Insufficient balance to send', 'error');
-            return;
-        }
-        
-        var self = this;
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.id = 'sendMoneyModal';
-        modal.style.zIndex = '9999';
-        
-        modal.innerHTML = `
-            <div style="background: white; border-radius: 20px; padding: 28px; max-width: 440px; width: 95%; animation: slideUp 0.3s ease; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); max-height: 90vh; overflow-y: auto;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                    <h2 style="font-size: 20px; font-weight: 700; color: #1e293b; margin: 0;">Send Money</h2>
-                    <button onclick="document.getElementById('sendMoneyModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">✕</button>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Find Recipient</label>
-                    <input type="text" id="recipientUsername" placeholder="Search @username..." style="width: 100%; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 14px; font-family: inherit; box-sizing: border-box; transition: 0.2s;" onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none'" oninput="app.searchRecipientUsers(this.value)">
-                    <div id="usernameDropdown" style="display: none; margin-top: 8px; max-height: 300px; overflow-y: auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
-                    </div>
-                </div>
-                
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 20px; display: none; align-items: center; gap: 12px;" id="selectedRecipientBox">
-                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #2563eb); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 16px;" id="selectedRecipientAvatar"></div>
-                    <div>
-                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;" id="selectedRecipientName"></div>
-                        <div style="font-size: 12px; color: #64748b;" id="selectedRecipientUsername"></div>
-                    </div>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Amount (KSh)</label>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="number" id="sendAmount" placeholder="0.00" min="1" max="${this.balance}" style="flex: 1; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 14px; font-family: inherit; box-sizing: border-box; transition: 0.2s;" onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none'">
-                        <button onclick="document.getElementById('sendAmount').value = '${this.balance}'" style="background: #e2e8f0; border: none; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 12px; color: #475569; transition: 0.2s;" onmouseover="this.style.background='#cbd5e1'" onmouseout="this.style.background='#e2e8f0'">Max</button>
-                    </div>
-                </div>
-                
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #64748b;">
-                        <span>Available:</span>
-                        <span style="font-weight: 700; color: #1e293b;">CC Points ${this.balance.toFixed(2)}</span>
-                    </div>
-                </div>
-                
-                <button onclick="app.processSendMoney()" style="width: 100%; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 14px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s; margin-bottom: 10px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 20px rgba(59, 130, 246, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                    Send Money
-                </button>
-                <button onclick="document.getElementById('sendMoneyModal').remove()" style="width: 100%; background: #e2e8f0; color: #475569; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px;">
-                    Cancel
-                </button>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        document.getElementById('recipientUsername').focus();
-    },
-    
-    searchRecipientUsers: function(query) {
-        var dropdown = document.getElementById('usernameDropdown');
-        if (!query || query.length < 1) {
-            dropdown.style.display = 'none';
-            return;
-        }
-        
-        var searchQuery = query.toLowerCase();
-        var self = this;
-        var results = [];
-        
-        // Search through all users
-        for (var uid in this.users) {
-            if (!this.user || uid !== this.user.uid) {  // Don't show self
-                var user = this.users[uid];
-                if (user && user.username && user.username.toLowerCase().includes(searchQuery)) {
-                    results.push({ uid: uid, user: user });
-                }
-            }
-        }
-        
-        if (results.length === 0) {
-            dropdown.innerHTML = '<div style="padding: 12px; color: #9ca3af; font-size: 13px; text-align: center;">No users found</div>';
-            dropdown.style.display = 'block';
-            return;
-        }
-        
-        var html = '';
-        results.forEach(function(r) {
-            var initials = r.user.name.charAt(0).toUpperCase();
-            html += `
-                <div onclick="app.selectRecipient('${r.uid}', '${r.user.username}', '${r.user.name}')" style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s; gap: 12px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='white'">
-                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #2563eb); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 16px; flex-shrink: 0; background-image: ${r.user.profilePhoto ? 'url(' + r.user.profilePhoto + ')' : 'none'}; background-size: cover; background-position: center;">${!r.user.profilePhoto ? initials : ''}</div>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;">${r.user.name}</div>
-                        <div style="font-size: 12px; color: #64748b;">@${r.user.username}</div>
-                    </div>
-                    <div style="font-size: 11px; color: #94a3af;">👥 ${r.user.followers || 0}</div>
-                </div>
-            `;
-        });
-        
-        dropdown.innerHTML = html;
-        dropdown.style.display = 'block';
-    },
-    
-    selectRecipient: function(uid, username, name) {
-        document.getElementById('recipientUsername').value = username;
-        document.getElementById('usernameDropdown').style.display = 'none';
-        
-        var box = document.getElementById('selectedRecipientBox');
-        var user = this.users[uid];
-        
-        if (user) {
-            var initials = name.charAt(0).toUpperCase();
-            document.getElementById('selectedRecipientAvatar').textContent = initials;
-            document.getElementById('selectedRecipientAvatar').style.backgroundImage = user.profilePhoto ? 'url(' + user.profilePhoto + ')' : 'none';
-            document.getElementById('selectedRecipientName').textContent = name;
-            document.getElementById('selectedRecipientUsername').textContent = '@' + username;
-            box.style.display = 'flex';
-        }
-    },
-    
-    processSendMoney: function() {
-        var username = document.getElementById('recipientUsername').value.trim();
-        var amount = parseFloat(document.getElementById('sendAmount').value);
-        var self = this;
-        
-        if (!username) {
-            this.toast('Enter recipient username', 'error');
-            return;
-        }
-        
-        if (isNaN(amount) || amount < 1) {
-            this.toast('Enter valid amount', 'error');
-            return;
-        }
-        
-        if (amount > this.balance) {
-            this.toast('Insufficient balance', 'error');
-            return;
-        }
-        
-        // Find recipient by username
-        db.ref('users').orderByChild('username').equalTo(username).once('value')
-            .then(function(snapshot) {
-                if (!snapshot.exists()) {
-                    self.toast('User not found', 'error');
-                    return;
-                }
-                
-                var recipientUid = Object.keys(snapshot.val())[0];
-                var recipientData = snapshot.val()[recipientUid];
-                
-                // Deduct from sender
-                self.balance -= amount;
-                db.ref('users/' + self.user.uid + '/balance').set(self.balance);
-                
-                // Add to recipient
-                var recipientBalance = (recipientData.balance || 0) + amount;
-                db.ref('users/' + recipientUid + '/balance').set(recipientBalance);
-                
-                // Log transaction
-                db.ref('transactions').push({
-                    senderId: self.user.uid,
-                    senderName: self.profile.name,
-                    recipientId: recipientUid,
-                    recipientName: recipientData.name,
-                    recipientUsername: username,
-                    amount: amount,
-                    type: 'transfer',
-                    createdAt: new Date().toLocaleString('en-KE'),
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
-                
-                self.updateBalanceDisplays();
-                self.toast('Sent CC Points ' + amount + ' to @' + username, 'success');
-                document.getElementById('sendMoneyModal').remove();
-                
-            })
-            .catch(function(err) {
-                console.error('Error:', err);
-                self.toast('Error processing transfer', 'error');
-            });
-    },
-    
     showTransactionHistory: function() {
         var self = this;
         var modal = document.createElement('div');
@@ -6362,18 +5040,15 @@ var app = {
         
         document.body.appendChild(modal);
         
-        // Load transactions
-        db.ref('transactions').orderByChild('timestamp').once('value', function(snapshot) {
+        // Load transactions from revenue analytics
+        db.ref('analytics/revenue').orderByChild('userId').equalTo(this.user.uid).once('value', function(snapshot) {
             var transactions = [];
             snapshot.forEach(function(child) {
                 var tx = child.val();
-                // Only show transactions for current user (sent or received)
-                if (tx.senderId === self.user.uid || tx.recipientId === self.user.uid) {
-                    transactions.push({
-                        id: child.key,
-                        ...tx
-                    });
-                }
+                transactions.push({
+                    id: child.key,
+                    ...tx
+                });
             });
             
             // Reverse to show newest first
@@ -6385,25 +5060,22 @@ var app = {
                 html = '<div style="text-align: center; color: #94a3b8; padding: 40px 20px;">No transactions yet</div>';
             } else {
                 transactions.forEach(function(tx) {
-                    var isSender = tx.senderId === self.user.uid;
-                    var isReceiver = tx.recipientId === self.user.uid;
-                    var otherName = isSender ? tx.recipientName : tx.senderName;
-                    var otherUsername = isSender ? tx.recipientUsername : tx.senderName;
-                    var icon = isSender ? '📤' : '📥';
-                    var color = isSender ? '#ef4444' : '#22c55e';
-                    var sign = isSender ? '-' : '+';
+                    var isEarned = tx.type === 'earned';
+                    var icon = isEarned ? '📈' : '🛍️';
+                    var color = isEarned ? '#22c55e' : '#ef4444';
+                    var sign = isEarned ? '+' : '-';
                     
                     html += `
-                        <div style="background: ${isSender ? '#fee2e2' : '#f0fdf4'}; border-left: 4px solid ${color}; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="background: ${isEarned ? '#f0fdf4' : '#fee2e2'}; border-left: 4px solid ${color}; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
                             <div style="display: flex; gap: 12px; align-items: center; flex: 1;">
                                 <div style="font-size: 24px;">${icon}</div>
                                 <div>
-                                    <div style="font-weight: 600; color: #1e293b; font-size: 14px;">${isSender ? 'Sent to' : 'Received from'} ${otherName}</div>
-                                    <div style="font-size: 12px; color: #64748b; margin-top: 2px;">${tx.createdAt}</div>
+                                    <div style="font-weight: 600; color: #1e293b; font-size: 14px;">${isEarned ? 'Earned' : 'Spent'} ${tx.item || ''}</div>
+                                    <div style="font-size: 12px; color: #64748b; margin-top: 2px;">${tx.date || 'N/A'}</div>
                                 </div>
                             </div>
                             <div style="text-align: right;">
-                                <div style="font-size: 16px; font-weight: 700; color: ${color};">${sign}CC Points ${tx.amount.toFixed(2)}</div>
+                                <div style="font-size: 16px; font-weight: 700; color: ${color};">${sign}${tx.amount.toFixed(2)} Coins</div>
                             </div>
                         </div>
                     `;
@@ -6417,53 +5089,15 @@ var app = {
         });
     },
 
-    processWithdrawal: function() {
-        var amount = parseFloat(document.getElementById('withdrawAmount').value);
-        var minAmount = 1;
-        
-        if (isNaN(amount) || amount < minAmount) {
-            this.toast('❌ Minimum withdrawal is CC Points ' + minAmount, 'error');
-            return;
-        }
-        if (amount > this.balance) {
-            this.toast('❌ Insufficient balance. You have CC Points ' + this.balance.toFixed(2), 'error');
-            return;
-        }
-        
-        var method = document.getElementById('paymentMethod').value;
-        var account = document.getElementById('accountNumber').value.trim();
-        if (!account) {
-            this.toast('❌ Please enter your account details', 'error');
-            return;
-        }
-
-        var self = this;
-        db.ref('withdrawals').push({
-            userId: this.user.uid,
-            userName: this.profile.name,
-            userEmail: this.user.email,
-            amount: amount,
-            method: method,
-            account: account,
-            status: 'pending',
-            createdAt: new Date().toLocaleString('en-KE'),
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
-
-        this.balance -= amount;
-        db.ref('users/' + this.user.uid + '/balance').set(this.balance);
-        
+    updateBalanceDisplays: function() {
         var balanceDisplay = document.getElementById('balanceDisplay');
         if (balanceDisplay) {
-            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
+            balanceDisplay.textContent = this.balance.toFixed(2) + ' Coins';
         }
-        
-        this.toast('✅ Withdrawal request submitted! CC Points ' + amount.toFixed(2), 'success');
-        this.closeWithdrawModal();
-        document.getElementById('withdrawAmount').value = '';
-        document.getElementById('accountNumber').value = '';
-        this.renderProfile();
-        
+        var earnBalanceDisplay = document.getElementById('earnBalanceDisplay');
+        if (earnBalanceDisplay) {
+            earnBalanceDisplay.textContent = this.balance.toFixed(2) + ' Coins';
+        }
     },
 
     // ============================================
@@ -6504,13 +5138,10 @@ var app = {
 
     getRandomImage: function(keyword) {
         return new Promise(function(resolve, reject) {
-            // Skip Unsplash - use free picsum.photos directly (more reliable, no API key needed)
             var width = 800 + Math.floor(Math.random() * 400);
             var height = 600 + Math.floor(Math.random() * 300);
             var seed = (keyword || 'person') + Date.now() + Math.random();
             var imageUrl = 'https://picsum.photos/seed/' + encodeURIComponent(seed) + '/' + width + '/' + height;
-            
-            console.log('📸 Using placeholder image:', imageUrl);
             resolve(imageUrl);
         });
     },
@@ -6690,8 +5321,11 @@ var app = {
             }).then(function() {
                 self.balance += 1;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
+                self.trackRevenue('earned', 1, 'post_creation');
+                self.engagementStats.postsCount = (self.engagementStats.postsCount || 0) + 1;
+                self.saveEngagementStats();
                 self.toast('Post published', 'success');
-                
+                self.logUserActivity('create_post', 'Created a new post');
                 if (shareSpinner) shareSpinner.style.display = 'none';
                 if (shareText) shareText.style.display = 'inline';
                 if (sharePostBtn) sharePostBtn.disabled = false;
@@ -7069,7 +5703,7 @@ var app = {
                     <h2 style="margin-bottom:2px;font-weight:800;font-size:22px;color:#1a202c;">Anthony Onchari</h2>
                     <p style="color:#0088cc;font-size:13px;font-weight:600;margin-bottom:4px;">👨‍💻 Developer & Digital Media Specialist</p>
                     <p style="color:#6b7280;font-size:11px;background:#f0f0f0;display:inline-block;padding:2px 12px;border-radius:12px;margin-bottom:16px;">
-                        📱 Version V01A.01
+                        📱 Version V02A.01
                     </p>
                     
                     <div style="background:#f7fafc;padding:16px 18px;border-radius:16px;text-align:left;border:1px solid #e2e8f0;margin-bottom:16px;">
@@ -7080,7 +5714,7 @@ var app = {
                             social media should feel like home — warm, real, and human.
                         </p>
                         <p style="font-size:13px;line-height:1.7;color:#4a5568;margin-top:10px;border-top:1px solid #e2e8f0;padding-top:10px;">
-                            This is <strong>Version V01A.01</strong> — the beginning of something beautiful. 
+                            This is <strong>Version V02A.01</strong> — the beginning of something beautiful. 
                             More features, more love, and more connection coming soon!
                         </p>
                     </div>
@@ -7113,7 +5747,7 @@ var app = {
                     </div>
                     
                     <div style="margin-top:14px;font-size:11px;color:#a0aec0;border-top:1px solid #e2e8f0;padding-top:12px;">
-                        <span>© 2026 Onchari Group • CHICHI V01A.01</span>
+                        <span>© 2026 Onchari Group • CHICHI V02A.01</span>
                     </div>
                 </div>
             </div>
@@ -7187,7 +5821,7 @@ var app = {
                     self.toast('Photo updated!', 'success');
                     self.renderProfile();
                     self.loadMessages();
-                    
+                    self.logUserActivity('update_profile_photo', 'Updated profile photo');
                 })
                 .catch(function(err) { self.toast('Upload failed', 'error'); });
             }
@@ -7311,7 +5945,7 @@ var app = {
                             modal.remove();
                         }
                         self.renderProfile();
-                        
+                        self.logUserActivity('update_profile', 'Updated profile');
                     }
                 }).catch(function(err) {
                     self.toast('Photo upload failed', 'error');
@@ -7330,13 +5964,13 @@ var app = {
                 modal.remove();
             }
             this.renderProfile();
-            
+            this.logUserActivity('update_profile', 'Updated profile');
         }
     },
 
     handleLogin: function(e) {
         e.preventDefault();
-        var loginInput = document.getElementById('loginEmail').value; // Now accepts username or email
+        var loginInput = document.getElementById('loginEmail').value;
         var pass = document.getElementById('loginPassword').value;
         var loginBtn = document.getElementById('loginBtn');
         var loginSpinner = document.querySelector('.login-spinner');
@@ -7353,12 +5987,9 @@ var app = {
         
         var self = this;
         
-        // Check if input is username or email
         if (loginInput.includes('@')) {
-            // Direct email login
             self._performLogin(loginInput, pass, loginBtn, loginSpinner, loginText);
         } else {
-            // Username provided - lookup email first
             db.ref('users').orderByChild('username').equalTo(loginInput).once('value')
                 .then(function(snapshot) {
                     if (snapshot.exists()) {
@@ -7387,17 +6018,15 @@ var app = {
         var self = this;
         auth.signInWithEmailAndPassword(email, password)
             .then(function(result) {
-                console.log('✅ Login successful:', result.user.email);
                 self.toast('✅ Login successful!', 'success');
-                
+                self.logUserActivity('login_success', 'User logged in: ' + email);
             })
             .catch(function(err) {
-                console.error('❌ Login error:', err.message);
                 if (loginSpinner) loginSpinner.style.display = 'none';
                 if (loginText) loginText.style.display = 'inline';
                 if (loginBtn) loginBtn.disabled = false;
                 self.toast('❌ ' + err.message, 'error');
-                
+                self.logUserActivity('login_failed', 'Failed login attempt: ' + email + ' - ' + err.message);
             });
     },
 
@@ -7450,7 +6079,7 @@ var app = {
             })
             .then(function() {
                 self.toast('Account created! Please select your interests', 'success');
-                
+                self.logUserActivity('signup', 'New user signed up: ' + email);
                 setTimeout(function() {
                     if (self.showMandatoryHashtagSelection) {
                         self.showMandatoryHashtagSelection();
@@ -7477,7 +6106,6 @@ var app = {
                 var user = result.user;
                 return db.ref('users/' + user.uid).once('value').then(function(snap) {
                     if (!snap.exists()) {
-                        // New user - create profile
                         var autoUsername = (user.displayName || 'user').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
                         
                         return db.ref('users/' + user.uid).set({
@@ -7509,17 +6137,15 @@ var app = {
                             };
                             
                             self.toast('Account created with Google!', 'success');
+                            self.logUserActivity('google_signup', 'New user signed up with Google: ' + user.email);
                             
-                            
-                            // Show username customization popup for Google users
                             setTimeout(function() {
                                 self.showCustomizeUsernameModal();
                             }, 500);
                         });
                     } else {
-                        // Existing user - just login
                         self.toast('Welcome back!', 'success');
-                        
+                        self.logUserActivity('google_login', 'User logged in with Google: ' + user.email);
                     }
                 });
             })
@@ -7567,7 +6193,6 @@ var app = {
         document.body.appendChild(modal);
         document.getElementById('customizeUsername').focus();
         
-        // Allow Enter key to submit
         document.getElementById('customizeUsername').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 self.saveCustomizedUsername();
@@ -7590,23 +6215,20 @@ var app = {
         
         var self = this;
         
-        // Check if username is already taken
         db.ref('users').orderByChild('username').equalTo(username).once('value')
             .then(function(snapshot) {
                 if (snapshot.exists()) {
                     var existingUid = Object.keys(snapshot.val())[0];
-                    // Allow if it's the current user's username
                     if (existingUid !== self.user.uid) {
                         self.toast('This username is already taken', 'error');
                         return;
                     }
                 }
                 
-                // Save username
                 db.ref('users/' + self.user.uid + '/username').set(username);
                 self.profile.username = username;
                 self.toast('Username updated to @' + username, 'success');
-                
+                self.logUserActivity('username_customized', 'Set username to ' + username + ' after Google signup');
                 document.getElementById('customizeUsernameModal').remove();
                 self.showApp();
             })
@@ -7644,7 +6266,7 @@ var app = {
             .then(function() {
                 self.toast('Password reset link sent to ' + email, 'success');
                 self.closeForgotPasswordModal();
-                
+                self.logUserActivity('password_reset', 'Password reset requested for: ' + email);
             })
             .catch(function(err) {
                 self.toast('Error: ' + err.message, 'error');
@@ -7658,7 +6280,7 @@ var app = {
         auth.signOut().then(function() {
             self.user = null;
             self.profile = { name: 'Guest', balance: 0 };
-            
+            self.logUserActivity('logout', 'User logged out');
             window.location.reload();
         }).catch(function(err) {
             self.toast('Logout error: ' + err.message, 'error');
@@ -7736,16 +6358,15 @@ var app = {
 // ============================================
 
 app.init();
-// app.initMusic(); // Music disabled
 
 setTimeout(function() {
     if (app.user && app.user.email === 'support-chichi@gmail.com') {
-        console.log('🤖 Support account detected! Starting auto-post scheduler...');
         app.startAutoPostScheduler();
     }
 }, 3000);
 
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
-console.log('%c🧠 Trivia: CC Points 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
-console.log('%c🛡️ CHICHI Ready to go!', 'color: #ef4444; font-size: 12px;');
-console.log('%c👨‍💻 Built by Anthony Onchari - Version V01A.01', 'color: #6b7280; font-size: 11px;');
+console.log('%c💰 Chichi Coins - Earn by answering trivia!', 'color: #FFC24B; font-size: 12px;');
+console.log('%c🎁 Gift Catalog - Redeem coins for awesome rewards!', 'color: #8b5cf6; font-size: 12px;');
+console.log('%c📊 User engagement & revenue tracking active!', 'color: #3b82f6; font-size: 12px;');
+console.log('%c👨‍💻 Built by Anthony Onchari - Version V02A.01', 'color: #6b7280; font-size: 11px;');
