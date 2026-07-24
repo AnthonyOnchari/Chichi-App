@@ -64,10 +64,10 @@ var app = {
         document.addEventListener('touch', interactionHandler, { once: false });
         document.addEventListener('keydown', interactionHandler, { once: false });
        
-        this.initConsent();
-        this.initActivityTracking();
-        this.initSuspiciousActivityDetection();
-        this.loadSpinnerSettings();
+        
+        
+        
+        
        
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
@@ -127,7 +127,7 @@ var app = {
                     self.showApp();
                     self.setOnlineStatus();
                     self.startTriviaTimer();
-                    self.logUserActivity('login', 'User logged in');
+                    
                     
                     setTimeout(function() {
                         var mainApp = document.getElementById('mainApp');
@@ -228,12 +228,6 @@ var app = {
     // CONSENT FUNCTIONS
     // ============================================
 
-    initConsent: function() {
-        var consentGiven = localStorage.getItem('userConsent');
-        if (!consentGiven) {
-            this.checkUserLocation();
-        }
-    },
 
     checkUserLocation: function() {
         var self = this;
@@ -756,7 +750,7 @@ var app = {
             scrollTimeout = setTimeout(function() {
                 var scrollPercent = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
                 if (scrollPercent > 0 && scrollPercent % 25 === 0) {
-                    self.logUserActivity('scroll', 'Scrolled to ' + scrollPercent + '%');
+                    
                 }
             }, 500);
         });
@@ -764,46 +758,16 @@ var app = {
         var startTime = Date.now();
         window.addEventListener('beforeunload', function() {
             var timeSpent = Math.round((Date.now() - startTime) / 1000);
-            self.logUserActivity('session_end', 'Time spent: ' + timeSpent + ' seconds');
+            
         });
         
         console.log('📊 Activity tracking initialized');
     },
 
     trackPageView: function() {
-        this.logUserActivity('page_view', {
-            page: window.location.pathname,
-            title: document.title,
-            referrer: document.referrer || 'direct'
-        });
+        
     },
 
-    logUserActivity: function(action, details) {
-        if (!this.user && !this.isGuest) return;
-        
-        var userId = this.user ? this.user.uid : 'guest';
-        var userName = this.user ? (this.profile.name || this.user.email || 'User') : 'Guest';
-        
-        var safeDetails = typeof details === 'string' ? details : JSON.stringify(details);
-        if (safeDetails.length > 200) {
-            safeDetails = safeDetails.substring(0, 200) + '...';
-        }
-        
-        db.ref('activityLogs').push({
-            userId: userId,
-            userName: userName,
-            userEmail: this.user ? this.user.email : 'guest@chichi.com',
-            action: action,
-            details: safeDetails,
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            time: new Date().toLocaleString('en-KE'),
-            isAdmin: this.isAdmin || false
-        }).catch(function(err) {
-            console.log('⚠️ Failed to log activity:', err.message);
-        });
-        
-        this.checkForSuspiciousActivity(action, details);
-    },
 
     checkAndShowUsernameSetup: function() {
         // Show username setup popup once for users without username
@@ -889,7 +853,7 @@ var app = {
                 db.ref('users/' + self.user.uid + '/username').set(username);
                 self.profile.username = username;
                 self.toast('Username set to @' + username, 'success');
-                self.logUserActivity('username_setup', 'Set username to ' + username);
+                
                 document.getElementById('usernameSetupModal').remove();
             })
             .catch(function(err) {
@@ -902,10 +866,6 @@ var app = {
     // SUSPICIOUS ACTIVITY DETECTION
     // ============================================
 
-    initSuspiciousActivityDetection: function() {
-        this.actionTimestamps = {};
-        console.log('🛡️ Suspicious activity detection initialized');
-    },
 
     checkForSuspiciousActivity: function(action, details) {
         // ✅ DISABLED: This feature was too noisy
@@ -1055,10 +1015,10 @@ var app = {
         if (pass === ADMIN_PASSWORD) {
             this.closeAdminModal();
             this.openAdminPortal();
-            this.logUserActivity('admin_login', 'Admin logged in');
+            
         } else {
             this.toast('❌ Wrong password', 'error');
-            this.logUserActivity('admin_login_failed', 'Failed admin login attempt');
+            
             document.getElementById('adminPassword').value = '';
             document.getElementById('adminPassword').focus();
         }
@@ -1373,7 +1333,7 @@ var app = {
                 // Save username
                 db.ref('users/' + uid + '/username').set(username);
                 self.toast('✅ Username set to @' + username + ' for ' + name, 'success');
-                self.logUserActivity('admin_fix_username', 'Admin set username to ' + username + ' for user ' + name);
+                
                 document.getElementById('fixUsernameModal').remove();
                 self.loadAdminUsers(); // Reload users list
             })
@@ -1512,7 +1472,7 @@ var app = {
         }).then(function() {
             self.toast('✅ User "' + userName + '" has been banned', 'success');
             self.loadAdminUsers();
-            self.logUserActivity('admin_ban', 'Banned user: ' + userName + ' for: ' + reason);
+            
         }).catch(function(err) {
             self.toast('❌ Error banning user: ' + err.message, 'error');
         });
@@ -1525,7 +1485,7 @@ var app = {
         db.ref('bannedUsers/' + uid).remove().then(function() {
             self.toast('✅ User "' + userName + '" has been unbanned', 'success');
             self.loadAdminUsers();
-            self.logUserActivity('admin_unban', 'Unbanned user: ' + userName);
+            
         }).catch(function(err) {
             self.toast('❌ Error unbanning user: ' + err.message, 'error');
         });
@@ -1538,7 +1498,7 @@ var app = {
         db.ref('users/' + uid).remove().then(function() {
             self.toast('✅ User "' + userName + '" deleted', 'success');
             self.loadAdminUsers();
-            self.logUserActivity('admin_delete_user', 'Deleted user: ' + userName);
+            
         }).catch(function(err) {
             self.toast('❌ Error deleting user: ' + err.message, 'error');
         });
@@ -1583,7 +1543,7 @@ var app = {
         this.toast('✅ Post deleted', 'success');
         this.loadAdminPosts();
         this.loadPosts();
-        this.logUserActivity('admin_delete_post', 'Admin deleted post: ' + id);
+        
     },
 
     // ============================================
@@ -1654,7 +1614,7 @@ var app = {
             self.toast('✅ Withdrawal approved', 'success');
             self.loadAdminWithdrawals();
             self.loadAdminDashboard();
-            self.logUserActivity('admin_approve_withdrawal', 'Approved withdrawal: ' + withdrawalId);
+            
         }).catch(function(err) {
             self.toast('❌ Error: ' + err.message, 'error');
         });
@@ -1675,7 +1635,7 @@ var app = {
                     self.toast('✅ Withdrawal rejected and refunded', 'success');
                     self.loadAdminWithdrawals();
                     self.loadAdminDashboard();
-                    self.logUserActivity('admin_reject_withdrawal', 'Rejected withdrawal: ' + withdrawalId);
+                    
                 });
             }
         });
@@ -1773,7 +1733,7 @@ var app = {
             self.toast('✅ Payment approved and user upgraded!', 'success');
             self.loadPaymentVerifications();
             self.loadAdminUsers();
-            self.logUserActivity('admin_approve_payment', 'Approved payment for ' + userId + ' to ' + tier);
+            
         }).catch(function(err) {
             self.toast('❌ Error: ' + err.message, 'error');
         });
@@ -1789,7 +1749,7 @@ var app = {
         db.ref('paymentVerifications/' + paymentId + '/status').set('rejected').then(function() {
             self.toast('✅ Payment rejected', 'success');
             self.loadPaymentVerifications();
-            self.logUserActivity('admin_reject_payment', 'Rejected payment');
+            
         }).catch(function(err) {
             self.toast('❌ Error: ' + err.message, 'error');
         });
@@ -1882,7 +1842,7 @@ var app = {
         });
         
         this.toast('✅ Spinner settings saved!', 'success');
-        this.logUserActivity('admin_spinner_settings', 'Updated spinner settings');
+        
     },
 
     adminForceWin: function() {
@@ -1905,7 +1865,7 @@ var app = {
         window.ADMIN_SPINNER_OVERRIDES.forceAmount = amount;
         
         this.toast('✅ Next spin will force win CC Points ' + amount, 'success');
-        this.logUserActivity('admin_force_win', 'Forced win of CC Points ' + amount);
+        
         document.getElementById('adminForceAmount').value = '';
     },
 
@@ -1937,7 +1897,7 @@ var app = {
         });
         
         this.toast('✅ Odds set to: ' + level.toUpperCase(), 'success');
-        this.logUserActivity('admin_set_odds', 'Set odds to ' + level);
+        
     },
 
     loadSpinnerStats: function() {
@@ -2097,7 +2057,7 @@ var app = {
         }));
         
         this.toast('✅ ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' plan updated!', 'success');
-        this.logUserActivity('trivia_plan_update', 'Updated ' + tier + ' plan - ' + questionsPerDay + ' questions, CC Points ' + rewardPerQuestion + ' reward');
+        
     },
 
     // ============================================
@@ -2246,7 +2206,7 @@ var app = {
         db.ref('suspiciousActivity/' + activityId + '/status').set('resolved').then(function() {
             self.toast('✅ Activity marked as resolved', 'success');
             self.loadSuspiciousActivity();
-            self.logUserActivity('admin_resolve_activity', 'Resolved suspicious activity: ' + activityId);
+            
         }).catch(function(err) {
             self.toast('❌ Error: ' + err.message, 'error');
         });
@@ -2557,7 +2517,7 @@ var app = {
             self.toast('✅ Payment submitted! Admin will verify shortly.', 'success');
             var modal = document.querySelector('.modal-overlay');
             if (modal) modal.remove();
-            self.logUserActivity('payment_submit', 'Submitted payment for ' + tierData.label);
+            
         }).catch(function(err) {
             self.toast('❌ Error: ' + err.message, 'error');
         });
@@ -2596,7 +2556,7 @@ var app = {
             var amount = window.ADMIN_SPINNER_OVERRIDES.forceAmount;
             window.ADMIN_SPINNER_OVERRIDES.forceWin = false;
             window.ADMIN_SPINNER_OVERRIDES.forceAmount = 0;
-            this.logUserActivity('admin_force_win_used', 'Forced win of CC Points ' + amount);
+            
             return Math.min(amount, SPINNER_CONFIG.maxWin);
         }
         
@@ -2876,7 +2836,7 @@ var app = {
             `;
             
             this.toast('You won CC Points ' + winAmount + '!', 'success');
-            this.logUserActivity('spinner_win', 'Won CC Points ' + winAmount);
+            
         } else {
             resultDiv.innerHTML = `
                 <div style="color: #ef4444; font-size: 28px; margin-bottom: 4px;">Better Luck Next Time</div>
@@ -2889,7 +2849,7 @@ var app = {
             `;
             
             this.toast('Better luck next time!', 'info');
-            this.logUserActivity('spinner_lose', 'Lost spin');
+            
         }
     },
 
@@ -3935,7 +3895,7 @@ var app = {
             self.toast('✅ Upgraded to ' + tierName + '! 🎉', 'success');
             self.renderEarn();
             self.loadProfile();
-            self.logUserActivity('upgrade_tier', 'Upgraded to ' + tierName + ' for CC Points ' + price);
+            
         }, 1500);
     },
 
@@ -4513,7 +4473,7 @@ var app = {
             db.ref('users/' + uid + '/followers').set(followers);
         });
         this.renderProfile();
-        this.logUserActivity('unfollow', 'Unfollowed user: ' + name);
+        
     },
 
     // ============================================
@@ -4598,7 +4558,7 @@ var app = {
         this.showApp();
         this.switchView('feed');
         this.loadPosts();
-        this.logUserActivity('guest_access', 'User browsing as guest');
+        
     },
 
     // ============================================
@@ -4860,7 +4820,7 @@ var app = {
            
             db.ref('posts/' + id + '/likes').set(likes);
             self.renderFeed();
-            self.logUserActivity('like_post', 'Liked post: ' + id);
+            
         });
     },
 
@@ -4874,7 +4834,7 @@ var app = {
             link.href = url;
             link.download = 'photo.jpg';
             link.click();
-            this.logUserActivity('download_post', 'Downloaded post: ' + id);
+            
         } catch (err) {
             this.toast('Download failed', 'error');
         }
@@ -4900,7 +4860,7 @@ var app = {
             var text = shareText + '\n' + shareUrl;
             navigator.clipboard.writeText(text).then(function() {
                 this.toast('Post link copied to clipboard! 📋', 'success');
-                this.logUserActivity('share_post', 'Shared post: ' + id);
+                
             }.bind(this)).catch(function(err) {
                 this.toast('Share link: ' + shareUrl, 'info');
             }.bind(this));
@@ -5125,7 +5085,7 @@ var app = {
             }
             self.toast('Comment added', 'success');
             self.renderFeed();
-            self.logUserActivity('comment', 'Commented on post: ' + id);
+            
         });
     },
 
@@ -5172,12 +5132,12 @@ var app = {
        
         if (isFollowing) {
             delete this.following[uid];
-            this.logUserActivity('unfollow', 'Unfollowed user: ' + name);
+            
         } else {
             this.following[uid] = true;
             this.balance += 0.05;
             db.ref('users/' + this.user.uid + '/balance').set(this.balance);
-            this.logUserActivity('follow', 'Followed user: ' + name);
+            
         }
        
         db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
@@ -5225,7 +5185,7 @@ var app = {
             clearInterval(this.triviaInterval);
             this.triviaInterval = null;
         }
-        this.logUserActivity('logout', 'User logged out');
+        
     },
 
     // ============================================
@@ -5895,7 +5855,7 @@ var app = {
             return Promise.all(savePromises);
         }).then(function() {
             self.toast('✅ Stories uploaded successfully!', 'success');
-            self.logUserActivity('story_upload', 'Uploaded stories');
+            
             setTimeout(function() {
                 var modal = document.getElementById('storyModalOverlay');
                 if (modal) modal.remove();
@@ -6372,7 +6332,7 @@ var app = {
                 self.updateBalanceDisplays();
                 self.toast('Sent CC Points ' + amount + ' to @' + username, 'success');
                 document.getElementById('sendMoneyModal').remove();
-                self.logUserActivity('send_money', 'Sent CC Points ' + amount + ' to @' + username);
+                
             })
             .catch(function(err) {
                 console.error('Error:', err);
@@ -6503,7 +6463,7 @@ var app = {
         document.getElementById('withdrawAmount').value = '';
         document.getElementById('accountNumber').value = '';
         this.renderProfile();
-        this.logUserActivity('withdrawal_request', 'Requested withdrawal of CC Points ' + amount);
+        
     },
 
     // ============================================
@@ -6731,7 +6691,7 @@ var app = {
                 self.balance += 1;
                 db.ref('users/' + self.user.uid + '/balance').set(self.balance);
                 self.toast('Post published', 'success');
-                self.logUserActivity('create_post', 'Created a new post');
+                
                 if (shareSpinner) shareSpinner.style.display = 'none';
                 if (shareText) shareText.style.display = 'inline';
                 if (sharePostBtn) sharePostBtn.disabled = false;
@@ -7227,7 +7187,7 @@ var app = {
                     self.toast('Photo updated!', 'success');
                     self.renderProfile();
                     self.loadMessages();
-                    self.logUserActivity('update_profile_photo', 'Updated profile photo');
+                    
                 })
                 .catch(function(err) { self.toast('Upload failed', 'error'); });
             }
@@ -7351,7 +7311,7 @@ var app = {
                             modal.remove();
                         }
                         self.renderProfile();
-                        self.logUserActivity('update_profile', 'Updated profile');
+                        
                     }
                 }).catch(function(err) {
                     self.toast('Photo upload failed', 'error');
@@ -7370,7 +7330,7 @@ var app = {
                 modal.remove();
             }
             this.renderProfile();
-            this.logUserActivity('update_profile', 'Updated profile');
+            
         }
     },
 
@@ -7429,7 +7389,7 @@ var app = {
             .then(function(result) {
                 console.log('✅ Login successful:', result.user.email);
                 self.toast('✅ Login successful!', 'success');
-                self.logUserActivity('login_success', 'User logged in: ' + email);
+                
             })
             .catch(function(err) {
                 console.error('❌ Login error:', err.message);
@@ -7437,7 +7397,7 @@ var app = {
                 if (loginText) loginText.style.display = 'inline';
                 if (loginBtn) loginBtn.disabled = false;
                 self.toast('❌ ' + err.message, 'error');
-                self.logUserActivity('login_failed', 'Failed login attempt: ' + email + ' - ' + err.message);
+                
             });
     },
 
@@ -7490,7 +7450,7 @@ var app = {
             })
             .then(function() {
                 self.toast('Account created! Please select your interests', 'success');
-                self.logUserActivity('signup', 'New user signed up: ' + email);
+                
                 setTimeout(function() {
                     if (self.showMandatoryHashtagSelection) {
                         self.showMandatoryHashtagSelection();
@@ -7549,7 +7509,7 @@ var app = {
                             };
                             
                             self.toast('Account created with Google!', 'success');
-                            self.logUserActivity('google_signup', 'New user signed up with Google: ' + user.email);
+                            
                             
                             // Show username customization popup for Google users
                             setTimeout(function() {
@@ -7559,7 +7519,7 @@ var app = {
                     } else {
                         // Existing user - just login
                         self.toast('Welcome back!', 'success');
-                        self.logUserActivity('google_login', 'User logged in with Google: ' + user.email);
+                        
                     }
                 });
             })
@@ -7646,7 +7606,7 @@ var app = {
                 db.ref('users/' + self.user.uid + '/username').set(username);
                 self.profile.username = username;
                 self.toast('Username updated to @' + username, 'success');
-                self.logUserActivity('username_customized', 'Set username to ' + username + ' after Google signup');
+                
                 document.getElementById('customizeUsernameModal').remove();
                 self.showApp();
             })
@@ -7684,7 +7644,7 @@ var app = {
             .then(function() {
                 self.toast('Password reset link sent to ' + email, 'success');
                 self.closeForgotPasswordModal();
-                self.logUserActivity('password_reset', 'Password reset requested for: ' + email);
+                
             })
             .catch(function(err) {
                 self.toast('Error: ' + err.message, 'error');
@@ -7698,7 +7658,7 @@ var app = {
         auth.signOut().then(function() {
             self.user = null;
             self.profile = { name: 'Guest', balance: 0 };
-            self.logUserActivity('logout', 'User logged out');
+            
             window.location.reload();
         }).catch(function(err) {
             self.toast('Logout error: ' + err.message, 'error');
@@ -7787,5 +7747,5 @@ setTimeout(function() {
 
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
 console.log('%c🧠 Trivia: CC Points 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
-console.log('%c🛡️ Suspicious activity detection active!', 'color: #ef4444; font-size: 12px;');
+console.log('%c🛡️ CHICHI Ready to go!', 'color: #ef4444; font-size: 12px;');
 console.log('%c👨‍💻 Built by Anthony Onchari - Version V01A.01', 'color: #6b7280; font-size: 11px;');
