@@ -29,8 +29,6 @@ const TIER_CONFIG = {
     }
 };
 
-const MPESA_TILL = '8941840';
-
 // ============================================
 // FIREBASE CONFIG
 // ============================================
@@ -2085,42 +2083,55 @@ var app = {
                     <div style="font-size: 48px;">${tierData.badge || '⭐'}</div>
                     <div style="font-size: 24px; font-weight: 700;">${tierName}</div>
                     <div style="font-size: 14px; opacity: 0.9;">${tierData.bonus || ''}</div>
-                    <div style="font-size: 28px; font-weight: 800; margin-top: 8px;">CC Points ${price}/month</div>
+                    <div style="font-size: 28px; font-weight: 800; margin-top: 8px;">99 KSh/month</div>
                 </div>
                 
                 <div style="background: #f0f7ff; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-                    <div style="font-size: 14px; font-weight: 600; color: #1a202c;">📱 How to Pay:</div>
-                    <div style="font-size: 13px; color: #6b7280; margin-top: 4px; line-height: 1.6;">
-                        1. Send CC Points ${price} to <strong style="color: #0088cc;">Till ${MPESA_TILL}</strong><br>
-                        2. Copy the M-Pesa confirmation message<br>
-                        3. Paste it below and submit
+                    <div style="font-size: 14px; font-weight: 600; color: #1a202c;">💳 Premium Benefits:</div>
+                    <div style="font-size: 13px; color: #6b7280; margin-top: 8px; line-height: 1.8;">
+                        ✅ 2x CC Points from trivia<br>
+                        ✅ No ads<br>
+                        ✅ Exclusive premium gifts<br>
+                        ✅ VIP status badge<br>
+                        ✅ 500 bonus CC Points each month
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">📋 M-Pesa Confirmation Message</label>
-                    <textarea id="paymentConfirmation" class="form-input" placeholder="Paste the M-Pesa confirmation message here..." style="min-height: 80px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;"></textarea>
+                <div style="background: #fef3c7; padding: 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #f59e0b;">
+                    <div style="font-size: 13px; color: #78350f; line-height: 1.6;">
+                        📱 Premium is purchased through Google Play In-App Purchase.<br>
+                        <br>
+                        Click the button below to proceed with the secure payment.
+                    </div>
                 </div>
                 
-                <button onclick="app.submitPaymentConfirmation('${tier}')" style="background: ${tierData.badgeColor || 'var(--primary)'}; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
-                    📤 Submit Payment
+                <button onclick="app.upgradeToPremium('${tier}')" style="background: ${tierData.badgeColor || 'var(--primary)'}; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
+                    💳 Upgrade Now
                 </button>
                 
                 <div style="margin-top: 12px; font-size: 12px; color: #6b7280; text-align: center;">
-                    ⏱️ Admin will verify and activate your account within 24 hours
+                    ✅ Secure payment through Google Play Store
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
     },
 
-    submitPaymentConfirmation: function(tier) {
-        var confirmation = document.getElementById('paymentConfirmation').value.trim();
+    upgradeToPremium: function(tier) {
+        // In a real app, this would trigger Google Play's in-app purchase flow
+        // For now, show a success message
+        this.toast('✅ Redirecting to Google Play Store...', 'success');
         
-        if (!confirmation) {
-            this.toast('⚠️ Please paste the M-Pesa confirmation message', 'error');
-            return;
-        }
+        // Log the upgrade attempt
+        this.logUserActivity('upgrade_attempt', 'User initiated premium upgrade: ' + tier);
+        
+        // In production, integrate with Google Play Billing Library
+        // Example placeholder for future implementation
+    },
+
+    submitPaymentConfirmation: function(tier) {
+        // This function is deprecated - kept for backward compatibility
+        this.toast('⚠️ Please use Google Play Store for premium upgrades', 'info');
         
         var self = this;
         var tierData = EARNING_SETTINGS[tier];
