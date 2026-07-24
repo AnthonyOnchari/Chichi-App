@@ -107,7 +107,7 @@ const EARNING_SETTINGS = {
         label: '👑 VIP',
         badge: '👑',
         badgeColor: '#8b5cf6',
-        price: 100,
+        price: 330,
         dailyQuestions: 150,
         rewardPerQuestion: 20.50,
         timerSeconds: 45,
@@ -177,7 +177,6 @@ const TRIVIA_QUESTIONS = [
 
 // Secret configuration - Default values (will be overridden by Vercel env vars)
 let ADMIN_PASSWORD = 'CHICHI26303@Admin';
-let MPESA_TILL = '8941840';
 
 // Fetch secrets from Vercel API (these come from environment variables)
 async function loadSecrets() {
@@ -186,7 +185,6 @@ async function loadSecrets() {
         if (response.ok) {
             const secrets = await response.json();
             ADMIN_PASSWORD = secrets.adminPassword || ADMIN_PASSWORD;
-            MPESA_TILL = secrets.mpesat || MPESA_TILL;
             console.log('🔐 Secrets loaded securely from Vercel');
         } else {
             console.warn('⚠️ Could not load secrets from Vercel, using fallback values');
