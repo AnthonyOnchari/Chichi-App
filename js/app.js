@@ -1,3 +1,282 @@
+// ============================================
+// SPINNER CONFIGURATION
+// ============================================
+
+const SPINNER_CONFIG = {
+    spinCost: 5,
+    maxWin: 40,
+    minWin: 1,
+    segments: [
+        { value: 0, label: '💔', weight: 25, color: '#ef4444' },
+        { value: 1, label: 'CC Points 1', weight: 15, color: '#f59e0b' },
+        { value: 2, label: 'CC Points 2', weight: 12, color: '#f59e0b' },
+        { value: 3, label: 'CC Points 3', weight: 10, color: '#f59e0b' },
+        { value: 5, label: 'CC Points 5', weight: 8, color: '#22c55e' },
+        { value: 10, label: 'CC Points 10', weight: 6, color: '#22c55e' },
+        { value: 15, label: 'CC Points 15', weight: 5, color: '#22c55e' },
+        { value: 20, label: 'CC Points 20', weight: 4, color: '#3b82f6' },
+        { value: 30, label: 'CC Points 30', weight: 3, color: '#3b82f6' },
+        { value: 40, label: 'CC Points 40', weight: 2, color: '#8b5cf6' }
+    ]
+};
+
+// ============================================
+// PREMIUM/VIP TIERS
+// ============================================
+
+const TIER_CONFIG = {
+    premium: {
+        label: '⭐ Premium',
+        price: 50,
+        badge: '⭐',
+        badgeColor: '#f59e0b',
+        dailyQuestions: 15,
+        rewardPerQuestion: 10.50,
+        timerSeconds: 30,
+        adsPerQuestion: 0,
+        maxQuestions: 15,
+        bonus: 'No ads + 5 extra questions/day'
+    },
+    vip: {
+        label: '👑 VIP',
+        price: 100,
+        badge: '👑',
+        badgeColor: '#8b5cf6',
+        dailyQuestions: 150,
+        rewardPerQuestion: 20.50,
+        timerSeconds: 45,
+        adsPerQuestion: 0,
+        maxQuestions: 150,
+        bonus: 'No ads + 15 extra questions/day + Exclusive content'
+    }
+};
+
+const MPESA_TILL = '8941840';
+
+// ============================================
+// FIREBASE CONFIG
+// ============================================
+
+if (!firebase.apps.length) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    console.log('✅ Firebase initialized');
+} else {
+    console.log('⚠️ Firebase already initialized');
+}
+
+var auth = firebase.auth();
+var db = firebase.database();
+
+db.ref('.info/connected').on('value', function(snapshot) {
+    if (snapshot.val() === true) {
+        console.log('🌐 Connected to Firebase');
+    } else {
+        console.log('📡 Disconnected from Firebase');
+    }
+});
+
+var loadingTimeout = setTimeout(() => {
+    var loading = document.getElementById('loadingScreen');
+    if (loading) {
+        loading.classList.remove('active');
+        loading.style.display = 'none';
+    }
+    var authPage = document.getElementById('authPage');
+    if (authPage) {
+        authPage.style.display = 'flex';
+    }
+}, 3000);
+
+// ============================================
+// POST TEMPLATES
+// ============================================
+
+const POST_TEMPLATES = [
+    { text: "I told my boss I needed a raise because I'm the best worker here. He said 'You're also the only worker here.' I got the raise.", category: "Funny", imageKeyword: "happy person laughing portrait" },
+    { text: "My phone has more storage than my brain. I can remember 1000 songs but not what I ate for breakfast.", category: "Funny", imageKeyword: "confused person thinking" },
+    { text: "The best part about working from home is that my commute is 10 seconds. The worst part? My boss is always in my kitchen.", category: "Funny", imageKeyword: "person working on laptop smiling" },
+    { text: "I asked Google 'Why am I so tired?' It said 'Because you're always on your phone at 2 AM.'", category: "Funny", imageKeyword: "tired person in bed with phone" },
+    { text: "My dog thinks I'm a superhero. He gets excited every time I come home from the bathroom.", category: "Funny", imageKeyword: "person with dog happy" },
+    { text: "I'm not saying I'm old, but my back goes out more than I do.", category: "Funny", imageKeyword: "elderly person smiling" },
+    { text: "The best way to remember your wife's birthday is to forget it once.", category: "Funny", imageKeyword: "couple laughing together" },
+    { text: "I don't need a hair stylist, my pillow gives me a new style every morning.", category: "Funny", imageKeyword: "person with messy hair laughing" },
+    { text: "My brain has two modes: 'I can do anything' and 'What was I doing again?'", category: "Funny", imageKeyword: "confused person scratching head" },
+    { text: "The best exercise for losing weight is running out of patience.", category: "Funny", imageKeyword: "person exercising frustrated" },
+    { text: "My boss told me to have a good day. I went home.", category: "Funny", imageKeyword: "person leaving office happy" },
+    { text: "I'm not lazy, I'm on energy saving mode.", category: "Funny", imageKeyword: "person lying on couch relaxing" },
+    { text: "The only thing I'm good at is making bad decisions look good.", category: "Funny", imageKeyword: "person laughing at themselves" },
+    { text: "I need a 6-month vacation, twice a year.", category: "Funny", imageKeyword: "person on beach relaxing" },
+    { text: "My life is a series of naps interrupted by food.", category: "Funny", imageKeyword: "person sleeping peacefully" },
+    { text: "Your greatest strength is your ability to keep going when others give up. Keep pushing.", category: "Inspiration", imageKeyword: "determined person sunrise" },
+    { text: "The only person you should try to be better than is the person you were yesterday.", category: "Inspiration", imageKeyword: "person looking forward determined" },
+    { text: "Success is not about how many times you fall, but how many times you get back up.", category: "Inspiration", imageKeyword: "person getting up determined" },
+    { text: "Every morning is a new beginning. Make it count.", category: "Inspiration", imageKeyword: "person morning coffee smiling" },
+    { text: "Your potential is endless. Don't limit yourself.", category: "Inspiration", imageKeyword: "person with arms open confident" },
+    { text: "The best time to start was yesterday. The next best time is now.", category: "Inspiration", imageKeyword: "person starting journey determined" },
+    { text: "Believe you can and you're halfway there.", category: "Inspiration", imageKeyword: "confident person smiling" },
+    { text: "Your only limit is the one you set for yourself.", category: "Inspiration", imageKeyword: "person breaking through barrier" },
+    { text: "Dream big. Work hard. Stay focused.", category: "Inspiration", imageKeyword: "focused person working" },
+    { text: "You are stronger than you think.", category: "Inspiration", imageKeyword: "strong person confident" },
+    { text: "Success starts with self-belief.", category: "Inspiration", imageKeyword: "person believing in themselves" },
+    { text: "Be the energy you want to attract.", category: "Inspiration", imageKeyword: "happy positive person" },
+    { text: "Kenya's economy grew by 5.6% in 2023. The tech sector is leading the growth.", category: "Kenya News", imageKeyword: "Kenyan person in tech office" },
+    { text: "The Maasai Mara is considered the 7th wonder of the world. Over 1.5 million wildebeest migrate annually.", category: "Kenya News", imageKeyword: "Maasai person smiling" },
+    { text: "Kenyan youth are leading Africa's tech revolution. Over 200 startups launched this year.", category: "Kenya News", imageKeyword: "Kenyan youth coding smiling" },
+    { text: "Kenya is home to the world's largest refugee camp at Dadaab.", category: "Kenya News", imageKeyword: "Kenyan community together" },
+    { text: "Lake Victoria, the largest lake in Africa, is shared by Kenya, Uganda, and Tanzania.", category: "Kenya News", imageKeyword: "people at lake smiling" },
+    { text: "Kenya has 42 different ethnic communities, each with its own unique culture.", category: "Kenya News", imageKeyword: "Kenyan cultural dancers" },
+    { text: "The Kenyan shilling is one of the most stable currencies in East Africa.", category: "Kenya News", imageKeyword: "Kenyan business person" },
+    { text: "Kenya produces some of the world's best marathon runners.", category: "Kenya News", imageKeyword: "Kenyan runner smiling" },
+    { text: "Nairobi is the only capital city with a national park.", category: "Kenya News", imageKeyword: "person in Nairobi smiling" },
+    { text: "Kenyan coffee is among the best in the world.", category: "Kenya News", imageKeyword: "Kenyan coffee farmer smiling" },
+    { text: "AI is revolutionizing healthcare. New algorithms can detect diseases earlier than doctors.", category: "Tech", imageKeyword: "doctor with AI technology" },
+    { text: "Your smartphone is more powerful than the computers that sent humans to the moon.", category: "Tech", imageKeyword: "person amazed by phone" },
+    { text: "The world's fastest internet is in South Korea. 6G is coming soon.", category: "Tech", imageKeyword: "person on laptop excited" },
+    { text: "Blockchain technology is changing how we think about money and trust.", category: "Tech", imageKeyword: "person with blockchain concept" },
+    { text: "The first computer virus was created in 1983. It was called the 'Elk Cloner'.", category: "Tech", imageKeyword: "person at computer thinking" },
+    { text: "Cloud computing has revolutionized how businesses operate worldwide.", category: "Tech", imageKeyword: "business person using cloud" },
+    { text: "5G technology is transforming how we connect.", category: "Tech", imageKeyword: "person with 5G phone smiling" },
+    { text: "The future of work is remote and digital.", category: "Tech", imageKeyword: "person working remotely" },
+    { text: "A 10-minute daily meditation can reduce stress by 30%. Try it today.", category: "Wellness", imageKeyword: "person meditating peaceful" },
+    { text: "Walking 30 minutes a day can add 3 years to your life. It's that simple.", category: "Wellness", imageKeyword: "person walking happy smiling" },
+    { text: "The average person spends 2 hours a day on social media. Make it count.", category: "Wellness", imageKeyword: "person on phone mindful" },
+    { text: "Drinking water first thing in the morning boosts your metabolism.", category: "Wellness", imageKeyword: "person drinking water morning" },
+    { text: "Sleep is not a luxury, it's a necessity. Aim for 7-8 hours.", category: "Wellness", imageKeyword: "person sleeping peacefully" },
+    { text: "Reading 15 minutes a day can reduce stress by 60%.", category: "Wellness", imageKeyword: "person reading book relaxed" },
+    { text: "Yoga is the perfect way to start your day.", category: "Wellness", imageKeyword: "person doing yoga" },
+    { text: "Mental health matters. Take a break when you need to.", category: "Wellness", imageKeyword: "person taking a break" },
+    { text: "The best Kenyan dish? Some say Nyama Choma, others say Ugali. Try both!", category: "Food", imageKeyword: "people eating Kenyan food" },
+    { text: "Cooking is an art. Your kitchen is your canvas. Create something beautiful.", category: "Food", imageKeyword: "person cooking happy" },
+    { text: "Traditional Kenyan food is some of the most flavorful in the world.", category: "Food", imageKeyword: "Kenyan person eating" },
+    { text: "Chapati is life. That's a fact, not an opinion.", category: "Food", imageKeyword: "person making chapati" },
+    { text: "Good food equals good mood.", category: "Food", imageKeyword: "person eating happily" },
+    { text: "The best meals are shared with loved ones.", category: "Food", imageKeyword: "family eating together" },
+    { text: "Kenya has 8 national parks. Each one is unique. Visit them all.", category: "Travel", imageKeyword: "person on safari smiling" },
+    { text: "Travel makes you realize how beautiful the world truly is.", category: "Travel", imageKeyword: "person traveling happy" },
+    { text: "The Kenyan coast is one of the most beautiful places on Earth.", category: "Travel", imageKeyword: "person on Kenyan beach" },
+    { text: "Mombasa's old town is a UNESCO World Heritage site. It's worth a visit.", category: "Travel", imageKeyword: "person in Mombasa smiling" },
+    { text: "Adventure awaits. Go explore!", category: "Travel", imageKeyword: "adventurous person" },
+    { text: "Travel is the only thing you buy that makes you richer.", category: "Travel", imageKeyword: "happy traveler" },
+    { text: "Your brain is constantly changing. Every thought you have physically rewires your brain.", category: "Fun Facts", imageKeyword: "person thinking" },
+    { text: "The human body has 37 trillion cells. Each one is working right now to keep you alive.", category: "Fun Facts", imageKeyword: "healthy person smiling" },
+    { text: "Dolphins sleep with one eye open. Half their brain stays awake.", category: "Fun Facts", imageKeyword: "person amazed" },
+    { text: "The average person walks about 100,000 miles in their lifetime.", category: "Fun Facts", imageKeyword: "person walking" },
+    { text: "Your heart beats about 100,000 times per day. That's 2.5 billion times in a lifetime.", category: "Fun Facts", imageKeyword: "person with heart" },
+    { text: "The Great Wall of China is not visible from space. This is a common myth.", category: "Fun Facts", imageKeyword: "person traveling" },
+    { text: "Humans are the only animals that blush.", category: "Fun Facts", imageKeyword: "person blushing" },
+    { text: "Your body produces enough heat in 30 minutes to boil a gallon of water.", category: "Fun Facts", imageKeyword: "person feeling warm" },
+    { text: "The best relationships are built on trust, communication, and a good sense of humor.", category: "Relationships", imageKeyword: "couple laughing together" },
+    { text: "A happy relationship is about understanding, not agreement.", category: "Relationships", imageKeyword: "couple talking" },
+    { text: "Love is not about how many days you've been together, but how much you've grown together.", category: "Relationships", imageKeyword: "couple in love" },
+    { text: "The best love story is when you fall in love with the most unexpected person.", category: "Relationships", imageKeyword: "couple happy" },
+    { text: "Love is patient, love is kind. Love is everything.", category: "Relationships", imageKeyword: "couple hugging" },
+    { text: "A relationship is not a 50/50 deal. It's 100/100.", category: "Relationships", imageKeyword: "couple supporting each other" },
+];
+
+// ============================================
+// EARNING SETTINGS
+// ============================================
+
+const EARNING_SETTINGS = {
+    free: {
+        dailyQuestions: 5,
+        rewardPerQuestion: 0.50,
+        timerSeconds: 20,
+        adsPerQuestion: 2,
+        maxQuestions: 5,
+        label: 'Free Plan',
+        badge: null,
+        badgeColor: null
+    },
+    premium: {
+        dailyQuestions: 15,
+        rewardPerQuestion: 0.50,
+        timerSeconds: 30,
+        adsPerQuestion: 0,
+        maxQuestions: 15,
+        price: 50,
+        label: '⭐ Premium',
+        badge: '⭐',
+        bonus: 'No ads + 15 questions/day',
+        badgeColor: '#f59e0b'
+    },
+    vip: {
+        dailyQuestions: 150,
+        rewardPerQuestion: 0.50,
+        timerSeconds: 45,
+        adsPerQuestion: 0,
+        maxQuestions: 150,
+        price: 100,
+        label: '👑 VIP',
+        badge: '👑',
+        bonus: 'No ads + 150 questions/day + Exclusive content',
+        badgeColor: '#8b5cf6'
+    }
+};
+
+// ============================================
+// TRIVIA QUESTIONS
+// ============================================
+
+const TRIVIA_QUESTIONS = [
+    { question: "In which year did Kenya become a republic, and who was the first President?", options: ["1963 - Jomo Kenyatta", "1964 - Jomo Kenyatta", "1964 - Daniel Moi", "1963 - Daniel Moi"], correct: 1 },
+    { question: "Which Kenyan leader was assassinated in 1969, and what was his role?", options: ["Tom Mboya - Minister", "Jomo Kenyatta - President", "Oginga Odinga - VP", "Ronald Ngala - Minister"], correct: 0 },
+    { question: "What year was the Kenyan Constitution promulgated, and who signed it?", options: ["2008 - Mwai Kibaki", "2010 - Mwai Kibaki", "2012 - Uhuru Kenyatta", "2010 - Daniel Moi"], correct: 1 },
+    { question: "Which Kenyan president served the longest, and for how many years?", options: ["Jomo Kenyatta - 15 years", "Daniel arap Moi - 24 years", "Mwai Kibaki - 10 years", "Uhuru Kenyatta - 10 years"], correct: 1 },
+    { question: "Who was Kenya's first Vice President and from which community?", options: ["Jaramogi Oginga Odinga - Luo", "Daniel arap Moi - Kalenjin", "Mwai Kibaki - Kikuyu", "Joseph Murumbi - Kamba"], correct: 0 },
+    { question: "What year did Kenya join the United Nations?", options: ["1963", "1964", "1965", "1966"], correct: 0 },
+    { question: "Who was Kenya's first female Member of Parliament?", options: ["Grace Onyango", "Martha Karua", "Wangari Maathai", "Charity Ngilu"], correct: 0 },
+    { question: "Which Kenyan president introduced the 'Nyayo' philosophy?", options: ["Daniel arap Moi", "Jomo Kenyatta", "Mwai Kibaki", "Uhuru Kenyatta"], correct: 0 },
+    { question: "What year did Kenya hold its first multi-party elections?", options: ["1990", "1992", "1995", "1997"], correct: 1 },
+    { question: "Who was the founder of the Kenya African National Union (KANU)?", options: ["Jomo Kenyatta", "Daniel Moi", "Oginga Odinga", "Tom Mboya"], correct: 0 },
+    { question: "What is the exact height of Mount Kenya in meters?", options: ["5,199", "5,199.5", "5,200", "5,199.2"], correct: 0 },
+    { question: "Which lake in Kenya has the highest salinity?", options: ["Lake Turkana", "Lake Victoria", "Lake Nakuru", "Lake Natron"], correct: 0 },
+    { question: "How many counties does Kenya have and when were they established?", options: ["47 - 2010", "47 - 2013", "42 - 2010", "42 - 2013"], correct: 0 },
+    { question: "Which river is the longest in Kenya?", options: ["Tana River", "Athi River", "Nzoia River", "Yala River"], correct: 0 },
+    { question: "What is the area of Kenya's largest national park?", options: ["21,812 km²", "20,000 km²", "22,000 km²", "21,000 km²"], correct: 0 },
+    { question: "Which city is Kenya's second largest?", options: ["Mombasa", "Kisumu", "Nakuru", "Eldoret"], correct: 0 },
+    { question: "What is the deepest lake in Kenya?", options: ["Lake Victoria", "Lake Turkana", "Lake Naivasha", "Lake Baringo"], correct: 1 },
+    { question: "Which country borders Kenya to the southeast?", options: ["Somalia", "Tanzania", "Uganda", "Ethiopia"], correct: 1 },
+    { question: "What is the total area of Kenya in square kilometers?", options: ["580,367", "582,646", "586,000", "590,000"], correct: 0 },
+    { question: "Which national park is located near Nairobi?", options: ["Nairobi National Park", "Maasai Mara", "Amboseli", "Tsavo"], correct: 0 },
+    { question: "How many ethnic communities are officially recognized in Kenya and which is the largest?", options: ["42 - Kikuyu", "42 - Luo", "47 - Kikuyu", "47 - Luo"], correct: 0 },
+    { question: "What is the name of the traditional Kikuyu council of elders?", options: ["Kiama", "Njuri Ncheke", "Ituika", "Mugithi"], correct: 0 },
+    { question: "Which community practices the 'Nyamakama' initiation ceremony?", options: ["Kalenjin", "Kikuyu", "Luo", "Meru"], correct: 0 },
+    { question: "What is the traditional Luo instrument called?", options: ["Nyatiti", "Orutu", "Kipande", "Litungu"], correct: 0 },
+    { question: "Which Kenyan community is known for the 'Chakacha' dance?", options: ["Swahili", "Luo", "Kikuyu", "Kalenjin"], correct: 0 },
+    { question: "What is the traditional dress of the Maasai called?", options: ["Shuka", "Kanga", "Kitenge", "Khanga"], correct: 0 },
+    { question: "Which Kenyan community practices 'Dodo' music?", options: ["Luo", "Kikuyu", "Kalenjin", "Meru"], correct: 0 },
+    { question: "What is the traditional circumcision ceremony among the Kikuyu?", options: ["Ituika", "Nyamakama", "Tumdo", "Chakacha"], correct: 0 },
+    { question: "Which community is known for the 'Mugithi' music genre?", options: ["Kikuyu", "Luo", "Kalenjin", "Meru"], correct: 0 },
+    { question: "What is the traditional Kalenjin initiation ceremony called?", options: ["Tumdo", "Nyamakama", "Mugithi", "Chakacha"], correct: 0 },
+    { question: "How many bird species are found in Kenya?", options: ["Over 1,100", "Over 1,000", "Over 1,200", "Over 900"], correct: 0 },
+    { question: "Which endangered animal is found only in Kenya's Tana River region?", options: ["Hirola antelope", "Black Rhino", "Grevy's Zebra", "Bongo"], correct: 0 },
+    { question: "How many national parks does Kenya have?", options: ["22", "20", "25", "28"], correct: 0 },
+    { question: "Which Kenyan lake has the highest concentration of flamingos?", options: ["Lake Nakuru", "Lake Natron", "Lake Victoria", "Lake Turkana"], correct: 0 },
+    { question: "What is the largest mammal in Kenya?", options: ["Elephant", "Giraffe", "Rhino", "Hippo"], correct: 0 },
+    { question: "Which Kenyan park is known for black rhino conservation?", options: ["Lake Nakuru", "Maasai Mara", "Amboseli", "Samburu"], correct: 0 },
+    { question: "How many species of primates are found in Kenya?", options: ["10", "15", "20", "25"], correct: 1 },
+    { question: "Which snake is the deadliest in Kenya?", options: ["Black Mamba", "Puff Adder", "Cobra", "Viper"], correct: 0 },
+    { question: "What is Kenya's national bird?", options: ["Lilac-breasted Roller", "Fish Eagle", "Ostrich", "Flamingo"], correct: 0 },
+    { question: "Which national park is known for its elephants?", options: ["Amboseli", "Maasai Mara", "Tsavo", "Samburu"], correct: 0 },
+    { question: "What is Kenya's current GDP (nominal) in USD?", options: ["$115 billion", "$110 billion", "$120 billion", "$100 billion"], correct: 0 },
+    { question: "Which sector contributes most to Kenya's GDP?", options: ["Services", "Agriculture", "Industry", "Manufacturing"], correct: 0 },
+    { question: "What is Kenya's current inflation rate?", options: ["5.5%", "6%", "5%", "6.5%"], correct: 0 },
+    { question: "How many mobile money users does Kenya have?", options: ["35 million", "30 million", "40 million", "25 million"], correct: 0 },
+    { question: "Which industry in Kenya has the highest foreign investment?", options: ["Technology", "Agriculture", "Tourism", "Manufacturing"], correct: 0 },
+    { question: "What is Kenya's currency code?", options: ["KES", "KSH", "KNS", "KNY"], correct: 0 },
+    { question: "Which company is Kenya's largest mobile network operator?", options: ["Safaricom", "Airtel", "Telkom", "Equitel"], correct: 0 },
+    { question: "What is Kenya's unemployment rate?", options: ["10%", "12%", "15%", "18%"], correct: 0 },
+    { question: "Which port is Kenya's largest?", options: ["Mombasa", "Kilindini", "Lamu", "Malindi"], correct: 0 },
+    { question: "What is Kenya's main export?", options: ["Tea", "Coffee", "Flowers", "All of the above"], correct: 3 }
+];
+
+
+
+// ============================================
+// APP OBJECT
+// ============================================
+
 var app = {
     user: null,
     profile: {},
@@ -22,6 +301,7 @@ var app = {
     onlineInterval: null,
     postedHistory: [],
     lastPostTime: 0,
+    autoPostInterval: null,
     editProfilePhoto: null,
     triviaInterval: null,
     currentTrivia: null,
@@ -203,12 +483,6 @@ var app = {
         
         this.loadPostedHistory();
         this.loadDarkModePreference();
-        
-        setTimeout(function() {
-            if (self.user && self.user.email === 'support-chichi@gmail.com') {
-                console.log('🤖 Support account detected! Starting auto-post scheduler...');
-            }
-        }, 5000);
     },
 
     // ============================================
@@ -1829,20 +2103,25 @@ var app = {
                     <div style="font-size: 28px; font-weight: 800; margin-top: 8px;">CC Points ${price}/month</div>
                 </div>
                 
-                <div style="background: #fef3c7; padding: 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #f59e0b;">
-                    <div style="font-size: 13px; color: #78350f; line-height: 1.6;">
-                        💳 Premium is purchased through Google Play In-App Purchase.<br>
-                        <br>
-                        Click below to proceed with secure payment.
+                <div style="background: #f0f7ff; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                    <div style="font-size: 14px; font-weight: 600; color: #1a202c;">📱 How to Pay:</div>
+                    <div style="font-size: 13px; color: #6b7280; margin-top: 4px; line-height: 1.6;">
+                        1. Send CC Points ${price} to <strong style="color: #0088cc;">Till ${MPESA_TILL}</strong><br>
+                        2. Copy the M-Pesa confirmation message<br>
+                        3. Paste it below and submit
                     </div>
                 </div>
                 
-                <button onclick="this.closest('.modal-overlay').remove(); app.toast('✅ Redirecting to Google Play Store...', 'success');" style="background: ${tierData.badgeColor || 'var(--primary)'}; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
+                <div style="background: #fef3c7; padding: 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #f59e0b;">
+                    <div style="font-size: 13px; color: #78350f; line-height: 1.6;">
+                        💳 Premium is purchased through Google Play In-App Purchase.<br>Click below to upgrade securely.
+                    </div>
+                </div>
+                <button onclick="this.closest('.modal-overlay').remove(); app.toast('✅ Redirecting to Google Play...', 'success');" style="background: #f59e0b; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%; margin-bottom: 12px;">
                     💳 Upgrade Now
                 </button>
-                
                 <div style="margin-top: 12px; font-size: 12px; color: #6b7280; text-align: center;">
-                    ✅ Secure payment through Google Play Store
+                    ✅ Secure payment through Google Play Store and activate your account within 24 hours
                 </div>
             </div>
         `;
@@ -2455,7 +2734,7 @@ var app = {
                     <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${userBalance.toFixed(2)}</div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                         <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
-                        <button onclick="app.openSpinner()" style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
+                        <button style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
                         ${userTier !== 'vip' ? `<button onclick="app.showPremiumPayment('premium')" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Upgrade</button>` : ''}
                     </div>
                     <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
@@ -2489,7 +2768,7 @@ var app = {
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
                         Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
                     </div>
-                    <button onclick="app.openSpinner()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
+                    <button style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
                         🎯 Spin Now
                     </button>
                 </div>
@@ -2552,19 +2831,53 @@ var app = {
         
         var html = `
             <div style="padding: 16px;">
-                <div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 16px; padding: 20px; margin-bottom: 20px; color: white; text-align: center;">
-                    <div style="font-size: 40px; margin-bottom: 8px;">💰</div>
-                    <div style="font-size: 24px; font-weight: 700;">Your Balance</div>
-                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
-                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                        <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
-                        <button onclick="app.openSpinner()" style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
-                        ${userTier !== 'vip' ? `<button onclick="app.showPremiumPayment('premium')" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Upgrade</button>` : ''}
-                    </div>
-                    <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
-                        ${tierData.label} - ${remaining} questions remaining today
+                <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 20px; padding: 28px; margin-bottom: 20px; color: white; text-align: left; box-shadow: 0 8px 32px rgba(0, 136, 204, 0.15); position: relative; overflow: hidden;">
+                    <!-- Card background decoration -->
+                    <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(0, 136, 204, 0.1), transparent); border-radius: 50%;"></div>
+                    
+                    <div style="position: relative; z-index: 1;">
+                        <!-- Card Top -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                            <div style="font-size: 24px; font-weight: 800; color: #00D4AA;">CHICHI</div>
+                            <div style="width: 50px; height: 35px; background: linear-gradient(135deg, #f59e0b, #f97316); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px;">CC</div>
+                        </div>
+                        
+                        <!-- Card Number (Masked) -->
+                        <div style="font-size: 14px; letter-spacing: 4px; margin-bottom: 20px; color: rgba(255, 255, 255, 0.6);">
+                            •••• •••• •••• ${(this.balance.toFixed(0) % 10000).toString().padStart(4, '0')}
+                        </div>
+                        
+                        <!-- Balance Display -->
+                        <div style="margin-bottom: 8px;">
+                            <div style="font-size: 12px; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Available Balance</div>
+                            <div style="font-size: 42px; font-weight: 800; background: linear-gradient(135deg, #00D4AA, #0088cc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;" id="earnBalanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
+                        </div>
+                        
+                        <!-- Card Bottom Info -->
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                            <div>
+                                <div style="font-size: 10px; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Cardholder</div>
+                                <div style="font-size: 14px; font-weight: 600; text-transform: uppercase;">${(this.user && this.user.displayName ? this.user.displayName : 'USER').substring(0, 16)}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 10px; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Tier</div>
+                                <div style="font-size: 14px; font-weight: 600; background: #00D4AA; color: #1a1a2e; padding: 4px 12px; border-radius: 8px; text-transform: uppercase;">${userTier}</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                
+                <!-- Quick Actions -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <button onclick="app.switchEarnTab('Trivia')" data-earn-tab="trivia" style="background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);">🧠 Trivia</button>
+                    <button onclick="app.switchEarnTab('Gifts')" data-earn-tab="gifts" style="background: linear-gradient(135deg, #f59e0b, #f97316); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">🎁 Redeem</button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: 2px solid #0088cc; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
+                    <button onclick="app.showPremiumPayment('premium')" style="background: #8b5cf6; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Premium</button>
+                </div>
+                
                 
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
                     <h3 style="margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
@@ -2595,7 +2908,7 @@ var app = {
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
                         Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
                     </div>
-                    <button onclick="app.openSpinner()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
+                    <button style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
                         🎯 Spin Now
                     </button>
                 </div>
@@ -3214,7 +3527,7 @@ var app = {
                     <div class="balance-label">💰 Your Balance</div>
                     <div class="balance-amount" id="balanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
                     <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
-                    <button class="btn-withdraw" onclick="app.openSpinner()" style="background:#8b5cf6;margin-left:8px;">🎰 Spin</button>
+                    <button class="btn-withdraw" style="background:#8b5cf6;margin-left:8px;">🎰 Spin</button>
                 </div>
             </div>
             
@@ -5379,6 +5692,48 @@ var app = {
             this.renderProfile();
             this.logUserActivity('update_profile', 'Updated profile');
         }
+    },
+
+    // ============================================
+    // EARN PAGE TAB SWITCHING
+    // ============================================
+
+    switchEarnTab: function(tabName) {
+        // Hide all tabs
+        var tabs = ['Feed', 'Trivia', 'Wallet', 'Gifts', 'Premium'];
+        tabs.forEach(function(tab) {
+            var el = document.getElementById(tab.toLowerCase() + 'Container');
+            if (el) el.style.display = 'none';
+        });
+
+        // Show selected tab
+        var selectedEl = document.getElementById(tabName.toLowerCase() + 'Container');
+        if (selectedEl) selectedEl.style.display = 'block';
+
+        // Update button styles
+        var buttons = document.querySelectorAll('[data-earn-tab]');
+        buttons.forEach(function(btn) {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-earn-tab') === tabName.toLowerCase()) {
+                btn.classList.add('active');
+            }
+        });
+    },
+
+    // ============================================
+    // EXPLORE MODALS
+    // ============================================
+
+    showSimilarInterestsModal: function() {
+        this.toast('👥 Similar interests feature coming soon!', 'info');
+    },
+
+    showFeaturedUsersModal: function() {
+        this.toast('⭐ Featured users feature coming soon!', 'info');
+    },
+
+    showTopCreatorsModal: function() {
+        this.toast('🚀 Top creators feature coming soon!', 'info');
     }
 };
 
@@ -5389,15 +5744,9 @@ var app = {
 app.init();
 app.initMusic();
 
-setTimeout(function() {
-    if (app.user && app.user.email === 'support-chichi@gmail.com') {
-        console.log('🤖 Support account detected! Starting auto-post scheduler...');
-    }
-}, 3000);
-
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
-console.log('%c📱 Auto-posts every 10 minutes with unique content', 'color: #0088cc; font-size: 12px;');
-console.log('%c🧠 Trivia:CC Points 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
-console.log('%c🎰 Spin & Win:CC Points 5 per spin - MaxCC Points 40!', 'color: #8b5cf6; font-size: 12px;');
+console.log('%c💬 Chat with friends, share stories, play trivia, earn CC Points!', 'color: #0088cc; font-size: 12px;');
+console.log('%c🧠 Trivia: CC Points 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
+console.log('%c🎁 Earn CC Points and redeem gifts - Airtime, Data, Netflix, Spotify', 'color: #00D4AA; font-size: 12px;');
 console.log('%c🛡️ Suspicious activity detection active!', 'color: #ef4444; font-size: 12px;');
 console.log('%c👨‍💻 Built by Anthony Onchari - Version V01A.01', 'color: #6b7280; font-size: 11px;');
