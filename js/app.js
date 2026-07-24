@@ -32,33 +32,6 @@ if (!initFirebase()) {
 }
 
 // ============================================
-// TRIVIA QUESTIONS DATABASE
-// ============================================
-
-var TRIVIA_QUESTIONS = [
-    { question: "What is the capital of France?", options: ["London", "Paris", "Berlin", "Madrid"], correct: 1 },
-    { question: "Which planet is closest to the Sun?", options: ["Venus", "Mercury", "Mars", "Earth"], correct: 1 },
-    { question: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], correct: 3 },
-    { question: "Who wrote Romeo and Juliet?", options: ["Jane Austen", "William Shakespeare", "Mark Twain", "Charles Dickens"], correct: 1 },
-    { question: "What is the smallest country in the world?", options: ["Monaco", "Vatican City", "Liechtenstein", "San Marino"], correct: 1 },
-    { question: "Which element has the symbol 'Au'?", options: ["Silver", "Gold", "Aluminum", "Argon"], correct: 1 },
-    { question: "What year did World War II end?", options: ["1943", "1944", "1945", "1946"], correct: 2 },
-    { question: "How many sides does a hexagon have?", options: ["5", "6", "7", "8"], correct: 1 },
-    { question: "What is the largest mammal on Earth?", options: ["African Elephant", "Blue Whale", "Giraffe", "Hippopotamus"], correct: 1 },
-    { question: "What is the chemical formula for water?", options: ["H2O2", "H2O", "H3O", "HO2"], correct: 1 },
-    { question: "Which country is known as the Land of the Rising Sun?", options: ["China", "Japan", "Thailand", "Vietnam"], correct: 1 },
-    { question: "What is the speed of light?", options: ["300,000 km/s", "150,000 km/s", "450,000 km/s", "100,000 km/s"], correct: 0 },
-    { question: "How many continents are there?", options: ["5", "6", "7", "8"], correct: 2 },
-    { question: "What is the tallest mountain in the world?", options: ["K2", "Mount Kilimanjaro", "Mount Everest", "Denali"], correct: 2 },
-    { question: "Which gas do plants need for photosynthesis?", options: ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"], correct: 2 },
-    { question: "What is the currency of Japan?", options: ["Won", "Peso", "Yuan", "Yen"], correct: 3 },
-    { question: "How many strings does a standard guitar have?", options: ["4", "5", "6", "7"], correct: 2 },
-    { question: "What is the boiling point of water?", options: ["50°C", "75°C", "100°C", "125°C"], correct: 2 },
-    { question: "Which planet is known as the Red Planet?", options: ["Jupiter", "Mars", "Saturn", "Venus"], correct: 1 },
-    { question: "What is the capital of Kenya?", options: ["Mombasa", "Nairobi", "Kisumu", "Nakuru"], correct: 1 }
-];
-
-// ============================================
 // APP OBJECT
 // ============================================
 
@@ -3692,6 +3665,32 @@ var app = {
     },
 
     generateTriviaQuestion: function(callback) {
+        // Define TRIVIA_QUESTIONS if not already defined
+        if (typeof TRIVIA_QUESTIONS === 'undefined') {
+            window.TRIVIA_QUESTIONS = [
+                { question: "What is the capital of France?", options: ["London", "Paris", "Berlin", "Madrid"], correct: 1 },
+                { question: "Which planet is closest to the Sun?", options: ["Venus", "Mercury", "Mars", "Earth"], correct: 1 },
+                { question: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], correct: 3 },
+                { question: "Who wrote Romeo and Juliet?", options: ["Jane Austen", "William Shakespeare", "Mark Twain", "Charles Dickens"], correct: 1 },
+                { question: "What is the smallest country in the world?", options: ["Monaco", "Vatican City", "Liechtenstein", "San Marino"], correct: 1 },
+                { question: "Which element has the symbol 'Au'?", options: ["Silver", "Gold", "Aluminum", "Argon"], correct: 1 },
+                { question: "What year did World War II end?", options: ["1943", "1944", "1945", "1946"], correct: 2 },
+                { question: "How many sides does a hexagon have?", options: ["5", "6", "7", "8"], correct: 1 },
+                { question: "What is the largest mammal on Earth?", options: ["African Elephant", "Blue Whale", "Giraffe", "Hippopotamus"], correct: 1 },
+                { question: "What is the chemical formula for water?", options: ["H2O2", "H2O", "H3O", "HO2"], correct: 1 },
+                { question: "Which country is known as the Land of the Rising Sun?", options: ["China", "Japan", "Thailand", "Vietnam"], correct: 1 },
+                { question: "What is the speed of light?", options: ["300,000 km/s", "150,000 km/s", "450,000 km/s", "100,000 km/s"], correct: 0 },
+                { question: "How many continents are there?", options: ["5", "6", "7", "8"], correct: 2 },
+                { question: "What is the tallest mountain in the world?", options: ["K2", "Mount Kilimanjaro", "Mount Everest", "Denali"], correct: 2 },
+                { question: "Which gas do plants need for photosynthesis?", options: ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"], correct: 2 },
+                { question: "What is the currency of Japan?", options: ["Won", "Peso", "Yuan", "Yen"], correct: 3 },
+                { question: "How many strings does a standard guitar have?", options: ["4", "5", "6", "7"], correct: 2 },
+                { question: "What is the boiling point of water?", options: ["50°C", "75°C", "100°C", "125°C"], correct: 2 },
+                { question: "Which planet is known as the Red Planet?", options: ["Jupiter", "Mars", "Saturn", "Venus"], correct: 1 },
+                { question: "What is the capital of Kenya?", options: ["Mombasa", "Nairobi", "Kisumu", "Nakuru"], correct: 1 }
+            ];
+        }
+        
         if (!this.user || this.isGuest) {
             this.toast('⚠️ Please log in to answer trivia', 'error');
             return;
