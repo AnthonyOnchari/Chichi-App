@@ -1194,7 +1194,7 @@ var app = {
                                 <div class="withdrawal-status ${w.status || 'pending'}">${(w.status || 'pending').toUpperCase()}</div>
                             </div>
                             <div class="withdrawal-details">
-                                <div>KSh ${w.amount || 0} • ${w.method || 'M-Pesa'}</div>
+                                <div>CC Points ${w.amount || 0} • ${w.method || 'M-Pesa'}</div>
                                 <div style="font-size: 0.75rem; margin-top: 4px;">${w.createdAt || 'N/A'}</div>
                             </div>
                         </div>
@@ -1278,7 +1278,7 @@ var app = {
                                 <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
                                 ${usernameDisplay}
                                 <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Joined: ${u.user.createdAt}</div>
-                                <div style="font-size: 0.75rem; color: var(--primary);">Balance: KSh ${(u.user.balance || 0).toFixed(2)}</div>
+                                <div style="font-size: 0.75rem; color: var(--primary);">Balance: CC Points ${(u.user.balance || 0).toFixed(2)}</div>
                                 <div style="font-size: 0.75rem; color: var(--primary);">Tier: ${tierData ? tierData.label : 'Free'}</div>
                                 ${isBanned ? `<div style="font-size: 0.7rem; color: #ef4444;">Banned: ${banData.reason || 'No reason'}</div>` : ''}
                             </div>
@@ -1622,7 +1622,7 @@ var app = {
                                 <div class="withdrawal-status ${statusClass}" style="background: ${statusColor}20; color: ${statusColor}; padding: 4px 12px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">${(w.status || 'pending').toUpperCase()}</div>
                             </div>
                             <div class="withdrawal-details" style="margin: 8px 0;">
-                                <div style="font-size: 0.9rem; font-weight: 600;">💰 KSh ${(w.amount || 0).toFixed(2)}</div>
+                                <div style="font-size: 0.9rem; font-weight: 600;">💰 CC Points ${(w.amount || 0).toFixed(2)}</div>
                                 <div style="font-size: 0.8rem; color: var(--text-light);">📱 ${w.method || 'M-Pesa'} • ${w.account || 'N/A'}</div>
                                 <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 2px;">📧 ${w.userEmail || 'No email'}</div>
                                 <div style="font-size: 0.7rem; color: var(--text-light); margin-top: 2px;">📅 ${w.createdAt || 'N/A'}</div>
@@ -1731,7 +1731,7 @@ var app = {
                                         <div style="font-weight: 600; font-size: 0.95rem; color: #1a202c;">${v.userName || 'Unknown User'}</div>
                                         <div style="font-size: 0.85rem; color: #6b7280; margin-top: 4px;">📧 ${v.userEmail || 'N/A'}</div>
                                         <div style="font-size: 0.85rem; color: #0088cc; margin-top: 4px; font-weight: 600;">⭐ Upgrading to: ${v.tierName || 'Unknown tier'}</div>
-                                        <div style="font-size: 0.85rem; color: #1a202c; margin-top: 4px; font-weight: 700;">💳 Amount: KSh ${(v.amount || 0).toFixed(2)}</div>
+                                        <div style="font-size: 0.85rem; color: #1a202c; margin-top: 4px; font-weight: 700;">💳 Amount: CC Points ${(v.amount || 0).toFixed(2)}</div>
                                         <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 6px;">📝 ${v.confirmation || 'No verification message'}</div>
                                         <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 4px;">🕐 ${timestamp}</div>
                                     </div>
@@ -1904,8 +1904,8 @@ var app = {
         window.ADMIN_SPINNER_OVERRIDES.forceWin = true;
         window.ADMIN_SPINNER_OVERRIDES.forceAmount = amount;
         
-        this.toast('✅ Next spin will force win KSh ' + amount, 'success');
-        this.logUserActivity('admin_force_win', 'Forced win of KSh ' + amount);
+        this.toast('✅ Next spin will force win CC Points ' + amount, 'success');
+        this.logUserActivity('admin_force_win', 'Forced win of CC Points ' + amount);
         document.getElementById('adminForceAmount').value = '';
     },
 
@@ -1962,7 +1962,7 @@ var app = {
             var totalAmount = 0;
             wins.forEach(function(w) {
                 var details = w.details || '';
-                var match = details.match(/KSh (\d+)/);
+                var match = details.match(/CC Points (\d+)/);
                 if (match) {
                     totalAmount += parseInt(match[1]);
                 }
@@ -1983,11 +1983,11 @@ var app = {
                     </div>
                     <div style="background: #f0f7ff; padding: 12px; border-radius: 8px; text-align: center;">
                         <div style="font-size: 11px; color: #6b7280;">Avg Win</div>
-                        <div style="font-size: 24px; font-weight: 700; color: #22c55e;">KSh ${avgWin}</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #22c55e;">CC Points ${avgWin}</div>
                     </div>
                 </div>
                 <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
-                    Total paid out: KSh ${totalAmount} from ${totalSpins} spins
+                    Total paid out: CC Points ${totalAmount} from ${totalSpins} spins
                 </div>
             `;
             
@@ -2097,7 +2097,7 @@ var app = {
         }));
         
         this.toast('✅ ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' plan updated!', 'success');
-        this.logUserActivity('trivia_plan_update', 'Updated ' + tier + ' plan - ' + questionsPerDay + ' questions, KSh ' + rewardPerQuestion + ' reward');
+        this.logUserActivity('trivia_plan_update', 'Updated ' + tier + ' plan - ' + questionsPerDay + ' questions, CC Points ' + rewardPerQuestion + ' reward');
     },
 
     // ============================================
@@ -2364,7 +2364,7 @@ var app = {
                     
                     <div style="background: #fef3c7; padding: 16px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
                         <div style="font-size: 12px; color: #92400e; font-weight: 600; margin-bottom: 4px;">CURRENT BALANCE</div>
-                        <div style="font-size: 28px; font-weight: 700; color: #92400e;">KSh ${currentBalance.toFixed(2)}</div>
+                        <div style="font-size: 28px; font-weight: 700; color: #92400e;">CC Points ${currentBalance.toFixed(2)}</div>
                     </div>
                     
                     <div class="form-group">
@@ -2399,7 +2399,7 @@ var app = {
             if (err) {
                 this.toast('❌ Error: ' + err.message, 'error');
             } else {
-                this.toast('✅ Balance updated to KSh ' + balance.toFixed(2), 'success');
+                this.toast('✅ Balance updated to CC Points ' + balance.toFixed(2), 'success');
                 document.getElementById('balanceEditModal').remove();
                 this.loadAdminUsers();
             }
@@ -2437,11 +2437,11 @@ var app = {
                         <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px;">Premium</div>
                         <div style="color: #6b7280; font-size: 12px; margin-bottom: 12px;">Better rewards</div>
                         <div style="background: #f0f7ff; padding: 10px; border-radius: 8px; margin-bottom: 12px;">
-                            <div style="font-size: 18px; font-weight: 800; color: #667eea;">KSh ${premiumData.price}</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #667eea;">CC Points ${premiumData.price}</div>
                             <div style="font-size: 11px; color: #6b7280;">/month</div>
                         </div>
                         <div style="font-size: 11px; color: #1a202c; text-align: left; line-height: 1.6; background: #fafafa; padding: 10px; border-radius: 8px;">
-                            ✅ +KSh ${premiumData.rewardPerQuestion}/question<br>
+                            ✅ +CC Points ${premiumData.rewardPerQuestion}/question<br>
                             ✅ ${premiumData.questionsPerDay} daily questions<br>
                             ✅ ${premiumData.adsPerQuestion === 0 ? 'No ads' : premiumData.adsPerQuestion + ' ads'}<br>
                             ✅ ${premiumData.bonus}
@@ -2455,11 +2455,11 @@ var app = {
                         <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px;">VIP</div>
                         <div style="color: #6b7280; font-size: 12px; margin-bottom: 12px;">Maximum rewards</div>
                         <div style="background: linear-gradient(135deg, #fffbeb, #fee2e2); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
-                            <div style="font-size: 18px; font-weight: 800; color: #f59e0b;">KSh ${vipData.price}</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #f59e0b;">CC Points ${vipData.price}</div>
                             <div style="font-size: 11px; color: #6b7280;">/month</div>
                         </div>
                         <div style="font-size: 11px; color: #1a202c; text-align: left; line-height: 1.6; background: #fafafa; padding: 10px; border-radius: 8px;">
-                            ✅ +KSh ${vipData.rewardPerQuestion}/question<br>
+                            ✅ +CC Points ${vipData.rewardPerQuestion}/question<br>
                             ✅ ${vipData.questionsPerDay} daily questions<br>
                             ✅ ${vipData.adsPerQuestion === 0 ? 'No ads' : vipData.adsPerQuestion + ' ads'}<br>
                             ✅ ${vipData.bonus}
@@ -2502,13 +2502,13 @@ var app = {
                     <div style="font-size: 48px;">${tierData.badge || '⭐'}</div>
                     <div style="font-size: 24px; font-weight: 700;">${tierName}</div>
                     <div style="font-size: 14px; opacity: 0.9;">${tierData.bonus || ''}</div>
-                    <div style="font-size: 28px; font-weight: 800; margin-top: 8px;">KSh ${price}/month</div>
+                    <div style="font-size: 28px; font-weight: 800; margin-top: 8px;">CC Points ${price}/month</div>
                 </div>
                 
                 <div style="background: #f0f7ff; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
                     <div style="font-size: 14px; font-weight: 600; color: #1a202c;">📱 How to Pay:</div>
                     <div style="font-size: 13px; color: #6b7280; margin-top: 4px; line-height: 1.6;">
-                        1. Send KSh ${price} to <strong style="color: #0088cc;">Till ${MPESA_TILL}</strong><br>
+                        1. Send CC Points ${price} to <strong style="color: #0088cc;">Till ${MPESA_TILL}</strong><br>
                         2. Copy the M-Pesa confirmation message<br>
                         3. Paste it below and submit
                     </div>
@@ -2574,7 +2574,7 @@ var app = {
         }
         
         if (this.balance < SPINNER_CONFIG.spinCost) {
-            this.toast('❌ Insufficient balance. Need KSh ' + SPINNER_CONFIG.spinCost, 'error');
+            this.toast('❌ Insufficient balance. Need CC Points ' + SPINNER_CONFIG.spinCost, 'error');
             return;
         }
         
@@ -2596,7 +2596,7 @@ var app = {
             var amount = window.ADMIN_SPINNER_OVERRIDES.forceAmount;
             window.ADMIN_SPINNER_OVERRIDES.forceWin = false;
             window.ADMIN_SPINNER_OVERRIDES.forceAmount = 0;
-            this.logUserActivity('admin_force_win_used', 'Forced win of KSh ' + amount);
+            this.logUserActivity('admin_force_win_used', 'Forced win of CC Points ' + amount);
             return Math.min(amount, SPINNER_CONFIG.maxWin);
         }
         
@@ -2658,7 +2658,7 @@ var app = {
         var segments = [];
         for (var i = 0; i < 50; i++) {
             var value = segmentValues[i];
-            var label = value === 0 ? 'Lost' : 'KSh ' + value;
+            var label = value === 0 ? 'Lost' : 'CC Points ' + value;
             segments.push({
                 value: value,
                 label: label,
@@ -2679,9 +2679,9 @@ var app = {
             <div style="background: linear-gradient(135deg, white, #f9fafb); border-radius: 24px; padding: 24px; max-width: 460px; width: 95%; text-align: center; animation: smoothFadeIn 0.3s ease; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
                 <h2 style="margin: 0 0 8px 0; font-weight: 700; font-size: 24px;">Spin & Win</h2>
                 <div style="display: flex; gap: 12px; justify-content: center; font-size: 12px; color: #6b7280; margin-bottom: 20px;">
-                    <div>Cost: KSh ${SPINNER_CONFIG.spinCost}</div>
+                    <div>Cost: CC Points ${SPINNER_CONFIG.spinCost}</div>
                     <div>•</div>
-                    <div>Max: KSh 1000</div>
+                    <div>Max: CC Points 1000</div>
                 </div>
                 
                 <!-- ENHANCED SPINNER FRAME -->
@@ -2866,8 +2866,8 @@ var app = {
             
             resultDiv.innerHTML = `
                 <div style="color: #22c55e; font-size: 28px; margin-bottom: 4px;">You Won!</div>
-                <div style="color: #1a202c; font-size: 42px; font-weight: 800;">+KSh ${winAmount}</div>
-                <div style="color: #6b7280; font-size: 14px; margin-top: 8px;">Balance: KSh ${this.balance.toFixed(2)}</div>
+                <div style="color: #1a202c; font-size: 42px; font-weight: 800;">+CC Points ${winAmount}</div>
+                <div style="color: #6b7280; font-size: 14px; margin-top: 8px;">Balance: CC Points ${this.balance.toFixed(2)}</div>
                 <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
                     <button onclick="app.spinAgain()" style="padding: 10px 24px; background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">Spin Again</button>
                     <button onclick="app.showWithdrawModal()" style="padding: 10px 24px; background: #22c55e; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">Withdraw</button>
@@ -2875,13 +2875,13 @@ var app = {
                 </div>
             `;
             
-            this.toast('You won KSh ' + winAmount + '!', 'success');
-            this.logUserActivity('spinner_win', 'Won KSh ' + winAmount);
+            this.toast('You won CC Points ' + winAmount + '!', 'success');
+            this.logUserActivity('spinner_win', 'Won CC Points ' + winAmount);
         } else {
             resultDiv.innerHTML = `
                 <div style="color: #ef4444; font-size: 28px; margin-bottom: 4px;">Better Luck Next Time</div>
                 <div style="color: #1a202c; font-size: 36px; font-weight: 800;">You Lost</div>
-                <div style="color: #6b7280; font-size: 14px; margin-top: 8px;">Cost: KSh ${SPINNER_CONFIG.spinCost}</div>
+                <div style="color: #6b7280; font-size: 14px; margin-top: 8px;">Cost: CC Points ${SPINNER_CONFIG.spinCost}</div>
                 <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
                     <button onclick="app.spinAgain()" style="padding: 10px 24px; background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">Try Again</button>
                     <button onclick="document.getElementById('spinnerModal').remove()" style="padding: 10px 24px; background: #f3f4f6; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">Close</button>
@@ -2901,7 +2901,7 @@ var app = {
         
         // Check balance
         if (this.balance < SPINNER_CONFIG.spinCost) {
-            this.toast('Insufficient balance. Need KSh ' + SPINNER_CONFIG.spinCost, 'error');
+            this.toast('Insufficient balance. Need CC Points ' + SPINNER_CONFIG.spinCost, 'error');
             return;
         }
         
@@ -2921,15 +2921,15 @@ var app = {
     updateBalanceDisplays: function() {
         var balanceDisplay = document.getElementById('balanceDisplay');
         if (balanceDisplay) {
-            balanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
         }
         var earnBalanceDisplay = document.getElementById('earnBalanceDisplay');
         if (earnBalanceDisplay) {
-            earnBalanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+            earnBalanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
         }
         var withdrawBalanceDisplay = document.getElementById('withdrawBalanceDisplay');
         if (withdrawBalanceDisplay) {
-            withdrawBalanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+            withdrawBalanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
         }
     },
 
@@ -3488,7 +3488,7 @@ var app = {
                         <!-- Balance -->
                         <div style="margin-bottom: 24px;">
                             <div style="font-size: 11px; color: rgba(255,255,255,0.75); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Account Balance</div>
-                            <div style="font-size: 42px; font-weight: 800; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">KSh ${userBalance.toFixed(2)}</div>
+                            <div style="font-size: 42px; font-weight: 800; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">CC Points ${userBalance.toFixed(2)}</div>
                         </div>
                         
                         <!-- Card Footer with Username -->
@@ -3530,13 +3530,13 @@ var app = {
                         </div>
                         <div style="text-align: right;">
                             <div style="font-size: 12px; font-weight: 600; color: ${tierColor.accent};">DAILY</div>
-                            <div style="font-size: 13px; color: #64748b; margin-top: 4px;">+KSh ${tierData.rewardPerQuestion}/question</div>
+                            <div style="font-size: 13px; color: #64748b; margin-top: 4px;">+CC Points ${tierData.rewardPerQuestion}/question</div>
                         </div>
                     </div>
                     
                     <div style="background: white; border-radius: 10px; padding: 12px; font-size: 12px; color: #475569; margin-bottom: 14px; line-height: 1.6;">
                         • ${tierData.questionsPerDay} questions daily<br>
-                        • KSh ${tierData.rewardPerQuestion} per correct answer<br>
+                        • CC Points ${tierData.rewardPerQuestion} per correct answer<br>
                         • ${tierData.adsPerQuestion === 0 ? 'No ads' : tierData.adsPerQuestion + ' ads/question'}<br>
                         • ${tierData.timerSeconds}s timer
                     </div>
@@ -3574,7 +3574,7 @@ var app = {
                                 <div style="font-size: 16px; font-weight: 700; color: #15803d;">Knowledge Challenge</div>
                                 <div style="font-size: 13px; color: #4b5563; margin-top: 6px;">Answer questions, earn rewards</div>
                             </div>
-                            <div style="background: #dcfce7; color: #15803d; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap;">+KSh ${tierData.rewardPerQuestion}</div>
+                            <div style="background: #dcfce7; color: #15803d; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap;">+CC Points ${tierData.rewardPerQuestion}</div>
                         </div>
                         
                         <div style="background: white; border-radius: 12px; padding: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
@@ -3596,7 +3596,7 @@ var app = {
                                 <div style="font-size: 16px; font-weight: 700; color: #b45309;">Fortune Wheel</div>
                                 <div style="font-size: 13px; color: #4b5563; margin-top: 6px;">Spin for bonus prizes</div>
                             </div>
-                            <div style="background: #fef3c7; color: #b45309; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap;">Cost: KSh ${SPINNER_CONFIG.spinCost}</div>
+                            <div style="background: #fef3c7; color: #b45309; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap;">Cost: CC Points ${SPINNER_CONFIG.spinCost}</div>
                         </div>
                         
                         <div style="background: white; border-radius: 12px; padding: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
@@ -3668,7 +3668,7 @@ var app = {
                 <div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 16px; padding: 20px; margin-bottom: 20px; color: white; text-align: center;">
                     <div style="font-size: 40px; margin-bottom: 8px;">💰</div>
                     <div style="font-size: 24px; font-weight: 700;">Your Balance</div>
-                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">KSh ${this.balance.toFixed(2)}</div>
+                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                         <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
                         <button onclick="app.openSpinner()" style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
@@ -3682,7 +3682,7 @@ var app = {
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
                     <h3 style="margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
                         <span>🧠</span> Trivia Challenge
-                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">KSh ${tierData.rewardPerQuestion}</span>
+                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">CC Points ${tierData.rewardPerQuestion}</span>
                     </h3>
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">
                         ⏱️ ${tierData.timerSeconds} seconds • ${remaining} questions left today
@@ -3706,7 +3706,7 @@ var app = {
                         <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">Max ${SPINNER_CONFIG.maxWin}</span>
                     </h3>
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
-                        Cost: KSh ${SPINNER_CONFIG.spinCost} per spin • Max Win: KSh ${SPINNER_CONFIG.maxWin}
+                        Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
                     </div>
                     <button onclick="app.openSpinner()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
                         🎯 Spin Now
@@ -3718,7 +3718,7 @@ var app = {
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Total Earned</div>
-                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">KSh ${this.balance.toFixed(2)}</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">CC Points ${this.balance.toFixed(2)}</div>
                         </div>
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Questions</div>
@@ -3835,7 +3835,7 @@ var app = {
         if (correct) {
             resultArea.innerHTML = `
                 <div style="color: #22c55e; font-weight: 700; font-size: 18px;">✅ Correct!</div>
-                <div style="color: #6b7280; font-size: 14px;">You earned KSh ${tierData.rewardPerQuestion.toFixed(2)}!</div>
+                <div style="color: #6b7280; font-size: 14px;">You earned CC Points ${tierData.rewardPerQuestion.toFixed(2)}!</div>
             `;
             resultArea.style.background = '#dcfce7';
             
@@ -3844,10 +3844,10 @@ var app = {
             
             var balanceDisplay = document.getElementById('earnBalanceDisplay');
             if (balanceDisplay) {
-                balanceDisplay.textContent = 'KSh ' + self.balance.toFixed(2);
+                balanceDisplay.textContent = 'CC Points ' + self.balance.toFixed(2);
             }
             
-            self.toast('🎉 Correct! +KSh ' + tierData.rewardPerQuestion.toFixed(2), 'success');
+            self.toast('🎉 Correct! +CC Points ' + tierData.rewardPerQuestion.toFixed(2), 'success');
             self.incrementQuestionCount();
         } else {
             resultArea.innerHTML = `
@@ -3914,7 +3914,7 @@ var app = {
         var price = EARNING_SETTINGS[tier].price;
         var tierName = EARNING_SETTINGS[tier].label;
         
-        if (!confirm(`Upgrade to ${tierName} for KSh ${price}/month?`)) {
+        if (!confirm(`Upgrade to ${tierName} for CC Points ${price}/month?`)) {
             return;
         }
         
@@ -3923,7 +3923,7 @@ var app = {
         
         setTimeout(function() {
             if (self.balance < price) {
-                self.toast('❌ Insufficient balance. You need KSh ' + price, 'error');
+                self.toast('❌ Insufficient balance. You need CC Points ' + price, 'error');
                 return;
             }
             
@@ -3935,7 +3935,7 @@ var app = {
             self.toast('✅ Upgraded to ' + tierName + '! 🎉', 'success');
             self.renderEarn();
             self.loadProfile();
-            self.logUserActivity('upgrade_tier', 'Upgraded to ' + tierName + ' for KSh ' + price);
+            self.logUserActivity('upgrade_tier', 'Upgraded to ' + tierName + ' for CC Points ' + price);
         }, 1500);
     },
 
@@ -4319,7 +4319,7 @@ var app = {
                
                 var balanceDisplay = document.getElementById('balanceDisplay');
                 if (balanceDisplay) {
-                    balanceDisplay.textContent = 'KSh ' + self.balance.toFixed(2);
+                    balanceDisplay.textContent = 'CC Points ' + self.balance.toFixed(2);
                 }
                
                 var avatar = document.getElementById('quickPostAvatar');
@@ -6184,7 +6184,7 @@ var app = {
         document.getElementById('withdrawAmount').min = 1;
         var balanceDisplay = document.getElementById('withdrawBalanceDisplay');
         if (balanceDisplay) {
-            balanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
         }
     },
 
@@ -6237,7 +6237,7 @@ var app = {
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #64748b;">
                         <span>Available:</span>
-                        <span style="font-weight: 700; color: #1e293b;">KSh ${this.balance.toFixed(2)}</span>
+                        <span style="font-weight: 700; color: #1e293b;">CC Points ${this.balance.toFixed(2)}</span>
                     </div>
                 </div>
                 
@@ -6370,9 +6370,9 @@ var app = {
                 });
                 
                 self.updateBalanceDisplays();
-                self.toast('Sent KSh ' + amount + ' to @' + username, 'success');
+                self.toast('Sent CC Points ' + amount + ' to @' + username, 'success');
                 document.getElementById('sendMoneyModal').remove();
-                self.logUserActivity('send_money', 'Sent KSh ' + amount + ' to @' + username);
+                self.logUserActivity('send_money', 'Sent CC Points ' + amount + ' to @' + username);
             })
             .catch(function(err) {
                 console.error('Error:', err);
@@ -6443,7 +6443,7 @@ var app = {
                                 </div>
                             </div>
                             <div style="text-align: right;">
-                                <div style="font-size: 16px; font-weight: 700; color: ${color};">${sign}KSh ${tx.amount.toFixed(2)}</div>
+                                <div style="font-size: 16px; font-weight: 700; color: ${color};">${sign}CC Points ${tx.amount.toFixed(2)}</div>
                             </div>
                         </div>
                     `;
@@ -6462,11 +6462,11 @@ var app = {
         var minAmount = 1;
         
         if (isNaN(amount) || amount < minAmount) {
-            this.toast('❌ Minimum withdrawal is KSh ' + minAmount, 'error');
+            this.toast('❌ Minimum withdrawal is CC Points ' + minAmount, 'error');
             return;
         }
         if (amount > this.balance) {
-            this.toast('❌ Insufficient balance. You have KSh ' + this.balance.toFixed(2), 'error');
+            this.toast('❌ Insufficient balance. You have CC Points ' + this.balance.toFixed(2), 'error');
             return;
         }
         
@@ -6495,15 +6495,15 @@ var app = {
         
         var balanceDisplay = document.getElementById('balanceDisplay');
         if (balanceDisplay) {
-            balanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
         }
         
-        this.toast('✅ Withdrawal request submitted! KSh ' + amount.toFixed(2), 'success');
+        this.toast('✅ Withdrawal request submitted! CC Points ' + amount.toFixed(2), 'success');
         this.closeWithdrawModal();
         document.getElementById('withdrawAmount').value = '';
         document.getElementById('accountNumber').value = '';
         this.renderProfile();
-        this.logUserActivity('withdrawal_request', 'Requested withdrawal of KSh ' + amount);
+        this.logUserActivity('withdrawal_request', 'Requested withdrawal of CC Points ' + amount);
     },
 
     // ============================================
@@ -7787,7 +7787,7 @@ setTimeout(function() {
 
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
 console.log('%c📱 Auto-posts every 10 minutes with unique content', 'color: #0088cc; font-size: 12px;');
-console.log('%c🧠 Trivia: KSh 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
-console.log('%c🎰 Spin & Win: KSh 5 per spin - Max KSh 40!', 'color: #8b5cf6; font-size: 12px;');
+console.log('%c🧠 Trivia: CC Points 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
+console.log('%c🎰 Spin & Win: CC Points 5 per spin - Max CC Points 40!', 'color: #8b5cf6; font-size: 12px;');
 console.log('%c🛡️ Suspicious activity detection active!', 'color: #ef4444; font-size: 12px;');
 console.log('%c👨‍💻 Built by Anthony Onchari - Version V01A.01', 'color: #6b7280; font-size: 11px;');

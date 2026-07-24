@@ -3,40 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <!-- SEO Meta Tags -->
-    <title>CHICHI - Connect, Play, Earn!</title>
-    <meta name="description" content="Chat with friends, share stories, play trivia, earn CC Points, and redeem gifts. A fun social platform for Kenyans.">
-    <meta name="keywords" content="social media, chat, trivia, Kenya, rewards, airtime, data">
-    <meta name="author" content="Anthony Onchari">
-    <meta name="theme-color" content="#1e293b">
-    
-    <!-- Open Graph Tags -->
-    <meta property="og:title" content="CHICHI - Connect, Play, Earn!">
-    <meta property="og:description" content="Chat with friends, share stories, play trivia, earn CC Points, and redeem gifts.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://chichi.buzz">
-    <meta property="og:image" content="https://chichi.buzz/images/og-image.png">
-    <meta property="og:site_name" content="CHICHI">
-    
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="CHICHI - Connect, Play, Earn!">
-    <meta name="twitter:description" content="A fun social platform for Kenyans. Chat, share, play trivia, earn rewards.">
-    
-    <!-- Structured Data -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "CHICHI",
-      "description": "A fun social platform for Kenyans. Chat with friends, share stories, play trivia, earn CC Points, and redeem gifts.",
-      "url": "https://chichi.buzz",
-      "applicationCategory": "SocialNetworking",
-      "operatingSystem": "Android, iOS, Web"
-    }
-    </script>
-    
+    <title>CHICHI - Social Media</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     
@@ -48,81 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
     
-    <!-- CONFIGURATION (Public config inline, secrets from Vercel API) -->
-    <script>
-// Public configuration (safe to be in code)
-const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyD_tSXJCOLffm4ZMtM8gXOCH5CXFOKdqWM",
-    authDomain: "chichi-001.firebaseapp.com",
-    projectId: "chichi-001",
-    storageBucket: "chichi-001.firebasestorage.app",
-    messagingSenderId: "219736252899",
-    appId: "1:219736252899:web:626efc2fe5040efb7500d6",
-    databaseURL: "https://chichi-001-default-rtdb.firebaseio.com"
-};
-
-const CLOUD_NAME = 'u1uilb6f';
-const UPLOAD_PRESET = 'chichi_photos';
-
-
-
-
-// Secret configuration - Default values (will be overridden by Vercel env vars)
-let ADMIN_PASSWORD = 'CHICHI26303@Admin';
-
-// Fetch secrets from Vercel API (these come from environment variables)
-async function loadSecrets() {
-    try {
-        const response = await fetch('/api/config');
-        if (response.ok) {
-            const secrets = await response.json();
-            ADMIN_PASSWORD = secrets.adminPassword || ADMIN_PASSWORD;
-            console.log('🔐 Secrets loaded securely from Vercel');
-        } else {
-            console.warn('⚠️ Could not load secrets from Vercel, using fallback values');
-        }
-    } catch (error) {
-        console.warn('⚠️ Secrets fetch failed, using fallback values:', error.message);
-    }
-}
-
-// Initialize Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(FIREBASE_CONFIG);
-    console.log('✅ Firebase initialized');
-} else {
-    console.log('⚠️ Firebase already initialized');
-}
-
-var auth = firebase.auth();
-var db = firebase.database();
-
-db.ref('.info/connected').on('value', function(snapshot) {
-    if (snapshot.val() === true) {
-        console.log('🌐 Connected to Firebase');
-    } else {
-        console.log('📡 Disconnected from Firebase');
-    }
-});
-
-// Load secrets immediately
-loadSecrets();
-
-// Loading screen timeout
-var loadingTimeout = setTimeout(() => {
-    var loading = document.getElementById('loadingScreen');
-    if (loading) {
-        loading.classList.remove('active');
-        loading.style.display = 'none';
-    }
-    var authPage = document.getElementById('authPage');
-    if (authPage) {
-        authPage.style.display = 'flex';
-    }
-}, 3000);
-
-console.log('✅ Configuration loaded successfully');
-    </script>
+    <script src="js/config.js"></script>
 </head>
 <body>
 
@@ -256,18 +149,37 @@ console.log('✅ Configuration loaded successfully');
 
 <!-- MAIN APP -->
 <div class="main-app" id="mainApp">
-    <div class="app-header" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);">
-        <div class="header-left" style="gap: 12px; flex: 1;">
-            <h1 class="header-title" style="font-size: 20px; font-weight: 900; letter-spacing: 2px; background: linear-gradient(135deg, #00D4AA, #0088cc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0;">CHICHI</h1>
+    <div class="app-header">
+        <div class="header-left">
+            <div id="storiesList"></div>
+            <h1 class="header-title">CHICHI</h1>
         </div>
         
-        <!-- HEADER ACTIONS -->
-        <div class="header-actions" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 50px; padding: 8px 12px; display: flex; gap: 4px; align-items: center; border: 1px solid rgba(255, 255, 255, 0.1);">
-            <!-- REFRESH ICON -->
-            <button class="btn-icon" onclick="app.refreshCurrentPage()" title="Refresh page" style="background: rgba(255, 255, 255, 0.1); border: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #ffffff; font-size: 18px; transition: 0.3s; border-radius: 50%; hover-effect: rotate;" onmouseover="this.style.background='rgba(255, 255, 255, 0.15)'; this.style.transform='rotate(180deg)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'; this.style.transform='rotate(0)'" id="globalRefreshBtn">↻</button>
+        <div class="header-actions">
+            <label class="music-toggle-3d" title="Toggle music">
+                <input type="checkbox" id="musicToggle" onchange="app.toggleMusic()">
+                <div class="toggle-cube">
+                    <div class="toggle-face front">🔇</div>
+                    <div class="toggle-face back">🎵</div>
+                </div>
+            </label>
             
-            <!-- MENU ICON -->
-            <button class="btn-icon" onclick="app.showHeaderMenuModal()" title="Menu" style="background: rgba(255, 255, 255, 0.1); border: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #ffffff; font-size: 18px; transition: 0.2s; border-radius: 50%;" onmouseover="this.style.background='rgba(255, 255, 255, 0.15)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'">⋯</button>
+            <!-- DARK MODE TOGGLE -->
+            <label class="dark-mode-toggle" title="Toggle dark mode">
+                <input type="checkbox" id="darkModeToggle" onchange="app.toggleDarkMode()">
+                <div class="toggle-cube">
+                    <div class="toggle-face front">☀️</div>
+                    <div class="toggle-face back">🌙</div>
+                </div>
+            </label>
+            
+            <button class="btn-icon" onclick="app.loadPosts()" id="refreshFeedBtn">↻</button>
+            <button class="btn-icon" onclick="app.showHeaderMenu()">⋯</button>
+        </div>
+        
+        <div id="headerMenu" style="display: none; position: fixed; top: 48px; right: 12px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 150px;">
+            <button onclick="app.openAdminModal(); app.closeHeaderMenu();" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f0f0f0;">⚙️ Admin</button>
+            <button onclick="app.showLogout(); app.closeHeaderMenu();" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #ef4444;">🚪 Logout</button>
         </div>
     </div>
 
@@ -278,24 +190,22 @@ console.log('✅ Configuration loaded successfully');
                 <div class="quick-post-avatar" id="quickPostAvatar">U</div>
                 <input type="text" class="quick-post-input" placeholder="Share something..." readonly>
             </div>
-            
-            <!-- INSTAGRAM-STYLE STORIES CAROUSEL -->
-            <div style="padding: 12px 16px; background: white; border-bottom: 1px solid #f0f0f0; overflow-x: auto; overflow-y: hidden;">
-                <div id="storiesCarousel" style="display: flex; gap: 12px; align-items: center; flex-wrap: nowrap; padding: 4px 0;">
-                    <!-- Stories will be rendered here by loadStories() -->
-                </div>
-            </div>
-            
             <div id="feedContainer"></div>
         </div>
 
         <!-- EXPLORE VIEW -->
         <div class="view" id="exploreView">
+            <!-- HEADER -->
+            <div style="position: sticky; top: 0; z-index: 30; background: white; border-bottom: 1px solid #e0e0e0; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">🔍 Discover</h3>
+                <button style="background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 600;" onclick="app.loadExplore()">🔄 Refresh</button>
+            </div>
+            
             <!-- SEARCH BAR -->
             <div style="padding: 16px; background: white; border-bottom: 1px solid #f0f0f0;">
                 <div style="display: flex; gap: 8px; background: #f5f5f5; border-radius: 24px; padding: 10px 16px; align-items: center;">
                     <span style="font-size: 20px;">🔍</span>
-                    <input type="text" id="exploreSearchInput" placeholder="Search users, posts, hashtags..." style="background: none; border: none; flex: 1; font-size: 15px; outline: none;" onkeyup="if(window.app) app.searchExploreUsers(this.value)">
+                    <input type="text" id="exploreSearchInput" placeholder="Search users, posts, hashtags..." style="background: none; border: none; flex: 1; font-size: 15px; outline: none;" onkeyup="app.searchExploreUsers(this.value)">
                 </div>
             </div>
             
@@ -308,20 +218,20 @@ console.log('✅ Configuration loaded successfully');
             <!-- QUICK DISCOVERY BUTTONS (Hidden when searching) -->
             <div id="quickDiscoverySection" style="padding: 16px; background: white; border-bottom: 1px solid #f0f0f0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
                 <button onclick="app.showSimilarInterestsModal()" style="background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border: none; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(6,182,212,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                    Similar
+                    🤝 Similar Interests
                 </button>
                 <button onclick="app.showFeaturedUsersModal()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(245,158,11,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                    Featured
+                    ⭐ Featured
                 </button>
                 <button onclick="app.showTopCreatorsModal()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(139,92,246,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                    Top Creators
+                    👑 Top Creators
                 </button>
             </div>
             
             <!-- TRENDING HASHTAGS SECTION (Hidden when searching) -->
             <div id="trendingSection" style="padding: 20px 16px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">Trending Now</h4>
+                    <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">🔥 Trending Now</h4>
                     <button onclick="app.calculateTrendingHashtags(); app.renderTrendingInExplore();" style="background: none; border: none; color: var(--primary); cursor: pointer; font-size: 12px; font-weight: 600;">Refresh</button>
                 </div>
                 <div id="trendingHashtagsContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -332,7 +242,7 @@ console.log('✅ Configuration loaded successfully');
             <!-- TRENDING POSTS SECTION (Hidden when searching) -->
             <div id="postsSection" style="padding: 0 16px 20px 16px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">Trending Posts</h4>
+                    <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">📸 Trending Posts</h4>
                     <span style="font-size: 12px; color: #6b7280;">Most liked</span>
                 </div>
                 <div id="trendingPostsContainer" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; background: #e2e8f0;">
@@ -347,7 +257,7 @@ console.log('✅ Configuration loaded successfully');
                 <h2>Messages</h2>
                 <div style="display: flex; background: #f0f0f0; border-radius: 24px; padding: 8px 12px; margin-bottom: 12px;">
                     <span style="font-size: 18px; margin-right: 8px;">🔍</span>
-                    <input type="text" placeholder="Search conversations..." id="messagesSearchInput" onkeyup="if(window.app) app.searchMessages(this.value)" style="background: none; border: none; flex: 1; font-size: 14px; outline: none;">
+                    <input type="text" placeholder="Search conversations..." id="messagesSearchInput" onkeyup="app.searchMessages(this.value)" style="background: none; border: none; flex: 1; font-size: 14px; outline: none;">
                 </div>
                 <div id="messagesFilterTabs">
                     <button class="message-filter-tab active" onclick="app.filterMessages('all')">All</button>
@@ -388,21 +298,7 @@ console.log('✅ Configuration loaded successfully');
 
         <!-- EARN VIEW -->
         <div class="view" id="earnView">
-            <!-- Earn Page Sub-Tabs -->
-            <div class="earn-subtabs">
-                <button class="earn-subtab-btn active" onclick="app.switchEarnTab('feed')">Feed</button>
-                <button class="earn-subtab-btn" onclick="app.switchEarnTab('trivia')">Trivia</button>
-                <button class="earn-subtab-btn" onclick="app.switchEarnTab('wallet')">Wallet</button>
-                <button class="earn-subtab-btn" onclick="app.switchEarnTab('gifts')">Gifts</button>
-                <button class="earn-subtab-btn" onclick="app.switchEarnTab('premium')">Premium</button>
-            </div>
-            
-            <!-- Earn Content Container -->
-            <div id="earnContainer" class="earn-content-section"></div>
-            <div id="triviaContainer" class="earn-content-section hidden"></div>
-            <div id="walletContainer" class="earn-content-section hidden"></div>
-            <div id="giftsContainer" class="earn-content-section hidden"></div>
-            <div id="premiumContainer" class="earn-content-section hidden"></div>
+            <div id="earnContainer"></div>
         </div>
 
         <!-- PROFILE VIEW -->
@@ -475,10 +371,6 @@ console.log('✅ Configuration loaded successfully');
             <span class="share-btn-text">Share Post</span>
             <span class="share-spinner" style="display: none; margin-left: 8px;">⏳</span>
         </button>
-        <button type="button" class="btn-submit" id="shareStoryBtn" onclick="app.createStory()" style="background: linear-gradient(135deg, #8b5cf6, #6366f1); margin-top: 12px;">
-            <span class="share-btn-text">Share Story</span>
-            <span class="share-spinner" style="display: none; margin-left: 8px;">⏳</span>
-        </button>
     </div>
 </div>
 
@@ -543,7 +435,7 @@ console.log('✅ Configuration loaded successfully');
         <!-- Users -->
         <div class="admin-tab-content" id="adminUsers">
             <div style="margin-bottom:16px;">
-                <input type="text" id="userSearchInput" placeholder="Search by name, email, or #hashtag..." class="form-input" onkeyup="if(window.app) app.searchUsers(this.value)" style="background: white; border: 2px solid #e5e7eb; padding: 12px; border-radius: 10px; font-size: 14px; transition: 0.2s;" onfocus="this.style.borderColor='#0088cc'; this.style.boxShadow='0 0 0 3px rgba(0,136,204,0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                <input type="text" id="userSearchInput" placeholder="Search by name, email, or #hashtag..." class="form-input" onkeyup="app.searchUsers(this.value)" style="background: white; border: 2px solid #e5e7eb; padding: 12px; border-radius: 10px; font-size: 14px; transition: 0.2s;" onfocus="this.style.borderColor='#0088cc'; this.style.boxShadow='0 0 0 3px rgba(0,136,204,0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
             </div>
             <div id="adminUsersList"></div>
         </div>
@@ -639,26 +531,15 @@ console.log('✅ Configuration loaded successfully');
     </div>
 </div>
 
-<script src="js/app.js" defer></script>
+<audio id="themeMusic" preload="auto"></audio>
+
+<script src="js/app.js"></script>
 <script>
-    // Safe wrapper for app methods before app loads
-    window.appReady = false;
-    
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof app !== 'undefined' && app.init) { 
             app.init();
-            window.appReady = true;
         }
     });
-    
-    // Fallback if DOMContentLoaded already fired
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            window.appReady = true;
-        });
-    } else {
-        window.appReady = true;
-    }
 </script>
 
 </body>
