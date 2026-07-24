@@ -4043,23 +4043,33 @@ var app = {
         var userPosts = this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this)).length;
 
         var html = `
-            <div style="padding: 20px; background: #f5f5f5; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;">
+            <div style="padding: 0; background: #f5f5f5; min-height: 100vh;">
                 
                 <!-- PROFILE CARD -->
-                <div style="width: 100%; max-width: 500px; background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                <div style="width: 100%; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     
-                    <!-- HEADER IMAGE SECTION -->
-                    <div style="position: relative; width: 100%; height: 280px; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; align-items: flex-end; justify-content: center; padding: 20px;">
+                    <!-- COVER IMAGE SECTION -->
+                    <div style="position: relative; width: 100%; height: 280px; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); display: flex; align-items: flex-end; justify-content: center; padding: 20px; cursor: pointer; overflow: hidden;" onclick="app.showCoverImageModal()">
+                        
+                        <!-- Cover Image -->
+                        ${this.profile.coverImage ? `
+                            <img src="${this.profile.coverImage}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+                        ` : ''}
+                        
+                        <!-- Overlay -->
+                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: ${this.profile.coverImage ? 'rgba(0,0,0,0.2)' : 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'}; display: flex; align-items: center; justify-content: center;">
+                            <div style="text-align: center; color: white; font-size: 12px; opacity: 0.7;">📷 Click to change cover</div>
+                        </div>
                         
                         <!-- Social Icons (Top Right) -->
-                        <div style="position: absolute; top: 16px; right: 16px; display: flex; gap: 12px;">
+                        <div style="position: absolute; top: 16px; right: 16px; display: flex; gap: 12px; z-index: 5;">
                             <a href="#" style="color: white; font-size: 18px; text-decoration: none;">📷</a>
                             <a href="#" style="color: white; font-size: 18px; text-decoration: none;">𝕏</a>
                             <a href="#" style="color: white; font-size: 18px; text-decoration: none;">👍</a>
                         </div>
                         
                         <!-- Back Button (Top Left) -->
-                        <div style="position: absolute; top: 16px; left: 16px;">
+                        <div style="position: absolute; top: 16px; left: 16px; z-index: 5;">
                             <button onclick="app.switchView('feed');" style="background: rgba(0,0,0,0.5); border: none; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px;">←</button>
                         </div>
                         
@@ -4085,8 +4095,11 @@ var app = {
                             margin-bottom: -70px;
                             position: relative;
                             z-index: 10;
-                        " onclick="app.showProfilePhotoModal()" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+                        " onclick="event.stopPropagation(); app.showProfilePhotoModal()" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'" title="Click to change profile photo">
                             ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
+                            
+                            <!-- Photo Edit Badge -->
+                            <div style="position: absolute; bottom: 0; right: 0; background: #3b82f6; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; border: 3px solid white;">📷</div>
                         </div>
                     </div>
                     
@@ -4160,9 +4173,131 @@ var app = {
                         </button>
                     </div>
                 </div>
+                
+                <!-- INSTAGRAM-STYLE POSTS GRID -->
+                <div style="padding: 20px;">
+                    <div style="max-width: 1200px; margin: 0 auto;">
+                        <h3 style="font-size: 16px; font-weight: 700; color: #1a1a1a; margin-bottom: 16px;">📸 Posts</h3>
+                        
+                        ${this.posts && this.posts.filter(p => p.userId === this.user.uid).length > 0 ? `
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px;">
+                                ${this.posts.filter(p => p.userId === this.user.uid).map(p => `
+                                    <div style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #e5e7eb; cursor: pointer; group; transition: all 0.3s;" onclick="app.viewPostDetail('${p.id}')" onmouseover="this.style.filter='brightness(0.7)'" onmouseout="this.style.filter='brightness(1)'">
+                                        ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, #667eea, #764ba2);color:white;font-size:24px;">📸</div>`}
+                                        
+                                        <!-- Hover Stats Overlay -->
+                                        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; gap: 16px; opacity: 0;">
+                                            <div style="color: white; font-weight: 700; display: flex; align-items: center; gap: 4px;">❤️ ${(p.likes && Object.keys(p.likes).length) || 0}</div>
+                                            <div style="color: white; font-weight: 700; display: flex; align-items: center; gap: 4px;">💬 ${p.comments ? p.comments.length : 0}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : `
+                            <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 12px;">
+                                <div style="font-size: 48px; margin-bottom: 12px;">📸</div>
+                                <div style="color: #64748b; font-size: 14px;">No posts yet. Start sharing your moments!</div>
+                            </div>
+                        `}
+                    </div>
+                </div>
             </div>
         `;
         profileContent.innerHTML = html;
+    },
+
+    // ============================================
+    // COVER IMAGE MODAL - UPLOAD COVER
+    // ============================================
+
+    showCoverImageModal: function() {
+        var self = this;
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.zIndex = '10050';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.background = 'rgba(0,0,0,0.85)';
+        
+        var content = document.createElement('div');
+        content.style.background = 'white';
+        content.style.borderRadius = '16px';
+        content.style.padding = '24px';
+        content.style.maxWidth = '500px';
+        content.style.width = '90%';
+        content.style.textAlign = 'center';
+        
+        var html = `
+            <div style="margin-bottom: 20px;">
+                <div style="font-size: 24px; margin-bottom: 8px;">🖼️</div>
+                <h2 style="margin: 0; font-size: 20px; color: #1a1a1a;">Upload Cover Image</h2>
+                <p style="color: #6b7280; margin: 8px 0 0 0; font-size: 14px;">Choose a beautiful cover photo for your profile</p>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <input type="file" id="coverImageInput" accept="image/*" style="display: none;">
+                <button onclick="document.getElementById('coverImageInput').click()" style="width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-bottom: 8px;">📤 Choose Image</button>
+                <p style="color: #9ca3af; font-size: 12px; margin: 0;">JPG, PNG, or WebP • Recommended: 1200x400px</p>
+            </div>
+            
+            <div style="display: flex; gap: 8px;">
+                <button onclick="this.closest('.modal-overlay').remove()" style="flex: 1; background: #f3f4f6; color: #1a1a1a; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
+            </div>
+        `;
+        
+        content.innerHTML = html;
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+        
+        // Handle file selection
+        var coverInput = modal.querySelector('#coverImageInput');
+        coverInput.onchange = function(e) {
+            var file = e.target.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    var imageData = event.target.result;
+                    
+                    // Upload to Cloudinary
+                    var formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('upload_preset', UPLOAD_PRESET);
+                    
+                    fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.secure_url) {
+                            // Save to Firebase
+                            db.ref('users/' + self.user.uid + '/coverImage').set(data.secure_url, function(err) {
+                                if (!err) {
+                                    self.toast('✅ Cover image updated!', 'success');
+                                    self.profile.coverImage = data.secure_url;
+                                    self.renderProfile();
+                                    modal.remove();
+                                } else {
+                                    self.toast('❌ Error saving cover image', 'error');
+                                }
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Upload error:', err);
+                        self.toast('❌ Upload failed', 'error');
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        
+        // Close on backdrop click
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        };
     },
 
     // ============================================
