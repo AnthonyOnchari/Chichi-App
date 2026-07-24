@@ -3449,3 +3449,458 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
         border-radius: 20px 20px 0 0;
     }
 }
+
+/* ============================================
+   NEW FEATURES - PROFILE IMAGE RING
+   ============================================ */
+
+.profile-image-ring {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    position: relative;
+    background: linear-gradient(135deg, #0088cc, #31a3e0);
+    padding: 3px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.profile-image-ring img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 3px solid white;
+    object-fit: cover;
+    display: block;
+}
+
+.profile-image-ring::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 0deg,
+        #0088cc 0deg,
+        #31a3e0 90deg,
+        #0088cc 180deg,
+        #31a3e0 270deg,
+        #0088cc 360deg
+    );
+    z-index: -1;
+    opacity: 0.4;
+    animation: ringPulse 3s ease-in-out infinite;
+}
+
+@keyframes ringPulse {
+    0%, 100% {
+        opacity: 0.4;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.02);
+    }
+}
+
+.profile-image-ring:hover {
+    transform: scale(1.05);
+}
+
+/* ============================================
+   NEW FEATURES - TRIVIA START BUTTON
+   ============================================ */
+
+#triviaStartBtn {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 40px 20px;
+    text-align: center;
+    animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.trivia-start-btn {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #0088cc, #31a3e0);
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 136, 204, 0.3);
+}
+
+.trivia-start-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px rgba(0, 136, 204, 0.5);
+}
+
+.trivia-start-btn:active {
+    transform: scale(0.95);
+}
+
+/* ============================================
+   NEW FEATURES - TRIVIA NEXT OVERLAY
+   ============================================ */
+
+#triviaNextOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease;
+}
+
+#triviaNextOverlay.show {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.trivia-next-btn {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    font-size: 24px;
+    background: linear-gradient(135deg, #10b981, #34d399);
+    border: 5px solid white;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    transition: all 0.3s;
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+}
+
+.trivia-next-btn:hover {
+    transform: scale(1.12);
+    box-shadow: 0 12px 32px rgba(16, 185, 129, 0.6);
+}
+
+.trivia-next-btn:active {
+    transform: scale(0.95);
+}
+
+/* ============================================
+   NEW FEATURES - GIFTS AUTO-SCROLL
+   ============================================ */
+
+.gifts-scroll-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    padding: 12px 0;
+    animation: slideUp 0.4s ease;
+}
+
+.gifts-scroll-container::-webkit-scrollbar {
+    width: 4px;
+}
+
+.gifts-scroll-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+}
+
+.gifts-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 136, 204, 0.3);
+    border-radius: 10px;
+}
+
+.gifts-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 136, 204, 0.5);
+}
+
+.gift-card {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+}
+
+.airtime-gift-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 20px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    border: 2px solid transparent;
+}
+
+.airtime-gift-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+    border-color: white;
+}
+
+.airtime-gift-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.airtime-gift-name {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.airtime-gift-cost {
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.airtime-gift-credits {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    width: fit-content;
+}
+
+/* ============================================
+   NEW FEATURES - MESSAGE DELETION
+   ============================================ */
+
+.message-context-menu {
+    position: absolute;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    z-index: 1000;
+    min-width: 140px;
+    box-shadow: var(--shadow);
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message-context-menu button {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 10px 12px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.message-context-menu button:hover {
+    background: #f3f4f6;
+    color: #ef4444;
+}
+
+.message-item {
+    position: relative;
+    transition: all 0.2s;
+}
+
+.message-item:hover {
+    background: rgba(0, 136, 204, 0.05);
+}
+
+.message-item-actions {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+.message-item:hover .message-item-actions {
+    opacity: 1;
+}
+
+.message-delete-btn {
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.message-delete-btn:hover {
+    background: #fca5a5;
+    transform: scale(1.05);
+}
+
+/* ============================================
+   NEW FEATURES - NOTIFICATIONS
+   ============================================ */
+
+.notifications-tab {
+    padding: 12px;
+    background: linear-gradient(135deg, #fef3c7, #fef08a);
+    border-radius: 10px;
+    border: 1px solid #fcd34d;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.notifications-tab:hover {
+    background: linear-gradient(135deg, #fcd34d, #fbbf24);
+    transform: translateX(4px);
+}
+
+.notifications-badge {
+    background: #dc2626;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+.notification-item {
+    background: linear-gradient(135deg, #fef3c7, #ffffff);
+    border-left: 4px solid #f59e0b;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.notification-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.notification-icon {
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+.notification-title {
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.notification-message {
+    font-size: 13px;
+    color: var(--text-light);
+    line-height: 1.4;
+}
+
+.notification-time {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 8px;
+}
+
+/* ============================================
+   NEW FEATURES - UNREAD BADGE
+   ============================================ */
+
+.chat-unread-badge {
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    margin-left: auto;
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(0, 136, 204, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(0, 136, 204, 0);
+    }
+}

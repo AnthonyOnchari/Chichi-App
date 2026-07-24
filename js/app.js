@@ -63,6 +63,10 @@ var app = {
     triviaAnswered: false,
     triviaTimeout: null,
     triviaTimer: null,
+    triviaStarted: false,
+    lastMessagePreview: null,
+    messageDeleteQueue: {},
+    notificationsTab: false,
     suspiciousActivityDetected: false,
     actionTimestamps: {},
     isAdmin: false,
@@ -7118,6 +7122,352 @@ var app = {
         if (menu) {
             menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
         }
+    },
+
+    // ============================================
+    // NEW FEATURES - START TRIVIA
+    // ============================================
+
+    startTrivia: function() {
+        this.triviaStarted = true;
+        var startBtn = document.getElementById('triviaStartBtn');
+        var questionDisplay = document.getElementById('triviaQuestionDisplay');
+        
+        if (startBtn) startBtn.style.display = 'none';
+        if (questionDisplay) questionDisplay.style.display = 'block';
+        
+        this.fetchTrivia();
+        console.log('✅ Trivia started');
+    },
+
+    nextTrivia: function() {
+        this.triviaStarted = false;
+        this.triviaAnswered = false;
+        
+        var overlay = document.getElementById('triviaNextOverlay');
+        if (overlay) {
+            overlay.classList.remove('show');
+            overlay.style.display = 'none';
+        }
+        
+        var startBtn = document.getElementById('triviaStartBtn');
+        if (startBtn) startBtn.style.display = 'flex';
+        
+        var questionDisplay = document.getElementById('triviaQuestionDisplay');
+        if (questionDisplay) questionDisplay.style.display = 'none';
+        
+        this.fetchTrivia();
+    },
+
+    // ============================================
+    // NEW FEATURES - MESSAGE DELETION
+    // ============================================
+
+    deleteMessage: function(messageId, chatUserId) {
+        var self = this;
+        
+        if (!confirm('🗑️ Delete this message? This action cannot be undone.')) {
+            return;
+        }
+        
+        var chatKey = [this.user.uid, chatUserId].sort().join('_');
+        var path = 'chats/' + chatKey + '/messages/' + messageId;
+        
+        db.ref(path).remove().then(function() {
+            console.log('✅ Message deleted');
+            self.toast('✓ Message deleted', 'success');
+            self.loadChat(chatUserId);
+        }).catch(function(err) {
+            console.error('❌ Delete error:', err);
+            self.toast('Error deleting message', 'error');
+        });
+    },
+
+    showMessageContextMenu: function(event, messageId, chatUserId, isOwnMessage) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        if (!isOwnMessage) {
+            this.toast('Can only delete your own messages', 'info');
+            return;
+        }
+        
+        var messageElement = event.target.closest('.message-item');
+        if (!messageElement) return;
+        
+        var existingMenu = messageElement.querySelector('.message-context-menu');
+        if (existingMenu) existingMenu.remove();
+        
+        var menu = document.createElement('div');
+        menu.className = 'message-context-menu';
+        menu.style.cssText = 'position: absolute; right: 10px; top: 100%; margin-top: 8px;';
+        
+        menu.innerHTML = '<button onclick="app.deleteMessage(\'' + messageId + '\', \'' + chatUserId + '\')" style="width: 100%; background: none; border: none; padding: 10px 12px; text-align: left; cursor: pointer; font-size: 13px; border-radius: 6px; transition: all 0.2s; color: #dc2626;">🗑️ Delete Message</button>';
+        
+        messageElement.style.position = 'relative';
+        messageElement.appendChild(menu);
+        
+        setTimeout(function() {
+            if (menu.parentElement) menu.remove();
+        }, 5000);
+        
+        var closeMenu = function() {
+            if (menu.parentElement) menu.remove();
+            document.removeEventListener('click', closeMenu);
+        };
+        
+        setTimeout(function() {
+            document.addEventListener('click', closeMenu);
+        }, 100);
+    },
+
+    // ============================================
+    // NEW FEATURES - MESSAGE PREVIEW
+    // ============================================
+
+    showLastMessagePreview: function() {
+        if (!this.currentChat || !this.user) return;
+        
+        var chatKey = [this.user.uid, this.currentChat].sort().join('_');
+        var self = this;
+        
+        db.ref('chats/' + chatKey + '/messages')
+            .limitToLast(1)
+            .once('value', function(snapshot) {
+                if (!snapshot.exists()) return;
+                
+                var messages = snapshot.val();
+                if (!messages) return;
+                
+                var lastMsg = Object.values(messages)[0];
+                var previewBox = document.getElementById('lastMessagePreview');
+                
+                if (previewBox && lastMsg.text) {
+                    var senderName = lastMsg.senderName || 'User';
+                    var messagePreview = lastMsg.text.substring(0, 50);
+                    if (lastMsg.text.length > 50) messagePreview += '...';
+                    
+                    previewBox.innerHTML = '<strong>' + senderName + ':</strong> ' + messagePreview;
+                    previewBox.style.display = 'block';
+                }
+            }).catch(function(err) {
+                console.log('Preview error:', err);
+            });
+    },
+
+    hideLastMessagePreview: function() {
+        var previewBox = document.getElementById('lastMessagePreview');
+        if (previewBox) previewBox.style.display = 'none';
+    },
+
+    markMessagesAsRead: function(chatUserId) {
+        if (!this.user) return;
+        
+        var unreadRef = db.ref('unread/' + this.user.uid + '/' + chatUserId);
+        unreadRef.remove();
+        
+        delete this.unreadMessages[chatUserId];
+        
+        var badge = document.querySelector('[data-user="' + chatUserId + '"] .chat-unread-badge');
+        if (badge) badge.remove();
+        
+        console.log('✅ Messages marked as read');
+    },
+
+    // ============================================
+    // NEW FEATURES - AIRTIME GIFTS
+    // ============================================
+
+    getAirtimeGifts: function() {
+        return [
+            {
+                name: '📱 50 KES Airtime',
+                value: 50,
+                credits: 10,
+                icon: '📱',
+                provider: 'Airtime',
+                category: 'airtime'
+            },
+            {
+                name: '📱 100 KES Airtime',
+                value: 100,
+                credits: 25,
+                icon: '📱',
+                provider: 'Airtime',
+                category: 'airtime'
+            },
+            {
+                name: '📱 200 KES Airtime',
+                value: 200,
+                credits: 50,
+                icon: '📱',
+                provider: 'Airtime',
+                category: 'airtime'
+            },
+            {
+                name: '📱 500 KES Airtime',
+                value: 500,
+                credits: 120,
+                icon: '📱',
+                provider: 'Airtime',
+                category: 'airtime'
+            },
+            {
+                name: '📱 1000 KES Airtime',
+                value: 1000,
+                credits: 250,
+                icon: '📱',
+                provider: 'Airtime',
+                category: 'airtime'
+            }
+        ];
+    },
+
+    // ============================================
+    // NEW FEATURES - NOTIFICATIONS TAB
+    // ============================================
+
+    showNotificationsTab: function() {
+        if (!this.user) {
+            this.toast('Please log in first', 'error');
+            return;
+        }
+        
+        var chatList = document.getElementById('chatsList');
+        if (!chatList) return;
+        
+        var self = this;
+        var notificationChats = [];
+        
+        db.ref('chats').once('value', function(snapshot) {
+            if (!snapshot.exists()) {
+                chatList.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-light);">📭 No notifications</div>';
+                return;
+            }
+            
+            snapshot.forEach(function(chatSnap) {
+                var chatData = chatSnap.val();
+                var lastMessage = (chatData.lastMessage || '').toLowerCase();
+                var chatKey = chatSnap.key;
+                
+                var userIds = chatKey.split('_');
+                var otherUserId = userIds[0] === self.user.uid ? userIds[1] : userIds[0];
+                
+                if (lastMessage.includes('money') || 
+                    lastMessage.includes('received') || 
+                    lastMessage.includes('sent') ||
+                    lastMessage.includes('payment') ||
+                    lastMessage.includes('admin') ||
+                    lastMessage.includes('notification') ||
+                    lastMessage.includes('alert')) {
+                    
+                    notificationChats.push({
+                        key: chatKey,
+                        userId: otherUserId,
+                        lastMessage: chatData.lastMessage || 'New notification',
+                        timestamp: chatData.timestamp || Date.now(),
+                        isAdmin: lastMessage.includes('admin') || lastMessage.includes('system')
+                    });
+                }
+            });
+            
+            notificationChats.sort(function(a, b) {
+                return b.timestamp - a.timestamp;
+            });
+            
+            if (notificationChats.length === 0) {
+                chatList.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-light);">📭 No notifications</div>';
+                return;
+            }
+            
+            var html = '<div class="notifications-container">';
+            
+            notificationChats.forEach(function(notif) {
+                var icon = notif.isAdmin ? '📢' : '💰';
+                var typeLabel = notif.isAdmin ? 'Admin' : 'Payment';
+                
+                html += '<div class="notification-item" onclick="app.openChat(\'' + notif.key + '\')">' +
+                    '<div class="notification-icon">' + icon + '</div>' +
+                    '<div class="notification-title">' + typeLabel + '</div>' +
+                    '<div class="notification-message">' + notif.lastMessage.substring(0, 60) + (notif.lastMessage.length > 60 ? '...' : '') + '</div>' +
+                    '<div class="notification-time">Just now</div>' +
+                    '</div>';
+            });
+            
+            html += '</div>';
+            chatList.innerHTML = html;
+        }).catch(function(err) {
+            console.error('Notification error:', err);
+            chatList.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;">Error loading notifications</div>';
+        });
+    },
+
+    getNotificationCount: function(callback) {
+        if (!this.user) {
+            callback(0);
+            return;
+        }
+        
+        var self = this;
+        var count = 0;
+        
+        db.ref('chats').once('value', function(snapshot) {
+            if (snapshot.exists()) {
+                snapshot.forEach(function(chatSnap) {
+                    var lastMessage = (chatSnap.val().lastMessage || '').toLowerCase();
+                    if (lastMessage.includes('money') || 
+                        lastMessage.includes('admin') || 
+                        lastMessage.includes('notification')) {
+                        count++;
+                    }
+                });
+            }
+            callback(count);
+        });
+    },
+
+    // ============================================
+    // NEW FEATURES - PROFILE RING
+    // ============================================
+
+    renderProfileImageWithRing: function(imageUrl, containerId) {
+        var container = document.getElementById(containerId);
+        if (!container) return;
+        
+        var ringDiv = document.createElement('div');
+        ringDiv.className = 'profile-image-ring';
+        
+        var img = document.createElement('img');
+        img.src = imageUrl || 'https://via.placeholder.com/80';
+        img.alt = 'Profile';
+        img.onerror = function() {
+            this.src = 'https://via.placeholder.com/80?text=👤';
+        };
+        
+        ringDiv.appendChild(img);
+        container.innerHTML = '';
+        container.appendChild(ringDiv);
+    },
+
+    // ============================================
+    // NEW FEATURES - UTILITY
+    // ============================================
+
+    formatNotificationTime: function(timestamp) {
+        var now = Date.now();
+        var diff = now - timestamp;
+        
+        var seconds = Math.floor(diff / 1000);
+        var minutes = Math.floor(seconds / 60);
+        var hours = Math.floor(minutes / 60);
+        var days = Math.floor(hours / 24);
+        
+        if (seconds < 60) return 'Just now';
+        if (minutes < 60) return minutes + 'm ago';
+        if (hours < 24) return hours + 'h ago';
+        if (days < 7) return days + 'd ago';
+        
+        return new Date(timestamp).toLocaleDateString();
     }
 };
 
@@ -7131,4 +7481,4 @@ console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size:
 console.log('%c💰 Chichi Coins - Earn by answering trivia!', 'color: #FFC24B; font-size: 12px;');
 console.log('%c🎁 Gift Catalog - Redeem coins for awesome rewards!', 'color: #8b5cf6; font-size: 12px;');
 console.log('%c📊 User engagement & revenue tracking active!', 'color: #3b82f6; font-size: 12px;');
-console.log('%c👨‍💻 Built by Anthony Onchari - Version V02A.01', 'color: #6b7280; font-size: 11px;');
+console.log('%c✨ Features: Profile Ring, Trivia Start, Message Delete, Notifications & More!', 'color: #ec4899; font-size: 11px;');

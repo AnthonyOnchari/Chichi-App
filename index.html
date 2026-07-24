@@ -247,9 +247,10 @@
                     <input type="text" placeholder="Search conversations..." id="messagesSearchInput" onkeyup="app.searchMessages(this.value)" style="background: none; border: none; flex: 1; font-size: 14px; outline: none;">
                 </div>
                 <div id="messagesFilterTabs">
-                    <button class="message-filter-tab active" onclick="app.filterMessages('all')">All</button>
-                    <button class="message-filter-tab" onclick="app.filterMessages('unread')">Unread</button>
-                    <button class="message-filter-tab" onclick="app.filterMessages('favorites')">Favorites</button>
+                    <button class="message-filter-tab active" onclick="app.filterMessages('all')">💬 All</button>
+                    <button class="message-filter-tab" onclick="app.filterMessages('unread')">📬 Unread</button>
+                    <button class="message-filter-tab" onclick="app.filterMessages('favorites')">⭐ Favorites</button>
+                    <button class="message-filter-tab" onclick="app.showNotificationsTab()">🔔 Notifications</button>
                 </div>
             </div>
             <div class="messages-container" id="messageList"></div>
@@ -271,10 +272,27 @@
             
             <div id="typingIndicator" style="display:none;padding:6px 16px;background:#f3f4f6;border-radius:8px;margin:0 16px 8px;font-size:13px;color:#6b7280;">Someone is typing...</div>
             
+            <div id="lastMessagePreview" style="
+                position: relative;
+                margin: 0 16px 8px;
+                background: linear-gradient(135deg, #f3f4f6, #ffffff);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 12px;
+                font-size: 12px;
+                color: var(--text-light);
+                display: none;
+                animation: slideUp 0.3s ease;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+                border-left: 3px solid var(--primary);
+                max-height: 80px;
+                overflow: hidden;
+            "></div>
+            
             <div id="chatInput">
                 <button class="attach-btn" onclick="document.getElementById('chatImageInput').click()" style="background:none;border:none;font-size:20px;cursor:pointer;padding:8px;opacity:0.6;">📎</button>
                 <input type="file" id="chatImageInput" style="display:none;" accept="image/*" multiple onchange="app.handleChatImageUpload(event)">
-                <input type="text" id="chatMessageInput" placeholder="Type a message..." oninput="app.onChatInputChange(event, window.currentChatUid)" onfocus="var chatMessages=document.getElementById('chatMessages');if(chatMessages){setTimeout(function(){chatMessages.scrollTop=chatMessages.scrollHeight;},50);}">
+                <input type="text" id="chatMessageInput" placeholder="Type a message..." oninput="app.onChatInputChange(event, window.currentChatUid)" onfocus="var chatMessages=document.getElementById('chatMessages');if(chatMessages){setTimeout(function(){chatMessages.scrollTop=chatMessages.scrollHeight;},50);}app.showLastMessagePreview();" onblur="app.hideLastMessagePreview();" onkeypress="if(event.key==='Enter' && !event.shiftKey) { app.sendChatMessage(); event.preventDefault(); }">
                 <button id="chatSendBtn" onclick="app.sendChatMessage()">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
                         <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
