@@ -3973,7 +3973,7 @@ var app = {
     },
 
     // ============================================
-    // RENDER PROFILE - FIXED
+    // RENDER PROFILE - BENTO STYLE
     // ============================================
 
     renderProfile: function() {
@@ -4006,107 +4006,121 @@ var app = {
             return;
         }
         
-        var userTier = 'free';
-        var tierData = EARNING_SETTINGS[userTier];
         var username = this.profile.username || 'user';
         var interests = this.profile.interests || [];
         var bio = this.profile.bio || '';
-        var userPosts = this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this)).length;
+        var userPosts = this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this));
         var followers = this.profile.followers || 0;
         var following = Object.keys(this.following).length;
+
+        // Generate posts grid HTML
+        var postsHtml = '';
+        if (userPosts.length === 0) {
+            postsHtml = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px; color: #9ca3af; background: white; border-radius: 8px;">
+                    <div style="font-size: 40px; margin-bottom: 8px;">📸</div>
+                    <div style="font-size: 14px; font-weight: 500;">No posts yet</div>
+                    <div style="font-size: 12px; margin-top: 4px;">Create your first post!</div>
+                </div>
+            `;
+        } else {
+            var recentPosts = userPosts.slice(0, 9);
+            postsHtml = recentPosts.map(function(p) {
+                var likes = (p.likes && Object.keys(p.likes).length) || 0;
+                var comments = (p.comments && p.comments.length) || 0;
+                return `
+                    <div style="position: relative; aspect-ratio: 1; background: #e5e7eb; overflow: hidden; cursor: pointer; border-radius: 4px;" onclick="app.viewPostDetail('${p.id}')">
+                        ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:24px;">📸</div>`}
+                        <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:white;padding:4px 8px;font-size:10px;display:flex;justify-content:space-between;align-items:center;">
+                            <span>❤️ ${likes}</span>
+                            <span>💬 ${comments}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
         var html = `
             <div style="padding: 0; background: #f5f5f5; min-height: 100vh;">
                 
-                <!-- PROFILE HEADER WITH COVER -->
-                <div style="position: relative; width: 100%; background: #1a1a1a; overflow: hidden;">
+                <!-- BENTO HEADER -->
+                <div style="display: grid; grid-template-columns: 90px 1fr; gap: 0; background: white; padding: 16px 16px 12px 16px; align-items: center; border-bottom: 1px solid #f0f0f0;">
                     
-                    <!-- Cover Image -->
-                    <div style="position: relative; width: 100%; height: 200px; background: linear-gradient(135deg, #2d1b69 0%, #3d2680 100%); overflow: hidden;">
-                        ${this.profile.coverImage ? `
-                            <img src="${this.profile.coverImage}" style="width:100%;height:100%;object-fit:cover;">
-                        ` : `
-                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:14px;">
-                                🌄
-                            </div>
-                        `}
-                        
-                        <!-- Change Cover Button -->
-                        <button onclick="app.showCoverImageModal()" style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.5);color:white;border:none;padding:4px 10px;border-radius:12px;font-size:10px;cursor:pointer;backdrop-filter:blur(4px);">📷 Cover</button>
-                        
-                        <!-- Back Button -->
-                        <button onclick="app.switchView('feed');" style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.5);color:white;border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;backdrop-filter:blur(4px);">‹</button>
-                        
-                        <!-- Profile Photo -->
-                        <div style="position:absolute;bottom:-50px;left:50%;transform:translateX(-50%);">
-                            <div style="
-                                width: 100px;
-                                height: 100px;
-                                border-radius: 50%;
-                                border: 4px solid white;
-                                background: linear-gradient(135deg, #667eea, #764ba2);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                font-size: 40px;
-                                color: white;
-                                font-weight: 700;
-                                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                                background-image: ${this.profile.profilePhoto ? 'url(' + this.profile.profilePhoto + ')' : 'none'};
-                                background-size: cover;
-                                background-position: center;
-                                cursor: pointer;
-                                transition: transform 0.3s;
-                            " onclick="app.showProfilePhotoModal()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
-                            </div>
+                    <!-- Left: Profile Photo -->
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <div style="
+                            width: 80px;
+                            height: 80px;
+                            border-radius: 50%;
+                            border: 3px solid white;
+                            background: linear-gradient(135deg, #667eea, #764ba2);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 32px;
+                            color: white;
+                            font-weight: 700;
+                            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+                            background-image: ${this.profile.profilePhoto ? 'url(' + this.profile.profilePhoto + ')' : 'none'};
+                            background-size: cover;
+                            background-position: center;
+                            cursor: pointer;
+                            transition: transform 0.3s;
+                            flex-shrink: 0;
+                        " onclick="app.showProfilePhotoModal()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
                         </div>
                     </div>
-                </div>
-                
-                <!-- PROFILE INFO -->
-                <div style="padding: 60px 16px 20px 16px; background: white; border-radius: 20px 20px 0 0; margin-top: -10px;">
                     
-                    <!-- Name & Username -->
-                    <div style="text-align: center; margin-bottom: 12px;">
-                        <div style="font-size: 20px; font-weight: 700; color: #1a1a1a; display: inline-flex; align-items: center; gap: 6px;">
+                    <!-- Right: Name, Username, Edit Button -->
+                    <div style="padding-left: 14px; display: flex; flex-direction: column; justify-content: center;">
+                        <div style="font-size: 18px; font-weight: 700; color: #1a1a1a; display: flex; align-items: center; gap: 6px;">
                             ${this.profile.name || 'User'}
                             <span style="color: #3b82f6; font-size: 16px;">✓</span>
                         </div>
-                        <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">@${username}</div>
+                        <div style="font-size: 13px; color: #9ca3af; margin-bottom: 6px;">@${username}</div>
+                        
+                        <!-- Edit Profile Button (right below username) -->
+                        <button onclick="app.showProfileSettings()" style="background: #f1f5f9; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #1a1a1a; font-size: 12px; transition: all 0.3s; width: fit-content;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f1f5f9'">
+                            ✏️ Edit Profile
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- STATS ROW -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; background: white; padding: 12px 16px; border-bottom: 1px solid #f0f0f0;">
+                    <div style="text-align: center; padding: 4px 0; border-right: 1px solid #f0f0f0;">
+                        <div style="font-weight: 700; color: #1a1a1a; font-size: 18px;">${userPosts.length}</div>
+                        <div style="font-size: 11px; color: #9ca3af;">Posts</div>
+                    </div>
+                    <div style="text-align: center; padding: 4px 0; border-right: 1px solid #f0f0f0;">
+                        <div style="font-weight: 700; color: #1a1a1a; font-size: 18px;">${followers}</div>
+                        <div style="font-size: 11px; color: #9ca3af;">Followers</div>
+                    </div>
+                    <div style="text-align: center; padding: 4px 0; cursor: pointer;" onclick="app.showFollowing()">
+                        <div style="font-weight: 700; color: #1a1a1a; font-size: 18px;">${following}</div>
+                        <div style="font-size: 11px; color: #9ca3af;">Following</div>
+                    </div>
+                </div>
+                
+                <!-- ABOUT & BIO SECTION -->
+                <div style="background: white; padding: 14px 16px; border-bottom: 1px solid #f0f0f0;">
+                    <!-- Email -->
+                    <div style="margin-bottom: 10px;">
+                        <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Contact</div>
+                        <div style="font-size: 13px; color: #475569; word-break: break-all;">📧 ${this.user.email}</div>
                     </div>
                     
                     <!-- Bio -->
-                    <div style="text-align: center; color: #4b5563; font-size: 13px; line-height: 1.5; margin-bottom: 16px; padding: 0 10px;">
-                        ${bio || 'No bio yet. Tap edit to add one!'}
-                    </div>
-                    
-                    <!-- Followers / Following -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 12px;">
-                        <div style="text-align: center;">
-                            <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">${userPosts}</div>
-                            <div style="font-size: 11px; color: #9ca3af;">Posts</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">${followers}</div>
-                            <div style="font-size: 11px; color: #9ca3af;">Followers</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-weight: 700; color: #1a1a1a; font-size: 16px; cursor: pointer;" onclick="app.showFollowing()">${following}</div>
-                            <div style="font-size: 11px; color: #9ca3af;">Following</div>
-                        </div>
-                    </div>
-                    
-                    <!-- About -->
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">About</div>
-                        <div style="font-size: 13px; color: #475569; word-break: break-all;">${this.user.email}</div>
+                    <div>
+                        <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Bio</div>
+                        <div style="font-size: 13px; color: #4b5563; line-height: 1.5;">${bio || 'No bio yet. Tap edit to add one!'}</div>
                     </div>
                     
                     <!-- Interests -->
                     ${interests && interests.length > 0 ? `
-                        <div style="margin-bottom: 16px;">
-                            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Interests</div>
+                        <div style="margin-top: 10px;">
+                            <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Interests</div>
                             <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                                 ${interests.map(function(interest) {
                                     var emojis = {
@@ -4115,37 +4129,28 @@ var app = {
                                         'gaming': '🎮', 'photography': '📸', 'writing': '✍️', 'cooking': '👨‍🍳', 'yoga': '🧘'
                                     };
                                     var emoji = emojis[interest.toLowerCase()] || '✨';
-                                    return `<span style="background: #f1f5f9; padding: 4px 14px; border-radius: 12px; font-size: 12px; color: #4b5563;">${emoji} ${interest}</span>`;
+                                    return `<span style="background: #f1f5f9; padding: 4px 12px; border-radius: 12px; font-size: 12px; color: #4b5563;">${emoji} ${interest}</span>`;
                                 }).join('')}
                             </div>
                         </div>
                     ` : ''}
-                    
-                    <!-- Edit Profile Button -->
-                    <button onclick="app.showProfileSettings()" style="width: 100%; background: #f1f5f9; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; color: #1a1a1a; font-size: 14px; transition: all 0.3s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f1f5f9'">
-                        ✏️ Edit Profile
-                    </button>
                 </div>
                 
                 <!-- POSTS GRID (3 columns) -->
-                <div style="padding: 16px;">
-                    <div style="font-weight: 700; color: #1a1a1a; margin-bottom: 12px; font-size: 14px;">📸 Posts</div>
+                <div style="padding: 12px 12px 80px 12px;">
+                    <div style="font-weight: 700; color: #1a1a1a; margin-bottom: 10px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                        📸 Posts
+                        <span style="font-size: 12px; color: #9ca3af; font-weight: 400;">(${userPosts.length})</span>
+                    </div>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
-                        ${this.posts.filter(p => p.userId === this.user.uid).length > 0 ? 
-                            this.posts.filter(p => p.userId === this.user.uid).map(p => `
-                                <div style="position: relative; aspect-ratio: 1; background: #e5e7eb; border-radius: 4px; overflow: hidden; cursor: pointer;" onclick="app.viewPostDetail('${p.id}')">
-                                    ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:20px;">📸</div>`}
-                                </div>
-                            `).join('') 
-                        : `
-                            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #9ca3af; font-size: 13px; background: white; border-radius: 8px;">
-                                No posts yet. Share your first moment!
-                            </div>
-                        `}
+                        ${postsHtml}
                     </div>
                 </div>
+                
+                <div style="height: 20px;"></div>
             </div>
         `;
+        
         profileContent.innerHTML = html;
     },
 
@@ -5743,10 +5748,14 @@ var app = {
                 <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width:100%;min-height:80px;padding:12px;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:1rem;resize:vertical;box-sizing:border-box;">${this.profile.bio || ''}</textarea>
             </div>
            
-            <div style="margin-bottom:16px;">
+            <div style="margin-bottom:16px; position: relative;">
                 <label style="display:block;font-weight:600;margin-bottom:8px;">Interests (comma separated)</label>
-                <input type="text" id="editProfileInterests" value="${(this.profile.interests || []).join(', ')}" placeholder="music, sports, travel, tech..." style="width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;font-size:1rem;box-sizing:border-box;">
-                <div style="font-size:0.75rem;color:#999;margin-top:4px;">Add your interests separated by commas</div>
+                <input type="text" id="editProfileInterests" value="${(this.profile.interests || []).join(', ')}" 
+                       placeholder="music, sports, travel, tech..." 
+                       style="width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;font-size:1rem;box-sizing:border-box;"
+                       onkeyup="app.showInterestSuggestions(this)">
+                <div id="interestSuggestionsContainer" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ccc;border-radius:8px;max-height:150px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.1);margin-top:4px;"></div>
+                <div style="font-size:0.75rem;color:#999;margin-top:4px;">Type to see suggestions, click to add</div>
             </div>
            
             <div style="display:flex;gap:12px;margin-top:24px;">
@@ -5757,6 +5766,74 @@ var app = {
        
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+    },
+
+    // ============================================
+    // INTEREST SUGGESTIONS
+    // ============================================
+
+    showInterestSuggestions: function(input) {
+        var container = document.getElementById('interestSuggestionsContainer');
+        if (!container) return;
+        
+        var query = input.value.trim().toLowerCase();
+        
+        if (query.length < 1) {
+            container.style.display = 'none';
+            container.innerHTML = '';
+            return;
+        }
+        
+        var allInterests = [
+            'Music', 'Sports', 'Travel', 'Art', 'Tech', 'Food', 'Fitness', 'Books',
+            'Movies', 'Nature', 'Gaming', 'Photography', 'Writing', 'Cooking', 'Yoga',
+            'Dance', 'Fashion', 'Science', 'History', 'Entrepreneurship', 'Marketing',
+            'Finance', 'Startups', 'Comedy', 'Animation', 'Design', 'Illustration',
+            'Football', 'Basketball', 'Tennis', 'Health', 'Beauty', 'DIY', 'Programming',
+            'AI', 'Web Dev', 'Apps', 'Gadgets', 'Learning', 'Language', 'Investing',
+            'Environment', 'Charity', 'Community', 'Activism', 'Culture'
+        ];
+        
+        var suggestions = allInterests.filter(function(interest) {
+            return interest.toLowerCase().includes(query);
+        });
+        
+        if (suggestions.length === 0) {
+            container.innerHTML = '<div style="padding: 8px; color: #9ca3af; font-size: 12px;">No matches found</div>';
+            container.style.display = 'block';
+            return;
+        }
+        
+        var html = '';
+        suggestions.slice(0, 8).forEach(function(interest) {
+            html += `
+                <div style="padding: 6px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: #1a202c; transition: 0.2s;" 
+                     onmouseover="this.style.background='#f0f7ff'" 
+                     onmouseout="this.style.background='white'"
+                     onclick="app.addInterestSuggestion('${interest}')">
+                    ${interest}
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        container.style.display = 'block';
+    },
+
+    addInterestSuggestion: function(interest) {
+        var input = document.getElementById('editProfileInterests');
+        if (!input) return;
+        
+        var currentValue = input.value.trim();
+        var interests = currentValue ? currentValue.split(',').map(function(i) { return i.trim(); }) : [];
+        
+        if (!interests.includes(interest)) {
+            interests.push(interest);
+            input.value = interests.join(', ');
+        }
+        
+        document.getElementById('interestSuggestionsContainer').style.display = 'none';
+        input.focus();
     },
 
     previewEditProfilePhoto: function(event) {
@@ -5861,7 +5938,7 @@ var app = {
                 self.toast('Error updating profile', 'error');
             } else {
                 self.profile = { ...self.profile, ...updateData };
-                self.toast('Profile updated!', 'success');
+                self.toast('✅ Profile updated!', 'success');
                 self.editProfilePhoto = null;
                 var modal = document.querySelector('.modal-overlay');
                 if (modal) {
@@ -6179,23 +6256,14 @@ var app = {
                 
                 var postHtml = '<div class="post" id="post-' + p.id + '" style="' + (isSupportPost ? 'border-radius:12px;' : '') + '"><div class="post-header"><div class="post-user"><div class="post-avatar" style="background-image:url(' + (p.userPhoto || '') + ');cursor:pointer;" onclick="app.viewUserProfile(\'' + p.userId + '\')">' + (!p.userPhoto ? p.userName.charAt(0).toUpperCase() : '') + '</div><div><div class="post-name" onclick="app.viewUserProfile(\'' + p.userId + '\')">' + p.userName + '</div><div class="post-time">' + p.createdAt + '</div></div></div>' + (isOwnPost ? '<button class="post-menu" onclick="app.deletePost(\'' + p.id + '\')">🗑️</button>' : '') + '</div>';
                 
-                if (isSupportPost) {
-                    postHtml += '<div style="background:#0088cc;color:white;padding:4px 12px;font-size:11px;font-weight:700;display:inline-block;margin:8px 16px 0;border-radius:20px;">🤖 Generated by CHICHI AI</div>';
-                }
+                // REMOVED: Generated by CHICHI AI labels
                 
                 postHtml += '<img src="' + p.photoUrl + '" class="post-image" style="' + (isSupportPost ? 'border-radius:0;' : '') + '"><div class="post-caption">' + p.caption + '</div>';
                 
-                if (isSupportPost) {
-                    postHtml += '<div style="padding:0 16px 8px;font-size:11px;color:#0088cc;font-style:italic;">✨ Generated by CHICHI AI • ' + (p.category || 'Support') + '</div>';
-                }
-                
                 postHtml += '<div class="post-stats">' + likes + ' likes · ' + downloads + ' saves · ' + comments + ' comments</div>';
                 
-                if (!isSupportPost) {
-                    postHtml += '<div class="post-actions"><button class="post-action ' + (userLiked ? 'liked' : '') + '" onclick="app.likePost(\'' + p.id + '\')">' + (userLiked ? '❤️ Liked' : '🤍 Like') + '</button><button class="post-action" onclick="app.downloadPost(\'' + p.photoUrl + '\', \'' + p.id + '\')">💾 Save</button><button class="post-action" onclick="app.viewComments(\'' + p.id + '\')">💬 Comment</button><button class="post-action" onclick="app.sharePost(\'' + p.id + '\', \'' + p.caption.replace(/'/g, "\\'") + '\')">📤 Share</button></div>';
-                } else {
-                    postHtml += '<div style="padding:8px 16px 16px;display:flex;gap:12px;border-top:1px solid #eee;margin-top:4px;"><span style="font-size:13px;color:#6b7280;">❤️ ' + likes + ' likes</span><span style="font-size:13px;color:#6b7280;">💾 ' + downloads + ' saves</span><span style="font-size:13px;color:#6b7280;">💬 ' + comments + ' comments</span></div>';
-                }
+                // Show actions for all posts (including support posts)
+                postHtml += '<div class="post-actions"><button class="post-action ' + (userLiked ? 'liked' : '') + '" onclick="app.likePost(\'' + p.id + '\')">' + (userLiked ? '❤️ Liked' : '🤍 Like') + '</button><button class="post-action" onclick="app.downloadPost(\'' + p.photoUrl + '\', \'' + p.id + '\')">💾 Save</button><button class="post-action" onclick="app.viewComments(\'' + p.id + '\')">💬 Comment</button><button class="post-action" onclick="app.sharePost(\'' + p.id + '\', \'' + p.caption.replace(/'/g, "\\'") + '\')">📤 Share</button></div>';
                 
                 postHtml += '</div>';
                 html += postHtml;
@@ -6231,6 +6299,9 @@ var app = {
            
             db.ref('posts/' + id + '/likes').set(likes);
             self.renderFeed();
+            if (self.currentView === 'profile') {
+                self.renderProfile();
+            }
             self.logUserActivity('like_post', 'Liked post: ' + id);
         });
     },
@@ -6284,9 +6355,14 @@ var app = {
 
     deletePost: function(id) {
         if (!confirm('Delete this post?')) return;
-        db.ref('posts/' + id).remove();
-        this.toast('Post deleted', 'success');
-        this.loadPosts();
+        var self = this;
+        db.ref('posts/' + id).remove().then(function() {
+            self.toast('Post deleted', 'success');
+            self.loadPosts();
+            if (self.currentView === 'profile') {
+                self.renderProfile();
+            }
+        });
     },
 
     // ============================================
@@ -6319,141 +6395,6 @@ var app = {
             modal.innerHTML = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2 style="font-weight:700;margin-bottom:16px;">Comments</h2><div style="max-height:400px;overflow-y:auto;margin-bottom:16px;">' + html + '</div></div>';
             document.body.appendChild(modal);
         }.bind(this));
-    },
-
-    // ============================================
-    // PROFILE SETTINGS MENU
-    // ============================================
-
-    showProfileSettings: function() {
-        var html = `
-            <div class="modal" style="width: 90%; max-width: 320px; border-radius: 16px; padding: 0; overflow: hidden;">
-                <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); padding: 16px; color: white;">
-                    <div class="modal-close" style="position: absolute; top: 8px; right: 8px;">
-                        <button onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px;">✕</button>
-                    </div>
-                    <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Settings</h2>
-                </div>
-                
-                <div style="padding: 0;">
-                    <button onclick="app.showEditProfileModal(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #1e293b; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: 0.3s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-                        ✏️ Edit Profile
-                    </button>
-                    
-                    <button onclick="app.showNotificationPreferences(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #1e293b; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: 0.3s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-                        🔔 Notification Settings
-                    </button>
-                    
-                    <button onclick="app.showAppSettings(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #1e293b; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: 0.3s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-                        ⚙️ App Settings
-                    </button>
-                    
-                    <button onclick="app.showLogout(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #ef4444; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; transition: 0.3s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='white'">
-                        🚪 Log Out
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = html;
-        document.body.appendChild(modal);
-    },
-
-    // ============================================
-    // APP SETTINGS
-    // ============================================
-
-    showAppSettings: function() {
-        var html = `
-            <div class="modal" style="max-width: 500px;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <h2 style="font-weight: 700; margin-bottom: 20px;">App Settings</h2>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px; background: #f8fafc; border-radius: 10px; margin-bottom: 12px;">
-                    <div>
-                        <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">Dark Mode</div>
-                        <div style="font-size: 13px; color: #64748b;">Toggle dark theme</div>
-                    </div>
-                    <label class="dark-mode-toggle" style="margin: 0;">
-                        <input type="checkbox" id="darkModeToggle" onchange="app.toggleDarkMode()" ${localStorage.getItem('chichi-dark-mode') === 'enabled' ? 'checked' : ''} style="cursor: pointer;">
-                        <div class="toggle-cube"></div>
-                    </label>
-                </div>
-                
-                <div style="padding: 12px; background: #f0f7ff; border-radius: 10px; border-left: 4px solid #3b82f6;">
-                    <div style="font-size: 13px; color: #0c4a6e; font-weight: 600;">App Version</div>
-                    <div style="font-size: 12px; color: #0c4a6e; margin-top: 4px;">CHICHI V02A.01</div>
-                </div>
-            </div>
-        `;
-        
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = html;
-        document.body.appendChild(modal);
-    },
-
-    // ============================================
-    // VIEW POST DETAIL
-    // ============================================
-
-    viewPostDetail: function(id) {
-        var self = this;
-        var post = this.posts.find(function(p) { return p.id === id; });
-        
-        if (!post) return;
-        
-        var likes = (post.likes && Object.keys(post.likes).length) || 0;
-        var comments = post.comments || [];
-        var userLiked = this.user && post.likes && post.likes[this.user.uid];
-        
-        var html = `
-            <div class="modal">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-height:80vh;overflow-y:auto;">
-                    <div style="background:#f0f0f0;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
-                        <img src="${post.photoUrl}" style="width:100%;height:100%;object-fit:cover;">
-                    </div>
-                    <div style="display:flex;flex-direction:column;">
-                        <div style="display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid #e2e8f0;">
-                            <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);background-image:url(${post.userPhoto || ''});background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">${!post.userPhoto ? post.userName.charAt(0).toUpperCase() : ''}</div>
-                            <div>
-                                <div style="font-weight:700;color:#1e293b;">${post.userName}</div>
-                                <div style="font-size:12px;color:#64748b;">${post.createdAt}</div>
-                            </div>
-                        </div>
-                        
-                        <div style="padding:12px 0;border-bottom:1px solid #e2e8f0;">
-                            <div style="font-size:14px;color:#1e293b;line-height:1.6;">${post.caption}</div>
-                        </div>
-                        
-                        <div style="flex:1;overflow-y:auto;padding:12px 0;border-bottom:1px solid #e2e8f0;">
-                            ${comments.length === 0 ? '<div style="text-align:center;color:#6b7280;padding:20px;font-size:14px;">No comments yet</div>' : `
-                                ${comments.map(function(c) {
-                                    return `<div style="margin-bottom:12px;"><div style="font-weight:600;font-size:13px;">${c.user}</div><div style="font-size:13px;color:#475569;margin-top:4px;">${c.text}</div><div style="font-size:11px;color:#94a3b8;margin-top:4px;">${c.time}</div></div>`;
-                                }).join('')}
-                            `}
-                        </div>
-                        
-                        <div style="padding:12px 0;border-bottom:1px solid #e2e8f0;">
-                            <div style="font-weight:700;font-size:14px;color:#1e293b;">${likes} likes · ${comments.length} comments</div>
-                        </div>
-                        
-                        <div style="padding:12px 0;display:flex;gap:8px;">
-                            <button onclick="app.likePost('${post.id}');location.reload();" style="flex:1;background:${userLiked ? '#fbbf24' : '#f0f0f0'};color:${userLiked ? 'white' : '#1e293b'};border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;transition:0.3s;">${userLiked ? '❤️ Liked' : '🤍 Like'}</button>
-                            <button onclick="app.downloadPost('${post.photoUrl}', '${post.id}');" style="flex:1;background:#f0f0f0;color:#1e293b;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;transition:0.3s;">💾 Save</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = html;
-        document.body.appendChild(modal);
     },
 
     // ============================================
@@ -8384,6 +8325,30 @@ var app = {
                 item.style.display = 'none';
             }
         });
+    },
+
+    // ============================================
+    // REFRESH FEED - FIXED
+    // ============================================
+
+    refreshFeed: function() {
+        var btn = document.getElementById('refreshFeedBtn');
+        if (btn) {
+            btn.textContent = '⏳';
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+        }
+        
+        this.loadPosts();
+        this.toast('🔄 Feed refreshed!', 'success');
+        
+        setTimeout(function() {
+            if (btn) {
+                btn.textContent = '↻';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
+        }, 1000);
     }
 };
 
