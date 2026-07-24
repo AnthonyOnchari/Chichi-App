@@ -22,7 +22,7 @@ var app = {
     onlineInterval: null,
     postedHistory: [],
     lastPostTime: 0,
-        editProfilePhoto: null,
+    editProfilePhoto: null,
     triviaInterval: null,
     currentTrivia: null,
     triviaAnswered: false,
@@ -207,7 +207,6 @@ var app = {
         setTimeout(function() {
             if (self.user && self.user.email === 'support-chichi@gmail.com') {
                 console.log('🤖 Support account detected! Starting auto-post scheduler...');
-                self.startAutoPostScheduler();
             }
         }, 5000);
     },
@@ -1830,26 +1829,20 @@ var app = {
                     <div style="font-size: 28px; font-weight: 800; margin-top: 8px;">CC Points ${price}/month</div>
                 </div>
                 
-                <div style="background: #f0f7ff; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-                    <div style="font-size: 14px; font-weight: 600; color: #1a202c;">📱 How to Pay:</div>
-                    <div style="font-size: 13px; color: #6b7280; margin-top: 4px; line-height: 1.6;">
-                        1. Send CC Points ${price} to <strong style="color: #0088cc;">Till ${MPESA_TILL}</strong><br>
-                        2. Copy the M-Pesa confirmation message<br>
-                        3. Paste it below and submit
+                <div style="background: #fef3c7; padding: 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #f59e0b;">
+                    <div style="font-size: 13px; color: #78350f; line-height: 1.6;">
+                        💳 Premium is purchased through Google Play In-App Purchase.<br>
+                        <br>
+                        Click below to proceed with secure payment.
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">📋 M-Pesa Confirmation Message</label>
-                    <textarea id="paymentConfirmation" class="form-input" placeholder="Paste the M-Pesa confirmation message here..." style="min-height: 80px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;"></textarea>
-                </div>
-                
-                <button onclick="app.submitPaymentConfirmation('${tier}')" style="background: ${tierData.badgeColor || 'var(--primary)'}; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
-                    📤 Submit Payment
+                <button onclick="this.closest('.modal-overlay').remove(); app.toast('✅ Redirecting to Google Play Store...', 'success');" style="background: ${tierData.badgeColor || 'var(--primary)'}; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
+                    💳 Upgrade Now
                 </button>
                 
                 <div style="margin-top: 12px; font-size: 12px; color: #6b7280; text-align: center;">
-                    ⏱️ Admin will verify and activate your account within 24 hours
+                    ✅ Secure payment through Google Play Store
                 </div>
             </div>
         `;
@@ -1862,10 +1855,217 @@ var app = {
     // ============================================
 
 
+    determineSpinResult: function() {
+        if (window.ADMIN_SPINNER_OVERRIDES && window.ADMIN_SPINNER_OVERRIDES.forceWin) {
+            var amount = window.ADMIN_SPINNER_OVERRIDES.forceAmount;
+            window.ADMIN_SPINNER_OVERRIDES.forceWin = false;
+            window.ADMIN_SPINNER_OVERRIDES.forceAmount = 0;
+            this.logUserActivity('admin_force_win_used', 'Forced win of CC Points ' + amount);
+            return Math.min(amount, SPINNER_CONFIG.maxWin);
+        }
+        
+        var segments = SPINNER_CONFIG.segments;
+        var totalWeight = segments.reduce(function(sum, seg) { return sum + seg.weight; }, 0);
+        var random = Math.random() * totalWeight;
+        var cumulative = 0;
+        
+        for (var i = 0; i < segments.length; i++) {
+            cumulative += segments[i].weight;
+            if (random <= cumulative) {
+                var value = segments[i].value;
+                if (value > SPINNER_CONFIG.maxWin) {
+                    return SPINNER_CONFIG.maxWin;
+                }
+                return value;
+            }
+        }
+        return 0;
+    },
+
+    showSpinnerWheel: function(winAmount) {
+        var self = this;
+        
+        var segments = [];
+        var segmentColors = [
+            '#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', 
+            '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#06b6d4',
+            '#84cc16', '#a855f7', '#ef4444', '#f59e0b', '#22c55e',
+            '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'
+        ];
+        
+        var prizeValues = [0, 1, 2, 3, 5, 10, 15, 20, 25, 30, 35, 40, 0, 5, 10, 15, 20, 25, 30, 35];
+        for (var i = prizeValues.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var temp = prizeValues[i];
+            prizeValues[i] = prizeValues[j];
+            prizeValues[j] = temp;
+        }
+        
+        var winIndex = Math.floor(Math.random() * 20);
+        prizeValues[winIndex] = winAmount;
+        
+        for (var i = 0; i < 20; i++) {
+            var value = prizeValues[i];
+            var label = value === 0 ? '💔' : 'CC Points ' + value;
+            segments.push({
+                value: value,
+                label: label,
+                color: segmentColors[i % segmentColors.length]
+            });
+        }
+        
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '10050';
+        
+        var canvasSize = Math.min(window.innerWidth - 40, 380);
+        
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 24px; padding: 20px; max-width: 420px; width: 95%; text-align: center; animation: smoothFadeIn 0.3s ease;">
+                <h3 style="margin: 0 0 4px 0; font-weight: 700;">🎰 Spin & Win!</h3>
+                <p style="color: #6b7280; font-size: 13px; margin-bottom: 12px;">Cost: CC Points ${SPINNER_CONFIG.spinCost} | Max Win: CC Points ${SPINNER_CONFIG.maxWin}</p>
+                
+                <div style="position: relative; margin: 0 auto; width: ${canvasSize}px; height: ${canvasSize}px;">
+                    <canvas id="spinnerCanvas" width="${canvasSize}" height="${canvasSize}" style="width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 4px 20px rgba(0,0,0,0.2);"></canvas>
+                    <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%);">
+                        <div style="width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent; border-top: 28px solid #ef4444; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));"></div>
+                    </div>
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;">
+                        <div style="width: 30px; height: 30px; background: #1a202c; border-radius: 50%; border: 4px solid white; box-shadow: 0 0 20px rgba(0,0,0,0.3);"></div>
+                    </div>
+                </div>
+                
+                <button id="spinButton" onclick="app.startSpin()" style="background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; padding: 14px 40px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 18px; margin-top: 16px; width: 100%;">
+                    🎰 SPIN
+                </button>
+                
+                <div id="spinResult" style="margin-top: 12px; font-size: 20px; font-weight: 700; min-height: 40px;"></div>
+                
+                <button onclick="this.closest('.modal-overlay').remove()" style="margin-top: 8px; background: none; border: none; color: #6b7280; cursor: pointer; font-size: 13px;">Close</button>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        this._spinnerData = {
+            segments: segments,
+            winAmount: winAmount,
+            modal: modal,
+            isSpinning: false
+        };
+        
+        this.drawSpinnerWheel(segments, 0);
+    },
 
 
+    startSpin: function() {
+        if (this._spinnerData && this._spinnerData.isSpinning) return;
+        
+        var self = this;
+        var spinBtn = document.getElementById('spinButton');
+        var resultDiv = document.getElementById('spinResult');
+        
+        if (spinBtn) {
+            spinBtn.disabled = true;
+            spinBtn.textContent = '🌀 Spinning...';
+            spinBtn.style.opacity = '0.7';
+        }
+        
+        if (resultDiv) {
+            resultDiv.innerHTML = '';
+        }
+        
+        this._spinnerData.isSpinning = true;
+        
+        var segments = this._spinnerData.segments;
+        var winAmount = this._spinnerData.winAmount;
+        
+        var winSegmentIndex = 0;
+        for (var i = 0; i < segments.length; i++) {
+            if (segments[i].value === winAmount && winAmount > 0) {
+                winSegmentIndex = i;
+                break;
+            }
+        }
+        
+        if (winAmount === 0) {
+            var loseSegments = [];
+            for (var i = 0; i < segments.length; i++) {
+                if (segments[i].value === 0) {
+                    loseSegments.push(i);
+                }
+            }
+            winSegmentIndex = loseSegments[Math.floor(Math.random() * loseSegments.length)];
+        }
+        
+        var segmentAngle = (2 * Math.PI) / segments.length;
+        var targetRotation = (2 * Math.PI) * (5 + Math.random() * 4) + (winSegmentIndex / segments.length) * 2 * Math.PI;
+        var startTime = Date.now();
+        var duration = 5000 + Math.random() * 2000;
+        
+        function animateSpin() {
+            var elapsed = Date.now() - startTime;
+            var progress = Math.min(elapsed / duration, 1);
+            
+            var ease = 1 - Math.pow(1 - progress, 3);
+            var rotation = targetRotation * ease;
+            
+            self.drawSpinnerWheel(segments, rotation);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animateSpin);
+            } else {
+                self._spinnerData.isSpinning = false;
+                
+                if (spinBtn) {
+                    spinBtn.style.display = 'none';
+                }
+                
+                self.showSpinResult(winAmount);
+            }
+        }
+        
+        animateSpin();
+    },
 
-
+    showSpinResult: function(winAmount) {
+        var resultDiv = document.getElementById('spinResult');
+        
+        if (winAmount > 0) {
+            this.balance += winAmount;
+            db.ref('users/' + this.user.uid + '/balance').set(this.balance);
+            this.updateBalanceDisplays();
+            
+            resultDiv.innerHTML = `
+                <div style="color: #22c55e; font-size: 28px;">🎉 You Won!</div>
+                <div style="color: #1a202c; font-size: 36px; font-weight: 800;">+CC Points ${winAmount}</div>
+                <div style="color: #6b7280; font-size: 14px; margin-top: 4px;">Balance: CC Points ${this.balance.toFixed(2)}</div>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap;">
+                    <button onclick="app.spinAgain()" style="padding: 10px 24px; background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;">🔄 Spin Again</button>
+                    <button onclick="app.showWithdrawModal()" style="padding: 10px 24px; background: #22c55e; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;">💳 Withdraw</button>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 24px; background: #f3f4f6; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;">Close</button>
+                </div>
+            `;
+            
+            this.toast('🎉 You won CC Points ' + winAmount + '!', 'success');
+            this.logUserActivity('spinner_win', 'Won CC Points ' + winAmount);
+        } else {
+            resultDiv.innerHTML = `
+                <div style="color: #ef4444; font-size: 28px;">😔 Better Luck Next Time!</div>
+                <div style="color: #6b7280; font-size: 14px;">You lost this round. Try again!</div>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap;">
+                    <button onclick="app.spinAgain()" style="padding: 10px 24px; background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;">🔄 Spin Again</button>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 24px; background: #f3f4f6; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;">Close</button>
+                </div>
+            `;
+            
+            this.logUserActivity('spinner_lose', 'Lost spin');
+        }
+        
+        this._spinnerData = null;
+    },
 
 
     updateBalanceDisplays: function() {
@@ -2255,7 +2455,7 @@ var app = {
                     <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${userBalance.toFixed(2)}</div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                         <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
-                        <button 
+                        <button onclick="app.openSpinner()" style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
                         ${userTier !== 'vip' ? `<button onclick="app.showPremiumPayment('premium')" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Upgrade</button>` : ''}
                     </div>
                     <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
@@ -2289,7 +2489,9 @@ var app = {
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
                         Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
                     </div>
-                    <button 
+                    <button onclick="app.openSpinner()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
+                        🎯 Spin Now
+                    </button>
                 </div>
                 
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
@@ -2356,7 +2558,7 @@ var app = {
                     <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                         <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
-                        <button 
+                        <button onclick="app.openSpinner()" style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
                         ${userTier !== 'vip' ? `<button onclick="app.showPremiumPayment('premium')" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Upgrade</button>` : ''}
                     </div>
                     <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
@@ -2393,7 +2595,9 @@ var app = {
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
                         Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
                     </div>
-                    <button 
+                    <button onclick="app.openSpinner()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
+                        🎯 Spin Now
+                    </button>
                 </div>
                 
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
@@ -3010,7 +3214,7 @@ var app = {
                     <div class="balance-label">💰 Your Balance</div>
                     <div class="balance-amount" id="balanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
                     <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
-                    <button class="btn-withdraw" 
+                    <button class="btn-withdraw" onclick="app.openSpinner()" style="background:#8b5cf6;margin-left:8px;">🎰 Spin</button>
                 </div>
             </div>
             
@@ -3618,7 +3822,11 @@ var app = {
             clearInterval(this.onlineInterval);
             this.onlineInterval = null;
         }
-                if (this.triviaInterval) {
+        if (this.autoPostInterval) {
+            clearInterval(this.autoPostInterval);
+            this.autoPostInterval = null;
+        }
+        if (this.triviaInterval) {
             clearInterval(this.triviaInterval);
             this.triviaInterval = null;
         }
@@ -4398,6 +4606,28 @@ var app = {
         });
     },
 
+    getRandomImage: function(keyword) {
+        return new Promise(function(resolve, reject) {
+            var unsplashUrl = 'https://api.unsplash.com/photos/random?query=' + encodeURIComponent(keyword) + '&orientation=landscape';
+            fetch(unsplashUrl, {
+                headers: { 'Authorization': 'Client-ID 0Gsd_TnIf0UngbQD6aLSR-u6pTQf__o5W93K8Q30G7Q' }
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Unsplash API error');
+                return response.json();
+            })
+            .then(function(data) {
+                if (data && data.urls && data.urls.regular) { resolve(data.urls.regular); }
+                else { throw new Error('No image from Unsplash'); }
+            })
+            .catch(function() {
+                var width = 800 + Math.floor(Math.random() * 400);
+                var height = 600 + Math.floor(Math.random() * 300);
+                var seed = 'person' + Date.now() + Math.random();
+                resolve('https://picsum.photos/seed/' + seed + '/' + width + '/' + height);
+            });
+        });
+    },
 
     uploadImageToCloudinary: function(imageUrl) {
         return new Promise(function(resolve, reject) {
@@ -4419,8 +4649,6 @@ var app = {
                 .catch(reject);
         });
     },
-
-
 
     // ============================================
     // PREVIEW PHOTO
@@ -5164,13 +5392,12 @@ app.initMusic();
 setTimeout(function() {
     if (app.user && app.user.email === 'support-chichi@gmail.com') {
         console.log('🤖 Support account detected! Starting auto-post scheduler...');
-        
     }
 }, 3000);
 
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
 console.log('%c📱 Auto-posts every 10 minutes with unique content', 'color: #0088cc; font-size: 12px;');
-console.log('%c🧠 Trivia: CC Points 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
-console.log('%c🎰 Spin & Win: CC Points 5 per spin - Max CC Points 40!', 'color: #8b5cf6; font-size: 12px;');
+console.log('%c🧠 Trivia:CC Points 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
+console.log('%c🎰 Spin & Win:CC Points 5 per spin - MaxCC Points 40!', 'color: #8b5cf6; font-size: 12px;');
 console.log('%c🛡️ Suspicious activity detection active!', 'color: #ef4444; font-size: 12px;');
 console.log('%c👨‍💻 Built by Anthony Onchari - Version V01A.01', 'color: #6b7280; font-size: 11px;');
