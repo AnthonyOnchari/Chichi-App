@@ -90,10 +90,6 @@ var app = {
     triviaAnswered: false,
     triviaTimeout: null,
     triviaTimer: null,
-    triviaStarted: false,
-    lastMessagePreview: null,
-    messageDeleteQueue: {},
-    notificationsTab: false,
     suspiciousActivityDetected: false,
     actionTimestamps: {},
     isAdmin: false,
@@ -2092,34 +2088,20 @@ var app = {
         document.body.appendChild(modal);
     },
 
-    redeemGift: function(giftIdOrName, cost) {
+    redeemGift: function(giftId) {
         var catalog = window.GIFT_CATALOG || [];
-        var gift = null;
-        
-        // Handle direct airtime gifts (new format)
-        if (typeof cost === 'number') {
-            gift = {
-                id: 'airtime_' + giftIdOrName.replace(/ /g, '_'),
-                name: giftIdOrName,
-                cost: cost,
-                description: 'Airtime gift'
-            };
-        } else {
-            // Handle catalog gifts (old format)
-            gift = catalog.find(function(g) { return g.id === giftIdOrName; });
-        }
-        
+        var gift = catalog.find(function(g) { return g.id === giftId; });
         if (!gift) {
             this.toast('Gift not found', 'error');
             return;
         }
         
         if (this.balance < gift.cost) {
-            this.toast('❌ Insufficient coins! Need ' + gift.cost + ' Coins', 'error');
+            this.toast('Insufficient coins! Need ' + gift.cost + ' Coins', 'error');
             return;
         }
         
-        if (!confirm(`✓ Redeem "${gift.name}" for ${gift.cost} Chichi Coins?`)) {
+        if (!confirm(`Redeem "${gift.name}" for ${gift.cost} Chichi Coins?`)) {
             return;
         }
         
@@ -2144,6 +2126,9 @@ var app = {
         this.updateBalanceDisplays();
         this.toast('🎉 Redeemed: ' + gift.name + '!', 'success');
         this.logUserActivity('redeem_gift', 'Redeemed ' + gift.name + ' for ' + gift.cost + ' coins');
+        
+        document.querySelector('.modal-overlay').remove();
+        this.showGiftCatalog();
     },
 
     // ============================================
@@ -3120,212 +3105,60 @@ var app = {
                         <div style="font-size: 10px; color: #94a3b8;">⏱️ ${tierData.timerSeconds}s</div>
                     </div>
                     
-                    <div id="triviaStartBtn" style="
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                        gap: 16px;
-                        padding: 24px 16px;
-                        text-align: center;
-                    ">
-                        <div style="font-size: 40px;">🎯</div>
-                        <div>
-                            <h3 style="margin: 0 0 6px 0; font-size: 16px; font-weight: 700; color: #1e293b;">Test Your Knowledge</h3>
-                            <p style="margin: 0; color: #64748b; font-size: 12px; line-height: 1.4;">Answer correctly to earn coins!</p>
-                        </div>
-                        <button onclick="app.startTrivia()" style="
-                            width: 100px;
-                            height: 100px;
-                            border-radius: 50%;
-                            font-size: 18px;
-                            font-weight: 700;
-                            background: linear-gradient(135deg, #22c55e, #16a34a);
-                            border: none;
-                            color: white;
-                            cursor: pointer;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            flex-direction: column;
-                            gap: 4px;
-                            transition: all 0.3s;
-                            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
-                        " onmouseover="this.style.transform='scale(1.08)'; this.style.boxShadow='0 6px 20px rgba(34, 197, 94, 0.5)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(34, 197, 94, 0.3)'">
-                            <span style="font-size: 28px;">▶️</span>
-                            START
-                        </button>
-                    </div>
-                    
-                    <div id="triviaQuestionArea" style="display: none;">
-                        <!-- Questions appear here -->
-                    </div>
-                    
-                    <div id="triviaNextOverlay" style="
-                        display: none;
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        bottom: 0;
-                        background: rgba(0, 0, 0, 0.5);
-                        z-index: 1000;
-                        align-items: center;
-                        justify-content: center;
-                        backdrop-filter: blur(4px);
-                    ">
-                        <button onclick="app.nextTrivia()" style="
-                            width: 140px;
-                            height: 140px;
-                            border-radius: 50%;
-                            font-size: 20px;
-                            font-weight: 700;
-                            background: linear-gradient(135deg, #10b981, #34d399);
-                            border: 5px solid white;
-                            color: white;
-                            cursor: pointer;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            flex-direction: column;
-                            gap: 6px;
-                            transition: all 0.3s;
-                            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.5);
-                        " onmouseover="this.style.transform='scale(1.12)'" onmouseout="this.style.transform='scale(1)'">
-                            <span>✓</span>
-                            <span style="font-size: 14px;">NEXT</span>
-                        </button>
-                    </div>
+                    <button onclick="app.generateTriviaQuestion()" style="
+                        width: 100%;
+                        padding: 12px;
+                        background: ${remaining > 0 ? 'linear-gradient(135deg, #22c55e, #16a34a)' : '#94a3b8'};
+                        color: white;
+                        border: none;
+                        border-radius: 10px;
+                        cursor: ${remaining > 0 ? 'pointer' : 'not-allowed'};
+                        font-weight: 600;
+                        font-size: 13px;
+                        transition: all 0.3s;
+                        opacity: ${remaining <= 0 ? '0.6' : '1'};
+                    " ${remaining <= 0 ? 'disabled' : ''} onmouseover="if(${remaining > 0}) { this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 15px rgba(34,197,94,0.3)'; }" onmouseout="if(${remaining > 0}) { this.style.transform='translateY(0)'; this.style.boxShadow='none'; }">
+                        ${remaining > 0 ? '🚀 Start' : '⏳ Done for today'}
+                    </button>
                 </div>
                 
-                <!-- AIRTIME GIFTS SECTION -->
+                <!-- GIFT CATALOG PREVIEW -->
                 <div style="
                     background: white;
                     border-radius: 14px;
                     padding: 14px;
-                    margin-bottom: 14px;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
                     border: 1px solid #e8ecf0;
                 ">
-                    <h3 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 700; color: #1e293b;">📱 Airtime Gifts</h3>
-                    <div class="gifts-scroll-container" style="
-                        display: flex;
-                        flex-direction: column;
-                        gap: 10px;
-                        max-height: 350px;
-                        overflow-y: auto;
-                        scroll-snap-type: y mandatory;
-                        padding: 4px;
-                    ">
-                        <div class="airtime-gift-card" style="
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            border-radius: 12px;
-                            padding: 16px;
-                            color: white;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #1e293b;">🎁 Gifts</h3>
+                        <button onclick="app.showGiftCatalog()" style="
+                            background: none;
+                            border: none;
+                            color: #3b82f6;
                             cursor: pointer;
-                            transition: all 0.3s;
-                            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-                            border: 2px solid transparent;
-                            scroll-snap-align: start;
-                        " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(102, 126, 234, 0.5)'; this.style.borderColor='white'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)'; this.style.borderColor='transparent'">
-                            <div class="airtime-gift-info">
-                                <div class="airtime-gift-name" style="font-weight: 700; font-size: 14px;">📱 50 KES Airtime</div>
-                                <div class="airtime-gift-cost" style="font-size: 12px; opacity: 0.9;">Earn money</div>
-                                <div class="airtime-gift-credits" style="background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; width: fit-content; margin-top: 4px;">10 coins</div>
-                            </div>
-                            <button onclick="app.redeemGift('50 KES Airtime', 10)" style="background: rgba(255,255,255,0.3); border: 2px solid white; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">Get</button>
-                        </div>
-                        
-                        <div class="airtime-gift-card" style="
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            border-radius: 12px;
-                            padding: 16px;
-                            color: white;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            cursor: pointer;
-                            transition: all 0.3s;
-                            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-                            border: 2px solid transparent;
-                            scroll-snap-align: start;
-                        " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(102, 126, 234, 0.5)'; this.style.borderColor='white'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)'; this.style.borderColor='transparent'">
-                            <div class="airtime-gift-info">
-                                <div class="airtime-gift-name" style="font-weight: 700; font-size: 14px;">📱 100 KES Airtime</div>
-                                <div class="airtime-gift-cost" style="font-size: 12px; opacity: 0.9;">Best value</div>
-                                <div class="airtime-gift-credits" style="background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; width: fit-content; margin-top: 4px;">25 coins</div>
-                            </div>
-                            <button onclick="app.redeemGift('100 KES Airtime', 25)" style="background: rgba(255,255,255,0.3); border: 2px solid white; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">Get</button>
-                        </div>
-                        
-                        <div class="airtime-gift-card" style="
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            border-radius: 12px;
-                            padding: 16px;
-                            color: white;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            cursor: pointer;
-                            transition: all 0.3s;
-                            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-                            border: 2px solid transparent;
-                            scroll-snap-align: start;
-                        " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(102, 126, 234, 0.5)'; this.style.borderColor='white'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)'; this.style.borderColor='transparent'">
-                            <div class="airtime-gift-info">
-                                <div class="airtime-gift-name" style="font-weight: 700; font-size: 14px;">📱 200 KES Airtime</div>
-                                <div class="airtime-gift-cost" style="font-size: 12px; opacity: 0.9;">Popular choice</div>
-                                <div class="airtime-gift-credits" style="background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; width: fit-content; margin-top: 4px;">50 coins</div>
-                            </div>
-                            <button onclick="app.redeemGift('200 KES Airtime', 50)" style="background: rgba(255,255,255,0.3); border: 2px solid white; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">Get</button>
-                        </div>
-                        
-                        <div class="airtime-gift-card" style="
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            border-radius: 12px;
-                            padding: 16px;
-                            color: white;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            cursor: pointer;
-                            transition: all 0.3s;
-                            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-                            border: 2px solid transparent;
-                            scroll-snap-align: start;
-                        " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(102, 126, 234, 0.5)'; this.style.borderColor='white'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)'; this.style.borderColor='transparent'">
-                            <div class="airtime-gift-info">
-                                <div class="airtime-gift-name" style="font-weight: 700; font-size: 14px;">📱 500 KES Airtime</div>
-                                <div class="airtime-gift-cost" style="font-size: 12px; opacity: 0.9;">Premium plan</div>
-                                <div class="airtime-gift-credits" style="background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; width: fit-content; margin-top: 4px;">120 coins</div>
-                            </div>
-                            <button onclick="app.redeemGift('500 KES Airtime', 120)" style="background: rgba(255,255,255,0.3); border: 2px solid white; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">Get</button>
-                        </div>
-                        
-                        <div class="airtime-gift-card" style="
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            border-radius: 12px;
-                            padding: 16px;
-                            color: white;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            cursor: pointer;
-                            transition: all 0.3s;
-                            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-                            border: 2px solid transparent;
-                            scroll-snap-align: start;
-                        " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(102, 126, 234, 0.5)'; this.style.borderColor='white'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)'; this.style.borderColor='transparent'">
-                            <div class="airtime-gift-info">
-                                <div class="airtime-gift-name" style="font-weight: 700; font-size: 14px;">📱 1000 KES Airtime</div>
-                                <div class="airtime-gift-cost" style="font-size: 12px; opacity: 0.9;">Unlimited</div>
-                                <div class="airtime-gift-credits" style="background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; width: fit-content; margin-top: 4px;">250 coins</div>
-                            </div>
-                            <button onclick="app.redeemGift('1000 KES Airtime', 250)" style="background: rgba(255,255,255,0.3); border: 2px solid white; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">Get</button>
-                        </div>
+                            font-weight: 600;
+                            font-size: 11px;
+                        ">See All →</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                        ${catalog.slice(0, 3).map(function(gift) {
+                            return `
+                                <div style="
+                                    background: #f8fafc;
+                                    border-radius: 10px;
+                                    padding: 10px;
+                                    text-align: center;
+                                    transition: 0.3s;
+                                    cursor: pointer;
+                                " onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'" onclick="app.showGiftCatalog()">
+                                    <div style="font-size: 24px;">${gift.image}</div>
+                                    <div style="font-size: 9px; font-weight: 600; color: #1e293b; margin-top: 2px;">${gift.name}</div>
+                                    <div style="font-size: 8px; color: #6b7280;">${gift.cost}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                        ${catalog.length === 0 ? '<div style="grid-column: 1/-1; text-align: center; color: #6b7280; padding: 16px; font-size: 12px;">No gifts</div>' : ''}
                     </div>
                 </div>
                 
@@ -3342,13 +3175,8 @@ var app = {
 
     renderEarnWithTrivia: function(questionData) {
         var self = this;
-        var questionArea = document.getElementById('triviaQuestionArea');
-        if (!questionArea) {
-            // Fall back to full container if question area doesn't exist yet
-            var earnContainer = document.getElementById('earnContainer');
-            if (!earnContainer) return;
-            questionArea = earnContainer;
-        }
+        var earnContainer = document.getElementById('earnContainer');
+        if (!earnContainer) return;
         
         if (!this.currentTrivia && questionData) {
             this.currentTrivia = questionData;
@@ -3362,6 +3190,9 @@ var app = {
         
         var userTier = 'free';
         var tierData = EARNING_SETTINGS[userTier];
+        var remaining = this.getQuestionsRemaining();
+        var catalog = window.GIFT_CATALOG || [];
+        var username = this.profile.username || 'user';
         
         var optionsHtml = '';
         questionData.options.forEach(function(option, index) {
@@ -3387,41 +3218,259 @@ var app = {
         });
         
         var html = `
-            <p style="
-                font-size: 14px;
-                font-weight: 600;
-                color: #1a202c;
-                margin-bottom: 12px;
-                padding: 12px;
-                background: #f8fafc;
-                border-radius: 10px;
-                border-left: 3px solid #0088cc;
-                line-height: 1.5;
-            ">${questionData.question}</p>
-            
-            <div id="triviaOptions">
-                ${optionsHtml}
+            <div style="padding: 12px 12px 140px 12px; background: #f0f2f5; min-height: 100vh;">
+                
+                <!-- ===== CREDIT CARD (COMPACT) ===== -->
+                <div style="
+                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+                    border-radius: 18px;
+                    padding: 20px 20px 16px 20px;
+                    margin-bottom: 16px;
+                    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+                    position: relative;
+                    overflow: hidden;
+                    color: white;
+                ">
+                    <div style="position: absolute; top: -40px; right: -40px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(255,215,0,0.06) 0%, transparent 70%); border-radius: 50%;"></div>
+                    <div style="position: absolute; bottom: -50px; left: -30px; width: 130px; height: 130px; background: radial-gradient(circle, rgba(59,130,246,0.05) 0%, transparent 70%); border-radius: 50%;"></div>
+                    
+                    <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="
+                                width: 36px;
+                                height: 28px;
+                                background: linear-gradient(135deg, #FFD700, #FFA500);
+                                border-radius: 6px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 11px;
+                                font-weight: 800;
+                                color: #1a1a2e;
+                                box-shadow: 0 2px 10px rgba(255,215,0,0.25);
+                            ">💳</div>
+                            <div style="font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 600; letter-spacing: 0.5px;">CHICHI</div>
+                        </div>
+                        <div style="
+                            font-size: 9px;
+                            color: rgba(255,255,255,0.35);
+                            font-weight: 600;
+                            letter-spacing: 0.3px;
+                            background: rgba(255,255,255,0.05);
+                            padding: 2px 10px;
+                            border-radius: 10px;
+                            border: 1px solid rgba(255,255,255,0.04);
+                        ">${tierData.label}</div>
+                    </div>
+                    
+                    <div style="position: relative; z-index: 2; margin-bottom: 12px;">
+                        <div style="font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Balance</div>
+                        <div style="
+                            font-size: 30px;
+                            font-weight: 800;
+                            letter-spacing: -0.5px;
+                            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+                            -webkit-background-clip: text;
+                            -webkit-text-fill-color: transparent;
+                            background-clip: text;
+                            line-height: 1.1;
+                        " id="earnBalanceDisplay">${this.balance.toFixed(2)}</div>
+                        <div style="font-size: 10px; color: rgba(255,255,255,0.35);">Chichi Coins</div>
+                    </div>
+                    
+                    <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; margin-top: 4px;">
+                        <div>
+                            <div style="font-size: 7px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1px;">Card Holder</div>
+                            <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.8);">${this.profile.name || 'User'}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 7px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1px;">@username</div>
+                            <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.65);">@${username}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="position: relative; z-index: 2; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.04);">
+                        <div style="display: flex; justify-content: space-between; font-size: 8px; color: rgba(255,255,255,0.35); margin-bottom: 4px;">
+                            <span>Daily Questions</span>
+                            <span>${remaining} / ${tierData.questionsPerDay}</span>
+                        </div>
+                        <div style="width: 100%; height: 3px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden;">
+                            <div style="
+                                width: ${((tierData.questionsPerDay - remaining) / tierData.questionsPerDay * 100)}%;
+                                height: 100%;
+                                background: linear-gradient(90deg, #FFD700, #FF6B6B);
+                                border-radius: 10px;
+                                transition: width 0.5s ease;
+                            "></div>
+                        </div>
+                    </div>
+                    
+                    <div style="position: relative; z-index: 2; display: flex; gap: 8px; margin-top: 12px;">
+                        <button onclick="app.showGiftCatalog()" style="
+                            flex: 1;
+                            padding: 8px 6px;
+                            background: rgba(255,215,0,0.12);
+                            color: #FFD700;
+                            border: 1px solid rgba(255,215,0,0.15);
+                            border-radius: 8px;
+                            font-weight: 600;
+                            font-size: 10px;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                            backdrop-filter: blur(4px);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 4px;
+                        " onmouseover="this.style.background='rgba(255,215,0,0.2)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='rgba(255,215,0,0.12)'; this.style.transform='translateY(0)'">
+                            🎁 Gifts
+                        </button>
+                        <button onclick="app.showSendMoneyModal()" style="
+                            flex: 1;
+                            padding: 8px 6px;
+                            background: rgba(59,130,246,0.15);
+                            color: #60a5fa;
+                            border: 1px solid rgba(59,130,246,0.15);
+                            border-radius: 8px;
+                            font-weight: 600;
+                            font-size: 10px;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                            backdrop-filter: blur(4px);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 4px;
+                        " onmouseover="this.style.background='rgba(59,130,246,0.25)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'; this.style.transform='translateY(0)'">
+                            📤 Send
+                        </button>
+                        <button onclick="app.showTransactionHistory()" style="
+                            flex: 1;
+                            padding: 8px 6px;
+                            background: rgba(255,255,255,0.05);
+                            color: rgba(255,255,255,0.7);
+                            border: 1px solid rgba(255,255,255,0.06);
+                            border-radius: 8px;
+                            font-weight: 600;
+                            font-size: 10px;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                            backdrop-filter: blur(4px);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 4px;
+                        " onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.transform='translateY(0)'">
+                            📋 History
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- TRIVIA QUESTION -->
+                <div style="
+                    background: white;
+                    border-radius: 14px;
+                    padding: 16px;
+                    margin-bottom: 14px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                    border: 1px solid #e8ecf0;
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 700; color: #15803d;">🧠 Trivia</div>
+                            <div style="font-size: 11px; color: #64748b;">Answer to earn coins</div>
+                        </div>
+                        <div style="
+                            background: #dcfce7;
+                            color: #15803d;
+                            padding: 4px 10px;
+                            border-radius: 6px;
+                            font-size: 11px;
+                            font-weight: 600;
+                            white-space: nowrap;
+                        ">+${tierData.rewardPerQuestion}</div>
+                    </div>
+                    
+                    <div id="triviaQuestionArea">
+                        <p style="
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: #1a202c;
+                            margin-bottom: 12px;
+                            padding: 12px;
+                            background: #f8fafc;
+                            border-radius: 10px;
+                            border-left: 3px solid #0088cc;
+                            line-height: 1.5;
+                        ">${questionData.question}</p>
+                        
+                        <div id="triviaOptions">
+                            ${optionsHtml}
+                        </div>
+                        
+                        <div id="triviaTimerDisplay" style="
+                            text-align: center;
+                            margin-top: 12px;
+                            font-size: 12px;
+                            color: #6b7280;
+                        ">
+                            ⏱️ <span id="triviaTimeLeft" style="font-weight: 700; color: #ef4444;">${tierData.timerSeconds}</span>s remaining
+                        </div>
+                        
+                        <div id="triviaResultArea" style="
+                            display: none;
+                            text-align: center;
+                            padding: 10px;
+                            border-radius: 10px;
+                            margin-top: 10px;
+                        "></div>
+                    </div>
+                </div>
+                
+                <!-- GIFT CATALOG PREVIEW -->
+                <div style="
+                    background: white;
+                    border-radius: 14px;
+                    padding: 14px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                    border: 1px solid #e8ecf0;
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #1e293b;">🎁 Gifts</h3>
+                        <button onclick="app.showGiftCatalog()" style="
+                            background: none;
+                            border: none;
+                            color: #3b82f6;
+                            cursor: pointer;
+                            font-weight: 600;
+                            font-size: 11px;
+                        ">See All →</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                        ${catalog.slice(0, 3).map(function(gift) {
+                            return `
+                                <div style="
+                                    background: #f8fafc;
+                                    border-radius: 10px;
+                                    padding: 10px;
+                                    text-align: center;
+                                    transition: 0.3s;
+                                    cursor: pointer;
+                                " onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'" onclick="app.showGiftCatalog()">
+                                    <div style="font-size: 24px;">${gift.image}</div>
+                                    <div style="font-size: 9px; font-weight: 600; color: #1e293b; margin-top: 2px;">${gift.name}</div>
+                                    <div style="font-size: 8px; color: #6b7280;">${gift.cost}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                        ${catalog.length === 0 ? '<div style="grid-column: 1/-1; text-align: center; color: #6b7280; padding: 16px; font-size: 12px;">No gifts</div>' : ''}
+                    </div>
+                </div>
+                
             </div>
-            
-            <div id="triviaTimerDisplay" style="
-                text-align: center;
-                margin-top: 12px;
-                font-size: 12px;
-                color: #6b7280;
-            ">
-                ⏱️ <span id="triviaTimeLeft" style="font-weight: 700; color: #ef4444;">${tierData.timerSeconds}</span>s remaining
-            </div>
-            
-            <div id="triviaResultArea" style="
-                display: none;
-                text-align: center;
-                padding: 10px;
-                border-radius: 10px;
-                margin-top: 10px;
-            "></div>
         `;
         
-        questionArea.innerHTML = html;
+        earnContainer.innerHTML = html;
         
         // Start the timer
         var timeLeft = tierData.timerSeconds;
@@ -3456,10 +3505,15 @@ var app = {
                         }
                     });
                     
-                    // Show NEXT overlay instead of time's up message
-                    var overlay = document.getElementById('triviaNextOverlay');
-                    if (overlay) {
-                        overlay.style.display = 'flex';
+                    var resultArea = document.getElementById('triviaResultArea');
+                    if (resultArea && self.currentTrivia) {
+                        resultArea.style.display = 'block';
+                        var correctAnswer = (self.currentTrivia.options && self.currentTrivia.correct !== undefined) ? self.currentTrivia.options[self.currentTrivia.correct] : 'Unknown';
+                        resultArea.innerHTML = `
+                            <div style="color: #ef4444; font-weight: 700; font-size: 16px;">⏰ Time's Up!</div>
+                            <div style="color: #6b7280; font-size: 13px;">Answer: ${correctAnswer}</div>
+                        `;
+                        resultArea.style.background = '#fee2e2';
                     }
                 }
             }
@@ -3988,74 +4042,48 @@ var app = {
         var html = `
             <div style="padding: 0; background: linear-gradient(135deg, #2d1b69 0%, #3d2680 100%); min-height: 100vh;">
                 
-                <!-- PROFILE PHOTO SECTION - CARD DESIGN -->
-                <div style="position: relative; width: 100%; background: linear-gradient(135deg, #2d1b69 0%, #3d2680 100%); padding: 40px 20px; display: flex; align-items: center; justify-content: center; min-height: 350px;">
-                    <div style="position: relative; cursor: pointer; max-width: 240px;" onclick="app.showProfilePhotoModal()">
-                        <!-- Profile Card Container -->
+                <!-- PROFILE PHOTO SECTION -->
+                <div style="position: relative; width: 100%; height: 320px; background: linear-gradient(135deg, #2d1b69 0%, #3d2680 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <div style="position: relative; cursor: pointer;" onclick="app.showProfilePhotoModal()">
                         <div style="
-                            background: white;
-                            border-radius: 20px;
+                            width: 140px;
+                            height: 140px;
+                            border-radius: 50%;
+                            border: 4px solid rgba(255,255,255,0.3);
+                            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
                             overflow: hidden;
-                            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                            transition: all 0.3s;
-                        " onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 30px 80px rgba(0,0,0,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 20px 60px rgba(0,0,0,0.3)'">
-                            
-                            <!-- Profile Image -->
-                            <div style="
-                                width: 220px;
-                                height: 220px;
-                                border-radius: 20px 20px 0 0;
-                                background: linear-gradient(135deg, #667eea, #764ba2);
-                                background-image: ${this.profile.profilePhoto ? 'url(' + this.profile.profilePhoto + ')' : 'none'};
-                                background-size: cover;
-                                background-position: center;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                font-size: 80px;
-                                color: white;
-                                font-weight: 700;
-                                filter: ${this.profile.profilePhoto ? 'brightness(1.05)' : 'none'};
-                                position: relative;
-                                overflow: hidden;
-                            ">
-                                ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
-                                
-                                <!-- Edit Icon Overlay -->
-                                <div style="
-                                    position: absolute;
-                                    bottom: 8px;
-                                    right: 8px;
-                                    background: rgba(0,0,0,0.6);
-                                    border-radius: 50%;
-                                    width: 40px;
-                                    height: 40px;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    color: white;
-                                    font-size: 16px;
-                                    border: 3px solid white;
-                                    backdrop-filter: blur(4px);
-                                    cursor: pointer;
-                                ">📷</div>
-                            </div>
-                            
-                            <!-- Name & Info Banner -->
-                            <div style="
-                                background: white;
-                                padding: 20px 16px;
-                                text-align: center;
-                                border-top: 1px solid #f0f0f0;
-                            ">
-                                <div style="font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 4px;">${this.profile.name || 'User'}</div>
-                                <div style="font-size: 13px; color: #0088cc; font-weight: 600;">@${username}</div>
-                                <div style="font-size: 11px; color: #6b7280; margin-top: 6px; background: #f0f4f8; padding: 4px 12px; border-radius: 12px; display: inline-block;">${tierData.label}</div>
-                            </div>
+                            background: linear-gradient(135deg, #667eea, #764ba2);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 60px;
+                            color: white;
+                            font-weight: 700;
+                            transition: transform 0.3s;
+                            background-image: ${this.profile.profilePhoto ? 'url(' + this.profile.profilePhoto + ')' : 'none'};
+                            background-size: cover;
+                            background-position: center;
+                        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
                         </div>
+                        <div style="
+                            position: absolute;
+                            bottom: 4px;
+                            right: 4px;
+                            background: rgba(0,0,0,0.7);
+                            border-radius: 50%;
+                            width: 36px;
+                            height: 36px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-size: 14px;
+                            border: 2px solid white;
+                            backdrop-filter: blur(4px);
+                        ">📷</div>
                     </div>
                     
-                    <!-- Navigation Buttons -->
                     <div style="position: absolute; top: 16px; left: 16px; background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
                         <button onclick="app.switchView('feed');" style="background: none; border: none; font-size: 20px; cursor: pointer; color: white;">‹</button>
                     </div>
@@ -4085,10 +4113,10 @@ var app = {
                     </div>
                     
                     <!-- Interests -->
-                    <div style="margin-bottom: 12px;">
-                        <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">🏷️ Interests</div>
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">🏷️ Interests</div>
                         ${interests && interests.length > 0 ? `
-                            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                                 ${interests.map(function(interest) {
                                     var interestEmojis = {
                                         'music': '🎵', 'sports': '⚽', 'travel': '✈️', 'art': '🎨', 'tech': '💻',
@@ -4098,18 +4126,18 @@ var app = {
                                         'entrepreneurship': '💼', 'marketing': '📈', 'finance': '💰', 'startups': '🚀'
                                     };
                                     var emoji = interestEmojis[interest.toLowerCase()] || '✨';
-                                    return `<div style="background: linear-gradient(135deg, #f0f0f0, #e8e8e8); border-radius: 14px; padding: 4px 10px; font-size: 11px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 3px;"><span>${emoji}</span>${interest}</div>`;
+                                    return `<div style="background: linear-gradient(135deg, #f0f0f0, #e8e8e8); border-radius: 16px; padding: 6px 14px; font-size: 12px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 4px;"><span>${emoji}</span>${interest}</div>`;
                                 }).join('')}
                             </div>
                         ` : `
-                            <div style="color: #94a3b8; font-size: 12px;">No interests added yet</div>
+                            <div style="color: #94a3b8; font-size: 13px;">No interests added yet</div>
                         `}
                     </div>
                     
-                    <!-- Email (Compact) -->
-                    <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; display: flex; align-items: center; gap: 6px;">
-                        <span style="font-size: 14px;">📧</span>
-                        <span style="font-size: 12px; color: #475569;">${this.user.email}</span>
+                    <!-- Email -->
+                    <div style="background: #f8fafc; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 16px;">📧</span>
+                        <span style="font-size: 13px; color: #475569;">${this.user.email}</span>
                     </div>
                     
                     <!-- STATS GRID -->
@@ -5232,113 +5260,65 @@ var app = {
             return;
         }
         
-        var userInterests = (this.profile && this.profile.interests) || [];
+        var userInterests = this.profile.interests || [];
         
         if (userInterests.length === 0) {
             this.toast('📝 Add interests to your profile first', 'info');
             return;
         }
         
-        // Show loading modal
-        var loadingModal = document.createElement('div');
-        loadingModal.className = 'modal-overlay active';
-        loadingModal.innerHTML = `
-            <div class="modal" style="text-align: center; padding: 40px;">
-                <div style="font-size: 32px; margin-bottom: 12px;">🔄</div>
-                <p style="color: #6b7280;">Finding users with similar interests...</p>
+        var similarUsers = Object.keys(this.users)
+            .filter(function(uid) { return uid !== self.user.uid; })
+            .map(function(uid) {
+                var user = self.users[uid];
+                var interests = user.interests || [];
+                var commonCount = interests.filter(function(i) { return userInterests.includes(i); }).length;
+                return { uid: uid, ...user, commonInterests: commonCount, interests: interests };
+            })
+            .filter(function(u) { return u.commonInterests > 0; })
+            .sort(function(a, b) { return b.commonInterests - a.commonInterests; })
+            .slice(0, 20);
+        
+        var html = `
+            <div class="modal" style="max-height: 80vh; overflow-y: auto;">
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+                <h2 style="font-weight: 700; margin-bottom: 20px; color: #1e293b;">🤝 People with Similar Interests</h2>
+                
+                ${similarUsers.length === 0 ? `
+                    <div style="text-align: center; color: #6b7280; padding: 40px 20px;">
+                        <div style="font-size: 48px; margin-bottom: 12px;">😔</div>
+                        No users found with similar interests yet
+                    </div>
+                ` : `
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        ${similarUsers.map(function(user) {
+                            var isFollowing = self.following && self.following[user.uid];
+                            return `
+                                <div style="background: white; border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;">
+                                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                                        <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); background-image: url(${user.profilePhoto || ''}); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
+                                            ${!user.profilePhoto ? user.name.charAt(0).toUpperCase() : ''}
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: 700; color: #1e293b; font-size: 14px;">${user.name}</div>
+                                            <div style="font-size: 12px; color: #6b7280;">${user.commonInterests} ${user.commonInterests === 1 ? 'interest' : 'interests'} in common</div>
+                                        </div>
+                                    </div>
+                                    <button onclick="app.followUser('${user.uid}', '${user.name}'); setTimeout(function() { app.showSimilarInterestsModal(); }, 300);" style="background: ${isFollowing ? '#e2e8f0' : 'var(--primary)'}; color: ${isFollowing ? '#1e293b' : 'white'}; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap;">
+                                        ${isFollowing ? '✓ Following' : 'Follow'}
+                                    </button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `}
             </div>
         `;
-        document.body.appendChild(loadingModal);
         
-        // Fetch all users from Firebase
-        db.ref('users').once('value', function(snapshot) {
-            loadingModal.remove();
-            
-            if (!snapshot.exists()) {
-                self.toast('No users found yet', 'info');
-                return;
-            }
-            
-            var allUsers = snapshot.val();
-            var similarUsers = [];
-            
-            Object.keys(allUsers).forEach(function(uid) {
-                if (uid !== self.user.uid) {
-                    var user = allUsers[uid];
-                    var userProfileInterests = (user.interests || []);
-                    
-                    // Count common interests
-                    var commonCount = 0;
-                    userProfileInterests.forEach(function(interest) {
-                        if (userInterests.includes(interest)) {
-                            commonCount++;
-                        }
-                    });
-                    
-                    if (commonCount > 0) {
-                        similarUsers.push({
-                            uid: uid,
-                            name: user.name || 'User',
-                            profilePhoto: user.profilePhoto,
-                            commonInterests: commonCount,
-                            interests: userProfileInterests
-                        });
-                    }
-                }
-            });
-            
-            // Sort by most common interests
-            similarUsers.sort(function(a, b) {
-                return b.commonInterests - a.commonInterests;
-            });
-            
-            // Display modal
-            var html = `
-                <div class="modal" style="max-height: 80vh; overflow-y: auto;">
-                    <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                    <h2 style="font-weight: 700; margin-bottom: 20px; color: #1e293b;">🤝 People with Similar Interests</h2>
-                    
-                    ${similarUsers.length === 0 ? `
-                        <div style="text-align: center; color: #6b7280; padding: 40px 20px;">
-                            <div style="font-size: 48px; margin-bottom: 12px;">😔</div>
-                            No users found with similar interests yet. Try adding more interests to your profile!
-                        </div>
-                    ` : `
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            ${similarUsers.map(function(user) {
-                                var isFollowing = self.following && self.following[user.uid];
-                                return `
-                                    <div style="background: white; border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;">
-                                        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-                                            <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); background-image: url(${user.profilePhoto || ''}); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; flex-shrink: 0;">
-                                                ${!user.profilePhoto ? user.name.charAt(0).toUpperCase() : ''}
-                                            </div>
-                                            <div style="flex: 1;">
-                                                <div style="font-weight: 700; color: #1e293b; font-size: 14px;">${user.name}</div>
-                                                <div style="font-size: 12px; color: #0088cc; font-weight: 600;">✓ ${user.commonInterests} ${user.commonInterests === 1 ? 'interest' : 'interests'} in common</div>
-                                                <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">${user.interests.slice(0, 2).join(', ')}</div>
-                                            </div>
-                                        </div>
-                                        <button onclick="app.followUser('${user.uid}', '${user.name.replace(/'/g, "\\'")}'); setTimeout(function() { app.showSimilarInterestsModal(); }, 300);" style="background: ${isFollowing ? '#e2e8f0' : 'var(--primary)'}; color: ${isFollowing ? '#1e293b' : 'white'}; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap; flex-shrink: 0;">
-                                            ${isFollowing ? '✓ Following' : 'Follow'}
-                                        </button>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    `}
-                </div>
-            `;
-            
-            var modal = document.createElement('div');
-            modal.className = 'modal-overlay active';
-            modal.innerHTML = html;
-            document.body.appendChild(modal);
-        }).catch(function(err) {
-            loadingModal.remove();
-            console.error('❌ Error loading users:', err);
-            self.toast('Error loading users. Try again.', 'error');
-        });
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
     },
 
     // ============================================
@@ -7165,351 +7145,6 @@ var app = {
         if (menu) {
             menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
         }
-    },
-
-    // ============================================
-    // NEW FEATURES - START TRIVIA
-    // ============================================
-
-    startTrivia: function() {
-        this.triviaStarted = true;
-        var startBtn = document.getElementById('triviaStartBtn');
-        var questionArea = document.getElementById('triviaQuestionArea');
-        
-        if (startBtn) startBtn.style.display = 'none';
-        if (questionArea) questionArea.style.display = 'block';
-        
-        this.generateTriviaQuestion();
-        console.log('✅ Trivia started');
-    },
-
-    nextTrivia: function() {
-        this.triviaStarted = false;
-        this.triviaAnswered = false;
-        
-        var overlay = document.getElementById('triviaNextOverlay');
-        if (overlay) {
-            overlay.style.display = 'none';
-        }
-        
-        var startBtn = document.getElementById('triviaStartBtn');
-        if (startBtn) startBtn.style.display = 'flex';
-        
-        var questionArea = document.getElementById('triviaQuestionArea');
-        if (questionArea) questionArea.style.display = 'none';
-        
-        console.log('✅ Ready for next question');
-    },
-
-    // ============================================
-    // NEW FEATURES - MESSAGE DELETION
-    // ============================================
-
-    deleteMessage: function(messageId, chatUserId) {
-        var self = this;
-        
-        if (!confirm('🗑️ Delete this message? This action cannot be undone.')) {
-            return;
-        }
-        
-        var chatKey = [this.user.uid, chatUserId].sort().join('_');
-        var path = 'chats/' + chatKey + '/messages/' + messageId;
-        
-        db.ref(path).remove().then(function() {
-            console.log('✅ Message deleted');
-            self.toast('✓ Message deleted', 'success');
-            self.loadChat(chatUserId);
-        }).catch(function(err) {
-            console.error('❌ Delete error:', err);
-            self.toast('Error deleting message', 'error');
-        });
-    },
-
-    showMessageContextMenu: function(event, messageId, chatUserId, isOwnMessage) {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        if (!isOwnMessage) {
-            this.toast('Can only delete your own messages', 'info');
-            return;
-        }
-        
-        var messageElement = event.target.closest('.message-item');
-        if (!messageElement) return;
-        
-        var existingMenu = messageElement.querySelector('.message-context-menu');
-        if (existingMenu) existingMenu.remove();
-        
-        var menu = document.createElement('div');
-        menu.className = 'message-context-menu';
-        menu.style.cssText = 'position: absolute; right: 10px; top: 100%; margin-top: 8px;';
-        
-        menu.innerHTML = '<button onclick="app.deleteMessage(\'' + messageId + '\', \'' + chatUserId + '\')" style="width: 100%; background: none; border: none; padding: 10px 12px; text-align: left; cursor: pointer; font-size: 13px; border-radius: 6px; transition: all 0.2s; color: #dc2626;">🗑️ Delete Message</button>';
-        
-        messageElement.style.position = 'relative';
-        messageElement.appendChild(menu);
-        
-        setTimeout(function() {
-            if (menu.parentElement) menu.remove();
-        }, 5000);
-        
-        var closeMenu = function() {
-            if (menu.parentElement) menu.remove();
-            document.removeEventListener('click', closeMenu);
-        };
-        
-        setTimeout(function() {
-            document.addEventListener('click', closeMenu);
-        }, 100);
-    },
-
-    // ============================================
-    // NEW FEATURES - MESSAGE PREVIEW
-    // ============================================
-
-    showLastMessagePreview: function() {
-        if (!this.currentChat || !this.user) return;
-        
-        var chatKey = [this.user.uid, this.currentChat].sort().join('_');
-        var self = this;
-        
-        db.ref('chats/' + chatKey + '/messages')
-            .limitToLast(1)
-            .once('value', function(snapshot) {
-                if (!snapshot.exists()) return;
-                
-                var messages = snapshot.val();
-                if (!messages) return;
-                
-                var lastMsg = Object.values(messages)[0];
-                var previewBox = document.getElementById('lastMessagePreview');
-                
-                if (previewBox && lastMsg.text) {
-                    var senderName = lastMsg.senderName || 'User';
-                    var messagePreview = lastMsg.text.substring(0, 50);
-                    if (lastMsg.text.length > 50) messagePreview += '...';
-                    
-                    previewBox.innerHTML = '<strong>' + senderName + ':</strong> ' + messagePreview;
-                    previewBox.style.display = 'block';
-                }
-            }).catch(function(err) {
-                console.log('Preview error:', err);
-            });
-    },
-
-    hideLastMessagePreview: function() {
-        var previewBox = document.getElementById('lastMessagePreview');
-        if (previewBox) previewBox.style.display = 'none';
-    },
-
-    markMessagesAsRead: function(chatUserId) {
-        if (!this.user) return;
-        
-        var unreadRef = db.ref('unread/' + this.user.uid + '/' + chatUserId);
-        unreadRef.remove();
-        
-        delete this.unreadMessages[chatUserId];
-        
-        var badge = document.querySelector('[data-user="' + chatUserId + '"] .chat-unread-badge');
-        if (badge) badge.remove();
-        
-        console.log('✅ Messages marked as read');
-    },
-
-    // ============================================
-    // NEW FEATURES - AIRTIME GIFTS
-    // ============================================
-
-    getAirtimeGifts: function() {
-        return [
-            {
-                name: '📱 50 KES Airtime',
-                value: 50,
-                credits: 10,
-                icon: '📱',
-                provider: 'Airtime',
-                category: 'airtime'
-            },
-            {
-                name: '📱 100 KES Airtime',
-                value: 100,
-                credits: 25,
-                icon: '📱',
-                provider: 'Airtime',
-                category: 'airtime'
-            },
-            {
-                name: '📱 200 KES Airtime',
-                value: 200,
-                credits: 50,
-                icon: '📱',
-                provider: 'Airtime',
-                category: 'airtime'
-            },
-            {
-                name: '📱 500 KES Airtime',
-                value: 500,
-                credits: 120,
-                icon: '📱',
-                provider: 'Airtime',
-                category: 'airtime'
-            },
-            {
-                name: '📱 1000 KES Airtime',
-                value: 1000,
-                credits: 250,
-                icon: '📱',
-                provider: 'Airtime',
-                category: 'airtime'
-            }
-        ];
-    },
-
-    // ============================================
-    // NEW FEATURES - NOTIFICATIONS TAB
-    // ============================================
-
-    showNotificationsTab: function() {
-        if (!this.user) {
-            this.toast('Please log in first', 'error');
-            return;
-        }
-        
-        var chatList = document.getElementById('chatsList');
-        if (!chatList) return;
-        
-        var self = this;
-        var notificationChats = [];
-        
-        db.ref('chats').once('value', function(snapshot) {
-            if (!snapshot.exists()) {
-                chatList.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-light);">📭 No notifications</div>';
-                return;
-            }
-            
-            snapshot.forEach(function(chatSnap) {
-                var chatData = chatSnap.val();
-                var lastMessage = (chatData.lastMessage || '').toLowerCase();
-                var chatKey = chatSnap.key;
-                
-                var userIds = chatKey.split('_');
-                var otherUserId = userIds[0] === self.user.uid ? userIds[1] : userIds[0];
-                
-                if (lastMessage.includes('money') || 
-                    lastMessage.includes('received') || 
-                    lastMessage.includes('sent') ||
-                    lastMessage.includes('payment') ||
-                    lastMessage.includes('admin') ||
-                    lastMessage.includes('notification') ||
-                    lastMessage.includes('alert')) {
-                    
-                    notificationChats.push({
-                        key: chatKey,
-                        userId: otherUserId,
-                        lastMessage: chatData.lastMessage || 'New notification',
-                        timestamp: chatData.timestamp || Date.now(),
-                        isAdmin: lastMessage.includes('admin') || lastMessage.includes('system')
-                    });
-                }
-            });
-            
-            notificationChats.sort(function(a, b) {
-                return b.timestamp - a.timestamp;
-            });
-            
-            if (notificationChats.length === 0) {
-                chatList.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-light);">📭 No notifications</div>';
-                return;
-            }
-            
-            var html = '<div class="notifications-container">';
-            
-            notificationChats.forEach(function(notif) {
-                var icon = notif.isAdmin ? '📢' : '💰';
-                var typeLabel = notif.isAdmin ? 'Admin' : 'Payment';
-                
-                html += '<div class="notification-item" onclick="app.openChat(\'' + notif.key + '\')">' +
-                    '<div class="notification-icon">' + icon + '</div>' +
-                    '<div class="notification-title">' + typeLabel + '</div>' +
-                    '<div class="notification-message">' + notif.lastMessage.substring(0, 60) + (notif.lastMessage.length > 60 ? '...' : '') + '</div>' +
-                    '<div class="notification-time">Just now</div>' +
-                    '</div>';
-            });
-            
-            html += '</div>';
-            chatList.innerHTML = html;
-        }).catch(function(err) {
-            console.error('Notification error:', err);
-            chatList.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;">Error loading notifications</div>';
-        });
-    },
-
-    getNotificationCount: function(callback) {
-        if (!this.user) {
-            callback(0);
-            return;
-        }
-        
-        var self = this;
-        var count = 0;
-        
-        db.ref('chats').once('value', function(snapshot) {
-            if (snapshot.exists()) {
-                snapshot.forEach(function(chatSnap) {
-                    var lastMessage = (chatSnap.val().lastMessage || '').toLowerCase();
-                    if (lastMessage.includes('money') || 
-                        lastMessage.includes('admin') || 
-                        lastMessage.includes('notification')) {
-                        count++;
-                    }
-                });
-            }
-            callback(count);
-        });
-    },
-
-    // ============================================
-    // NEW FEATURES - PROFILE RING
-    // ============================================
-
-    renderProfileImageWithRing: function(imageUrl, containerId) {
-        var container = document.getElementById(containerId);
-        if (!container) return;
-        
-        var ringDiv = document.createElement('div');
-        ringDiv.className = 'profile-image-ring';
-        
-        var img = document.createElement('img');
-        img.src = imageUrl || 'https://via.placeholder.com/80';
-        img.alt = 'Profile';
-        img.onerror = function() {
-            this.src = 'https://via.placeholder.com/80?text=👤';
-        };
-        
-        ringDiv.appendChild(img);
-        container.innerHTML = '';
-        container.appendChild(ringDiv);
-    },
-
-    // ============================================
-    // NEW FEATURES - UTILITY
-    // ============================================
-
-    formatNotificationTime: function(timestamp) {
-        var now = Date.now();
-        var diff = now - timestamp;
-        
-        var seconds = Math.floor(diff / 1000);
-        var minutes = Math.floor(seconds / 60);
-        var hours = Math.floor(minutes / 60);
-        var days = Math.floor(hours / 24);
-        
-        if (seconds < 60) return 'Just now';
-        if (minutes < 60) return minutes + 'm ago';
-        if (hours < 24) return hours + 'h ago';
-        if (days < 7) return days + 'd ago';
-        
-        return new Date(timestamp).toLocaleDateString();
     }
 };
 
@@ -7523,4 +7158,4 @@ console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size:
 console.log('%c💰 Chichi Coins - Earn by answering trivia!', 'color: #FFC24B; font-size: 12px;');
 console.log('%c🎁 Gift Catalog - Redeem coins for awesome rewards!', 'color: #8b5cf6; font-size: 12px;');
 console.log('%c📊 User engagement & revenue tracking active!', 'color: #3b82f6; font-size: 12px;');
-console.log('%c✨ Features: Profile Ring, Trivia Start, Message Delete, Notifications & More!', 'color: #ec4899; font-size: 11px;');
+console.log('%c👨‍💻 Built by Anthony Onchari - Version V02A.01', 'color: #6b7280; font-size: 11px;');
