@@ -161,6 +161,23 @@ const TRIVIA_QUESTIONS = [
 ];
 
 // ============================================
+// GIFT CATALOG - Redeemable items
+// ============================================
+
+const GIFT_CATALOG = [
+    { id: 'gift1', name: '🎮 Game Voucher', description: '$10 Gaming Gift Card', cost: 500, category: 'gaming', image: '🎮' },
+    { id: 'gift2', name: '📱 Phone Credit', description: 'Airtime/Data top-up', cost: 200, category: 'mobile', image: '📱' },
+    { id: 'gift3', name: '🍕 Pizza Coupon', description: 'Free medium pizza', cost: 300, category: 'food', image: '🍕' },
+    { id: 'gift4', name: '🎬 Movie Ticket', description: 'Cinema ticket voucher', cost: 400, category: 'entertainment', image: '🎬' },
+    { id: 'gift5', name: '☕ Coffee Voucher', description: 'Free coffee & pastry', cost: 150, category: 'food', image: '☕' },
+    { id: 'gift6', name: '🎵 Music Subscription', description: '1-month music streaming', cost: 350, category: 'entertainment', image: '🎵' },
+    { id: 'gift7', name: '📚 Book Voucher', description: 'E-book store credit', cost: 250, category: 'education', image: '📚' },
+    { id: 'gift8', name: '🛍️ Shopping Voucher', description: 'Online store discount', cost: 450, category: 'shopping', image: '🛍️' },
+    { id: 'gift9', name: '🎨 Art Print', description: 'Digital art print', cost: 100, category: 'art', image: '🎨' },
+    { id: 'gift10', name: '🧘 Wellness Kit', description: 'Wellness e-book & guide', cost: 180, category: 'wellness', image: '🧘' }
+];
+
+// ============================================
 // AUTO-POST TEMPLATES (Support Account)
 // ============================================
 
@@ -214,6 +231,28 @@ db.ref('.info/connected').on('value', function(snapshot) {
         console.log('📡 Disconnected from Firebase');
     }
 });
+
+// ============================================
+// EXPOSE ALL CONFIG VARIABLES GLOBALLY
+// ============================================
+
+// Make all config variables available globally
+window.FIREBASE_CONFIG = FIREBASE_CONFIG;
+window.CLOUD_NAME = CLOUD_NAME;
+window.UPLOAD_PRESET = UPLOAD_PRESET;
+window.ADMIN_PASSWORD = ADMIN_PASSWORD;
+window.MPESA_TILL = MPESA_TILL;
+window.MUSIC_PLAYLIST = MUSIC_PLAYLIST;
+window.SPINNER_CONFIG = SPINNER_CONFIG;
+window.EARNING_SETTINGS = EARNING_SETTINGS;
+window.TRIVIA_QUESTIONS = TRIVIA_QUESTIONS;
+window.GIFT_CATALOG = GIFT_CATALOG;
+window.POST_TEMPLATES = POST_TEMPLATES;
+
+console.log('✅ All config variables exported globally');
+console.log('🎁 GIFT_CATALOG:', GIFT_CATALOG ? GIFT_CATALOG.length : 'NOT SET');
+console.log('🧠 TRIVIA_QUESTIONS:', TRIVIA_QUESTIONS ? TRIVIA_QUESTIONS.length : 'NOT SET');
+console.log('💰 EARNING_SETTINGS:', EARNING_SETTINGS ? Object.keys(EARNING_SETTINGS) : 'NOT SET');
 
 // Loading screen timeout
 var loadingTimeout = setTimeout(() => {

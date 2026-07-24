@@ -32,6 +32,65 @@ if (!initFirebase()) {
 }
 
 // ============================================
+// FALLBACK CONFIG - In case config.js doesn't load
+// ============================================
+
+// Ensure EARNING_SETTINGS is available
+if (typeof EARNING_SETTINGS === 'undefined') {
+    window.EARNING_SETTINGS = {
+        free: {
+            label: 'Free',
+            badge: '✨',
+            badgeColor: '#6b7280',
+            price: 0,
+            dailyQuestions: 5,
+            rewardPerQuestion: 0.50,
+            timerSeconds: 20,
+            adsPerQuestion: 0,
+            maxQuestions: 5,
+            bonus: '5 trivia questions/day',
+            questionsPerDay: 5
+        }
+    };
+}
+
+// Ensure TRIVIA_QUESTIONS is available
+if (typeof TRIVIA_QUESTIONS === 'undefined') {
+    window.TRIVIA_QUESTIONS = [
+        { question: "What is the capital of Kenya?", options: ["Nairobi", "Mombasa", "Kisumu", "Nakuru"], correct: 0 },
+        { question: "What is the largest ocean?", options: ["Atlantic", "Pacific", "Indian", "Arctic"], correct: 1 },
+        { question: "What is the smallest country?", options: ["Monaco", "Vatican City", "Liechtenstein", "San Marino"], correct: 1 },
+        { question: "What is the speed of light?", options: ["300,000 km/s", "150,000 km/s", "450,000 km/s", "100,000 km/s"], correct: 0 },
+        { question: "How many continents are there?", options: ["5", "6", "7", "8"], correct: 2 },
+        { question: "What is the tallest mountain?", options: ["K2", "Kilimanjaro", "Everest", "Denali"], correct: 2 },
+        { question: "Which planet is closest to the Sun?", options: ["Venus", "Mercury", "Mars", "Earth"], correct: 1 },
+        { question: "What is the boiling point of water?", options: ["50°C", "75°C", "100°C", "125°C"], correct: 2 },
+        { question: "Which planet is known as the Red Planet?", options: ["Jupiter", "Mars", "Saturn", "Venus"], correct: 1 },
+        { question: "What is the chemical formula for water?", options: ["H2O2", "H2O", "H3O", "HO2"], correct: 1 }
+    ];
+}
+
+// Ensure GIFT_CATALOG is available
+if (typeof GIFT_CATALOG === 'undefined') {
+    window.GIFT_CATALOG = [
+        { id: 'gift1', name: '🎮 Game Voucher', description: '$10 Gaming Gift Card', cost: 500, category: 'gaming', image: '🎮' },
+        { id: 'gift2', name: '📱 Phone Credit', description: 'Airtime/Data top-up', cost: 200, category: 'mobile', image: '📱' },
+        { id: 'gift3', name: '🍕 Pizza Coupon', description: 'Free medium pizza', cost: 300, category: 'food', image: '🍕' },
+        { id: 'gift4', name: '🎬 Movie Ticket', description: 'Cinema ticket voucher', cost: 400, category: 'entertainment', image: '🎬' },
+        { id: 'gift5', name: '☕ Coffee Voucher', description: 'Free coffee & pastry', cost: 150, category: 'food', image: '☕' }
+    ];
+}
+
+// Make sure variables are available as globals for app.js
+var EARNING_SETTINGS = window.EARNING_SETTINGS;
+var TRIVIA_QUESTIONS = window.TRIVIA_QUESTIONS;
+var GIFT_CATALOG = window.GIFT_CATALOG;
+
+console.log('✅ Fallback config loaded');
+console.log('🎁 GIFT_CATALOG:', GIFT_CATALOG ? GIFT_CATALOG.length : 'NOT SET');
+console.log('🧠 TRIVIA_QUESTIONS:', TRIVIA_QUESTIONS ? TRIVIA_QUESTIONS.length : 'NOT SET');
+
+// ============================================
 // APP OBJECT
 // ============================================
 
@@ -3665,30 +3724,10 @@ var app = {
     },
 
     generateTriviaQuestion: function(callback) {
-        // Define TRIVIA_QUESTIONS if not already defined
-        if (typeof TRIVIA_QUESTIONS === 'undefined') {
-            window.TRIVIA_QUESTIONS = [
-                { question: "What is the capital of France?", options: ["London", "Paris", "Berlin", "Madrid"], correct: 1 },
-                { question: "Which planet is closest to the Sun?", options: ["Venus", "Mercury", "Mars", "Earth"], correct: 1 },
-                { question: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], correct: 3 },
-                { question: "Who wrote Romeo and Juliet?", options: ["Jane Austen", "William Shakespeare", "Mark Twain", "Charles Dickens"], correct: 1 },
-                { question: "What is the smallest country in the world?", options: ["Monaco", "Vatican City", "Liechtenstein", "San Marino"], correct: 1 },
-                { question: "Which element has the symbol 'Au'?", options: ["Silver", "Gold", "Aluminum", "Argon"], correct: 1 },
-                { question: "What year did World War II end?", options: ["1943", "1944", "1945", "1946"], correct: 2 },
-                { question: "How many sides does a hexagon have?", options: ["5", "6", "7", "8"], correct: 1 },
-                { question: "What is the largest mammal on Earth?", options: ["African Elephant", "Blue Whale", "Giraffe", "Hippopotamus"], correct: 1 },
-                { question: "What is the chemical formula for water?", options: ["H2O2", "H2O", "H3O", "HO2"], correct: 1 },
-                { question: "Which country is known as the Land of the Rising Sun?", options: ["China", "Japan", "Thailand", "Vietnam"], correct: 1 },
-                { question: "What is the speed of light?", options: ["300,000 km/s", "150,000 km/s", "450,000 km/s", "100,000 km/s"], correct: 0 },
-                { question: "How many continents are there?", options: ["5", "6", "7", "8"], correct: 2 },
-                { question: "What is the tallest mountain in the world?", options: ["K2", "Mount Kilimanjaro", "Mount Everest", "Denali"], correct: 2 },
-                { question: "Which gas do plants need for photosynthesis?", options: ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"], correct: 2 },
-                { question: "What is the currency of Japan?", options: ["Won", "Peso", "Yuan", "Yen"], correct: 3 },
-                { question: "How many strings does a standard guitar have?", options: ["4", "5", "6", "7"], correct: 2 },
-                { question: "What is the boiling point of water?", options: ["50°C", "75°C", "100°C", "125°C"], correct: 2 },
-                { question: "Which planet is known as the Red Planet?", options: ["Jupiter", "Mars", "Saturn", "Venus"], correct: 1 },
-                { question: "What is the capital of Kenya?", options: ["Mombasa", "Nairobi", "Kisumu", "Nakuru"], correct: 1 }
-            ];
+        // TRIVIA_QUESTIONS is defined in fallback config above
+        if (!window.TRIVIA_QUESTIONS || window.TRIVIA_QUESTIONS.length === 0) {
+            this.toast('❌ Trivia questions not available', 'error');
+            return;
         }
         
         if (!this.user || this.isGuest) {
