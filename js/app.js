@@ -1,3 +1,12 @@
+// At the top of app.js, add:
+var auth = window.auth || null;
+var db = window.db || null;
+
+// If auth/db are not set, try to get from Firebase directly
+if (!auth && typeof firebase !== 'undefined') {
+    auth = firebase.auth();
+    db = firebase.database();
+}
 var app = {
     user: null,
     profile: {},
