@@ -1,12 +1,40 @@
-// At the top of app.js, add:
-var auth = window.auth || null;
-var db = window.db || null;
+// ============================================
+// CHICHI - APP.JS (FIXED)
+// ============================================
 
-// If auth/db are not set, try to get from Firebase directly
-if (!auth && typeof firebase !== 'undefined') {
-    auth = firebase.auth();
-    db = firebase.database();
+// Get Firebase instances
+var auth = null;
+var db = null;
+
+// Wait for Firebase to be ready
+function initFirebase() {
+    if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+        auth = firebase.auth();
+        db = firebase.database();
+        console.log('✅ Firebase ready in app.js');
+        return true;
+    }
+    return false;
 }
+
+// Try to init, retry if needed
+if (!initFirebase()) {
+    var retryCount = 0;
+    var firebaseRetry = setInterval(function() {
+        retryCount++;
+        if (initFirebase() || retryCount > 20) {
+            clearInterval(firebaseRetry);
+            if (retryCount > 20) {
+                console.error('❌ Firebase failed to initialize after 20 retries');
+            }
+        }
+    }, 500);
+}
+
+// ============================================
+// APP OBJECT
+// ============================================
+
 var app = {
     user: null,
     profile: {},
@@ -29,9 +57,6 @@ var app = {
     heatmapListenerSetup: false,
     blockedUsers: {},
     onlineInterval: null,
-    postedHistory: [],
-    lastPostTime: 0,
-    autoPostInterval: null,
     editProfilePhoto: null,
     triviaInterval: null,
     currentTrivia: null,
@@ -59,6 +84,13 @@ var app = {
 
     init: function() {
         var self = this;
+        
+        // Ensure Firebase is ready
+        if (!auth || !db) {
+            console.log('⏳ Waiting for Firebase...');
+            setTimeout(function() { self.init(); }, 1000);
+            return;
+        }
        
         this.chatMessages = {};
         this.unreadMessages = {};
@@ -82,20 +114,17 @@ var app = {
         this.initSuspiciousActivityDetection();
         this.loadEngagementStats();
        
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
-                .then(function(reg) {
-                    console.log('✅ Service Worker registered');
-                    self.initNotifications();
-                })
-                .catch(function(err) {
-                    console.error('⚠️ SW failed:', err);
-                    self.initNotifications();
-                });
-        }
-       
         auth.onAuthStateChanged(function(u) {
+            var loadingTimeout = setTimeout(function() {
+                var loading = document.getElementById('loadingScreen');
+                if (loading) {
+                    loading.classList.remove('active');
+                    loading.style.display = 'none';
+                }
+            }, 5000);
+            
             clearTimeout(loadingTimeout);
+            
             if (u) {
                 self.user = u;
                 self.isGuest = false;
@@ -121,7 +150,6 @@ var app = {
                     if (s.exists()) {
                         self.profile = s.val();
                         self.balance = self.profile.balance || 0;
-                        // Track login
                         self.trackLogin();
                     } else {
                         self.profile = {
@@ -168,10 +196,6 @@ var app = {
                 if (self.onlineInterval) {
                     clearInterval(self.onlineInterval);
                     self.onlineInterval = null;
-                }
-                if (self.autoPostInterval) {
-                    clearInterval(self.autoPostInterval);
-                    self.autoPostInterval = null;
                 }
                 if (self.triviaInterval) {
                     clearInterval(self.triviaInterval);
@@ -228,13 +252,6 @@ var app = {
         }, 1000);
         
         this.loadDarkModePreference();
-        
-        setTimeout(function() {
-            if (self.user && self.user.email === 'support-chichi@gmail.com') {
-                console.log('🤖 Support account detected! Starting auto-post scheduler...');
-                self.startAutoPostScheduler();
-            }
-        }, 5000);
     },
 
     // ============================================
@@ -260,7 +277,6 @@ var app = {
         this.engagementStats.totalLogins = (this.engagementStats.totalLogins || 0) + 1;
         this.saveEngagementStats();
         
-        // Store in Firebase for analytics
         if (this.user) {
             db.ref('analytics/loginHistory/' + this.user.uid + '/' + Date.now()).set({
                 date: today,
@@ -273,11 +289,10 @@ var app = {
         if (!this.user) return;
         var today = new Date().toDateString();
         
-        // Track coin spending/earning
         var revenueData = {
             userId: this.user.uid,
             userName: this.profile.name || 'User',
-            type: type, // 'earned' or 'spent'
+            type: type,
             amount: amount,
             item: item || '',
             date: today,
@@ -286,7 +301,6 @@ var app = {
         
         db.ref('analytics/revenue').push(revenueData);
         
-        // Update engagement stats
         if (type === 'earned') {
             this.engagementStats.totalEarned = (this.engagementStats.totalEarned || 0) + amount;
         } else if (type === 'spent') {
@@ -847,7 +861,7 @@ var app = {
     },
 
     // ============================================
-    // SUSPICIOUS ACTIVITY DETECTION (Simplified)
+    // SUSPICIOUS ACTIVITY DETECTION
     // ============================================
 
     initSuspiciousActivityDetection: function() {
@@ -856,7 +870,6 @@ var app = {
     },
 
     checkForSuspiciousActivity: function(action, details) {
-        // Lightweight version - only flag obvious spam patterns
         var self = this;
         var userId = this.user ? this.user.uid : 'guest';
         var now = Date.now();
@@ -912,7 +925,7 @@ var app = {
     },
 
     // ============================================
-    // ADMIN FUNCTIONS (Simplified)
+    // ADMIN FUNCTIONS
     // ============================================
 
     openAdminModal: function() {
@@ -951,6 +964,7 @@ var app = {
         this.loadSuspiciousActivity();
         this.loadAdminNotifications();
         this.loadAdminAnalytics();
+        this.loadAdminGifts();
     },
 
     closeAdminPortal: function() {
@@ -1006,7 +1020,6 @@ var app = {
         var userCount = Object.keys(this.users || {}).length;
         var postCount = (this.posts || []).length;
         
-        // Calculate today's signups
         var today = new Date().toLocaleDateString('en-KE');
         var todaySignups = 0;
         
@@ -1022,7 +1035,6 @@ var app = {
         document.getElementById('adminPostCount').textContent = postCount;
         document.getElementById('adminSignupCount').textContent = todaySignups;
        
-        // Load engagement stats
         db.ref('analytics/revenue').once('value', function(snap) {
             var totalEarned = 0;
             var totalSpent = 0;
@@ -1040,7 +1052,6 @@ var app = {
             
             document.getElementById('adminTotalEarned').textContent = totalEarned.toFixed(2);
             document.getElementById('adminTotalSpent').textContent = totalSpent.toFixed(2);
-            document.getElementById('adminTransactions').textContent = transactions;
         });
         
         db.ref('bannedUsers').once('value', function(snap) {
@@ -1067,8 +1078,7 @@ var app = {
                 usersWithoutUsername.push({
                     uid: uid,
                     name: user.name,
-                    email: user.email,
-                    displayName: user.displayName
+                    email: user.email
                 });
             }
         }
@@ -1219,8 +1229,6 @@ var app = {
 
     loadIncompleteUsers: function() {
         var self = this;
-        console.log('📥 Loading incomplete user profiles...');
-        
         var html = '';
         var incomplete = [];
         
@@ -1242,8 +1250,6 @@ var app = {
                     });
                 }
             }
-            
-            console.log('⚠️ Incomplete profiles found:', incomplete.length);
             
             if (incomplete.length === 0) {
                 html = '<div style="text-align: center; color: #22c55e; padding: 20px;"><div style="font-size: 30px;">✅</div>All users have complete profiles!</div>';
@@ -1495,7 +1501,6 @@ var app = {
         var self = this;
         var html = '';
         
-        // Get revenue stats
         db.ref('analytics/revenue').once('value', function(snap) {
             var earnedByType = {};
             var spentByType = {};
@@ -1598,7 +1603,7 @@ var app = {
                 </div>
                 
                 <div id="giftList">
-                    ${GIFT_CATALOG.map(function(gift) {
+                    ${window.GIFT_CATALOG ? window.GIFT_CATALOG.map(function(gift) {
                         return `
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb;">
                                 <div>
@@ -1612,7 +1617,7 @@ var app = {
                                 </div>
                             </div>
                         `;
-                    }).join('')}
+                    }).join('') : '<div style="color: #6b7280; text-align: center; padding: 20px;">Gift catalog not loaded</div>'}
                 </div>
                 
                 <button onclick="app.addGift()" style="width: 100%; margin-top: 12px; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">+ Add New Gift</button>
@@ -1672,6 +1677,8 @@ var app = {
             return;
         }
         
+        if (!window.GIFT_CATALOG) window.GIFT_CATALOG = [];
+        
         var newGift = {
             id: 'gift_' + Date.now(),
             name: name,
@@ -1681,14 +1688,14 @@ var app = {
             category: category
         };
         
-        GIFT_CATALOG.push(newGift);
+        window.GIFT_CATALOG.push(newGift);
         this.toast('✅ Gift added successfully!', 'success');
         document.querySelector('.modal-overlay').remove();
         this.loadAdminGifts();
     },
 
     editGift: function(id) {
-        var gift = GIFT_CATALOG.find(function(g) { return g.id === id; });
+        var gift = window.GIFT_CATALOG ? window.GIFT_CATALOG.find(function(g) { return g.id === id; }) : null;
         if (!gift) {
             this.toast('Gift not found', 'error');
             return;
@@ -1732,7 +1739,7 @@ var app = {
     },
 
     saveEditedGift: function(id) {
-        var gift = GIFT_CATALOG.find(function(g) { return g.id === id; });
+        var gift = window.GIFT_CATALOG ? window.GIFT_CATALOG.find(function(g) { return g.id === id; }) : null;
         if (!gift) {
             this.toast('Gift not found', 'error');
             return;
@@ -1752,11 +1759,13 @@ var app = {
     deleteGift: function(id) {
         if (!confirm('Delete this gift?')) return;
         
-        var index = GIFT_CATALOG.findIndex(function(g) { return g.id === id; });
-        if (index > -1) {
-            GIFT_CATALOG.splice(index, 1);
-            this.toast('✅ Gift deleted', 'success');
-            this.loadAdminGifts();
+        if (window.GIFT_CATALOG) {
+            var index = window.GIFT_CATALOG.findIndex(function(g) { return g.id === id; });
+            if (index > -1) {
+                window.GIFT_CATALOG.splice(index, 1);
+                this.toast('✅ Gift deleted', 'success');
+                this.loadAdminGifts();
+            }
         }
     },
 
@@ -1934,7 +1943,9 @@ var app = {
                             'create_post': '📄', 'delete_post': '🗑️', 'like_post': '❤️',
                             'comment': '💬', 'follow': '👥', 'unfollow': '👥',
                             'admin_login': '⚙️', 'admin_ban': '🚫', 'admin_unban': '✅',
-                            'admin_delete_post': '🗑️', 'admin_resolve_activity': '✅'
+                            'admin_delete_post': '🗑️', 'admin_resolve_activity': '✅',
+                            'admin_approve_payment': '✅', 'admin_reject_payment': '❌',
+                            'payment_submit': '💳', 'password_reset': '🔑'
                         }[act.action] || '📌';
                         
                         var timestamp = new Date(act.timestamp || 0).toLocaleString();
@@ -1987,6 +1998,8 @@ var app = {
         modal.style.paddingTop = '40px';
         modal.style.overflowY = 'auto';
         
+        var catalog = window.GIFT_CATALOG || [];
+        
         var html = `
             <div style="background: white; border-radius: 24px 24px 0 0; padding: 24px 20px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; margin: 0 auto;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -2012,7 +2025,8 @@ var app = {
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    ${GIFT_CATALOG.map(function(gift) {
+                    ${catalog.length === 0 ? '<div style="grid-column: 1/-1; text-align: center; color: #6b7280; padding: 40px;">No gifts available</div>' :
+                    catalog.map(function(gift) {
                         var canAfford = self.balance >= gift.cost;
                         return `
                             <div style="background: white; border-radius: 14px; padding: 16px; border: 2px solid ${canAfford ? '#22c55e' : '#e5e7eb'}; text-align: center; transition: 0.3s; ${canAfford ? 'box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);' : ''}">
@@ -2042,7 +2056,8 @@ var app = {
     },
 
     redeemGift: function(giftId) {
-        var gift = GIFT_CATALOG.find(function(g) { return g.id === giftId; });
+        var catalog = window.GIFT_CATALOG || [];
+        var gift = catalog.find(function(g) { return g.id === giftId; });
         if (!gift) {
             this.toast('Gift not found', 'error');
             return;
@@ -2061,7 +2076,6 @@ var app = {
         this.balance -= gift.cost;
         db.ref('users/' + this.user.uid + '/balance').set(this.balance);
         
-        // Track redemption
         db.ref('giftRedemptions').push({
             userId: this.user.uid,
             userName: this.profile.name || 'User',
@@ -2074,14 +2088,12 @@ var app = {
             timestamp: firebase.database.ServerValue.TIMESTAMP
         });
         
-        // Track revenue
         this.trackRevenue('spent', gift.cost, 'gift_' + gift.name);
         
         this.updateBalanceDisplays();
         this.toast('🎉 Redeemed: ' + gift.name + '!', 'success');
         this.logUserActivity('redeem_gift', 'Redeemed ' + gift.name + ' for ' + gift.cost + ' coins');
         
-        // Close modal and refresh
         document.querySelector('.modal-overlay').remove();
         this.showGiftCatalog();
     },
@@ -2425,7 +2437,7 @@ var app = {
     },
 
     // ============================================
-    // GET USER TIER (Simplified - always free)
+    // GET USER TIER
     // ============================================
 
     getUserTier: function() {
@@ -2535,6 +2547,7 @@ var app = {
         var triviaCount = this.triviaAnsweredCount || 0;
         var streakCount = this.streakCount || 0;
         var username = this.profile.username || 'user';
+        var catalog = window.GIFT_CATALOG || [];
         
         var html = `
             <div style="padding: 16px 16px 140px 16px; background: #ffffff; min-height: 100vh;">
@@ -2631,7 +2644,7 @@ var app = {
                         <button onclick="app.showGiftCatalog()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-weight: 600; font-size: 12px;">See All →</button>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                        ${GIFT_CATALOG.slice(0, 3).map(function(gift) {
+                        ${catalog.slice(0, 3).map(function(gift) {
                             return `
                                 <div style="background: #f8fafc; border-radius: 10px; padding: 12px; text-align: center;">
                                     <div style="font-size: 28px;">${gift.image}</div>
@@ -2640,6 +2653,7 @@ var app = {
                                 </div>
                             `;
                         }).join('')}
+                        ${catalog.length === 0 ? '<div style="grid-column: 1/-1; text-align: center; color: #6b7280; padding: 20px;">No gifts available</div>' : ''}
                     </div>
                 </div>
                 
@@ -2668,6 +2682,7 @@ var app = {
         var userTier = 'free';
         var tierData = EARNING_SETTINGS[userTier];
         var remaining = this.getQuestionsRemaining();
+        var catalog = window.GIFT_CATALOG || [];
         
         var optionsHtml = '';
         questionData.options.forEach(function(option, index) {
@@ -2730,7 +2745,7 @@ var app = {
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
                     <h3 style="margin: 0 0 12px 0;">🎁 Gift Catalog</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                        ${GIFT_CATALOG.slice(0, 3).map(function(gift) {
+                        ${catalog.slice(0, 3).map(function(gift) {
                             return `
                                 <div style="background: #f8fafc; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer;" onclick="app.showGiftCatalog()">
                                     <div style="font-size: 28px;">${gift.image}</div>
@@ -2739,6 +2754,7 @@ var app = {
                                 </div>
                             `;
                         }).join('')}
+                        ${catalog.length === 0 ? '<div style="grid-column: 1/-1; text-align: center; color: #6b7280; padding: 20px;">No gifts available</div>' : ''}
                     </div>
                     <button onclick="app.showGiftCatalog()" style="width: 100%; margin-top: 12px; padding: 10px; background: #f59e0b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">View All Gifts →</button>
                 </div>
@@ -2869,7 +2885,6 @@ var app = {
             this.balance += tierData.rewardPerQuestion;
             db.ref('users/' + userId + '/balance').set(this.balance);
             
-            // Track revenue
             this.trackRevenue('earned', tierData.rewardPerQuestion, 'trivia');
             
             var balanceDisplay = document.getElementById('earnBalanceDisplay');
@@ -4163,10 +4178,6 @@ var app = {
             clearInterval(this.onlineInterval);
             this.onlineInterval = null;
         }
-        if (this.autoPostInterval) {
-            clearInterval(this.autoPostInterval);
-            this.autoPostInterval = null;
-        }
         if (this.triviaInterval) {
             clearInterval(this.triviaInterval);
             this.triviaInterval = null;
@@ -5048,7 +5059,6 @@ var app = {
         
         document.body.appendChild(modal);
         
-        // Load transactions from revenue analytics
         db.ref('analytics/revenue').orderByChild('userId').equalTo(this.user.uid).once('value', function(snapshot) {
             var transactions = [];
             snapshot.forEach(function(child) {
@@ -5059,7 +5069,6 @@ var app = {
                 });
             });
             
-            // Reverse to show newest first
             transactions.reverse();
             
             var html = '';
@@ -5107,125 +5116,6 @@ var app = {
             earnBalanceDisplay.textContent = this.balance.toFixed(2) + ' Coins';
         }
     },
-
-    // ============================================
-    // AUTO-POST SYSTEM
-    // ============================================
-
-    loadPostedHistory: function() {
-        var savedHistory = localStorage.getItem('chichi_posted_history');
-        if (savedHistory) {
-            try {
-                this.postedHistory = JSON.parse(savedHistory);
-            } catch(e) { this.postedHistory = []; }
-        }
-        var savedTime = localStorage.getItem('chichi_last_post_time');
-        if (savedTime) { this.lastPostTime = parseInt(savedTime); }
-        var today = new Date().toDateString();
-        var savedDate = localStorage.getItem('chichi_last_post_date');
-        if (savedDate !== today) {
-            this.postedHistory = [];
-            localStorage.setItem('chichi_last_post_date', today);
-            this.savePostedHistory();
-        }
-    },
-
-    savePostedHistory: function() {
-        localStorage.setItem('chichi_posted_history', JSON.stringify(this.postedHistory));
-        localStorage.setItem('chichi_last_post_time', this.lastPostTime.toString());
-        localStorage.setItem('chichi_last_post_date', new Date().toDateString());
-    },
-
-    getAvailableTemplates: function() {
-        var allTemplates = POST_TEMPLATES.slice();
-        var postedTexts = this.postedHistory.map(function(item) { return item.text; });
-        return allTemplates.filter(function(template) {
-            return !postedTexts.includes(template.text);
-        });
-    },
-
-    getRandomImage: function(keyword) {
-        return new Promise(function(resolve, reject) {
-            var width = 800 + Math.floor(Math.random() * 400);
-            var height = 600 + Math.floor(Math.random() * 300);
-            var seed = (keyword || 'person') + Date.now() + Math.random();
-            var imageUrl = 'https://picsum.photos/seed/' + encodeURIComponent(seed) + '/' + width + '/' + height;
-            resolve(imageUrl);
-        });
-    },
-
-    uploadImageToCloudinary: function(imageUrl) {
-        return new Promise(function(resolve, reject) {
-            fetch(imageUrl)
-                .then(function(response) { return response.blob(); })
-                .then(function(blob) {
-                    var formData = new FormData();
-                    formData.append('file', blob);
-                    formData.append('upload_preset', UPLOAD_PRESET || 'chichi_photos');
-                    return fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
-                        method: 'POST', body: formData
-                    });
-                })
-                .then(function(response) { return response.json(); })
-                .then(function(data) {
-                    if (data.secure_url) { resolve(data.secure_url); }
-                    else { reject(new Error('No URL returned')); }
-                })
-                .catch(reject);
-        });
-    },
-
-    performAutoPost: function() {
-        var self = this;
-        if (!self.user || self.user.email !== 'support-chichi@gmail.com') { return; }
-        
-        var now = Date.now();
-        var minutesSinceLastPost = (now - self.lastPostTime) / (1000 * 60);
-        if (minutesSinceLastPost < 10 && self.postedHistory.length > 0) { return; }
-        
-        var availableTemplates = self.getAvailableTemplates();
-        if (availableTemplates.length === 0) {
-            self.postedHistory = [];
-            self.savePostedHistory();
-            availableTemplates = POST_TEMPLATES.slice();
-        }
-        
-        var randomIndex = Math.floor(Math.random() * availableTemplates.length);
-        var selected = availableTemplates[randomIndex];
-        
-        self.getRandomImage(selected.imageKeyword)
-            .then(function(imageUrl) { return self.uploadImageToCloudinary(imageUrl); })
-            .then(function(finalImageUrl) {
-                var postData = {
-                    userId: self.user.uid,
-                    userName: 'SUPPORT@CHICHI',
-                    userPhoto: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png',
-                    photoUrl: finalImageUrl,
-                    caption: selected.text,
-                    hashtags: ['#CHICHI', '#AutoPost', '#' + selected.category.replace(/\s/g, '')],
-                    likes: {}, comments: [], commentedUsers: {}, downloads: 0,
-                    isAutoPost: true, isSupportPost: true, category: selected.category,
-                    source: 'CHICHI AI',
-                    createdAt: new Date().toLocaleString('en-KE'),
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                };
-                db.ref('posts').push(postData).then(function() {
-                    self.toast('🤖 New post from SUPPORT@CHICHI!', 'success');
-                    self.postedHistory.push({
-                        text: selected.text,
-                        category: selected.category,
-                        timestamp: Date.now()
-                    });
-                    self.lastPostTime = Date.now();
-                    self.savePostedHistory();
-                    setTimeout(function() { self.loadPosts(); }, 500);
-                });
-            }).catch(function(err) {
-                console.error('❌ Image error:', err);
-                setTimeout(function() { self.performAutoPost(); }, 30000);
-            });
-    },
-
 
     // ============================================
     // PREVIEW PHOTO
@@ -6351,12 +6241,6 @@ var app = {
 // ============================================
 
 app.init();
-
-setTimeout(function() {
-    if (app.user && app.user.email === 'support-chichi@gmail.com') {
-        app.startAutoPostScheduler();
-    }
-}, 3000);
 
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
 console.log('%c💰 Chichi Coins - Earn by answering trivia!', 'color: #FFC24B; font-size: 12px;');
