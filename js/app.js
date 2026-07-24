@@ -227,7 +227,6 @@ var app = {
             self.setupHeatmapListener();
         }, 1000);
         
-        this.loadPostedHistory();
         this.loadDarkModePreference();
         
         setTimeout(function() {
@@ -5227,21 +5226,6 @@ var app = {
             });
     },
 
-    startAutoPostScheduler: function() {
-        var self = this;
-        if (!self.user || self.user.email !== 'support-chichi@gmail.com') { return; }
-        
-        self.loadPostedHistory();
-        var now = Date.now();
-        var minutesSinceLastPost = (now - self.lastPostTime) / (1000 * 60);
-        if (self.postedHistory.length === 0 || minutesSinceLastPost >= 10) {
-            setTimeout(function() { self.performAutoPost(); }, 3000);
-        }
-        
-        if (self.autoPostInterval) { clearInterval(self.autoPostInterval); }
-        self.autoPostInterval = setInterval(function() { self.performAutoPost(); }, 60000);
-        console.log('✅ Auto-post scheduler running!');
-    },
 
     // ============================================
     // PREVIEW PHOTO
