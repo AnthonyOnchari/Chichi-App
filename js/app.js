@@ -1,5 +1,5 @@
 // ============================================
-// CHICHI - APP.JS (COMPLETE)
+// CHICHI - APP.JS (COMPLETE FIXED)
 // ============================================
 
 // Get Firebase instances
@@ -29,30 +29,6 @@ if (!initFirebase()) {
             }
         }
     }, 500);
-}
-
-
-// ============================================
-// CONFIG VALIDATION - Ensure config.js loaded first
-// ============================================
-
-// Wait for config.js to load (config.js is loaded BEFORE app.js in index.html)
-var configCheckTimeout = 0;
-function checkConfigLoaded() {
-    if (typeof TRIVIA_QUESTIONS !== 'undefined' && typeof GIFT_CATALOG !== 'undefined' && typeof EARNING_SETTINGS !== 'undefined') {
-        console.log('✅ Config loaded successfully');
-        console.log('🎁 GIFT_CATALOG:', GIFT_CATALOG.length, 'items');
-        console.log('🧠 TRIVIA_QUESTIONS:', TRIVIA_QUESTIONS.length, 'questions');
-        console.log('💰 EARNING_SETTINGS:', Object.keys(EARNING_SETTINGS).length, 'tiers');
-        return true;
-    }
-    
-    configCheckTimeout++;
-    if (configCheckTimeout > 100) {
-        console.error('❌ Config.js failed to load - app may not work correctly');
-        return false;
-    }
-    return false;
 }
 
 // ============================================
@@ -110,7 +86,6 @@ var app = {
     init: function() {
         var self = this;
         
-        // Ensure Firebase is ready
         if (!auth || !db) {
             console.log('⏳ Waiting for Firebase...');
             setTimeout(function() { self.init(); }, 1000);
@@ -183,6 +158,7 @@ var app = {
                             username: u.email.split('@')[0] || 'user',
                             bio: '',
                             profilePhoto: u.photoURL || '',
+                            coverImage: '',
                             balance: 0,
                             followers: 0,
                             following: 0,
@@ -956,7 +932,7 @@ var app = {
     },
 
     // ============================================
-    // ADMIN FUNCTIONS (Simplified)
+    // ADMIN FUNCTIONS
     // ============================================
 
     openAdminModal: function() {
@@ -2129,7 +2105,7 @@ var app = {
     },
 
     // ============================================
-    // SEND MONEY TO USER
+    // SEND COINS TO USER
     // ============================================
 
     showSendMoneyModal: function() {
@@ -2497,7 +2473,7 @@ var app = {
         if (!resultsContainer) return;
         
         if (!query || query.trim() === '') {
-            resultsContainer.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">🔍 Search by name, email, username, or #hashtag</div>';
+            resultsContainer.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">🔍 Search by name, email, username</div>';
             return;
         }
         
@@ -2521,14 +2497,6 @@ var app = {
                     }
                     else if (user.username && user.username.toLowerCase().includes(searchQuery)) {
                         matches = true;
-                    }
-                    else if (user.hashtags && Array.isArray(user.hashtags)) {
-                        for (var i = 0; i < user.hashtags.length; i++) {
-                            if (user.hashtags[i].toLowerCase().includes(searchQuery)) {
-                                matches = true;
-                                break;
-                            }
-                        }
                     }
                     
                     if (matches) {
@@ -2622,14 +2590,6 @@ var app = {
                     else if (user.username && user.username.toLowerCase().includes(searchQuery)) {
                         matches = true;
                     }
-                    else if (user.hashtags && Array.isArray(user.hashtags)) {
-                        for (var i = 0; i < user.hashtags.length; i++) {
-                            if (user.hashtags[i].toLowerCase().includes(searchQuery)) {
-                                matches = true;
-                                break;
-                            }
-                        }
-                    }
                     
                     if (matches) {
                         results.push({ uid: uid, user: user });
@@ -2712,6 +2672,124 @@ var app = {
 
     clearUnreadBadge: function() {
         document.getElementById('messagesBadge').style.display = 'none';
+    },
+
+    // ============================================
+    // MESSAGES FILTER FUNCTIONS
+    // ============================================
+
+    filterMessages: function(filter) {
+        document.querySelectorAll('.message-filter-tab').forEach(function(tab) {
+            tab.classList.remove('active');
+        });
+        
+        var tabs = document.querySelectorAll('.message-filter-tab');
+        var tabMap = { 'all': 0, 'unread': 1, 'favorites': 2, 'notifications': 3 };
+        var index = tabMap[filter];
+        if (index !== undefined && tabs[index]) {
+            tabs[index].classList.add('active');
+        }
+        
+        if (filter === 'notifications') {
+            this.showNotificationsTab();
+            return;
+        }
+        
+        var items = document.querySelectorAll('.message-item');
+        items.forEach(function(item) {
+            var unreadBadge = item.querySelector('.message-item-unread');
+            var hasUnread = unreadBadge && parseInt(unreadBadge.textContent) > 0;
+            
+            if (filter === 'all') {
+                item.style.display = 'flex';
+            } else if (filter === 'unread' && hasUnread) {
+                item.style.display = 'flex';
+            } else if (filter === 'favorites') {
+                var isFav = item.getAttribute('data-favorite') === 'true';
+                item.style.display = isFav ? 'flex' : 'none';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    },
+
+    showNotificationsTab: function() {
+        var self = this;
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.zIndex = '10050';
+        
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 20px; padding: 24px; max-width: 500px; width: 95%; max-height: 80vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 20px; font-weight: 700; margin: 0;">🔔 Notifications</h2>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                </div>
+                <div id="notificationsList" style="max-height: 500px; overflow-y: auto;">
+                    <div style="text-align: center; color: #9ca3af; padding: 40px;">Loading notifications...</div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        if (!this.user || this.isGuest) {
+            document.getElementById('notificationsList').innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 40px;">Login to see notifications</div>';
+            return;
+        }
+        
+        var userId = this.user.uid;
+        db.ref('notifications/' + userId).orderByChild('timestamp').limitToLast(50).once('value', function(snapshot) {
+            var notifications = [];
+            snapshot.forEach(function(child) {
+                notifications.push({
+                    id: child.key,
+                    ...child.val()
+                });
+            });
+            
+            notifications.reverse();
+            
+            var html = '';
+            if (notifications.length === 0) {
+                html = '<div style="text-align: center; color: #9ca3af; padding: 40px;">No notifications yet</div>';
+            } else {
+                notifications.forEach(function(notif) {
+                    var icon = notif.type === 'coin_received' ? '💰' : '🔔';
+                    html += `
+                        <div style="padding: 12px; border-bottom: 1px solid #f0f0f0; background: ${notif.read ? 'white' : '#f0f7ff'}; border-radius: 8px; margin-bottom: 4px;">
+                            <div style="display: flex; gap: 10px; align-items: start;">
+                                <div style="font-size: 24px;">${icon}</div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; font-size: 14px; color: #1a202c;">${notif.message || 'New notification'}</div>
+                                    <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">${notif.createdAt || 'Just now'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            var list = document.getElementById('notificationsList');
+            if (list) list.innerHTML = html;
+        });
+    },
+
+    searchMessages: function(query) {
+        var items = document.querySelectorAll('.message-item');
+        var searchQuery = query.toLowerCase().trim();
+        
+        items.forEach(function(item) {
+            var name = item.querySelector('.message-item-name');
+            var preview = item.querySelector('.message-item-preview');
+            var text = (name ? name.textContent : '') + ' ' + (preview ? preview.textContent : '');
+            
+            if (!searchQuery || text.toLowerCase().includes(searchQuery)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
     },
 
     // ============================================
@@ -2892,7 +2970,7 @@ var app = {
         var html = `
             <div style="padding: 12px 12px 140px 12px; background: #f0f2f5; min-height: 100vh;">
                 
-                <!-- ===== CREDIT CARD (COMPACT) ===== -->
+                <!-- CREDIT CARD -->
                 <div style="
                     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
                     border-radius: 18px;
@@ -3038,64 +3116,29 @@ var app = {
                     </div>
                 </div>
                 
-                <!-- STATS SECTION -->
+                <!-- STATS -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
-                    <div style="
-                        background: white;
-                        border-radius: 14px;
-                        padding: 14px;
-                        text-align: center;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                    ">
+                    <div style="background: white; border-radius: 14px; padding: 14px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                         <div style="font-size: 24px; font-weight: 700; color: #3b82f6;" id="triviaCount">${triviaCount}</div>
                         <div style="font-size: 11px; color: #64748b; font-weight: 500;">Questions</div>
                     </div>
-                    <div style="
-                        background: white;
-                        border-radius: 14px;
-                        padding: 14px;
-                        text-align: center;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                    ">
+                    <div style="background: white; border-radius: 14px; padding: 14px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                         <div style="font-size: 24px; font-weight: 700; color: #8b5cf6;" id="streakCount">${streakCount}</div>
                         <div style="font-size: 11px; color: #64748b; font-weight: 500;">Streak</div>
                     </div>
                 </div>
                 
                 <!-- TRIVIA CARD -->
-                <div style="
-                    background: white;
-                    border-radius: 14px;
-                    padding: 16px;
-                    margin-bottom: 14px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                    border: 1px solid #e8ecf0;
-                ">
+                <div style="background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e8ecf0;">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
                         <div>
                             <div style="font-size: 14px; font-weight: 700; color: #15803d;">🧠 Trivia</div>
                             <div style="font-size: 11px; color: #64748b;">Earn coins answering questions</div>
                         </div>
-                        <div style="
-                            background: #dcfce7;
-                            color: #15803d;
-                            padding: 4px 10px;
-                            border-radius: 6px;
-                            font-size: 11px;
-                            font-weight: 600;
-                            white-space: nowrap;
-                        ">+${tierData.rewardPerQuestion}</div>
+                        <div style="background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; white-space: nowrap;">+${tierData.rewardPerQuestion}</div>
                     </div>
                     
-                    <div style="
-                        background: #f8fafc;
-                        border-radius: 8px;
-                        padding: 8px 12px;
-                        margin-bottom: 12px;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                    ">
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                         <div style="font-size: 11px; color: #64748b;">
                             <span style="font-weight: 600; color: #1e293b;">${remaining}</span> left today
                         </div>
@@ -3119,43 +3162,33 @@ var app = {
                     </button>
                 </div>
                 
-                <!-- GIFT CATALOG PREVIEW -->
-                <div style="
-                    background: white;
-                    border-radius: 14px;
-                    padding: 14px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                    border: 1px solid #e8ecf0;
-                ">
+                <!-- GIFT CATALOG PREVIEW (Horizontal Scroll) -->
+                <div style="background: white; border-radius: 14px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e8ecf0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #1e293b;">🎁 Gifts</h3>
-                        <button onclick="app.showGiftCatalog()" style="
-                            background: none;
-                            border: none;
-                            color: #3b82f6;
-                            cursor: pointer;
-                            font-weight: 600;
-                            font-size: 11px;
-                        ">See All →</button>
+                        <button onclick="app.showGiftCatalog()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-weight: 600; font-size: 11px;">See All →</button>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
-                        ${catalog.slice(0, 3).map(function(gift) {
+                    <div style="display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 8px 0; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;">
+                        ${catalog.map(function(gift) {
                             return `
                                 <div style="
+                                    flex: 0 0 100px;
                                     background: #f8fafc;
-                                    border-radius: 10px;
-                                    padding: 10px;
+                                    border-radius: 12px;
+                                    padding: 12px;
                                     text-align: center;
                                     transition: 0.3s;
                                     cursor: pointer;
-                                " onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'" onclick="app.showGiftCatalog()">
-                                    <div style="font-size: 24px;">${gift.image}</div>
-                                    <div style="font-size: 9px; font-weight: 600; color: #1e293b; margin-top: 2px;">${gift.name}</div>
-                                    <div style="font-size: 8px; color: #6b7280;">${gift.cost}</div>
+                                    scroll-snap-align: start;
+                                    border: 1px solid #e5e7eb;
+                                " onmouseover="this.style.background='#f1f5f9'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#f8fafc'; this.style.transform='translateY(0)'" onclick="app.showGiftCatalog()">
+                                    <div style="font-size: 28px;">${gift.image}</div>
+                                    <div style="font-size: 10px; font-weight: 600; color: #1e293b; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${gift.name}</div>
+                                    <div style="font-size: 9px; color: #6b7280;">${gift.cost} Coins</div>
                                 </div>
                             `;
                         }).join('')}
-                        ${catalog.length === 0 ? '<div style="grid-column: 1/-1; text-align: center; color: #6b7280; padding: 16px; font-size: 12px;">No gifts</div>' : ''}
+                        ${catalog.length === 0 ? '<div style="flex: 1; text-align: center; color: #6b7280; padding: 20px; font-size: 12px;">No gifts</div>' : ''}
                     </div>
                 </div>
                 
@@ -3167,7 +3200,7 @@ var app = {
     },
 
     // ============================================
-    // RENDER EARN WITH TRIVIA - COMPACT
+    // RENDER EARN WITH TRIVIA
     // ============================================
 
     renderEarnWithTrivia: function(questionData) {
@@ -3217,7 +3250,7 @@ var app = {
         var html = `
             <div style="padding: 12px 12px 140px 12px; background: #f0f2f5; min-height: 100vh;">
                 
-                <!-- ===== CREDIT CARD (COMPACT) ===== -->
+                <!-- CREDIT CARD -->
                 <div style="
                     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
                     border-radius: 18px;
@@ -3364,103 +3397,47 @@ var app = {
                 </div>
                 
                 <!-- TRIVIA QUESTION -->
-                <div style="
-                    background: white;
-                    border-radius: 14px;
-                    padding: 16px;
-                    margin-bottom: 14px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                    border: 1px solid #e8ecf0;
-                ">
+                <div style="background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e8ecf0;">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
                         <div>
                             <div style="font-size: 14px; font-weight: 700; color: #15803d;">🧠 Trivia</div>
                             <div style="font-size: 11px; color: #64748b;">Answer to earn coins</div>
                         </div>
-                        <div style="
-                            background: #dcfce7;
-                            color: #15803d;
-                            padding: 4px 10px;
-                            border-radius: 6px;
-                            font-size: 11px;
-                            font-weight: 600;
-                            white-space: nowrap;
-                        ">+${tierData.rewardPerQuestion}</div>
+                        <div style="background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; white-space: nowrap;">+${tierData.rewardPerQuestion}</div>
                     </div>
                     
                     <div id="triviaQuestionArea">
-                        <p style="
-                            font-size: 14px;
-                            font-weight: 600;
-                            color: #1a202c;
-                            margin-bottom: 12px;
-                            padding: 12px;
-                            background: #f8fafc;
-                            border-radius: 10px;
-                            border-left: 3px solid #0088cc;
-                            line-height: 1.5;
-                        ">${questionData.question}</p>
+                        <p style="font-size: 14px; font-weight: 600; color: #1a202c; margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 10px; border-left: 3px solid #0088cc; line-height: 1.5;">${questionData.question}</p>
                         
                         <div id="triviaOptions">
                             ${optionsHtml}
                         </div>
                         
-                        <div id="triviaTimerDisplay" style="
-                            text-align: center;
-                            margin-top: 12px;
-                            font-size: 12px;
-                            color: #6b7280;
-                        ">
+                        <div id="triviaTimerDisplay" style="text-align: center; margin-top: 12px; font-size: 12px; color: #6b7280;">
                             ⏱️ <span id="triviaTimeLeft" style="font-weight: 700; color: #ef4444;">${tierData.timerSeconds}</span>s remaining
                         </div>
                         
-                        <div id="triviaResultArea" style="
-                            display: none;
-                            text-align: center;
-                            padding: 10px;
-                            border-radius: 10px;
-                            margin-top: 10px;
-                        "></div>
+                        <div id="triviaResultArea" style="display: none; text-align: center; padding: 10px; border-radius: 10px; margin-top: 10px;"></div>
                     </div>
                 </div>
                 
-                <!-- GIFT CATALOG PREVIEW -->
-                <div style="
-                    background: white;
-                    border-radius: 14px;
-                    padding: 14px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                    border: 1px solid #e8ecf0;
-                ">
+                <!-- GIFT CATALOG PREVIEW (Horizontal Scroll) -->
+                <div style="background: white; border-radius: 14px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e8ecf0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #1e293b;">🎁 Gifts</h3>
-                        <button onclick="app.showGiftCatalog()" style="
-                            background: none;
-                            border: none;
-                            color: #3b82f6;
-                            cursor: pointer;
-                            font-weight: 600;
-                            font-size: 11px;
-                        ">See All →</button>
+                        <button onclick="app.showGiftCatalog()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-weight: 600; font-size: 11px;">See All →</button>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
-                        ${catalog.slice(0, 3).map(function(gift) {
+                    <div style="display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 8px 0; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;">
+                        ${catalog.map(function(gift) {
                             return `
-                                <div style="
-                                    background: #f8fafc;
-                                    border-radius: 10px;
-                                    padding: 10px;
-                                    text-align: center;
-                                    transition: 0.3s;
-                                    cursor: pointer;
-                                " onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'" onclick="app.showGiftCatalog()">
-                                    <div style="font-size: 24px;">${gift.image}</div>
-                                    <div style="font-size: 9px; font-weight: 600; color: #1e293b; margin-top: 2px;">${gift.name}</div>
-                                    <div style="font-size: 8px; color: #6b7280;">${gift.cost}</div>
+                                <div style="flex: 0 0 100px; background: #f8fafc; border-radius: 12px; padding: 12px; text-align: center; transition: 0.3s; cursor: pointer; scroll-snap-align: start; border: 1px solid #e5e7eb;" onmouseover="this.style.background='#f1f5f9'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#f8fafc'; this.style.transform='translateY(0)'" onclick="app.showGiftCatalog()">
+                                    <div style="font-size: 28px;">${gift.image}</div>
+                                    <div style="font-size: 10px; font-weight: 600; color: #1e293b; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${gift.name}</div>
+                                    <div style="font-size: 9px; color: #6b7280;">${gift.cost} Coins</div>
                                 </div>
                             `;
                         }).join('')}
-                        ${catalog.length === 0 ? '<div style="grid-column: 1/-1; text-align: center; color: #6b7280; padding: 16px; font-size: 12px;">No gifts</div>' : ''}
+                        ${catalog.length === 0 ? '<div style="flex: 1; text-align: center; color: #6b7280; padding: 20px; font-size: 12px;">No gifts</div>' : ''}
                     </div>
                 </div>
                 
@@ -3469,7 +3446,7 @@ var app = {
         
         earnContainer.innerHTML = html;
         
-        // Start the timer
+        // Start timer
         var timeLeft = tierData.timerSeconds;
         var timerDisplay = document.getElementById('triviaTimeLeft');
         
@@ -3689,12 +3666,6 @@ var app = {
     },
 
     generateTriviaQuestion: function(callback) {
-        // TRIVIA_QUESTIONS is defined in fallback config above
-        if (!window.TRIVIA_QUESTIONS || window.TRIVIA_QUESTIONS.length === 0) {
-            this.toast('❌ Trivia questions not available', 'error');
-            return;
-        }
-        
         if (!this.user || this.isGuest) {
             this.toast('⚠️ Please log in to answer trivia', 'error');
             return;
@@ -4002,188 +3973,184 @@ var app = {
     },
 
     // ============================================
-    // RENDER PROFILE - WITH FULL PROFILE INFO
+    // RENDER PROFILE - FIXED
     // ============================================
 
-    // ============================================
-// RENDER PROFILE - FIXED
-// ============================================
-
-renderProfile: function() {
-    var profileContent = document.getElementById('profileContent');
-    if (!profileContent) {
-        var profileView = document.getElementById('profileView');
-        if (profileView) {
-            var content = document.createElement('div');
-            content.id = 'profileContent';
-            profileView.appendChild(content);
-            profileContent = content;
-        } else {
+    renderProfile: function() {
+        var profileContent = document.getElementById('profileContent');
+        if (!profileContent) {
+            var profileView = document.getElementById('profileView');
+            if (profileView) {
+                var content = document.createElement('div');
+                content.id = 'profileContent';
+                profileView.appendChild(content);
+                profileContent = content;
+            } else {
+                return;
+            }
+        }
+        
+        if (!this.user || this.isGuest) {
+            var html = `
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 20px;text-align:center;">
+                    <div style="font-size:48px;margin-bottom:16px;">👤</div>
+                    <div style="font-size:20px;font-weight:600;margin-bottom:8px;color:var(--text);">No Profile Yet</div>
+                    <div style="font-size:14px;color:var(--text-light);margin-bottom:24px;line-height:1.5;">
+                        Sign up or log in to create your profile, earn rewards, and connect with others.
+                    </div>
+                    <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:14px 32px;border-radius:8px;font-weight:600;cursor:pointer;font-size:16px;margin-bottom:12px;">📝 Sign Up / Login</button>
+                    <button onclick="app.switchView('feed')" style="background:white;color:var(--primary);border:2px solid var(--primary);padding:12px 32px;border-radius:8px;font-weight:600;cursor:pointer;font-size:16px;">Back to Feed</button>
+                </div>
+            `;
+            profileContent.innerHTML = html;
             return;
         }
-    }
-    
-    if (!this.user || this.isGuest) {
+        
+        var userTier = 'free';
+        var tierData = EARNING_SETTINGS[userTier];
+        var username = this.profile.username || 'user';
+        var interests = this.profile.interests || [];
+        var bio = this.profile.bio || '';
+        var userPosts = this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this)).length;
+        var followers = this.profile.followers || 0;
+        var following = Object.keys(this.following).length;
+
         var html = `
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 20px;text-align:center;">
-                <div style="font-size:48px;margin-bottom:16px;">👤</div>
-                <div style="font-size:20px;font-weight:600;margin-bottom:8px;color:var(--text);">No Profile Yet</div>
-                <div style="font-size:14px;color:var(--text-light);margin-bottom:24px;line-height:1.5;">
-                    Sign up or log in to create your profile, earn rewards, and connect with others.
+            <div style="padding: 0; background: #f5f5f5; min-height: 100vh;">
+                
+                <!-- PROFILE HEADER WITH COVER -->
+                <div style="position: relative; width: 100%; background: #1a1a1a; overflow: hidden;">
+                    
+                    <!-- Cover Image -->
+                    <div style="position: relative; width: 100%; height: 200px; background: linear-gradient(135deg, #2d1b69 0%, #3d2680 100%); overflow: hidden;">
+                        ${this.profile.coverImage ? `
+                            <img src="${this.profile.coverImage}" style="width:100%;height:100%;object-fit:cover;">
+                        ` : `
+                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:14px;">
+                                🌄
+                            </div>
+                        `}
+                        
+                        <!-- Change Cover Button -->
+                        <button onclick="app.showCoverImageModal()" style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.5);color:white;border:none;padding:4px 10px;border-radius:12px;font-size:10px;cursor:pointer;backdrop-filter:blur(4px);">📷 Cover</button>
+                        
+                        <!-- Back Button -->
+                        <button onclick="app.switchView('feed');" style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.5);color:white;border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;backdrop-filter:blur(4px);">‹</button>
+                        
+                        <!-- Profile Photo -->
+                        <div style="position:absolute;bottom:-50px;left:50%;transform:translateX(-50%);">
+                            <div style="
+                                width: 100px;
+                                height: 100px;
+                                border-radius: 50%;
+                                border: 4px solid white;
+                                background: linear-gradient(135deg, #667eea, #764ba2);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 40px;
+                                color: white;
+                                font-weight: 700;
+                                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                                background-image: ${this.profile.profilePhoto ? 'url(' + this.profile.profilePhoto + ')' : 'none'};
+                                background-size: cover;
+                                background-position: center;
+                                cursor: pointer;
+                                transition: transform 0.3s;
+                            " onclick="app.showProfilePhotoModal()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:14px 32px;border-radius:8px;font-weight:600;cursor:pointer;font-size:16px;margin-bottom:12px;">📝 Sign Up / Login</button>
-                <button onclick="app.switchView('feed')" style="background:white;color:var(--primary);border:2px solid var(--primary);padding:12px 32px;border-radius:8px;font-weight:600;cursor:pointer;font-size:16px;">Back to Feed</button>
+                
+                <!-- PROFILE INFO -->
+                <div style="padding: 60px 16px 20px 16px; background: white; border-radius: 20px 20px 0 0; margin-top: -10px;">
+                    
+                    <!-- Name & Username -->
+                    <div style="text-align: center; margin-bottom: 12px;">
+                        <div style="font-size: 20px; font-weight: 700; color: #1a1a1a; display: inline-flex; align-items: center; gap: 6px;">
+                            ${this.profile.name || 'User'}
+                            <span style="color: #3b82f6; font-size: 16px;">✓</span>
+                        </div>
+                        <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">@${username}</div>
+                    </div>
+                    
+                    <!-- Bio -->
+                    <div style="text-align: center; color: #4b5563; font-size: 13px; line-height: 1.5; margin-bottom: 16px; padding: 0 10px;">
+                        ${bio || 'No bio yet. Tap edit to add one!'}
+                    </div>
+                    
+                    <!-- Followers / Following -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 12px;">
+                        <div style="text-align: center;">
+                            <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">${userPosts}</div>
+                            <div style="font-size: 11px; color: #9ca3af;">Posts</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">${followers}</div>
+                            <div style="font-size: 11px; color: #9ca3af;">Followers</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-weight: 700; color: #1a1a1a; font-size: 16px; cursor: pointer;" onclick="app.showFollowing()">${following}</div>
+                            <div style="font-size: 11px; color: #9ca3af;">Following</div>
+                        </div>
+                    </div>
+                    
+                    <!-- About -->
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">About</div>
+                        <div style="font-size: 13px; color: #475569; word-break: break-all;">${this.user.email}</div>
+                    </div>
+                    
+                    <!-- Interests -->
+                    ${interests && interests.length > 0 ? `
+                        <div style="margin-bottom: 16px;">
+                            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Interests</div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                ${interests.map(function(interest) {
+                                    var emojis = {
+                                        'music': '🎵', 'sports': '⚽', 'travel': '✈️', 'art': '🎨', 'tech': '💻',
+                                        'food': '🍔', 'fitness': '💪', 'books': '📚', 'movies': '🎬', 'nature': '🌿',
+                                        'gaming': '🎮', 'photography': '📸', 'writing': '✍️', 'cooking': '👨‍🍳', 'yoga': '🧘'
+                                    };
+                                    var emoji = emojis[interest.toLowerCase()] || '✨';
+                                    return `<span style="background: #f1f5f9; padding: 4px 14px; border-radius: 12px; font-size: 12px; color: #4b5563;">${emoji} ${interest}</span>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Edit Profile Button -->
+                    <button onclick="app.showProfileSettings()" style="width: 100%; background: #f1f5f9; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; color: #1a1a1a; font-size: 14px; transition: all 0.3s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f1f5f9'">
+                        ✏️ Edit Profile
+                    </button>
+                </div>
+                
+                <!-- POSTS GRID (3 columns) -->
+                <div style="padding: 16px;">
+                    <div style="font-weight: 700; color: #1a1a1a; margin-bottom: 12px; font-size: 14px;">📸 Posts</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
+                        ${this.posts.filter(p => p.userId === this.user.uid).length > 0 ? 
+                            this.posts.filter(p => p.userId === this.user.uid).map(p => `
+                                <div style="position: relative; aspect-ratio: 1; background: #e5e7eb; border-radius: 4px; overflow: hidden; cursor: pointer;" onclick="app.viewPostDetail('${p.id}')">
+                                    ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:20px;">📸</div>`}
+                                </div>
+                            `).join('') 
+                        : `
+                            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #9ca3af; font-size: 13px; background: white; border-radius: 8px;">
+                                No posts yet. Share your first moment!
+                            </div>
+                        `}
+                    </div>
+                </div>
             </div>
         `;
         profileContent.innerHTML = html;
-        return;
-    }
-    
-    var userTier = 'free';
-    var tierData = EARNING_SETTINGS[userTier];
-    var username = this.profile.username || 'user';
-    var interests = this.profile.interests || [];
-    var bio = this.profile.bio || '';
-    var userPosts = this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this)).length;
-    var followers = this.profile.followers || 0;
-    var following = Object.keys(this.following).length;
-
-    var html = `
-        <div style="padding: 0; background: #f5f5f5; min-height: 100vh;">
-            
-            <!-- PROFILE HEADER WITH COVER -->
-            <div style="position: relative; width: 100%; background: #1a1a1a; overflow: hidden;">
-                
-                <!-- Cover Image -->
-                <div style="position: relative; width: 100%; height: 200px; background: linear-gradient(135deg, #2d1b69 0%, #3d2680 100%); overflow: hidden;">
-                    ${this.profile.coverImage ? `
-                        <img src="${this.profile.coverImage}" style="width:100%;height:100%;object-fit:cover;">
-                    ` : `
-                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:14px;">
-                            🌄
-                        </div>
-                    `}
-                    
-                    <!-- Change Cover Button (Small, subtle) -->
-                    <button onclick="app.showCoverImageModal()" style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.5);color:white;border:none;padding:4px 10px;border-radius:12px;font-size:10px;cursor:pointer;backdrop-filter:blur(4px);">📷 Cover</button>
-                    
-                    <!-- Back Button -->
-                    <button onclick="app.switchView('feed');" style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.5);color:white;border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;backdrop-filter:blur(4px);">‹</button>
-                    
-                    <!-- Profile Photo (Overlapping) -->
-                    <div style="position:absolute;bottom:-50px;left:50%;transform:translateX(-50%);">
-                        <div style="
-                            width: 100px;
-                            height: 100px;
-                            border-radius: 50%;
-                            border: 4px solid white;
-                            background: linear-gradient(135deg, #667eea, #764ba2);
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-size: 40px;
-                            color: white;
-                            font-weight: 700;
-                            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                            background-image: ${this.profile.profilePhoto ? 'url(' + this.profile.profilePhoto + ')' : 'none'};
-                            background-size: cover;
-                            background-position: center;
-                            cursor: pointer;
-                            transition: transform 0.3s;
-                        " onclick="app.showProfilePhotoModal()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- PROFILE INFO -->
-            <div style="padding: 60px 16px 20px 16px; background: white; border-radius: 20px 20px 0 0; margin-top: -10px;">
-                
-                <!-- Name & Username -->
-                <div style="text-align: center; margin-bottom: 12px;">
-                    <div style="font-size: 20px; font-weight: 700; color: #1a1a1a; display: inline-flex; align-items: center; gap: 6px;">
-                        ${this.profile.name || 'User'}
-                        <span style="color: #3b82f6; font-size: 16px;">✓</span>
-                    </div>
-                    <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">@${username}</div>
-                </div>
-                
-                <!-- Bio -->
-                <div style="text-align: center; color: #4b5563; font-size: 13px; line-height: 1.5; margin-bottom: 16px; padding: 0 10px;">
-                    ${bio || 'No bio yet. Tap edit to add one!'}
-                </div>
-                
-                <!-- Followers / Following (3 columns) -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 12px;">
-                    <div style="text-align: center;">
-                        <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">${userPosts}</div>
-                        <div style="font-size: 11px; color: #9ca3af;">Posts</div>
-                    </div>
-                    <div style="text-align: center;">
-                        <div style="font-weight: 700; color: #1a1a1a; font-size: 16px;">${followers}</div>
-                        <div style="font-size: 11px; color: #9ca3af;">Followers</div>
-                    </div>
-                    <div style="text-align: center;">
-                        <div style="font-weight: 700; color: #1a1a1a; font-size: 16px; cursor: pointer;" onclick="app.showFollowing()">${following}</div>
-                        <div style="font-size: 11px; color: #9ca3af;">Following</div>
-                    </div>
-                </div>
-                
-                <!-- About -->
-                <div style="margin-bottom: 12px;">
-                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">About</div>
-                    <div style="font-size: 13px; color: #475569; word-break: break-all;">${this.user.email}</div>
-                </div>
-                
-                <!-- Interests -->
-                ${interests && interests.length > 0 ? `
-                    <div style="margin-bottom: 16px;">
-                        <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Interests</div>
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                            ${interests.map(function(interest) {
-                                var emojis = {
-                                    'music': '🎵', 'sports': '⚽', 'travel': '✈️', 'art': '🎨', 'tech': '💻',
-                                    'food': '🍔', 'fitness': '💪', 'books': '📚', 'movies': '🎬', 'nature': '🌿',
-                                    'gaming': '🎮', 'photography': '📸', 'writing': '✍️', 'cooking': '👨‍🍳', 'yoga': '🧘'
-                                };
-                                var emoji = emojis[interest.toLowerCase()] || '✨';
-                                return `<span style="background: #f1f5f9; padding: 4px 14px; border-radius: 12px; font-size: 12px; color: #4b5563;">${emoji} ${interest}</span>`;
-                            }).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <!-- Edit Profile Button -->
-                <button onclick="app.showProfileSettings()" style="width: 100%; background: #f1f5f9; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; color: #1a1a1a; font-size: 14px; transition: all 0.3s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f1f5f9'">
-                    ✏️ Edit Profile
-                </button>
-            </div>
-            
-            <!-- POSTS GRID (3 columns) -->
-            <div style="padding: 16px;">
-                <div style="font-weight: 700; color: #1a1a1a; margin-bottom: 12px; font-size: 14px;">📸 Posts</div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
-                    ${this.posts.filter(p => p.userId === this.user.uid).length > 0 ? 
-                        this.posts.filter(p => p.userId === this.user.uid).map(p => `
-                            <div style="position: relative; aspect-ratio: 1; background: #e5e7eb; border-radius: 4px; overflow: hidden; cursor: pointer;" onclick="app.viewPostDetail('${p.id}')">
-                                ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:20px;">📸</div>`}
-                            </div>
-                        `).join('') 
-                    : `
-                        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #9ca3af; font-size: 13px; background: white; border-radius: 8px;">
-                            No posts yet. Share your first moment!
-                        </div>
-                    `}
-                </div>
-            </div>
-        </div>
-    `;
-    profileContent.innerHTML = html;
-},
+    },
 
     // ============================================
-    // COVER IMAGE MODAL - UPLOAD COVER
+    // COVER IMAGE MODAL
     // ============================================
 
     showCoverImageModal: function() {
@@ -4225,50 +4192,40 @@ renderProfile: function() {
         modal.appendChild(content);
         document.body.appendChild(modal);
         
-        // Handle file selection
         var coverInput = modal.querySelector('#coverImageInput');
         coverInput.onchange = function(e) {
             var file = e.target.files[0];
             if (file) {
-                var reader = new FileReader();
-                reader.onload = function(event) {
-                    var imageData = event.target.result;
-                    
-                    // Upload to Cloudinary
-                    var formData = new FormData();
-                    formData.append('file', file);
-                    formData.append('upload_preset', UPLOAD_PRESET);
-                    
-                    fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.secure_url) {
-                            // Save to Firebase
-                            db.ref('users/' + self.user.uid + '/coverImage').set(data.secure_url, function(err) {
-                                if (!err) {
-                                    self.toast('✅ Cover image updated!', 'success');
-                                    self.profile.coverImage = data.secure_url;
-                                    self.renderProfile();
-                                    modal.remove();
-                                } else {
-                                    self.toast('❌ Error saving cover image', 'error');
-                                }
-                            });
-                        }
-                    })
-                    .catch(err => {
-                        console.error('Upload error:', err);
-                        self.toast('❌ Upload failed', 'error');
-                    });
-                };
-                reader.readAsDataURL(file);
+                var formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', UPLOAD_PRESET);
+                
+                fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.secure_url) {
+                        db.ref('users/' + self.user.uid + '/coverImage').set(data.secure_url, function(err) {
+                            if (!err) {
+                                self.toast('✅ Cover image updated!', 'success');
+                                self.profile.coverImage = data.secure_url;
+                                self.renderProfile();
+                                modal.remove();
+                            } else {
+                                self.toast('❌ Error saving cover image', 'error');
+                            }
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error('Upload error:', err);
+                    self.toast('❌ Upload failed', 'error');
+                });
             }
         };
         
-        // Close on backdrop click
         modal.onclick = function(e) {
             if (e.target === modal) {
                 modal.remove();
@@ -4277,7 +4234,7 @@ renderProfile: function() {
     },
 
     // ============================================
-    // PROFILE PHOTO MODAL - NICE POPUP WITH EDIT
+    // PROFILE PHOTO MODAL
     // ============================================
 
     showProfilePhotoModal: function() {
@@ -4360,7 +4317,6 @@ renderProfile: function() {
         
         document.body.appendChild(modal);
         
-        // Close on click outside
         modal.addEventListener('click', function(e) {
             if (e.target === this) {
                 this.remove();
@@ -4406,927 +4362,7 @@ renderProfile: function() {
     },
 
     // ============================================
-    // VIEW PROFILE PHOTO (Full Screen)
-    // ============================================
-
-    viewProfilePhoto: function() {
-        if (this.profile.profilePhoto) {
-            var modal = document.createElement('div');
-            modal.className = 'modal-overlay active';
-            modal.style.zIndex = '10050';
-            modal.style.background = 'rgba(0,0,0,0.9)';
-            modal.style.backdropFilter = 'blur(10px)';
-            modal.innerHTML = `
-                <div style="position:relative;max-width:90%;max-height:90vh;display:flex;align-items:center;justify-content:center;">
-                    <img src="${this.profile.profilePhoto}" style="max-width:100%;max-height:90vh;border-radius:12px;object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
-                    <button onclick="this.closest('.modal-overlay').remove()" style="
-                        position:absolute;
-                        top:16px;
-                        right:16px;
-                        background:rgba(0,0,0,0.6);
-                        color:white;
-                        border:none;
-                        width:44px;
-                        height:44px;
-                        border-radius:50%;
-                        cursor:pointer;
-                        font-size:22px;
-                        transition:0.3s;
-                        backdrop-filter:blur(4px);
-                    " onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">✕</button>
-                </div>
-            `;
-            document.body.appendChild(modal);
-        } else {
-            this.toast('No profile photo yet', 'error');
-        }
-    },
-
-    // ============================================
-    // UNFOLLOW USER
-    // ============================================
-
-    unfollowUser: function(uid, name) {
-        delete this.following[uid];
-        db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
-        db.ref('users/' + uid + '/followers').once('value', function(s) {
-            var followers = Math.max(0, (s.val() || 0) - 1);
-            db.ref('users/' + uid + '/followers').set(followers);
-        });
-        this.renderProfile();
-        this.logUserActivity('unfollow', 'Unfollowed user: ' + name);
-    },
-
-    // ============================================
-    // SHOW FOLLOWING LIST
-    // ============================================
-
-    showFollowing: function() {
-        var html = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>';
-        html += '<h2 style="margin-bottom:16px;">Following (' + Object.keys(this.following).length + ')</h2>';
-        if (Object.keys(this.following).length === 0) {
-            html += '<div style="text-align:center;color:#6b7280;padding:20px;">Not following anyone yet</div>';
-        } else {
-            html += '<div class="following-list">';
-            for (var uid in this.following) {
-                if (this.users[uid]) {
-                    var u = this.users[uid];
-                    var unreadCount = this.getUnreadCountForUser(uid);
-                    var msgBadge = unreadCount > 0 ? '<span style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;background:#ef4444;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;border:2px solid white;box-shadow:0 2px 6px rgba(239,68,68,0.4);">' + unreadCount + '</span>' : '';
-                   
-                    html += `
-                        <div class="following-item" style="display:flex;align-items:center;padding:10px;border-bottom:1px solid #f0f0f0;gap:12px;">
-                            <div class="following-avatar" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;background-image:url(${u.profilePhoto || ''});background-size:cover;background-position:center;">${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}</div>
-                            <div class="following-name" style="flex:1;font-weight:600;">${u.name}</div>
-                            <div style="display:flex;gap:6px;">
-                                <button class="following-unfollow" onclick="app.openChatFromSearch('${uid}', '${u.name}')" style="background:var(--primary);color:white;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.75rem;font-weight:600;transition:0.3s;position:relative;">
-                                    💬
-                                    ${msgBadge}
-                                </button>
-                                <button class="following-unfollow" onclick="app.unfollowUser('${uid}', '${u.name}')" style="background:#ef4444;color:white;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.75rem;font-weight:600;">Unfollow</button>
-                            </div>
-                        </div>
-                    `;
-                }
-            }
-            html += '</div>';
-        }
-        html += '</div>';
-       
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = html;
-        document.body.appendChild(modal);
-    },
-
-    // ============================================
-    // SHOW LOGIN PAGE
-    // ============================================
-
-    showLoginPage: function() {
-        var loading = document.getElementById('loadingScreen');
-        if (loading) {
-            loading.classList.remove('active');
-            loading.classList.add('hidden');
-            loading.style.visibility = 'hidden';
-            loading.style.zIndex = '-1';
-        }
-        
-        var authPage = document.getElementById('authPage');
-        var mainApp = document.getElementById('mainApp');
-        if (authPage && mainApp) {
-            mainApp.style.display = 'none';
-            authPage.classList.add('show');
-            authPage.classList.remove('hidden');
-            authPage.style.display = 'flex';
-            authPage.style.visibility = 'visible';
-            authPage.style.opacity = '1';
-            authPage.style.zIndex = '9998';
-        }
-        
-        var nav = document.querySelector('.bottom-nav');
-        if (nav) nav.style.display = 'none';
-        
-        this.switchTab('login');
-    },
-
-    continueAsGuest: function() {
-        this.user = null;
-        this.isGuest = true;
-        this.isAdmin = false;
-        this.profile = { name: 'Guest', balance: 0, triviaAnswered: [], tier: 'free' };
-        this.toast('📱 Browsing as Guest - Sign up to unlock all features!', 'info');
-        this.showApp();
-        this.switchView('feed');
-        this.loadPosts();
-        this.logUserActivity('guest_access', 'User browsing as guest');
-    },
-
-    // ============================================
-    // SWITCH TAB
-    // ============================================
-
-    switchTab: function(tab) {
-        document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-        document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-        document.querySelector('[onclick="app.switchTab(\'' + tab + '\')"]').classList.add('active');
-        document.getElementById(tab + 'Tab').classList.add('active');
-    },
-
-    // ============================================
-    // SWITCH VIEW
-    // ============================================
-
-    switchView: function(view) {
-        if (!this.navigationHistory) this.navigationHistory = [];
-        if (!this.currentView) this.currentView = 'feed';
-       
-        if (this.currentView !== view) {
-            this.navigationHistory.push(this.currentView);
-        }
-       
-        this.currentView = view;
-       
-        try {
-            localStorage.setItem('chichiCurrentView', view);
-        } catch (e) {}
-       
-        document.querySelectorAll('.view').forEach(function(v) {
-            v.classList.remove('active');
-            v.style.display = '';
-            v.style.visibility = '';
-            v.style.opacity = '';
-            v.style.zIndex = '';
-            v.style.pointerEvents = '';
-        });
-       
-        var chatView = document.getElementById('chatView');
-        if (chatView) {
-            chatView.classList.remove('active');
-            chatView.style.display = '';
-            chatView.style.visibility = '';
-            chatView.style.opacity = '';
-            chatView.style.zIndex = '';
-        }
-       
-        document.querySelectorAll('.nav-wrapper > .nav-item').forEach(function(n) { n.classList.remove('active'); });
-       
-        var viewElement = document.getElementById(view + 'View');
-        if (viewElement) {
-            viewElement.classList.add('active');
-        }
-       
-        if (view === 'profile') {
-            this.renderProfile();
-        } else if (view === 'feed') {
-            this.loadPosts();
-            this.loadStories();
-        } else if (view === 'messages') {
-            this.loadMessages();
-            this.clearUnreadBadge();
-        } else if (view === 'explore') {
-            this.loadExplore();
-        } else if (view === 'earn') {
-            this.renderEarn();
-            var self = this;
-            setTimeout(function() {
-                if (self.pendingTrivia && self.pendingTrivia.question) {
-                    self.currentTrivia = self.pendingTrivia;
-                    self.triviaAnswered = false;
-                    self.renderEarnWithTrivia(self.pendingTrivia);
-                }
-            }, 100);
-        }
-
-        var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
-        if (view === 'feed') navItems[0].classList.add('active');
-        else if (view === 'explore') navItems[1].classList.add('active');
-        else if (view === 'messages') navItems[2].classList.add('active');
-        else if (view === 'earn') navItems[3].classList.add('active');
-        else if (view === 'profile') navItems[4].classList.add('active');
-    },
-
-    // ============================================
-    // GO BACK
-    // ============================================
-
-    goBack: function() {
-        if (!this.backPressCount) {
-            this.backPressCount = 0;
-        }
-       
-        var currentView = this.getCurrentView();
-        var isOnHome = currentView === 'feed' || !currentView;
-       
-        if (!isOnHome) {
-            this.switchView('feed');
-            this.backPressCount = 0;
-            return;
-        }
-       
-        this.backPressCount++;
-       
-        if (this.backPressCount === 1) {
-            this.toast('Press back again to reload', 'info');
-           
-            setTimeout(function() {
-                if (this.backPressCount === 1) {
-                    this.backPressCount = 0;
-                }
-            }.bind(this), 2000);
-           
-        } else if (this.backPressCount === 2) {
-            this.toast('Press back once more to exit', 'info');
-            location.reload();
-           
-        } else if (this.backPressCount === 3) {
-            if (confirm('🚪 Exit CHICHI App?')) {
-                if (navigator.app && navigator.app.exitApp) {
-                    navigator.app.exitApp();
-                } else {
-                    window.history.back();
-                }
-            } else {
-                this.backPressCount = 0;
-                this.toast('Back in CHICHI', 'success');
-            }
-        }
-    },
-   
-    getCurrentView: function() {
-        var views = document.querySelectorAll('.view');
-        for (var i = 0; i < views.length; i++) {
-            if (views[i].classList.contains('active')) {
-                var viewId = views[i].id;
-                if (viewId === 'feedView') return 'feed';
-                if (viewId === 'exploreView') return 'explore';
-                if (viewId === 'messagesView') return 'messages';
-                if (viewId === 'profileView') return 'profile';
-                if (viewId === 'earnView') return 'earn';
-            }
-        }
-        return 'feed';
-    },
-
-    // ============================================
-    // LOAD POSTS
-    // ============================================
-
-    loadPosts: function() {
-        var self = this;
-        this.loadStories();
-       
-        db.ref('posts').orderByChild('timestamp').limitToLast(50).on('value', function(s) {
-            var p = [];
-            s.forEach(function(c) {
-                var post = c.val();
-                if (post) {
-                    post.id = c.key;
-                    p.unshift(post);
-                }
-            });
-            self.posts = p;
-            self.renderFeed();
-        }, function(err) {
-            console.error('❌ Error loading posts:', err.message);
-            self.posts = [];
-            self.renderFeed();
-        });
-    },
-
-    // ============================================
-    // RENDER FEED
-    // ============================================
-
-    renderFeed: function() {
-        var feedContainer = document.getElementById('feedContainer');
-        if (!feedContainer) return;
-       
-        if (!this.posts) this.posts = [];
-        
-        var html = '';
-        if (this.posts.length === 0) {
-            html = '<div style="text-align:center;color:#6b7280;padding:40px 16px;">No posts yet. Start creating!</div>';
-        } else {
-            this.posts.forEach(function(p) {
-                var likes = (p.likes && Object.keys(p.likes).length) || 0;
-                var downloads = p.downloads || 0;
-                var comments = (p.comments && p.comments.length) || 0;
-                var userLiked = this.user && p.likes && p.likes[this.user.uid];
-                var isOwnPost = this.user && p.userId === this.user.uid;
-                
-                var isSupportPost = false;
-                if (p.isSupportPost === true || p.isAutoPost === true) {
-                    isSupportPost = true;
-                }
-                if (p.userName === 'SUPPORT@CHICHI') {
-                    isSupportPost = true;
-                }
-                if (p.source === 'CHICHI AI' || p.source === 'AutoPost') {
-                    isSupportPost = true;
-                }
-                
-                var postHtml = '<div class="post" id="post-' + p.id + '" style="' + (isSupportPost ? 'border-radius:12px;' : '') + '"><div class="post-header"><div class="post-user"><div class="post-avatar" style="background-image:url(' + (p.userPhoto || '') + ');cursor:pointer;" onclick="app.viewUserProfile(\'' + p.userId + '\')">' + (!p.userPhoto ? p.userName.charAt(0).toUpperCase() : '') + '</div><div><div class="post-name" onclick="app.viewUserProfile(\'' + p.userId + '\')">' + p.userName + '</div><div class="post-time">' + p.createdAt + '</div></div></div>' + (isOwnPost ? '<button class="post-menu" onclick="app.deletePost(\'' + p.id + '\')">🗑️</button>' : '') + '</div>';
-                
-                if (isSupportPost) {
-                    postHtml += '<div style="background:#0088cc;color:white;padding:4px 12px;font-size:11px;font-weight:700;display:inline-block;margin:8px 16px 0;border-radius:20px;">🤖 Generated by CHICHI AI</div>';
-                }
-                
-                postHtml += '<img src="' + p.photoUrl + '" class="post-image" style="' + (isSupportPost ? 'border-radius:0;' : '') + '"><div class="post-caption">' + p.caption + '</div>';
-                
-                if (isSupportPost) {
-                    postHtml += '<div style="padding:0 16px 8px;font-size:11px;color:#0088cc;font-style:italic;">✨ Generated by CHICHI AI • ' + (p.category || 'Support') + '</div>';
-                }
-                
-                postHtml += '<div class="post-stats">' + likes + ' likes · ' + downloads + ' saves · ' + comments + ' comments</div>';
-                
-                if (!isSupportPost) {
-                    postHtml += '<div class="post-actions"><button class="post-action ' + (userLiked ? 'liked' : '') + '" onclick="app.likePost(\'' + p.id + '\')">' + (userLiked ? '❤️ Liked' : '🤍 Like') + '</button><button class="post-action" onclick="app.downloadPost(\'' + p.photoUrl + '\', \'' + p.id + '\')">💾 Save</button><button class="post-action" onclick="app.viewComments(\'' + p.id + '\')">💬 Comment</button><button class="post-action" onclick="app.sharePost(\'' + p.id + '\', \'' + p.caption.replace(/'/g, "\\'") + '\')">📤 Share</button></div>';
-                } else {
-                    postHtml += '<div style="padding:8px 16px 16px;display:flex;gap:12px;border-top:1px solid #eee;margin-top:4px;"><span style="font-size:13px;color:#6b7280;">❤️ ' + likes + ' likes</span><span style="font-size:13px;color:#6b7280;">💾 ' + downloads + ' saves</span><span style="font-size:13px;color:#6b7280;">💬 ' + comments + ' comments</span></div>';
-                }
-                
-                postHtml += '</div>';
-                html += postHtml;
-            }.bind(this));
-        }
-       
-        feedContainer.style.display = 'block';
-        feedContainer.innerHTML = html;
-    },
-
-    // ============================================
-    // LIKE POST
-    // ============================================
-
-    likePost: function(id) {
-        if (!this.requireAuth('like posts')) return;
-        
-        var self = this;
-        db.ref('posts/' + id).once('value', function(s) {
-            var post = s.val();
-            var likes = post.likes || {};
-           
-            if (likes[self.user.uid]) {
-                delete likes[self.user.uid];
-            } else {
-                likes[self.user.uid] = true;
-                self.balance += 0.2;
-                db.ref('users/' + self.user.uid + '/balance').set(self.balance);
-                self.trackRevenue('earned', 0.2, 'like');
-                self.engagementStats.likesCount = (self.engagementStats.likesCount || 0) + 1;
-                self.saveEngagementStats();
-            }
-           
-            db.ref('posts/' + id + '/likes').set(likes);
-            self.renderFeed();
-            self.logUserActivity('like_post', 'Liked post: ' + id);
-        });
-    },
-
-    // ============================================
-    // DOWNLOAD POST
-    // ============================================
-
-    downloadPost: function(url, id) {
-        try {
-            var link = document.createElement('a');
-            link.href = url;
-            link.download = 'photo.jpg';
-            link.click();
-            this.logUserActivity('download_post', 'Downloaded post: ' + id);
-        } catch (err) {
-            this.toast('Download failed', 'error');
-        }
-    },
-
-    // ============================================
-    // SHARE POST
-    // ============================================
-
-    sharePost: function(id, caption) {
-        if (!this.requireAuth('share posts')) return;
-        
-        var shareText = caption || 'Check out this post on CHICHI!';
-        var shareUrl = window.location.href;
-       
-        if (navigator.share) {
-            navigator.share({
-                title: 'CHICHI',
-                text: shareText,
-                url: shareUrl
-            }).catch(function(err) { console.log('Share cancelled'); });
-        } else {
-            var text = shareText + '\n' + shareUrl;
-            navigator.clipboard.writeText(text).then(function() {
-                this.toast('Post link copied to clipboard! 📋', 'success');
-                this.logUserActivity('share_post', 'Shared post: ' + id);
-            }.bind(this)).catch(function(err) {
-                this.toast('Share link: ' + shareUrl, 'info');
-            }.bind(this));
-        }
-    },
-
-    // ============================================
-    // DELETE POST
-    // ============================================
-
-    deletePost: function(id) {
-        if (!confirm('Delete this post?')) return;
-        db.ref('posts/' + id).remove();
-        this.toast('Post deleted', 'success');
-        this.loadPosts();
-    },
-
-    // ============================================
-    // VIEW COMMENTS
-    // ============================================
-
-    viewComments: function(id) {
-        if (!this.requireAuth('comment')) return;
-        
-        var self = this;
-        db.ref('posts/' + id).once('value', function(s) {
-            var post = s.val();
-            var comments = post.comments || [];
-            var commentedUsers = post.commentedUsers || {};
-            var userCommented = this.user && commentedUsers[this.user.uid];
-
-            var html = '';
-            if (comments.length === 0) {
-                html = '<div style="text-align:center;color:#6b7280;padding:20px;">No comments yet</div>';
-            } else {
-                comments.forEach(function(c) {
-                    html += '<div style="background:var(--light);padding:12px;border-radius:12px;margin-bottom:8px;"><div style="font-weight:600;font-size:0.9rem;">' + c.user + '</div><div style="font-size:0.85rem;margin:4px 0;">' + c.text + '</div><div style="font-size:0.75rem;color:var(--text-light);">' + c.time + '</div></div>';
-                });
-            }
-
-            html += '<div style="border-top:1px solid var(--border);padding-top:12px;display:flex;gap:8px;"><input type="text" id="commentInput" placeholder="Add comment..." style="flex:1;border:1px solid var(--border);border-radius:20px;padding:10px 12px;"><button onclick="app.submitComment(\'' + id + '\')" style="background:' + (userCommented ? '#d1d5db' : 'var(--primary)') + ';color:' + (userCommented ? 'var(--text-light)' : 'white') + ';border:none;border-radius:20px;padding:10px 16px;cursor:pointer;font-weight:600;' + (userCommented ? 'cursor:not-allowed;' : '') + '">' + (userCommented ? '✓ Earned' : 'Post') + '</button></div>';
-
-            var modal = document.createElement('div');
-            modal.className = 'modal-overlay active';
-            modal.innerHTML = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2 style="font-weight:700;margin-bottom:16px;">Comments</h2><div style="max-height:400px;overflow-y:auto;margin-bottom:16px;">' + html + '</div></div>';
-            document.body.appendChild(modal);
-        }.bind(this));
-    },
-
-    // ============================================
-    // PROFILE SETTINGS MENU
-    // ============================================
-
-    showProfileSettings: function() {
-        var html = `
-            <div class="modal" style="width: 90%; max-width: 320px; border-radius: 16px; padding: 0; overflow: hidden;">
-                <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); padding: 16px; color: white;">
-                    <div class="modal-close" style="position: absolute; top: 8px; right: 8px;">
-                        <button onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px;">✕</button>
-                    </div>
-                    <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Settings</h2>
-                </div>
-                
-                <div style="padding: 0;">
-                    <button onclick="app.showEditProfileModal(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #1e293b; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: 0.3s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-                        ✏️ Edit Profile
-                    </button>
-                    
-                    <button onclick="app.showNotificationPreferences(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #1e293b; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: 0.3s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-                        🔔 Notification Settings
-                    </button>
-                    
-                    <button onclick="app.showAppSettings(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #1e293b; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: 0.3s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-                        ⚙️ App Settings
-                    </button>
-                    
-                    <button onclick="app.showLogout(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #ef4444; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; transition: 0.3s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='white'">
-                        🚪 Log Out
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = html;
-        document.body.appendChild(modal);
-    },
-
-    // ============================================
-    // APP SETTINGS
-    // ============================================
-
-    showAppSettings: function() {
-        var html = `
-            <div class="modal" style="max-width: 500px;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <h2 style="font-weight: 700; margin-bottom: 20px;">App Settings</h2>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px; background: #f8fafc; border-radius: 10px; margin-bottom: 12px;">
-                    <div>
-                        <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">Dark Mode</div>
-                        <div style="font-size: 13px; color: #64748b;">Toggle dark theme</div>
-                    </div>
-                    <label class="dark-mode-toggle" style="margin: 0;">
-                        <input type="checkbox" id="darkModeToggle" onchange="app.toggleDarkMode()" ${localStorage.getItem('chichi-dark-mode') === 'enabled' ? 'checked' : ''} style="cursor: pointer;">
-                        <div class="toggle-cube"></div>
-                    </label>
-                </div>
-                
-                <div style="padding: 12px; background: #f0f7ff; border-radius: 10px; border-left: 4px solid #3b82f6;">
-                    <div style="font-size: 13px; color: #0c4a6e; font-weight: 600;">App Version</div>
-                    <div style="font-size: 12px; color: #0c4a6e; margin-top: 4px;">CHICHI V02A.01</div>
-                </div>
-            </div>
-        `;
-        
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = html;
-        document.body.appendChild(modal);
-    },
-
-    // ============================================
-    // VIEW POST DETAIL
-    // ============================================
-
-    viewPostDetail: function(id) {
-        var self = this;
-        var post = this.posts.find(function(p) { return p.id === id; });
-        
-        if (!post) return;
-        
-        var likes = (post.likes && Object.keys(post.likes).length) || 0;
-        var comments = post.comments || [];
-        var userLiked = this.user && post.likes && post.likes[this.user.uid];
-        
-        var html = `
-            <div class="modal">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-height:80vh;overflow-y:auto;">
-                    <div style="background:#f0f0f0;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
-                        <img src="${post.photoUrl}" style="width:100%;height:100%;object-fit:cover;">
-                    </div>
-                    <div style="display:flex;flex-direction:column;">
-                        <div style="display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid #e2e8f0;">
-                            <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);background-image:url(${post.userPhoto || ''});background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">${!post.userPhoto ? post.userName.charAt(0).toUpperCase() : ''}</div>
-                            <div>
-                                <div style="font-weight:700;color:#1e293b;">${post.userName}</div>
-                                <div style="font-size:12px;color:#64748b;">${post.createdAt}</div>
-                            </div>
-                        </div>
-                        
-                        <div style="padding:12px 0;border-bottom:1px solid #e2e8f0;">
-                            <div style="font-size:14px;color:#1e293b;line-height:1.6;">${post.caption}</div>
-                        </div>
-                        
-                        <div style="flex:1;overflow-y:auto;padding:12px 0;border-bottom:1px solid #e2e8f0;">
-                            ${comments.length === 0 ? '<div style="text-align:center;color:#6b7280;padding:20px;font-size:14px;">No comments yet</div>' : `
-                                ${comments.map(function(c) {
-                                    return `<div style="margin-bottom:12px;"><div style="font-weight:600;font-size:13px;">${c.user}</div><div style="font-size:13px;color:#475569;margin-top:4px;">${c.text}</div><div style="font-size:11px;color:#94a3b8;margin-top:4px;">${c.time}</div></div>`;
-                                }).join('')}
-                            `}
-                        </div>
-                        
-                        <div style="padding:12px 0;border-bottom:1px solid #e2e8f0;">
-                            <div style="font-weight:700;font-size:14px;color:#1e293b;">${likes} likes · ${comments.length} comments</div>
-                        </div>
-                        
-                        <div style="padding:12px 0;display:flex;gap:8px;">
-                            <button onclick="app.likePost('${post.id}');location.reload();" style="flex:1;background:${userLiked ? '#fbbf24' : '#f0f0f0'};color:${userLiked ? 'white' : '#1e293b'};border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;transition:0.3s;">${userLiked ? '❤️ Liked' : '🤍 Like'}</button>
-                            <button onclick="app.downloadPost('${post.photoUrl}', '${post.id}');" style="flex:1;background:#f0f0f0;color:#1e293b;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;transition:0.3s;">💾 Save</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = html;
-        document.body.appendChild(modal);
-    },
-
-    // ============================================
-    // SUBMIT COMMENT
-    // ============================================
-
-    submitComment: function(id) {
-        var text = document.getElementById('commentInput').value.trim();
-        if (!text) return;
-
-        var self = this;
-        db.ref('posts/' + id).once('value', function(s) {
-            var post = s.val();
-            var comments = post.comments || [];
-            var commentedUsers = post.commentedUsers || {};
-           
-            if (commentedUsers[self.user.uid]) {
-                self.toast('Already commented on this post', 'error');
-                return;
-            }
-
-            if (!Array.isArray(comments)) comments = [];
-            comments.push({
-                user: self.profile.name,
-                text: text,
-                time: new Date().toLocaleString('en-KE')
-            });
-           
-            commentedUsers[self.user.uid] = true;
-           
-            db.ref('posts/' + id + '/comments').set(comments);
-            db.ref('posts/' + id + '/commentedUsers').set(commentedUsers);
-           
-            self.balance += 0.5;
-            db.ref('users/' + self.user.uid + '/balance').set(self.balance);
-            self.trackRevenue('earned', 0.5, 'comment');
-            self.engagementStats.commentsCount = (self.engagementStats.commentsCount || 0) + 1;
-            self.saveEngagementStats();
-           
-            var modal = document.querySelector('.modal-overlay');
-            if (modal) {
-                modal.remove();
-            }
-            self.toast('Comment added', 'success');
-            self.renderFeed();
-            self.logUserActivity('comment', 'Commented on post: ' + id);
-        });
-    },
-
-    // ============================================
-    // VIEW USER PROFILE
-    // ============================================
-
-    viewUserProfile: function(uid) {
-        if (uid === this.user.uid) {
-            this.switchView('profile');
-        } else {
-            var self = this;
-            db.ref('users/' + uid).once('value', function(s) {
-                if (s.exists()) {
-                    var user = s.val();
-                    var isFollowing = this.following[uid] || false;
-                    var unreadCount = this.getUnreadCountForUser(uid);
-                    var msgBadge = unreadCount > 0 ? '<span style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;background:#ef4444;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;border:2px solid white;box-shadow:0 2px 6px rgba(239,68,68,0.4);">' + unreadCount + '</span>' : '';
-                   
-                    var html = '<div class="profile-header"><div class="profile-top"><div class="profile-avatar-large" style="background-image:url(' + (user.profilePhoto || '') + ');">' + (!user.profilePhoto ? user.name.charAt(0).toUpperCase() : '') + '</div><div class="profile-info"><div class="profile-name">' + (user.name || 'User') + '</div><div class="profile-email">' + user.email + '</div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-value">-</div><div class="profile-stat-label">Posts</div></div><div class="profile-stat"><div class="profile-stat-value">' + (user.followers || 0) + '</div><div class="profile-stat-label">Followers</div></div></div></div></div><div style="display:flex;gap:8px;margin-top:12px;"><button class="follow-btn" onclick="app.toggleFollow(\'' + uid + '\', \'' + user.name + '\')" style="background:' + (isFollowing ? '#ff4444' : 'var(--primary)') + ';color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;">' + (isFollowing ? '✕ Unfollow' : '✓ Follow') + '</button><button class="follow-btn" onclick="app.openChatFromSearch(\'' + uid + '\', \'' + user.name + '\')" style="background:#2E5BFF;color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;position:relative;">💬 Message ' + msgBadge + '</button></div></div>';
-                   
-                    var modal = document.createElement('div');
-                    modal.className = 'modal-overlay active';
-                    modal.innerHTML = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>' + html + '</div>';
-                    document.body.appendChild(modal);
-                }
-            }.bind(this));
-        }
-    },
-
-    // ============================================
-    // TOGGLE FOLLOW
-    // ============================================
-
-    toggleFollow: function(uid, name) {
-        if (!this.user || this.isGuest) {
-            this.toast('🔐 Sign up to follow users', 'info');
-            this.showLoginPage();
-            return;
-        }
-        
-        var self = this;
-        var isFollowing = this.following[uid] || false;
-       
-        if (isFollowing) {
-            delete this.following[uid];
-            this.logUserActivity('unfollow', 'Unfollowed user: ' + name);
-        } else {
-            this.following[uid] = true;
-            this.balance += 0.05;
-            db.ref('users/' + this.user.uid + '/balance').set(this.balance);
-            this.trackRevenue('earned', 0.05, 'follow');
-            this.logUserActivity('follow', 'Followed user: ' + name);
-        }
-       
-        db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
-        db.ref('users/' + uid + '/followers').once('value', function(s) {
-            var followers = (s.val() || 0) + (isFollowing ? -1 : 1);
-            db.ref('users/' + uid + '/followers').set(followers);
-        });
-       
-        var modal = document.querySelector('.modal-overlay.active');
-        if (modal) {
-            modal.remove();
-        }
-    },
-
-    // ============================================
-    // SHOW LOGOUT
-    // ============================================
-
-    showLogout: function() {
-        document.getElementById('logoutModal').classList.add('active');
-    },
-
-    closeLogout: function() {
-        document.getElementById('logoutModal').classList.remove('active');
-    },
-
-    confirmLogout: function() {
-        this.justLogout();
-    },
-
-    justLogout: function() {
-        auth.signOut();
-        document.getElementById('logoutModal').classList.remove('active');
-        this.showAuth();
-        this.toast('Logged out successfully', 'success');
-        if (this.onlineInterval) {
-            clearInterval(this.onlineInterval);
-            this.onlineInterval = null;
-        }
-        if (this.triviaInterval) {
-            clearInterval(this.triviaInterval);
-            this.triviaInterval = null;
-        }
-        this.logUserActivity('logout', 'User logged out');
-    },
-
-    // ============================================
-    // DELETE ACCOUNT PERMANENTLY
-    // ============================================
-
-    deleteAccountPermanently: function() {
-        var self = this;
-       
-        if (!confirm('⚠️ WARNING: This will PERMANENTLY DELETE your account and all your data!\n\nAll posts, messages, and profile info will be removed.\nThis CANNOT be undone.\n\nAre you absolutely sure?')) {
-            return;
-        }
-       
-        if (!confirm('Final confirmation: Delete everything? Click OK to proceed.')) {
-            return;
-        }
-       
-        this.toast('Deleting account... Please wait...', 'success');
-       
-        var uid = this.user.uid;
-        var deletionPromises = [];
-       
-        deletionPromises.push(db.ref('users/' + uid).remove());
-       
-        deletionPromises.push(db.ref('posts').orderByChild('userId').equalTo(uid).once('value', function(snapshot) {
-            var deletePromises = [];
-            snapshot.forEach(function(post) {
-                deletePromises.push(db.ref('posts/' + post.key).remove());
-            });
-            return Promise.all(deletePromises);
-        }));
-       
-        deletionPromises.push(db.ref('chats').once('value', function(snapshot) {
-            var deletePromises = [];
-            snapshot.forEach(function(chat) {
-                var chatKey = chat.key;
-                if (chatKey.includes(uid)) {
-                    deletePromises.push(db.ref('chats/' + chatKey).remove());
-                }
-            });
-            return Promise.all(deletePromises);
-        }));
-       
-        deletionPromises.push(db.ref('stories/' + uid).remove());
-       
-        Promise.all(deletionPromises).then(function() {
-            self.toast('Data deleted successfully. Removing account...', 'success');
-           
-            setTimeout(function() {
-                auth.currentUser.delete().then(function() {
-                    self.toast('Account permanently deleted', 'success');
-                    auth.signOut();
-                    document.getElementById('logoutModal').classList.remove('active');
-                    self.showAuth();
-                    setTimeout(function() {
-                        self.toast('Your account has been completely removed', 'success');
-                    }, 500);
-                }).catch(function(err) {
-                    if (err.code === 'auth/requires-recent-login') {
-                        self.toast('Please log in again before deleting your account', 'error');
-                        auth.signOut();
-                        self.showAuth();
-                    } else {
-                        self.toast('Error: ' + err.message, 'error');
-                    }
-                });
-            }, 1000);
-        }).catch(function(err) {
-            self.toast('Error deleting data: ' + err.message, 'error');
-        });
-    },
-
-    // ============================================
-    // REQUIRED AUTH
-    // ============================================
-
-    requireAuth: function(action) {
-        if (this.isGuest || !this.user) {
-            this.toast('🔐 Sign up to ' + (action || 'access this'), 'info');
-            this.showLoginPage();
-            return false;
-        }
-        return true;
-    },
-
-    // ============================================
-    // LOAD GROUPS
-    // ============================================
-
-    loadGroups: function() {
-        this.renderEarn();
-    },
-
-    // ============================================
-    // SETUP TYPING CLEANUP
-    // ============================================
-
-    setupTypingCleanup: function() {
-        if (!this.user) return;
-        var userTypingRef = db.ref('.info/connected');
-        userTypingRef.on('value', function(snapshot) {
-            if (snapshot.val() === false) {
-                console.log('⚠️ User going offline');
-            }
-        });
-    },
-
-    // ============================================
-    // CALCULATE TRENDING HASHTAGS
-    // ============================================
-
-    calculateTrendingHashtags: function() {
-        var hashtagCount = {};
-        var now = new Date();
-        var weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        
-        this.posts.forEach(function(post) {
-            var postDate = new Date(post.timestamp || post.createdAt);
-            if (postDate >= weekAgo) {
-                if (post.hashtags) {
-                    post.hashtags.forEach(function(tag) {
-                        hashtagCount[tag] = (hashtagCount[tag] || 0) + 1;
-                    });
-                }
-            }
-        });
-        
-        this.trendingHashtags = Object.keys(hashtagCount)
-            .map(function(tag) {
-                return {
-                    name: tag,
-                    count: hashtagCount[tag],
-                    posts: this.posts.filter(function(p) { return p.hashtags && p.hashtags.includes(tag); }).length
-                };
-            }.bind(this))
-            .sort(function(a, b) { return b.count - a.count; })
-            .slice(0, 15);
-    },
-
-    // ============================================
-    // LOAD EXPLORE
-    // ============================================
-
-    loadExplore: function() {
-        var self = this;
-        
-        if (!this.users || Object.keys(this.users).length === 0) {
-            db.ref('users').once('value', function(snapshot) {
-                self.users = snapshot.val() || {};
-            });
-        }
-        
-        setTimeout(function() {
-            self.renderTrendingHashtagsExplore();
-            self.renderTrendingPosts();
-            self.calculateTrendingHashtags();
-        }, 100);
-    },
-
-    // ============================================
-    // SIMILAR INTERESTS MODAL
+    // SHOW SIMILAR INTERESTS MODAL
     // ============================================
 
     showSimilarInterestsModal: function() {
@@ -5342,6 +4378,17 @@ renderProfile: function() {
         
         if (userInterests.length === 0) {
             this.toast('📝 Add interests to your profile first', 'info');
+            var modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 20px; padding: 32px; max-width: 400px; width: 95%; text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
+                    <h2 style="font-weight: 700; color: #1e293b; margin-bottom: 8px;">Add Interests First</h2>
+                    <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">Go to your profile settings to add interests. Then you'll find people who share your passions!</p>
+                    <button onclick="this.closest('.modal-overlay').remove(); app.showProfileSettings();" style="background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-weight: 600;">Go to Settings</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
             return;
         }
         
@@ -5351,7 +4398,7 @@ renderProfile: function() {
                 var user = self.users[uid];
                 var interests = user.interests || [];
                 var commonCount = interests.filter(function(i) { return userInterests.includes(i); }).length;
-                return { uid: uid, ...user, commonInterests: commonCount, interests: interests };
+                return { uid: uid, ...user, commonInterests: commonCount };
             })
             .filter(function(u) { return u.commonInterests > 0; })
             .sort(function(a, b) { return b.commonInterests - a.commonInterests; })
@@ -5364,25 +4411,26 @@ renderProfile: function() {
                 
                 ${similarUsers.length === 0 ? `
                     <div style="text-align: center; color: #6b7280; padding: 40px 20px;">
-                        <div style="font-size: 48px; margin-bottom: 12px;">😔</div>
-                        No users found with similar interests yet
+                        <div style="font-size: 48px; margin-bottom: 12px;">😊</div>
+                        <div style="font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">No matches yet</div>
+                        <div style="font-size: 13px; color: #64748b;">Try adding more interests to your profile!</div>
                     </div>
                 ` : `
-                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
                         ${similarUsers.map(function(user) {
                             var isFollowing = self.following && self.following[user.uid];
                             return `
-                                <div style="background: white; border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;">
-                                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-                                        <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); background-image: url(${user.profilePhoto || ''}); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
-                                            ${!user.profilePhoto ? user.name.charAt(0).toUpperCase() : ''}
+                                <div style="background: white; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; border: 1px solid #e5e7eb;">
+                                    <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+                                        <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); background-image: url(${user.profilePhoto || ''}); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; flex-shrink: 0;">
+                                            ${!user.profilePhoto ? (user.name || 'U').charAt(0).toUpperCase() : ''}
                                         </div>
-                                        <div style="flex: 1;">
-                                            <div style="font-weight: 700; color: #1e293b; font-size: 14px;">${user.name}</div>
-                                            <div style="font-size: 12px; color: #6b7280;">${user.commonInterests} ${user.commonInterests === 1 ? 'interest' : 'interests'} in common</div>
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-weight: 700; color: #1e293b; font-size: 14px;">${user.name || 'User'}</div>
+                                            <div style="font-size: 11px; color: #6b7280;">${user.commonInterests} ${user.commonInterests === 1 ? 'interest' : 'interests'} in common</div>
                                         </div>
                                     </div>
-                                    <button onclick="app.followUser('${user.uid}', '${user.name}'); setTimeout(function() { app.showSimilarInterestsModal(); }, 300);" style="background: ${isFollowing ? '#e2e8f0' : 'var(--primary)'}; color: ${isFollowing ? '#1e293b' : 'white'}; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap;">
+                                    <button onclick="app.followUser('${user.uid}', '${user.name || 'User'}'); setTimeout(function() { app.showSimilarInterestsModal(); }, 300);" style="background: ${isFollowing ? '#e5e7eb' : '#3b82f6'}; color: ${isFollowing ? '#1e293b' : 'white'}; border: none; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap; transition: 0.3s;" onmouseover="if(!${isFollowing}){this.style.background='#2563eb'}" onmouseout="if(!${isFollowing}){this.style.background='#3b82f6'}">
                                         ${isFollowing ? '✓ Following' : 'Follow'}
                                     </button>
                                 </div>
@@ -6647,14 +5695,6 @@ renderProfile: function() {
     },
 
     // ============================================
-    // PROFILE PHOTO MODAL FUNCTIONS (Legacy - kept for compatibility)
-    // ============================================
-
-    showProfilePhotoModalLegacy: function() {
-        this.showProfilePhotoModal();
-    },
-
-    // ============================================
     // SHOW EDIT PROFILE MODAL
     // ============================================
 
@@ -6748,7 +5788,6 @@ renderProfile: function() {
             return;
         }
        
-        // Validate username
         if (!/^[a-zA-Z0-9_]+$/.test(username)) {
             this.toast('Username can only contain letters, numbers, and underscores', 'error');
             return;
@@ -6759,7 +5798,6 @@ renderProfile: function() {
             return;
         }
        
-        // Parse interests
         var interests = interestsInput ? interestsInput.split(',').map(function(i) { return i.trim(); }).filter(function(i) { return i; }) : [];
         if (interests.length > 10) {
             this.toast('Maximum 10 interests allowed', 'error');
@@ -6768,7 +5806,6 @@ renderProfile: function() {
        
         this.toast('Saving profile...', 'info');
        
-        // Check if username is taken (if changed)
         if (username !== this.profile.username) {
             db.ref('users').orderByChild('username').equalTo(username).once('value', function(snapshot) {
                 if (snapshot.exists()) {
@@ -6835,6 +5872,2043 @@ renderProfile: function() {
             }
         });
     },
+
+    // ============================================
+    // UNFOLLOW USER
+    // ============================================
+
+    unfollowUser: function(uid, name) {
+        delete this.following[uid];
+        db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
+        db.ref('users/' + uid + '/followers').once('value', function(s) {
+            var followers = Math.max(0, (s.val() || 0) - 1);
+            db.ref('users/' + uid + '/followers').set(followers);
+        });
+        this.renderProfile();
+        this.logUserActivity('unfollow', 'Unfollowed user: ' + name);
+    },
+
+    // ============================================
+    // SHOW FOLLOWING LIST
+    // ============================================
+
+    showFollowing: function() {
+        var html = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>';
+        html += '<h2 style="margin-bottom:16px;">Following (' + Object.keys(this.following).length + ')</h2>';
+        if (Object.keys(this.following).length === 0) {
+            html += '<div style="text-align:center;color:#6b7280;padding:20px;">Not following anyone yet</div>';
+        } else {
+            html += '<div class="following-list">';
+            for (var uid in this.following) {
+                if (this.users[uid]) {
+                    var u = this.users[uid];
+                    var unreadCount = this.getUnreadCountForUser(uid);
+                    var msgBadge = unreadCount > 0 ? '<span style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;background:#ef4444;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;border:2px solid white;box-shadow:0 2px 6px rgba(239,68,68,0.4);">' + unreadCount + '</span>' : '';
+                   
+                    html += `
+                        <div class="following-item" style="display:flex;align-items:center;padding:10px;border-bottom:1px solid #f0f0f0;gap:12px;">
+                            <div class="following-avatar" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;background-image:url(${u.profilePhoto || ''});background-size:cover;background-position:center;">${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}</div>
+                            <div class="following-name" style="flex:1;font-weight:600;">${u.name}</div>
+                            <div style="display:flex;gap:6px;">
+                                <button class="following-unfollow" onclick="app.openChatFromSearch('${uid}', '${u.name}')" style="background:var(--primary);color:white;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.75rem;font-weight:600;transition:0.3s;position:relative;">
+                                    💬
+                                    ${msgBadge}
+                                </button>
+                                <button class="following-unfollow" onclick="app.unfollowUser('${uid}', '${u.name}')" style="background:#ef4444;color:white;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.75rem;font-weight:600;">Unfollow</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+       
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
+    },
+
+    // ============================================
+    // SHOW LOGIN PAGE
+    // ============================================
+
+    showLoginPage: function() {
+        var loading = document.getElementById('loadingScreen');
+        if (loading) {
+            loading.classList.remove('active');
+            loading.classList.add('hidden');
+            loading.style.visibility = 'hidden';
+            loading.style.zIndex = '-1';
+        }
+        
+        var authPage = document.getElementById('authPage');
+        var mainApp = document.getElementById('mainApp');
+        if (authPage && mainApp) {
+            mainApp.style.display = 'none';
+            authPage.classList.add('show');
+            authPage.classList.remove('hidden');
+            authPage.style.display = 'flex';
+            authPage.style.visibility = 'visible';
+            authPage.style.opacity = '1';
+            authPage.style.zIndex = '9998';
+        }
+        
+        var nav = document.querySelector('.bottom-nav');
+        if (nav) nav.style.display = 'none';
+        
+        this.switchTab('login');
+    },
+
+    continueAsGuest: function() {
+        this.user = null;
+        this.isGuest = true;
+        this.isAdmin = false;
+        this.profile = { name: 'Guest', balance: 0, triviaAnswered: [], tier: 'free' };
+        this.toast('📱 Browsing as Guest - Sign up to unlock all features!', 'info');
+        this.showApp();
+        this.switchView('feed');
+        this.loadPosts();
+        this.logUserActivity('guest_access', 'User browsing as guest');
+    },
+
+    // ============================================
+    // SWITCH TAB
+    // ============================================
+
+    switchTab: function(tab) {
+        document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+        document.querySelector('[onclick="app.switchTab(\'' + tab + '\')"]').classList.add('active');
+        document.getElementById(tab + 'Tab').classList.add('active');
+    },
+
+    // ============================================
+    // SWITCH VIEW
+    // ============================================
+
+    switchView: function(view) {
+        if (!this.navigationHistory) this.navigationHistory = [];
+        if (!this.currentView) this.currentView = 'feed';
+       
+        if (this.currentView !== view) {
+            this.navigationHistory.push(this.currentView);
+        }
+       
+        this.currentView = view;
+       
+        try {
+            localStorage.setItem('chichiCurrentView', view);
+        } catch (e) {}
+       
+        document.querySelectorAll('.view').forEach(function(v) {
+            v.classList.remove('active');
+            v.style.display = '';
+            v.style.visibility = '';
+            v.style.opacity = '';
+            v.style.zIndex = '';
+            v.style.pointerEvents = '';
+        });
+       
+        var chatView = document.getElementById('chatView');
+        if (chatView) {
+            chatView.classList.remove('active');
+            chatView.style.display = '';
+            chatView.style.visibility = '';
+            chatView.style.opacity = '';
+            chatView.style.zIndex = '';
+        }
+       
+        document.querySelectorAll('.nav-wrapper > .nav-item').forEach(function(n) { n.classList.remove('active'); });
+       
+        var viewElement = document.getElementById(view + 'View');
+        if (viewElement) {
+            viewElement.classList.add('active');
+        }
+       
+        if (view === 'profile') {
+            this.renderProfile();
+        } else if (view === 'feed') {
+            this.loadPosts();
+            this.loadStories();
+        } else if (view === 'messages') {
+            this.loadMessages();
+            this.clearUnreadBadge();
+        } else if (view === 'explore') {
+            this.loadExplore();
+        } else if (view === 'earn') {
+            this.renderEarn();
+            var self = this;
+            setTimeout(function() {
+                if (self.pendingTrivia && self.pendingTrivia.question) {
+                    self.currentTrivia = self.pendingTrivia;
+                    self.triviaAnswered = false;
+                    self.renderEarnWithTrivia(self.pendingTrivia);
+                }
+            }, 100);
+        }
+
+        var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
+        if (view === 'feed') navItems[0].classList.add('active');
+        else if (view === 'explore') navItems[1].classList.add('active');
+        else if (view === 'messages') navItems[2].classList.add('active');
+        else if (view === 'earn') navItems[3].classList.add('active');
+        else if (view === 'profile') navItems[4].classList.add('active');
+    },
+
+    // ============================================
+    // GO BACK
+    // ============================================
+
+    goBack: function() {
+        if (!this.backPressCount) {
+            this.backPressCount = 0;
+        }
+       
+        var currentView = this.getCurrentView();
+        var isOnHome = currentView === 'feed' || !currentView;
+       
+        if (!isOnHome) {
+            this.switchView('feed');
+            this.backPressCount = 0;
+            return;
+        }
+       
+        this.backPressCount++;
+       
+        if (this.backPressCount === 1) {
+            this.toast('Press back again to reload', 'info');
+           
+            setTimeout(function() {
+                if (this.backPressCount === 1) {
+                    this.backPressCount = 0;
+                }
+            }.bind(this), 2000);
+           
+        } else if (this.backPressCount === 2) {
+            this.toast('Press back once more to exit', 'info');
+            location.reload();
+           
+        } else if (this.backPressCount === 3) {
+            if (confirm('🚪 Exit CHICHI App?')) {
+                if (navigator.app && navigator.app.exitApp) {
+                    navigator.app.exitApp();
+                } else {
+                    window.history.back();
+                }
+            } else {
+                this.backPressCount = 0;
+                this.toast('Back in CHICHI', 'success');
+            }
+        }
+    },
+   
+    getCurrentView: function() {
+        var views = document.querySelectorAll('.view');
+        for (var i = 0; i < views.length; i++) {
+            if (views[i].classList.contains('active')) {
+                var viewId = views[i].id;
+                if (viewId === 'feedView') return 'feed';
+                if (viewId === 'exploreView') return 'explore';
+                if (viewId === 'messagesView') return 'messages';
+                if (viewId === 'profileView') return 'profile';
+                if (viewId === 'earnView') return 'earn';
+            }
+        }
+        return 'feed';
+    },
+
+    // ============================================
+    // LOAD POSTS
+    // ============================================
+
+    loadPosts: function() {
+        var self = this;
+        this.loadStories();
+       
+        db.ref('posts').orderByChild('timestamp').limitToLast(50).on('value', function(s) {
+            var p = [];
+            s.forEach(function(c) {
+                var post = c.val();
+                if (post) {
+                    post.id = c.key;
+                    p.unshift(post);
+                }
+            });
+            self.posts = p;
+            self.renderFeed();
+        }, function(err) {
+            console.error('❌ Error loading posts:', err.message);
+            self.posts = [];
+            self.renderFeed();
+        });
+    },
+
+    // ============================================
+    // RENDER FEED
+    // ============================================
+
+    renderFeed: function() {
+        var feedContainer = document.getElementById('feedContainer');
+        if (!feedContainer) return;
+       
+        if (!this.posts) this.posts = [];
+        
+        var html = '';
+        if (this.posts.length === 0) {
+            html = '<div style="text-align:center;color:#6b7280;padding:40px 16px;">No posts yet. Start creating!</div>';
+        } else {
+            this.posts.forEach(function(p) {
+                var likes = (p.likes && Object.keys(p.likes).length) || 0;
+                var downloads = p.downloads || 0;
+                var comments = (p.comments && p.comments.length) || 0;
+                var userLiked = this.user && p.likes && p.likes[this.user.uid];
+                var isOwnPost = this.user && p.userId === this.user.uid;
+                
+                var isSupportPost = false;
+                if (p.isSupportPost === true || p.isAutoPost === true) {
+                    isSupportPost = true;
+                }
+                if (p.userName === 'SUPPORT@CHICHI') {
+                    isSupportPost = true;
+                }
+                if (p.source === 'CHICHI AI' || p.source === 'AutoPost') {
+                    isSupportPost = true;
+                }
+                
+                var postHtml = '<div class="post" id="post-' + p.id + '" style="' + (isSupportPost ? 'border-radius:12px;' : '') + '"><div class="post-header"><div class="post-user"><div class="post-avatar" style="background-image:url(' + (p.userPhoto || '') + ');cursor:pointer;" onclick="app.viewUserProfile(\'' + p.userId + '\')">' + (!p.userPhoto ? p.userName.charAt(0).toUpperCase() : '') + '</div><div><div class="post-name" onclick="app.viewUserProfile(\'' + p.userId + '\')">' + p.userName + '</div><div class="post-time">' + p.createdAt + '</div></div></div>' + (isOwnPost ? '<button class="post-menu" onclick="app.deletePost(\'' + p.id + '\')">🗑️</button>' : '') + '</div>';
+                
+                if (isSupportPost) {
+                    postHtml += '<div style="background:#0088cc;color:white;padding:4px 12px;font-size:11px;font-weight:700;display:inline-block;margin:8px 16px 0;border-radius:20px;">🤖 Generated by CHICHI AI</div>';
+                }
+                
+                postHtml += '<img src="' + p.photoUrl + '" class="post-image" style="' + (isSupportPost ? 'border-radius:0;' : '') + '"><div class="post-caption">' + p.caption + '</div>';
+                
+                if (isSupportPost) {
+                    postHtml += '<div style="padding:0 16px 8px;font-size:11px;color:#0088cc;font-style:italic;">✨ Generated by CHICHI AI • ' + (p.category || 'Support') + '</div>';
+                }
+                
+                postHtml += '<div class="post-stats">' + likes + ' likes · ' + downloads + ' saves · ' + comments + ' comments</div>';
+                
+                if (!isSupportPost) {
+                    postHtml += '<div class="post-actions"><button class="post-action ' + (userLiked ? 'liked' : '') + '" onclick="app.likePost(\'' + p.id + '\')">' + (userLiked ? '❤️ Liked' : '🤍 Like') + '</button><button class="post-action" onclick="app.downloadPost(\'' + p.photoUrl + '\', \'' + p.id + '\')">💾 Save</button><button class="post-action" onclick="app.viewComments(\'' + p.id + '\')">💬 Comment</button><button class="post-action" onclick="app.sharePost(\'' + p.id + '\', \'' + p.caption.replace(/'/g, "\\'") + '\')">📤 Share</button></div>';
+                } else {
+                    postHtml += '<div style="padding:8px 16px 16px;display:flex;gap:12px;border-top:1px solid #eee;margin-top:4px;"><span style="font-size:13px;color:#6b7280;">❤️ ' + likes + ' likes</span><span style="font-size:13px;color:#6b7280;">💾 ' + downloads + ' saves</span><span style="font-size:13px;color:#6b7280;">💬 ' + comments + ' comments</span></div>';
+                }
+                
+                postHtml += '</div>';
+                html += postHtml;
+            }.bind(this));
+        }
+       
+        feedContainer.style.display = 'block';
+        feedContainer.innerHTML = html;
+    },
+
+    // ============================================
+    // LIKE POST
+    // ============================================
+
+    likePost: function(id) {
+        if (!this.requireAuth('like posts')) return;
+        
+        var self = this;
+        db.ref('posts/' + id).once('value', function(s) {
+            var post = s.val();
+            var likes = post.likes || {};
+           
+            if (likes[self.user.uid]) {
+                delete likes[self.user.uid];
+            } else {
+                likes[self.user.uid] = true;
+                self.balance += 0.2;
+                db.ref('users/' + self.user.uid + '/balance').set(self.balance);
+                self.trackRevenue('earned', 0.2, 'like');
+                self.engagementStats.likesCount = (self.engagementStats.likesCount || 0) + 1;
+                self.saveEngagementStats();
+            }
+           
+            db.ref('posts/' + id + '/likes').set(likes);
+            self.renderFeed();
+            self.logUserActivity('like_post', 'Liked post: ' + id);
+        });
+    },
+
+    // ============================================
+    // DOWNLOAD POST
+    // ============================================
+
+    downloadPost: function(url, id) {
+        try {
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'photo.jpg';
+            link.click();
+            this.logUserActivity('download_post', 'Downloaded post: ' + id);
+        } catch (err) {
+            this.toast('Download failed', 'error');
+        }
+    },
+
+    // ============================================
+    // SHARE POST
+    // ============================================
+
+    sharePost: function(id, caption) {
+        if (!this.requireAuth('share posts')) return;
+        
+        var shareText = caption || 'Check out this post on CHICHI!';
+        var shareUrl = window.location.href;
+       
+        if (navigator.share) {
+            navigator.share({
+                title: 'CHICHI',
+                text: shareText,
+                url: shareUrl
+            }).catch(function(err) { console.log('Share cancelled'); });
+        } else {
+            var text = shareText + '\n' + shareUrl;
+            navigator.clipboard.writeText(text).then(function() {
+                this.toast('Post link copied to clipboard! 📋', 'success');
+                this.logUserActivity('share_post', 'Shared post: ' + id);
+            }.bind(this)).catch(function(err) {
+                this.toast('Share link: ' + shareUrl, 'info');
+            }.bind(this));
+        }
+    },
+
+    // ============================================
+    // DELETE POST
+    // ============================================
+
+    deletePost: function(id) {
+        if (!confirm('Delete this post?')) return;
+        db.ref('posts/' + id).remove();
+        this.toast('Post deleted', 'success');
+        this.loadPosts();
+    },
+
+    // ============================================
+    // VIEW COMMENTS
+    // ============================================
+
+    viewComments: function(id) {
+        if (!this.requireAuth('comment')) return;
+        
+        var self = this;
+        db.ref('posts/' + id).once('value', function(s) {
+            var post = s.val();
+            var comments = post.comments || [];
+            var commentedUsers = post.commentedUsers || {};
+            var userCommented = this.user && commentedUsers[this.user.uid];
+
+            var html = '';
+            if (comments.length === 0) {
+                html = '<div style="text-align:center;color:#6b7280;padding:20px;">No comments yet</div>';
+            } else {
+                comments.forEach(function(c) {
+                    html += '<div style="background:var(--light);padding:12px;border-radius:12px;margin-bottom:8px;"><div style="font-weight:600;font-size:0.9rem;">' + c.user + '</div><div style="font-size:0.85rem;margin:4px 0;">' + c.text + '</div><div style="font-size:0.75rem;color:var(--text-light);">' + c.time + '</div></div>';
+                });
+            }
+
+            html += '<div style="border-top:1px solid var(--border);padding-top:12px;display:flex;gap:8px;"><input type="text" id="commentInput" placeholder="Add comment..." style="flex:1;border:1px solid var(--border);border-radius:20px;padding:10px 12px;"><button onclick="app.submitComment(\'' + id + '\')" style="background:' + (userCommented ? '#d1d5db' : 'var(--primary)') + ';color:' + (userCommented ? 'var(--text-light)' : 'white') + ';border:none;border-radius:20px;padding:10px 16px;cursor:pointer;font-weight:600;' + (userCommented ? 'cursor:not-allowed;' : '') + '">' + (userCommented ? '✓ Earned' : 'Post') + '</button></div>';
+
+            var modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2 style="font-weight:700;margin-bottom:16px;">Comments</h2><div style="max-height:400px;overflow-y:auto;margin-bottom:16px;">' + html + '</div></div>';
+            document.body.appendChild(modal);
+        }.bind(this));
+    },
+
+    // ============================================
+    // PROFILE SETTINGS MENU
+    // ============================================
+
+    showProfileSettings: function() {
+        var html = `
+            <div class="modal" style="width: 90%; max-width: 320px; border-radius: 16px; padding: 0; overflow: hidden;">
+                <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); padding: 16px; color: white;">
+                    <div class="modal-close" style="position: absolute; top: 8px; right: 8px;">
+                        <button onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px;">✕</button>
+                    </div>
+                    <h2 style="margin: 0; font-size: 18px; font-weight: 700;">Settings</h2>
+                </div>
+                
+                <div style="padding: 0;">
+                    <button onclick="app.showEditProfileModal(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #1e293b; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: 0.3s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        ✏️ Edit Profile
+                    </button>
+                    
+                    <button onclick="app.showNotificationPreferences(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #1e293b; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: 0.3s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        🔔 Notification Settings
+                    </button>
+                    
+                    <button onclick="app.showAppSettings(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #1e293b; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: 0.3s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        ⚙️ App Settings
+                    </button>
+                    
+                    <button onclick="app.showLogout(); this.closest('.modal-overlay').remove();" style="width: 100%; padding: 16px; border: none; background: white; color: #ef4444; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; transition: 0.3s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='white'">
+                        🚪 Log Out
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
+    },
+
+    // ============================================
+    // APP SETTINGS
+    // ============================================
+
+    showAppSettings: function() {
+        var html = `
+            <div class="modal" style="max-width: 500px;">
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+                <h2 style="font-weight: 700; margin-bottom: 20px;">App Settings</h2>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px; background: #f8fafc; border-radius: 10px; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">Dark Mode</div>
+                        <div style="font-size: 13px; color: #64748b;">Toggle dark theme</div>
+                    </div>
+                    <label class="dark-mode-toggle" style="margin: 0;">
+                        <input type="checkbox" id="darkModeToggle" onchange="app.toggleDarkMode()" ${localStorage.getItem('chichi-dark-mode') === 'enabled' ? 'checked' : ''} style="cursor: pointer;">
+                        <div class="toggle-cube"></div>
+                    </label>
+                </div>
+                
+                <div style="padding: 12px; background: #f0f7ff; border-radius: 10px; border-left: 4px solid #3b82f6;">
+                    <div style="font-size: 13px; color: #0c4a6e; font-weight: 600;">App Version</div>
+                    <div style="font-size: 12px; color: #0c4a6e; margin-top: 4px;">CHICHI V02A.01</div>
+                </div>
+            </div>
+        `;
+        
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
+    },
+
+    // ============================================
+    // VIEW POST DETAIL
+    // ============================================
+
+    viewPostDetail: function(id) {
+        var self = this;
+        var post = this.posts.find(function(p) { return p.id === id; });
+        
+        if (!post) return;
+        
+        var likes = (post.likes && Object.keys(post.likes).length) || 0;
+        var comments = post.comments || [];
+        var userLiked = this.user && post.likes && post.likes[this.user.uid];
+        
+        var html = `
+            <div class="modal">
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-height:80vh;overflow-y:auto;">
+                    <div style="background:#f0f0f0;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                        <img src="${post.photoUrl}" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <div style="display:flex;flex-direction:column;">
+                        <div style="display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid #e2e8f0;">
+                            <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);background-image:url(${post.userPhoto || ''});background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;">${!post.userPhoto ? post.userName.charAt(0).toUpperCase() : ''}</div>
+                            <div>
+                                <div style="font-weight:700;color:#1e293b;">${post.userName}</div>
+                                <div style="font-size:12px;color:#64748b;">${post.createdAt}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="padding:12px 0;border-bottom:1px solid #e2e8f0;">
+                            <div style="font-size:14px;color:#1e293b;line-height:1.6;">${post.caption}</div>
+                        </div>
+                        
+                        <div style="flex:1;overflow-y:auto;padding:12px 0;border-bottom:1px solid #e2e8f0;">
+                            ${comments.length === 0 ? '<div style="text-align:center;color:#6b7280;padding:20px;font-size:14px;">No comments yet</div>' : `
+                                ${comments.map(function(c) {
+                                    return `<div style="margin-bottom:12px;"><div style="font-weight:600;font-size:13px;">${c.user}</div><div style="font-size:13px;color:#475569;margin-top:4px;">${c.text}</div><div style="font-size:11px;color:#94a3b8;margin-top:4px;">${c.time}</div></div>`;
+                                }).join('')}
+                            `}
+                        </div>
+                        
+                        <div style="padding:12px 0;border-bottom:1px solid #e2e8f0;">
+                            <div style="font-weight:700;font-size:14px;color:#1e293b;">${likes} likes · ${comments.length} comments</div>
+                        </div>
+                        
+                        <div style="padding:12px 0;display:flex;gap:8px;">
+                            <button onclick="app.likePost('${post.id}');location.reload();" style="flex:1;background:${userLiked ? '#fbbf24' : '#f0f0f0'};color:${userLiked ? 'white' : '#1e293b'};border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;transition:0.3s;">${userLiked ? '❤️ Liked' : '🤍 Like'}</button>
+                            <button onclick="app.downloadPost('${post.photoUrl}', '${post.id}');" style="flex:1;background:#f0f0f0;color:#1e293b;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;transition:0.3s;">💾 Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
+    },
+
+    // ============================================
+    // SUBMIT COMMENT
+    // ============================================
+
+    submitComment: function(id) {
+        var text = document.getElementById('commentInput').value.trim();
+        if (!text) return;
+
+        var self = this;
+        db.ref('posts/' + id).once('value', function(s) {
+            var post = s.val();
+            var comments = post.comments || [];
+            var commentedUsers = post.commentedUsers || {};
+           
+            if (commentedUsers[self.user.uid]) {
+                self.toast('Already commented on this post', 'error');
+                return;
+            }
+
+            if (!Array.isArray(comments)) comments = [];
+            comments.push({
+                user: self.profile.name,
+                text: text,
+                time: new Date().toLocaleString('en-KE')
+            });
+           
+            commentedUsers[self.user.uid] = true;
+           
+            db.ref('posts/' + id + '/comments').set(comments);
+            db.ref('posts/' + id + '/commentedUsers').set(commentedUsers);
+           
+            self.balance += 0.5;
+            db.ref('users/' + self.user.uid + '/balance').set(self.balance);
+            self.trackRevenue('earned', 0.5, 'comment');
+            self.engagementStats.commentsCount = (self.engagementStats.commentsCount || 0) + 1;
+            self.saveEngagementStats();
+           
+            var modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+            self.toast('Comment added', 'success');
+            self.renderFeed();
+            self.logUserActivity('comment', 'Commented on post: ' + id);
+        });
+    },
+
+    // ============================================
+    // VIEW USER PROFILE
+    // ============================================
+
+    viewUserProfile: function(uid) {
+        if (uid === this.user.uid) {
+            this.switchView('profile');
+        } else {
+            var self = this;
+            db.ref('users/' + uid).once('value', function(s) {
+                if (s.exists()) {
+                    var user = s.val();
+                    var isFollowing = this.following[uid] || false;
+                    var unreadCount = this.getUnreadCountForUser(uid);
+                    var msgBadge = unreadCount > 0 ? '<span style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;background:#ef4444;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;border:2px solid white;box-shadow:0 2px 6px rgba(239,68,68,0.4);">' + unreadCount + '</span>' : '';
+                   
+                    var html = '<div class="profile-header"><div class="profile-top"><div class="profile-avatar-large" style="background-image:url(' + (user.profilePhoto || '') + ');">' + (!user.profilePhoto ? user.name.charAt(0).toUpperCase() : '') + '</div><div class="profile-info"><div class="profile-name">' + (user.name || 'User') + '</div><div class="profile-email">' + user.email + '</div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-value">-</div><div class="profile-stat-label">Posts</div></div><div class="profile-stat"><div class="profile-stat-value">' + (user.followers || 0) + '</div><div class="profile-stat-label">Followers</div></div></div></div></div><div style="display:flex;gap:8px;margin-top:12px;"><button class="follow-btn" onclick="app.toggleFollow(\'' + uid + '\', \'' + user.name + '\')" style="background:' + (isFollowing ? '#ff4444' : 'var(--primary)') + ';color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;">' + (isFollowing ? '✕ Unfollow' : '✓ Follow') + '</button><button class="follow-btn" onclick="app.openChatFromSearch(\'' + uid + '\', \'' + user.name + '\')" style="background:#2E5BFF;color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;position:relative;">💬 Message ' + msgBadge + '</button></div></div>';
+                   
+                    var modal = document.createElement('div');
+                    modal.className = 'modal-overlay active';
+                    modal.innerHTML = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>' + html + '</div>';
+                    document.body.appendChild(modal);
+                }
+            }.bind(this));
+        }
+    },
+
+    // ============================================
+    // TOGGLE FOLLOW
+    // ============================================
+
+    toggleFollow: function(uid, name) {
+        if (!this.user || this.isGuest) {
+            this.toast('🔐 Sign up to follow users', 'info');
+            this.showLoginPage();
+            return;
+        }
+        
+        var self = this;
+        var isFollowing = this.following[uid] || false;
+       
+        if (isFollowing) {
+            delete this.following[uid];
+            this.logUserActivity('unfollow', 'Unfollowed user: ' + name);
+        } else {
+            this.following[uid] = true;
+            this.balance += 0.05;
+            db.ref('users/' + this.user.uid + '/balance').set(this.balance);
+            this.trackRevenue('earned', 0.05, 'follow');
+            this.logUserActivity('follow', 'Followed user: ' + name);
+        }
+       
+        db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
+        db.ref('users/' + uid + '/followers').once('value', function(s) {
+            var followers = (s.val() || 0) + (isFollowing ? -1 : 1);
+            db.ref('users/' + uid + '/followers').set(followers);
+        });
+       
+        var modal = document.querySelector('.modal-overlay.active');
+        if (modal) {
+            modal.remove();
+        }
+    },
+
+    // ============================================
+    // SHOW LOGOUT
+    // ============================================
+
+    showLogout: function() {
+        document.getElementById('logoutModal').classList.add('active');
+    },
+
+    closeLogout: function() {
+        document.getElementById('logoutModal').classList.remove('active');
+    },
+
+    confirmLogout: function() {
+        this.justLogout();
+    },
+
+    justLogout: function() {
+        auth.signOut();
+        document.getElementById('logoutModal').classList.remove('active');
+        this.showAuth();
+        this.toast('Logged out successfully', 'success');
+        if (this.onlineInterval) {
+            clearInterval(this.onlineInterval);
+            this.onlineInterval = null;
+        }
+        if (this.triviaInterval) {
+            clearInterval(this.triviaInterval);
+            this.triviaInterval = null;
+        }
+        this.logUserActivity('logout', 'User logged out');
+    },
+
+    // ============================================
+    // DELETE ACCOUNT PERMANENTLY
+    // ============================================
+
+    deleteAccountPermanently: function() {
+        var self = this;
+       
+        if (!confirm('⚠️ WARNING: This will PERMANENTLY DELETE your account and all your data!\n\nAll posts, messages, and profile info will be removed.\nThis CANNOT be undone.\n\nAre you absolutely sure?')) {
+            return;
+        }
+       
+        if (!confirm('Final confirmation: Delete everything? Click OK to proceed.')) {
+            return;
+        }
+       
+        this.toast('Deleting account... Please wait...', 'success');
+       
+        var uid = this.user.uid;
+        var deletionPromises = [];
+       
+        deletionPromises.push(db.ref('users/' + uid).remove());
+       
+        deletionPromises.push(db.ref('posts').orderByChild('userId').equalTo(uid).once('value', function(snapshot) {
+            var deletePromises = [];
+            snapshot.forEach(function(post) {
+                deletePromises.push(db.ref('posts/' + post.key).remove());
+            });
+            return Promise.all(deletePromises);
+        }));
+       
+        deletionPromises.push(db.ref('chats').once('value', function(snapshot) {
+            var deletePromises = [];
+            snapshot.forEach(function(chat) {
+                var chatKey = chat.key;
+                if (chatKey.includes(uid)) {
+                    deletePromises.push(db.ref('chats/' + chatKey).remove());
+                }
+            });
+            return Promise.all(deletePromises);
+        }));
+       
+        deletionPromises.push(db.ref('stories/' + uid).remove());
+       
+        Promise.all(deletionPromises).then(function() {
+            self.toast('Data deleted successfully. Removing account...', 'success');
+           
+            setTimeout(function() {
+                auth.currentUser.delete().then(function() {
+                    self.toast('Account permanently deleted', 'success');
+                    auth.signOut();
+                    document.getElementById('logoutModal').classList.remove('active');
+                    self.showAuth();
+                    setTimeout(function() {
+                        self.toast('Your account has been completely removed', 'success');
+                    }, 500);
+                }).catch(function(err) {
+                    if (err.code === 'auth/requires-recent-login') {
+                        self.toast('Please log in again before deleting your account', 'error');
+                        auth.signOut();
+                        self.showAuth();
+                    } else {
+                        self.toast('Error: ' + err.message, 'error');
+                    }
+                });
+            }, 1000);
+        }).catch(function(err) {
+            self.toast('Error deleting data: ' + err.message, 'error');
+        });
+    },
+
+    // ============================================
+    // REQUIRED AUTH
+    // ============================================
+
+    requireAuth: function(action) {
+        if (this.isGuest || !this.user) {
+            this.toast('🔐 Sign up to ' + (action || 'access this'), 'info');
+            this.showLoginPage();
+            return false;
+        }
+        return true;
+    },
+
+    // ============================================
+    // LOAD GROUPS
+    // ============================================
+
+    loadGroups: function() {
+        this.renderEarn();
+    },
+
+    // ============================================
+    // SETUP TYPING CLEANUP
+    // ============================================
+
+    setupTypingCleanup: function() {
+        if (!this.user) return;
+        var userTypingRef = db.ref('.info/connected');
+        userTypingRef.on('value', function(snapshot) {
+            if (snapshot.val() === false) {
+                console.log('⚠️ User going offline');
+            }
+        });
+    },
+
+    // ============================================
+    // CALCULATE TRENDING HASHTAGS
+    // ============================================
+
+    calculateTrendingHashtags: function() {
+        var hashtagCount = {};
+        var now = new Date();
+        var weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        this.posts.forEach(function(post) {
+            var postDate = new Date(post.timestamp || post.createdAt);
+            if (postDate >= weekAgo) {
+                if (post.hashtags) {
+                    post.hashtags.forEach(function(tag) {
+                        hashtagCount[tag] = (hashtagCount[tag] || 0) + 1;
+                    });
+                }
+            }
+        });
+        
+        this.trendingHashtags = Object.keys(hashtagCount)
+            .map(function(tag) {
+                return {
+                    name: tag,
+                    count: hashtagCount[tag],
+                    posts: this.posts.filter(function(p) { return p.hashtags && p.hashtags.includes(tag); }).length
+                };
+            }.bind(this))
+            .sort(function(a, b) { return b.count - a.count; })
+            .slice(0, 15);
+    },
+
+    // ============================================
+    // LOAD EXPLORE
+    // ============================================
+
+    loadExplore: function() {
+        var self = this;
+        
+        if (!this.users || Object.keys(this.users).length === 0) {
+            db.ref('users').once('value', function(snapshot) {
+                self.users = snapshot.val() || {};
+            });
+        }
+        
+        setTimeout(function() {
+            self.renderTrendingHashtagsExplore();
+            self.renderTrendingPosts();
+            self.calculateTrendingHashtags();
+        }, 100);
+    },
+
+    // ============================================
+    // RENDER TRENDING HASHTAGS IN EXPLORE
+    // ============================================
+
+    renderTrendingHashtagsExplore: function() {
+        var container = document.getElementById('trendingHashtagsContainer');
+        if (!container) return;
+        
+        if (this.trendingHashtags.length === 0) {
+            this.calculateTrendingHashtags();
+            return;
+        }
+        
+        var html = '';
+        this.trendingHashtags.slice(0, 6).forEach(function(trend, index) {
+            html += `
+                <div style="background: white; border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'; this.style.background='#f8fafc'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)'; this.style.background='white'">
+                    <div style="font-weight: 700; color: var(--primary); margin-bottom: 4px; font-size: 14px;">${trend.name}</div>
+                    <div style="font-size: 12px; color: #6b7280;">${trend.posts} posts</div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    },
+
+    // ============================================
+    // TRENDING POSTS
+    // ============================================
+
+    renderTrendingPosts: function() {
+        var self = this;
+        var container = document.getElementById('trendingPostsContainer');
+        if (!container) return;
+        
+        var trendingPosts = (this.posts || [])
+            .sort(function(a, b) {
+                var aLikes = (a.likes && Object.keys(a.likes).length) || 0;
+                var bLikes = (b.likes && Object.keys(b.likes).length) || 0;
+                return bLikes - aLikes;
+            })
+            .slice(0, 9);
+        
+        if (trendingPosts.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 60px 20px; grid-column: 1/-1;">No posts yet. Create one!</div>';
+            return;
+        }
+        
+        var html = '';
+        trendingPosts.forEach(function(post) {
+            var likes = (post.likes && Object.keys(post.likes).length) || 0;
+            var comments = (post.comments && post.comments.length) || 0;
+            
+            html += `
+                <div style="position: relative; aspect-ratio: 1/1; background: #f0f0f0; cursor: pointer; overflow: hidden;" onclick="app.viewPostDetail('${post.id}')">
+                    <img src="${post.photoUrl}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0); display: flex; align-items: center; justify-content: center; gap: 16px; transition: all 0.3s ease; opacity: 0;" onmouseover="this.style.background='rgba(0,0,0,0.6)'; this.style.opacity='1';" onmouseout="this.style.background='rgba(0,0,0,0)'; this.style.opacity='0';">
+                        <div style="color: white; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;">❤️ ${likes}</div>
+                        <div style="color: white; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;">💬 ${comments}</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    },
+
+    // ============================================
+    // FOLLOW USER
+    // ============================================
+
+    followUser: function(uid, name) {
+        if (!this.user || this.isGuest) {
+            this.toast('🔐 Sign up to follow users', 'info');
+            this.showLoginPage();
+            return;
+        }
+        
+        var self = this;
+        
+        if (!this.following) this.following = {};
+        
+        if (this.following[uid]) {
+            delete this.following[uid];
+            this.toast('✓ Unfollowed ' + name, 'info');
+        } else {
+            this.following[uid] = true;
+            this.toast('✓ Followed ' + name, 'success');
+        }
+        
+        db.ref('users/' + this.user.uid + '/following').set(this.following);
+        
+        db.ref('users/' + uid + '/followers').once('value', function(snapshot) {
+            var count = snapshot.val() || 0;
+            var isFollowing = self.following && self.following[uid];
+            var newCount = isFollowing ? count + 1 : Math.max(0, count - 1);
+            db.ref('users/' + uid + '/followers').set(newCount);
+        });
+        
+        setTimeout(function() { self.renderFeaturedUsers(); self.renderTopCreators(); }, 300);
+    },
+
+    renderFeaturedUsers: function() {},
+    renderTopCreators: function() {},
+
+    // ============================================
+    // LOAD STORIES
+    // ============================================
+
+    loadStories: function() {
+        if (!this.user || this.isGuest) return;
+        
+        var self = this;
+        var html = '';
+        html += '<div class="story-item" onclick="app.showCreateStoryModal()"><div class="create-story-avatar">➕</div><div class="create-story-name">My Story</div></div>';
+        
+        db.ref('stories').once('value', function(snapshot) {
+            var allStories = [];
+            if (snapshot.val()) {
+                Object.keys(snapshot.val()).forEach(function(userId) {
+                    var userStories = snapshot.val()[userId];
+                    if (userStories && typeof userStories === 'object') {
+                        Object.keys(userStories).forEach(function(storyId) {
+                            var story = userStories[storyId];
+                            if (story && story.image) {
+                                allStories.push({
+                                    id: storyId,
+                                    userId: userId,
+                                    userName: story.userName || story.authorName || 'User',
+                                    image: story.image,
+                                    musicName: story.musicName || 'No music',
+                                    caption: story.caption || '',
+                                    createdAt: story.createdAt,
+                                    userPhoto: story.userPhoto || ''
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+           
+            allStories.sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+            var seenUsers = {};
+            var uniqueStories = [];
+            allStories.forEach(function(story) {
+                if (story && story.userId && !seenUsers[story.userId]) {
+                    seenUsers[story.userId] = true;
+                    uniqueStories.push(story);
+                }
+            });
+            
+            uniqueStories.slice(0, 8).forEach(function(story) {
+                var firstLetter = (story.userName || 'U').charAt(0).toUpperCase();
+                var storyPhotoStyle = story.userPhoto ? 'background-image: url(\'' + story.userPhoto + '\');' : '';
+                html += '<div class="story-item" onclick="app.viewStory(\'' + story.id + '\', \'' + story.userId + '\')" title="' + story.userName + '"><div class="story-avatar" style="' + storyPhotoStyle + '">' + (story.userPhoto ? '' : firstLetter) + '</div><div class="story-name">' + story.userName + '</div></div>';
+            });
+            
+            var storiesList = document.getElementById('storiesList');
+            if (storiesList) {
+                storiesList.innerHTML = html;
+            }
+        });
+    },
+
+    // ============================================
+    // SHOW CREATE STORY MODAL
+    // ============================================
+
+    showCreateStoryModal: function() {
+        var existing = document.getElementById('storyModalOverlay');
+        if (existing) existing.remove();
+        
+        var html = '<div class="story-modal-overlay" id="storyModalOverlay"><div class="story-modal"><div class="story-modal-header"><h2>📖 Create Story</h2><button class="story-modal-close" onclick="document.getElementById(\'storyModalOverlay\').remove()">✕</button></div><div class="story-modal-content"><div class="story-form-group"><label class="story-form-label">Story Images (Select multiple) *</label><input type="file" id="storyImageInput" accept="image/*" multiple class="story-file-input"><div style="font-size:12px;color:#6b7280;margin-top:4px;">You can select multiple images at once</div></div><div class="story-form-group"><label class="story-form-label">🎵 Music Name</label><input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" class="story-form-input"></div><div class="story-form-group"><label class="story-form-label">Caption</label><textarea id="storyCaptionInput" placeholder="Add a caption..." class="story-form-textarea"></textarea></div></div><div class="story-modal-footer"><button class="story-btn-cancel" onclick="document.getElementById(\'storyModalOverlay\').remove()">Cancel</button><button class="story-btn-upload" id="storyUploadBtn" onclick="app.uploadStory()"><span class="story-btn-text">📤 Upload Stories</span><div class="story-spinner"></div></button></div></div></div>';
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('storyModalOverlay').classList.add('active');
+        document.getElementById('storyModalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) { this.remove(); }
+        });
+    },
+
+    // ============================================
+    // UPLOAD STORY
+    // ============================================
+
+    uploadStory: function() {
+        var self = this;
+        var imageInput = document.getElementById('storyImageInput');
+        var musicNameInput = document.getElementById('storyMusicNameInput');
+        var captionInput = document.getElementById('storyCaptionInput');
+        var uploadBtn = document.getElementById('storyUploadBtn');
+        
+        if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
+            this.toast('⚠️ Please select at least one image', 'error');
+            return;
+        }
+        if (!this.user || !this.user.uid) {
+            this.toast('⚠️ Please login first', 'error');
+            return;
+        }
+        
+        if (uploadBtn) uploadBtn.classList.add('loading');
+        this.toast('📤 Uploading stories...', 'info');
+        
+        var files = imageInput.files;
+        var uploadPromises = [];
+        for (var i = 0; i < files.length; i++) {
+            var promise = new Promise(function(resolve, reject) {
+                var formData = new FormData();
+                formData.append('file', files[i]);
+                formData.append('upload_preset', UPLOAD_PRESET || 'chichi_photos');
+                fetch('https://api.cloudinary.com/v1_1/u1uilb6f/image/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.secure_url) { resolve(data.secure_url); }
+                    else { reject(new Error('No image URL returned')); }
+                })
+                .catch(reject);
+            });
+            uploadPromises.push(promise);
+        }
+        
+        Promise.all(uploadPromises).then(function(imageUrls) {
+            var musicName = musicNameInput ? musicNameInput.value.trim() : 'Audio';
+            var caption = captionInput ? captionInput.value.trim() : '';
+            var savePromises = [];
+            imageUrls.forEach(function(imageUrl, index) {
+                var storyId = 'story_' + Date.now() + '_' + index;
+                var storyData = {
+                    image: imageUrl,
+                    musicUrl: '',
+                    musicName: musicName || 'Audio',
+                    caption: caption || '',
+                    createdAt: new Date().getTime() + index,
+                    views: 0,
+                    authorUid: self.user.uid,
+                    authorName: self.user.displayName || 'Anonymous',
+                    userName: self.profile ? (self.profile.name || 'User') : 'User',
+                    userPhoto: self.profile ? (self.profile.profilePhoto || '') : ''
+                };
+                savePromises.push(db.ref('stories/' + self.user.uid + '/' + storyId).set(storyData));
+            });
+            return Promise.all(savePromises);
+        }).then(function() {
+            self.toast('✅ Stories uploaded successfully!', 'success');
+            self.logUserActivity('story_upload', 'Uploaded stories');
+            setTimeout(function() {
+                var modal = document.getElementById('storyModalOverlay');
+                if (modal) modal.remove();
+                self.loadStories();
+            }, 500);
+        }).catch(function(err) {
+            console.error('Upload error:', err);
+            self.toast('❌ Upload failed: ' + err.message, 'error');
+            if (uploadBtn) uploadBtn.classList.remove('loading');
+        });
+    },
+
+    // ============================================
+    // VIEW STORY
+    // ============================================
+
+    viewStory: function(storyId, userId) {
+        userId = userId || this.user.uid;
+        var self = this;
+        var isOwnStory = this.user && userId === this.user.uid;
+        
+        db.ref('stories/' + userId + '/' + storyId).once('value', function(snapshot) {
+            var story = snapshot.val();
+            if (!story) {
+                self.toast('Story not found', 'error');
+                return;
+            }
+            
+            var viewer = document.createElement('div');
+            viewer.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;animation:smoothFadeIn 0.3s ease;';
+            
+            var deleteBtn = isOwnStory ? '<button onclick="event.stopPropagation(); app.deleteStory(\'' + storyId + '\', \'' + userId + '\')" style="position:absolute;top:70px;right:16px;z-index:10;background:rgba(239,68,68,0.9);color:white;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>' : '';
+            
+            viewer.innerHTML = '<div style="position:absolute;top:16px;left:16px;right:16px;z-index:10;display:flex;gap:4px;"><div style="flex:1;height:3px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden;"><div id="storyProgressBar" style="height:100%;width:0%;background:white;border-radius:2px;transition:width 0.1s linear;"></div></div></div><div style="position:absolute;top:24px;left:16px;right:16px;z-index:10;display:flex;align-items:center;gap:12px;"><div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;overflow:hidden;border:2px solid rgba(255,255,255,0.3);">' + (story.userPhoto ? '<img src="' + story.userPhoto + '" style="width:100%;height:100%;object-fit:cover;">' : (story.userName || 'U').charAt(0).toUpperCase()) + '</div><div><div style="color:white;font-weight:600;font-size:14px;">' + (story.userName || 'User') + '</div><div style="color:rgba(255,255,255,0.6);font-size:11px;">' + (story.musicName || 'No music') + '</div></div></div>' + deleteBtn + '<div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;width:100%;"><img src="' + story.image + '" style="max-width:100%;max-height:70vh;border-radius:12px;object-fit:contain;box-shadow:0 8px 32px rgba(0,0,0,0.5);"></div>' + (story.caption ? '<div style="position:absolute;bottom:80px;left:16px;right:16px;z-index:10;color:white;text-align:center;font-size:14px;background:rgba(0,0,0,0.4);padding:12px 16px;border-radius:12px;">' + story.caption + '</div>' : '') + '<div style="position:absolute;bottom:30px;left:0;right:0;z-index:10;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;">Tap to close</div>';
+            
+            document.body.appendChild(viewer);
+            
+            var progressBar = document.getElementById('storyProgressBar');
+            var startTime = Date.now();
+            var duration = 10000;
+            var progressInterval = setInterval(function() {
+                var elapsed = Date.now() - startTime;
+                var progress = Math.min((elapsed / duration) * 100, 100);
+                if (progressBar) { progressBar.style.width = progress + '%'; }
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    viewer.remove();
+                    self.toast('Story viewed 📖', 'info');
+                }
+            }, 50);
+            
+            viewer.addEventListener('click', function(e) {
+                if (e.target.tagName === 'IMG' || e.target.tagName === 'BUTTON') { return; }
+                clearInterval(progressInterval);
+                viewer.remove();
+            });
+        });
+    },
+
+    deleteStory: function(storyId, userId) {
+        if (!confirm('Delete this story?')) return;
+        var self = this;
+        db.ref('stories/' + userId + '/' + storyId).remove().then(function() {
+            self.toast('✅ Story deleted', 'success');
+            self.loadStories();
+        }).catch(function(err) {
+            self.toast('❌ Error deleting story: ' + err.message, 'error');
+        });
+    },
+
+    // ============================================
+    // SHOW MANDATORY HASHTAG SELECTION
+    // ============================================
+
+    showMandatoryHashtagSelection: function() {
+        var hashtagCategories = {
+            '🎬 Entertainment': ['Movies', 'Music', 'Comedy', 'Gaming', 'Animation'],
+            '🎨 Creative': ['Photography', 'Art', 'Design', 'Fashion', 'Illustration'],
+            '⚽ Sports': ['Football', 'Basketball', 'Tennis', 'Fitness', 'Yoga'],
+            '🍔 Lifestyle': ['Food', 'Travel', 'Health', 'Beauty', 'DIY'],
+            '💻 Tech': ['Programming', 'AI', 'Web Dev', 'Apps', 'Gadgets'],
+            '📚 Education': ['Learning', 'Science', 'History', 'Language', 'Books'],
+            '💰 Business': ['Entrepreneurship', 'Marketing', 'Investing', 'Startups', 'Finance'],
+            '🌍 Social': ['Environment', 'Charity', 'Community', 'Activism', 'Culture']
+        };
+        
+        var htmlOptions = '';
+        for (var category in hashtagCategories) {
+            htmlOptions += '<div style="margin-bottom:12px;"><div style="font-weight:600;margin-bottom:8px;font-size:13px;color:#1a202c;">' + category + '</div><div style="display:flex;flex-wrap:wrap;gap:6px;">';
+            hashtagCategories[category].forEach(function(tag) {
+                htmlOptions += '<label style="display:inline-flex;align-items:center;padding:4px 10px;background:#f9fafb;border:2px solid #e5e7eb;border-radius:20px;cursor:pointer;transition:0.2s;font-size:12px;" onmouseover="this.style.borderColor=\'#0088cc\';this.style.background=\'rgba(0,136,204,0.05)\'" onmouseout="if(!this.querySelector(\'input\').checked){this.style.borderColor=\'#e5e7eb\';this.style.background=\'#f9fafb\'}"><input type="checkbox" class="hashtag-checkbox" value="' + tag + '" style="width:14px;height:14px;cursor:pointer;margin-right:5px;accent-color:#0088cc;" onchange="this.parentElement.style.borderColor=this.checked ? \'#0088cc\' : \'#e5e7eb\'; this.parentElement.style.background=this.checked ? \'rgba(0,136,204,0.1)\' : \'#f9fafb\'"><span style="font-size:11px;color:#1a202c;">' + tag + '</span></label>';
+            });
+            htmlOptions += '</div></div>';
+        }
+        
+        var modalHTML = '<div class="modal-overlay" id="mandatoryHashtagModal" style="display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:10001;backdrop-filter:blur(4px);"><div style="background:white;border-radius:24px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:smoothFadeIn 0.3s ease;"><div style="text-align:center;margin-bottom:16px;"><div style="font-size:36px;margin-bottom:4px;">🏷️</div><h2 style="margin-bottom:2px;font-weight:700;color:#1a202c;font-size:20px;">Choose Your Interests</h2><p style="color:#6b7280;font-size:13px;margin-bottom:4px;">Select at least <strong style="color:#0088cc;">3</strong> topics you care about</p><p style="color:#ef4444;font-size:11px;font-weight:600;min-height:18px;" id="hashtagError"></p></div><div style="margin-bottom:16px;max-height:50vh;overflow-y:auto;padding-right:4px;">' + htmlOptions + '</div><div style="display:flex;gap:10px;border-top:1px solid #e5e7eb;padding-top:14px;"><button onclick="app.saveMandatoryHashtags()" id="saveHashtagBtn" style="flex:1;padding:12px;background:linear-gradient(135deg,#0088cc,#006fa3);color:white;border:none;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;transition:0.3s;" onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'">✅ Save & Continue</button></div></div></div>';
+        
+        var existing = document.getElementById('mandatoryHashtagModal');
+        if (existing) existing.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    },
+
+    saveMandatoryHashtags: function() {
+        var checkboxes = document.querySelectorAll('#mandatoryHashtagModal .hashtag-checkbox:checked');
+        var selected = [];
+        checkboxes.forEach(function(cb) { selected.push(cb.value); });
+        var errorEl = document.getElementById('hashtagError');
+        
+        if (selected.length < 3) {
+            if (errorEl) errorEl.textContent = '⚠️ Please select at least 3 interests';
+            this.toast('Select at least 3 interests', 'error');
+            return;
+        }
+        if (selected.length > 5) {
+            if (errorEl) errorEl.textContent = '⚠️ Maximum 5 interests allowed';
+            this.toast('Maximum 5 interests allowed', 'error');
+            return;
+        }
+        if (errorEl) errorEl.textContent = '';
+        
+        var self = this;
+        var uid = this.user ? this.user.uid : null;
+        if (!uid) {
+            this.toast('User not found. Please login again.', 'error');
+            return;
+        }
+        
+        var btn = document.getElementById('saveHashtagBtn');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving...'; }
+        
+        db.ref('users/' + uid + '/hashtags').set(selected).then(function() {
+            self.profile.interests = selected;
+            self.profile.hashtags = selected;
+            self.toast('✅ Interests saved!', 'success');
+            var modal = document.getElementById('mandatoryHashtagModal');
+            if (modal) modal.remove();
+            setTimeout(function() {
+                self.switchView('explore');
+                self.loadExplore();
+            }, 500);
+        }).catch(function(err) {
+            self.toast('❌ Error saving interests: ' + err.message, 'error');
+            if (btn) { btn.disabled = false; btn.textContent = '✅ Save & Continue'; }
+        });
+    },
+
+    // ============================================
+    // LOAD SIGNUP HEATMAP
+    // ============================================
+
+    loadSignupHeatmap: function() {
+        var mapContainer = document.getElementById('signupMapContainer');
+        if (!mapContainer) { return; }
+        
+        mapContainer.innerHTML = '<div id="leafletMap" style="width:100%;height:100%;"></div><div id="heatmapDots" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;"></div>';
+        
+        if (typeof L !== 'undefined') {
+            var map = L.map('leafletMap', {
+                zoomControl: false, attributionControl: false,
+                scrollWheelZoom: false, doubleClickZoom: false,
+                dragging: false, touchZoom: false, boxZoom: false, keyboard: false
+            }).setView([20, 0], 2);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '', subdomains: 'abcd', maxZoom: 2, minZoom: 2, noWrap: true
+            }).addTo(map);
+            map.setZoom(2);
+            this.heatmapMap = map;
+        }
+        
+        this.updateHeatmapStats();
+        this.renderHeatmapDots();
+        if (!this.heatmapListenerSetup) {
+            this.setupHeatmapListener();
+            this.heatmapListenerSetup = true;
+        }
+    },
+
+    updateHeatmapStats: function() {
+        var totalUsers = Object.keys(this.users || {}).length;
+        var onlineCount = 0;
+        var now = new Date().getTime();
+        var fiveMinutesAgo = now - (5 * 60 * 1000);
+        
+        for (var uid in this.users) {
+            var user = this.users[uid];
+            if (user && user.lastSeen) {
+                var lastSeen = user.lastSeen;
+                if (typeof lastSeen === 'string') { lastSeen = new Date(lastSeen).getTime(); }
+                if (lastSeen && lastSeen > fiveMinutesAgo) { onlineCount++; }
+            }
+        }
+        
+        var totalElement = document.getElementById('totalSignups');
+        if (totalElement) { this.animateNumber(totalElement, totalUsers); }
+        var onlineElement = document.getElementById('onlineCount');
+        if (onlineElement) { this.animateNumber(onlineElement, onlineCount); }
+    },
+
+    animateNumber: function(element, target) {
+        var current = parseInt(element.textContent.replace(/,/g, '')) || 0;
+        var diff = target - current;
+        var steps = 20;
+        var step = diff / steps;
+        var count = 0;
+        var interval = setInterval(function() {
+            count++;
+            var value = Math.round(current + step * count);
+            if (count >= steps || value >= target) {
+                element.textContent = target.toLocaleString();
+                clearInterval(interval);
+            } else {
+                element.textContent = value.toLocaleString();
+            }
+        }, 30);
+    },
+
+    renderHeatmapDots: function() {
+        var dotsContainer = document.getElementById('heatmapDots');
+        if (!dotsContainer || !this.users) return;
+        
+        var usersArray = Object.keys(this.users).map(function(uid) { return { uid: uid, user: this.users[uid] }; }.bind(this));
+        if (usersArray.length === 0) { dotsContainer.innerHTML = ''; return; }
+        
+        var html = '';
+        var totalUsers = usersArray.length;
+        var dotSize = Math.min(4 + (totalUsers / 200), 8);
+        var locations = [
+            { lat: -1.286389, lng: 36.817223 }, { lat: -4.043477, lng: 39.668206 },
+            { lat: 0.313611, lng: 32.581111 }, { lat: -1.9441, lng: 30.0619 },
+            { lat: -3.361378, lng: 36.674448 }, { lat: -0.091702, lng: 34.767956 },
+            { lat: -0.2861, lng: 36.0711 }, { lat: -1.3216, lng: 36.8831 },
+            { lat: -0.4667, lng: 35.2833 }, { lat: 0.0494, lng: 34.7486 },
+            { lat: -0.4861, lng: 35.2972 }, { lat: -2.2698, lng: 37.8020 }
+        ];
+        
+        usersArray.forEach(function(u, index) {
+            var loc = locations[index % locations.length];
+            var baseLat = loc.lat + (Math.random() - 0.5) * 1.5;
+            var baseLng = loc.lng + (Math.random() - 0.5) * 1.5;
+            var dotColor = 'rgba(0,136,204,0.7)';
+            if (u.user && u.user.online) { dotColor = 'rgba(0,212,170,0.9)'; }
+            html += '<div style="position:absolute;width:' + dotSize + 'px;height:' + dotSize + 'px;background:' + dotColor + ';border-radius:50%;left:' + (50 + (baseLng / 30)) + '%;top:' + (50 - (baseLat / 15)) + '%;box-shadow:0 0 ' + (dotSize * 2) + 'px ' + dotColor + ';transition:all 0.5s ease;animation:pulse 2s infinite;" title="' + (u.user ? u.user.name : 'User') + '"></div>';
+        });
+        dotsContainer.innerHTML = html;
+    },
+
+    setupHeatmapListener: function() {
+        db.ref('users').on('value', function(snapshot) {
+            this.users = {};
+            snapshot.forEach(function(child) {
+                this.users[child.key] = child.val();
+            }.bind(this));
+            this.updateHeatmapStats();
+            this.renderHeatmapDots();
+        }.bind(this));
+    },
+
+    // ============================================
+    // OPEN CHAT FROM SEARCH
+    // ============================================
+
+    openChatFromSearch: function(uid, name) {
+        this.openChat(uid, name);
+    },
+
+    // ============================================
+    // SHOW TRANSACTION HISTORY
+    // ============================================
+
+    showTransactionHistory: function() {
+        var self = this;
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.id = 'transactionHistoryModal';
+        modal.style.zIndex = '9999';
+        
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 20px; padding: 28px; max-width: 500px; width: 95%; animation: slideUp 0.3s ease; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); max-height: 80vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h2 style="font-size: 20px; font-weight: 700; color: #1e293b; margin: 0;">📋 Transaction History</h2>
+                    <button onclick="document.getElementById('transactionHistoryModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">✕</button>
+                </div>
+                
+                <div id="transactionsList" style="max-height: 600px; overflow-y: auto;">
+                    <div style="text-align: center; color: #94a3b8; padding: 40px 20px;">Loading...</div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        db.ref('analytics/revenue').orderByChild('userId').equalTo(this.user.uid).once('value', function(snapshot) {
+            var transactions = [];
+            snapshot.forEach(function(child) {
+                var tx = child.val();
+                transactions.push({
+                    id: child.key,
+                    ...tx
+                });
+            });
+            
+            transactions.reverse();
+            
+            var html = '';
+            
+            if (transactions.length === 0) {
+                html = '<div style="text-align: center; color: #94a3b8; padding: 40px 20px;">No transactions yet</div>';
+            } else {
+                transactions.forEach(function(tx) {
+                    var isEarned = tx.type === 'earned';
+                    var icon = isEarned ? '📈' : '🛍️';
+                    var color = isEarned ? '#22c55e' : '#ef4444';
+                    var sign = isEarned ? '+' : '-';
+                    
+                    html += `
+                        <div style="background: ${isEarned ? '#f0fdf4' : '#fee2e2'}; border-left: 4px solid ${color}; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 12px; align-items: center; flex: 1;">
+                                <div style="font-size: 24px;">${icon}</div>
+                                <div>
+                                    <div style="font-weight: 600; color: #1e293b; font-size: 14px;">${isEarned ? 'Earned' : 'Spent'} ${tx.item || ''}</div>
+                                    <div style="font-size: 12px; color: #64748b; margin-top: 2px;">${tx.date || 'N/A'}</div>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 16px; font-weight: 700; color: ${color};">${sign}${tx.amount.toFixed(2)} Coins</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            var listContainer = document.getElementById('transactionsList');
+            if (listContainer) {
+                listContainer.innerHTML = html;
+            }
+        });
+    },
+
+    updateBalanceDisplays: function() {
+        var balanceDisplay = document.getElementById('balanceDisplay');
+        if (balanceDisplay) {
+            balanceDisplay.textContent = this.balance.toFixed(2) + ' Coins';
+        }
+        var earnBalanceDisplay = document.getElementById('earnBalanceDisplay');
+        if (earnBalanceDisplay) {
+            earnBalanceDisplay.textContent = this.balance.toFixed(2) + ' Coins';
+        }
+    },
+
+    // ============================================
+    // PREVIEW PHOTO
+    // ============================================
+
+    previewPhoto: function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            var preview = document.getElementById('photoPreview');
+            preview.textContent = '✓ ' + file.name + ' selected';
+            preview.style.display = 'block';
+        }
+    },
+
+    // ============================================
+    // SHOW CREATE MODAL
+    // ============================================
+
+    showCreateModal: function() {
+        var modal = document.getElementById('createModal');
+        if (!modal) {
+            this.toast('Error opening post creator', 'error');
+            return;
+        }
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+        modal.style.zIndex = '9999';
+        setTimeout(function() {
+            var captionInput = document.getElementById('captionInput');
+            if (captionInput) captionInput.focus();
+        }, 300);
+    },
+
+    closeCreateModal: function() {
+        var modal = document.getElementById('createModal');
+        if (!modal) return;
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+        document.getElementById('photoInput').value = '';
+        document.getElementById('captionInput').value = '';
+        var preview = document.getElementById('photoPreview');
+        if (preview) { preview.style.display = 'none'; preview.textContent = ''; }
+    },
+
+    createPost: function() {
+        if (!this.requireAuth('post')) return;
+        
+        var photoFile = document.getElementById('photoInput').files[0];
+        var caption = document.getElementById('captionInput').value.trim();
+        var sharePostBtn = document.getElementById('sharePostBtn');
+        var shareSpinner = document.querySelector('.share-spinner');
+        var shareText = document.querySelector('.share-btn-text');
+
+        if (!photoFile || !caption) {
+            this.toast('Add photo and caption', 'error');
+            return;
+        }
+
+        var hashtagRegex = /#[\w]+/g;
+        var hashtags = (caption.match(hashtagRegex) || []).slice(0, 5);
+
+        if (shareSpinner) shareSpinner.style.display = 'inline';
+        if (shareText) shareText.style.display = 'none';
+        if (sharePostBtn) sharePostBtn.disabled = true;
+
+        var formData = new FormData();
+        formData.append('file', photoFile);
+        formData.append('upload_preset', UPLOAD_PRESET);
+       
+        fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', {
+            method: 'POST', body: formData
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var self = this;
+            db.ref('posts').push({
+                userId: self.user.uid,
+                userName: self.profile.name || 'User',
+                userPhoto: self.profile.profilePhoto || '',
+                photoUrl: data.secure_url,
+                caption: caption,
+                hashtags: hashtags,
+                likes: {}, comments: [], commentedUsers: [], downloads: 0,
+                createdAt: new Date().toLocaleString('en-KE'),
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            }).then(function() {
+                self.balance += 1;
+                db.ref('users/' + self.user.uid + '/balance').set(self.balance);
+                self.trackRevenue('earned', 1, 'post_creation');
+                self.engagementStats.postsCount = (self.engagementStats.postsCount || 0) + 1;
+                self.saveEngagementStats();
+                self.toast('Post published', 'success');
+                self.logUserActivity('create_post', 'Created a new post');
+                if (shareSpinner) shareSpinner.style.display = 'none';
+                if (shareText) shareText.style.display = 'inline';
+                if (sharePostBtn) sharePostBtn.disabled = false;
+                self.closeCreateModal();
+                self.switchView('feed');
+            });
+        }.bind(this)).catch(function(err) {
+            this.toast('Upload failed: ' + err.message, 'error');
+            if (shareSpinner) shareSpinner.style.display = 'none';
+            if (shareText) shareText.style.display = 'inline';
+            if (sharePostBtn) sharePostBtn.disabled = false;
+        }.bind(this));
+    },
+
+    // ============================================
+    // MESSAGES
+    // ============================================
+
+    loadMessages: function() {
+        var self = this;
+        if (!this.user || this.isGuest || !this.user.uid) {
+            var html = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 20px;text-align:center;"><div style="font-size:64px;margin-bottom:16px;">💬</div><div style="font-size:22px;font-weight:700;margin-bottom:12px;color:var(--text);">Connect & Chat Now</div><div style="font-size:15px;color:var(--text-light);margin-bottom:12px;line-height:1.6;max-width:280px;">Join our community to message friends, share ideas, and build real connections!</div><button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:14px 40px;border-radius:8px;font-weight:600;cursor:pointer;font-size:16px;">🚀 Sign Up / Login</button></div>';
+            var container = document.getElementById('messageList');
+            if (container) { container.innerHTML = html; }
+            return;
+        }
+        
+        this.loadBlockedUsers();
+        var html = '';
+        var conversations = [];
+        
+        db.ref('messages').once('value', function(snapshot) {
+            if (snapshot.val()) {
+                Object.keys(snapshot.val()).forEach(function(chatKey) {
+                    if (chatKey.includes(self.user.uid)) {
+                        var parts = chatKey.split('_');
+                        var otherUserId = parts[0] === self.user.uid ? parts[1] : parts[0];
+                        if (self.blockedUsers && self.blockedUsers[otherUserId]) { return; }
+                        var messages = snapshot.val()[chatKey];
+                        var hasTextMessages = false;
+                        var lastMessage = 'Tap to message';
+                        var lastTimestamp = 0;
+                        var unreadCount = 0;
+                        if (messages && typeof messages === 'object') {
+                            Object.keys(messages).forEach(function(msgId) {
+                                var msg = messages[msgId];
+                                if (msg && !msg.deleted && (msg.text || msg.image)) {
+                                    hasTextMessages = true;
+                                    lastMessage = msg.text ? msg.text.substring(0, 50) : '📷 Image';
+                                    lastTimestamp = msg.timestamp || 0;
+                                    if (msg.sender !== self.user.uid && !msg.read) { unreadCount++; }
+                                }
+                            });
+                            if (hasTextMessages && otherUserId && self.users[otherUserId]) {
+                                conversations.push({
+                                    uid: otherUserId, chatKey: chatKey, lastMessage: lastMessage,
+                                    lastTimestamp: lastTimestamp, unreadCount: unreadCount,
+                                    user: self.users[otherUserId]
+                                });
+                            }
+                        }
+                    }
+                });
+            }
+            conversations.sort(function(a, b) { return b.lastTimestamp - a.lastTimestamp; });
+            
+            if (conversations.length > 0) {
+                conversations.forEach(function(conv) {
+                    var unreadBadge = conv.unreadCount > 0 ? '<div class="message-item-unread">' + conv.unreadCount + '</div>' : '';
+                    var avatarStyle = conv.user.profilePhoto ? 'background-image: url(\'' + conv.user.profilePhoto + '\'); background-size: cover; background-position: center;' : '';
+                    html += '<div class="message-item" onclick="app.openChatFromSearch(\'' + conv.uid + '\', \'' + conv.user.name + '\')"><div class="message-item-avatar" style="' + avatarStyle + ' background: ' + (!conv.user.profilePhoto ? 'linear-gradient(135deg, #0088cc, #006fa3)' : '') + ';">' + (!conv.user.profilePhoto ? conv.user.name.charAt(0).toUpperCase() : '') + '</div><div class="message-item-content"><div class="message-item-name">' + conv.user.name + '</div><div class="message-item-preview">' + conv.lastMessage + '</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;"><div class="message-item-time">' + self.formatTimeAgo(new Date(conv.lastTimestamp)) + '</div>' + unreadBadge + '</div></div>';
+                });
+            } else {
+                html = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;"><div style="font-size:48px;margin-bottom:16px;">💬</div><div style="font-size:18px;font-weight:600;color:#1a202c;margin-bottom:8px;">No conversations yet</div><div style="font-size:14px;color:#6b7280;margin-bottom:16px;">Go find someone to chat with!</div><button onclick="app.switchView(\'explore\')" style="background:var(--primary);color:white;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:600;">🔍 Find Friends</button></div>';
+            }
+            var container = document.getElementById('messageList');
+            if (container) { container.innerHTML = html; }
+        });
+    },
+
+    // ============================================
+    // OPEN CHAT
+    // ============================================
+
+    openChat: function(uid, name) {
+        if (!this.user || this.isGuest) {
+            this.toast('🔐 Sign up to message users', 'info');
+            this.showLoginPage();
+            return;
+        }
+        
+        document.querySelectorAll('.view').forEach(function(view) {
+            view.classList.remove('active');
+            view.style.display = 'none !important';
+        });
+        
+        var chatView = document.getElementById('chatView');
+        if (chatView) {
+            chatView.classList.add('active');
+            chatView.style.display = 'flex';
+            chatView.style.zIndex = '2000';
+            chatView.style.position = 'fixed';
+        }
+        
+        this.currentChat = { uid: uid, name: name };
+        document.getElementById('chatHeaderName').textContent = name;
+        
+        var avatar = document.getElementById('chatHeaderAvatar');
+        var userPhoto = this.users[uid] && this.users[uid].profilePhoto;
+        if (userPhoto) {
+            avatar.style.backgroundImage = 'url(' + userPhoto + ')';
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+            avatar.textContent = '';
+        } else {
+            avatar.style.backgroundImage = 'none';
+            avatar.textContent = name.charAt(0).toUpperCase();
+        }
+        
+        document.getElementById('chatMessages').innerHTML = '';
+        document.getElementById('chatMessageInput').value = '';
+        
+        var self = this;
+        setTimeout(function() {
+            self.loadChatMessages();
+            self.markAsRead(uid);
+            document.getElementById('chatMessageInput').focus();
+        }, 100);
+    },
+
+    // ============================================
+    // CLOSE CHAT
+    // ============================================
+
+    closeChatView: function() {
+        var chatView = document.getElementById('chatView');
+        if (chatView) {
+            chatView.classList.remove('active');
+            chatView.style.display = 'none';
+        }
+        if (this.currentChat && this.chatMessagesListener) {
+            var key = [this.user.uid, this.currentChat.uid].sort().join('_');
+            db.ref('chats/' + key + '/messages').off();
+            this.chatMessagesListener = null;
+        }
+        this.currentChat = null;
+        this.switchView('messages');
+    },
+
+    // ============================================
+    // LOAD CHAT MESSAGES
+    // ============================================
+
+    loadChatMessages: function() {
+        if (!this.currentChat) return;
+        var self = this;
+        var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+        if (!this.chatMessages) this.chatMessages = {};
+        if (this.chatMessagesListener) {
+            db.ref('chats/' + key + '/messages').off();
+        }
+        
+        db.ref('chats/' + key + '/messages').once('value').then(function(snapshot) {
+            var messages = [];
+            snapshot.forEach(function(c) {
+                var m = c.val();
+                if (m && (m.text || m.image)) { messages.push(m); }
+            });
+            messages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+            self.chatMessages[key] = messages;
+            self.displayChatMessages(messages, key);
+            
+            self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
+                var m = snap.val();
+                if (m && (m.text || m.image) && m.sender !== self.user.uid) {
+                    self.notifyNewMessage(self.currentChat.name, m.text || '📷 Image');
+                    db.ref('chats/' + key + '/messages').once('value').then(function(s) {
+                        var updated = [];
+                        s.forEach(function(c) {
+                            var msg = c.val();
+                            if (msg && (msg.text || msg.image)) { updated.push(msg); }
+                        });
+                        updated.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+                        self.chatMessages[key] = updated;
+                        self.displayChatMessages(updated, key);
+                    });
+                }
+            });
+        });
+    },
+
+    displayChatMessages: function(messages, key) {
+        var self = this;
+        if (key) {
+            if (!this.chatMessages) this.chatMessages = {};
+            this.chatMessages[key] = messages;
+        }
+        if (!messages || messages.length === 0) {
+            var chatMessagesView = document.getElementById('chatMessages');
+            if (chatMessagesView) {
+                chatMessagesView.innerHTML = '<div style="text-align:center;color:#999;padding:40px 16px;font-size:14px;">No messages yet. Say hello! 👋</div>';
+            }
+            return;
+        }
+        
+        var html = '';
+        var lastDate = '';
+        messages.forEach(function(m, idx) {
+            if (!m || (!m.text && !m.image)) return;
+            var side = m.sender === self.user.uid ? 'own' : 'other';
+            var timestamp = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+            
+            if (idx === 0 || (messages[idx-1] && new Date(messages[idx-1].timestamp).toDateString() !== new Date(m.timestamp).toDateString())) {
+                var d = new Date(m.timestamp);
+                var today = new Date();
+                var yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                var dateStr = 'Today';
+                if (d.toDateString() === yesterday.toDateString()) { dateStr = 'Yesterday'; }
+                else if (d.toDateString() !== today.toDateString()) { dateStr = d.toLocaleDateString(); }
+                if (dateStr !== lastDate) {
+                    html += '<div class="message-date-divider">' + dateStr + '</div>';
+                    lastDate = dateStr;
+                }
+            }
+            
+            var content = '';
+            if (m.image) {
+                content += '<img src="' + m.image + '" style="max-width:180px;border-radius:12px;cursor:pointer;" onclick="app.viewFullImage(\'' + m.image + '\')">';
+            }
+            if (m.text) { content += '<div>' + m.text + '</div>'; }
+            
+            var otherUserName = self.currentChat.name || 'User';
+            var otherUserInitial = otherUserName.charAt(0).toUpperCase();
+            
+            html += '<div class="message-group ' + side + '">';
+            if (side === 'other') {
+                html += '<div class="message-avatar" style="' + (self.users[self.currentChat.uid] && self.users[self.currentChat.uid].profilePhoto ? 'background-image: url(' + self.users[self.currentChat.uid].profilePhoto + '); background-size: cover; background-position: center;' : '') + '">' + (!self.users[self.currentChat.uid] || !self.users[self.currentChat.uid].profilePhoto ? otherUserInitial : '') + '</div>';
+            }
+            html += '<div class="message-wrapper">';
+            if (side === 'other') { html += '<div class="message-sender">' + otherUserName + '</div>'; }
+            html += '<div class="message-bubble">' + content + '</div>';
+            html += '<div class="message-meta"><span>' + timestamp + '</span></div>';
+            html += '</div></div>';
+        });
+        
+        var chatMessagesView = document.getElementById('chatMessages');
+        if (chatMessagesView) {
+            chatMessagesView.innerHTML = html;
+            setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 50);
+            setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 150);
+        }
+    },
+
+    sendChatMessage: function() {
+        if (!this.currentChat) {
+            this.toast('No chat selected', 'error');
+            return;
+        }
+        var input = document.getElementById('chatMessageInput');
+        var text = (input && input.value) || '';
+        text = text.trim();
+        if (!text) { if (input) input.focus(); return; }
+
+        var self = this;
+        var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+        var now = new Date().getTime();
+        if (!this.chatMessages[key]) this.chatMessages[key] = [];
+        
+        var tempMessage = {
+            sender: self.user.uid,
+            text: text,
+            timestamp: now,
+            pending: true
+        };
+        this.chatMessages[key].push(tempMessage);
+        this.displayChatMessages(this.chatMessages[key], key);
+        if (input) input.value = '';
+        if (input) input.focus();
+        
+        var messageRef = db.ref('messages/' + key).push();
+        messageRef.set({
+            text: text,
+            sender: self.user.uid,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            read: false
+        }).then(function() {
+            db.ref('chats/' + key + '/messages/' + messageRef.key).set({
+                text: text,
+                sender: self.user.uid,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                read: false
+            });
+            tempMessage.pending = false;
+            self.displayChatMessages(self.chatMessages[key], key);
+        }).catch(function(err) {
+            self.toast('Error sending message', 'error');
+            var idx = self.chatMessages[key].indexOf(tempMessage);
+            if (idx > -1) {
+                self.chatMessages[key].splice(idx, 1);
+                self.displayChatMessages(self.chatMessages[key], key);
+            }
+        });
+    },
+
+    markAsRead: function(uid) {
+        var self = this;
+        var key = [this.user.uid, uid].sort().join('_');
+        if (this.unreadMessages && this.unreadMessages[key]) {
+            this.unreadMessages[key].count = 0;
+        }
+        var messagesRef = db.ref('chats/' + key + '/messages');
+        messagesRef.once('value', function(snap) {
+            snap.forEach(function(childSnap) {
+                var m = childSnap.val();
+                if (m && m.sender !== self.user.uid && !m.read) {
+                    childSnap.ref.update({ read: true });
+                }
+            });
+        });
+        this.updateUnreadBadge();
+    },
+
+    viewFullImage: function(imageUrl) {
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.zIndex = '2000';
+        modal.innerHTML = '<div style="position:relative;width:90%;max-width:500px;"><img src="' + imageUrl + '" style="width:100%;border-radius:12px;"><button onclick="this.closest(\'.modal-overlay\').remove()" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);color:white;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;">✕</button></div>';
+        document.body.appendChild(modal);
+    },
+
+    loadBlockedUsers: function() {
+        if (!this.user) return;
+        db.ref('users/' + this.user.uid + '/blocked').once('value', function(snapshot) {
+            if (snapshot.val()) {
+                Object.keys(snapshot.val()).forEach(function(userId) {
+                    this.blockedUsers[userId] = true;
+                }.bind(this));
+            }
+        }.bind(this));
+    },
+
+    formatTimeAgo: function(date) {
+        var now = new Date();
+        var diff = now - date;
+        var seconds = Math.floor(diff / 1000);
+        var minutes = Math.floor(seconds / 60);
+        var hours = Math.floor(minutes / 60);
+        var days = Math.floor(hours / 24);
+        if (seconds < 60) return 'Just now';
+        if (minutes < 60) return minutes + 'm ago';
+        if (hours < 24) return hours + 'h ago';
+        if (days < 7) return days + 'd ago';
+        return date.toLocaleDateString();
+    },
+
+    // ============================================
+    // SHOW ABOUT
+    // ============================================
+
+    showAbout: function() {
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.innerHTML = `
+            <div class="modal" style="max-width:420px;border-radius:20px;padding:24px;max-height:90vh;overflow-y:auto;">
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">✕</button></div>
+                
+                <div style="text-align:center;padding:4px 0;">
+                    <div style="width:100px;height:100px;border-radius:50%;margin:0 auto 12px;overflow:hidden;border:3px solid #0088cc;box-shadow:0 4px 16px rgba(0,136,204,0.3);">
+                        <img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1784291624/1768467745366_1_lu01jr.jpg" alt="Anthony Onchari" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    
+                    <h2 style="margin-bottom:2px;font-weight:800;font-size:22px;color:#1a202c;">Anthony Onchari</h2>
+                    <p style="color:#0088cc;font-size:13px;font-weight:600;margin-bottom:4px;">👨‍💻 Developer & Digital Media Specialist</p>
+                    <p style="color:#6b7280;font-size:11px;background:#f0f0f0;display:inline-block;padding:2px 12px;border-radius:12px;margin-bottom:16px;">
+                        📱 Version V02A.01
+                    </p>
+                    
+                    <div style="background:#f7fafc;padding:16px 18px;border-radius:16px;text-align:left;border:1px solid #e2e8f0;margin-bottom:16px;">
+                        <p style="font-size:14px;line-height:1.8;color:#2d3748;margin:0;">
+                            Hey there! 👋 I'm <strong style="color:#0088cc;">Anthony</strong>, 
+                            a Developer and Digital Media Specialist who loves building things that bring people and community together. 
+                            I created <strong style="color:#0088cc;">CHICHI</strong> because I believe 
+                            social media should feel like home — warm, real, and human.
+                        </p>
+                        <p style="font-size:13px;line-height:1.7;color:#4a5568;margin-top:10px;border-top:1px solid #e2e8f0;padding-top:10px;">
+                            This is <strong>Version V02A.01</strong> — the beginning of something beautiful. 
+                            More features, more love, and more connection coming soon!
+                        </p>
+                    </div>
+                    
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+                        <div style="background:#ebf8ff;padding:10px 6px;border-radius:12px;">
+                            <div style="font-size:20px;">💻</div>
+                            <div style="font-size:11px;color:#2b6cb0;font-weight:600;">Web Developer</div>
+                        </div>
+                        <div style="background:#f0fff4;padding:10px 6px;border-radius:12px;">
+                            <div style="font-size:20px;">📱</div>
+                            <div style="font-size:11px;color:#276749;font-weight:600;">Digital Media</div>
+                        </div>
+                        <div style="background:#faf5ff;padding:10px 6px;border-radius:12px;">
+                            <div style="font-size:20px;">🤝</div>
+                            <div style="font-size:11px;color:#6b46c1;font-weight:600;">Community Builder</div>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                        <button onclick="window.open('https://wa.me/254701807001', '_blank')" style="padding:10px 18px;background:#25D366;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;transition:0.3s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            💬 WhatsApp
+                        </button>
+                        <button onclick="window.open('https://www.facebook.com/profile.php?id=100088002065441', '_blank')" style="padding:10px 18px;background:#1877F2;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;transition:0.3s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            📘 Facebook
+                        </button>
+                        <button onclick="window.open('https://www.linkedin.com/in/anthony-onchari-a3b87b270/', '_blank')" style="padding:10px 18px;background:#0A66C2;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;transition:0.3s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            💼 LinkedIn
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top:14px;font-size:11px;color:#a0aec0;border-top:1px solid #e2e8f0;padding-top:12px;">
+                        <span>© 2026 Onchari Group • CHICHI V02A.01</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.remove();
+            }
+        });
+    },
+
+    // ============================================
+    // SHOW HEADER MENU
+    // ============================================
+
+    showHeaderMenu: function() {
+        var menu = document.getElementById('headerMenu');
+        if (menu) {
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+    },
+
+    closeHeaderMenu: function() {
+        var menu = document.getElementById('headerMenu');
+        if (menu) {
+            menu.style.display = 'none';
+        }
+    },
+
+    // ============================================
+    // PROFILE PHOTO MODAL FUNCTIONS (Legacy)
+    // ============================================
+
+    showProfilePhotoModalLegacy: function() {
+        this.showProfilePhotoModal();
+    },
+
+    // ============================================
+    // HANDLE LOGIN
+    // ============================================
 
     handleLogin: function(e) {
         e.preventDefault();
@@ -7223,6 +8297,93 @@ renderProfile: function() {
         if (menu) {
             menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
         }
+    },
+
+    // ============================================
+    // SHOW NOTIFICATIONS TAB
+    // ============================================
+
+    showNotificationsTab: function() {
+        var self = this;
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.zIndex = '10050';
+        
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 20px; padding: 24px; max-width: 500px; width: 95%; max-height: 80vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 20px; font-weight: 700; margin: 0;">🔔 Notifications</h2>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                </div>
+                <div id="notificationsList" style="max-height: 500px; overflow-y: auto;">
+                    <div style="text-align: center; color: #9ca3af; padding: 40px;">Loading notifications...</div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        if (!this.user || this.isGuest) {
+            document.getElementById('notificationsList').innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 40px;">Login to see notifications</div>';
+            return;
+        }
+        
+        var userId = this.user.uid;
+        db.ref('notifications/' + userId).orderByChild('timestamp').limitToLast(50).once('value', function(snapshot) {
+            var notifications = [];
+            snapshot.forEach(function(child) {
+                notifications.push({
+                    id: child.key,
+                    ...child.val()
+                });
+            });
+            
+            notifications.reverse();
+            
+            var html = '';
+            if (notifications.length === 0) {
+                html = '<div style="text-align: center; color: #9ca3af; padding: 40px;">No notifications yet</div>';
+            } else {
+                notifications.forEach(function(notif) {
+                    var icon = notif.type === 'coin_received' ? '💰' : '🔔';
+                    html += `
+                        <div style="padding: 12px; border-bottom: 1px solid #f0f0f0; background: ${notif.read ? 'white' : '#f0f7ff'}; border-radius: 8px; margin-bottom: 4px;">
+                            <div style="display: flex; gap: 10px; align-items: start;">
+                                <div style="font-size: 24px;">${icon}</div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; font-size: 14px; color: #1a202c;">${notif.message || 'New notification'}</div>
+                                    <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">${notif.createdAt || 'Just now'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            var list = document.getElementById('notificationsList');
+            if (list) list.innerHTML = html;
+        });
+    },
+
+    // ============================================
+    // SEARCH MESSAGES
+    // ============================================
+
+    searchMessages: function(query) {
+        var items = document.querySelectorAll('.message-item');
+        var searchQuery = query.toLowerCase().trim();
+        
+        items.forEach(function(item) {
+            var name = item.querySelector('.message-item-name');
+            var preview = item.querySelector('.message-item-preview');
+            var text = (name ? name.textContent : '') + ' ' + (preview ? preview.textContent : '');
+            
+            if (!searchQuery || text.toLowerCase().includes(searchQuery)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
     }
 };
 
