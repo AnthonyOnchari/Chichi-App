@@ -7,15 +7,219 @@
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="style.css">
     
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+    <!-- Firebase SDKs - Using CDN with fallback -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
-    <script src="js/config.js"></script>
+    <!-- CONFIG - Inline to avoid 404 -->
+    <script>
+    // ============================================
+    // CHICHI - COMPLETE CONFIGURATION FILE
+    // ============================================
+
+    // ============================================
+    // FIREBASE CONFIGURATION
+    // ============================================
+
+    const FIREBASE_CONFIG = {
+        apiKey: "AIzaSyD_tSXJCOLffm4ZMtM8gXOCH5CXFOKdqWM",
+        authDomain: "chichi-001.firebaseapp.com",
+        projectId: "chichi-001",
+        storageBucket: "chichi-001.firebasestorage.app",
+        messagingSenderId: "219736252899",
+        appId: "1:219736252899:web:626efc2fe5040efb7500d6",
+        databaseURL: "https://chichi-001-default-rtdb.firebaseio.com"
+    };
+
+    // ============================================
+    // CLOUDINARY CONFIGURATION
+    // ============================================
+
+    const CLOUD_NAME = 'u1uilb6f';
+    const UPLOAD_PRESET = 'chichi_photos';
+
+    // ============================================
+    // ADMIN CONFIGURATION
+    // ============================================
+
+    const ADMIN_PASSWORD = 'CHICHI26303@Admin';
+
+    // ============================================
+    // EARNING SETTINGS
+    // ============================================
+
+    const EARNING_SETTINGS = {
+        free: {
+            label: 'Free',
+            badge: '✨',
+            badgeColor: '#6b7280',
+            price: 0,
+            dailyQuestions: 5,
+            rewardPerQuestion: 0.50,
+            timerSeconds: 20,
+            adsPerQuestion: 0,
+            maxQuestions: 5,
+            bonus: '5 trivia questions/day'
+        }
+    };
+
+    // ============================================
+    // TRIVIA QUESTIONS
+    // ============================================
+
+    const TRIVIA_QUESTIONS = [
+        { question: "What is the capital of Kenya?", options: ["Nairobi", "Mombasa", "Kisumu", "Nakuru"], correct: 0 },
+        { question: "Which is Africa's largest economy?", options: ["South Africa", "Nigeria", "Egypt", "Kenya"], correct: 1 },
+        { question: "How many ethnic groups are there in Kenya?", options: ["42", "35", "50", "28"], correct: 0 },
+        { question: "What is Kenya's currency?", options: ["Kenyan Shilling", "Tanzanian Shilling", "Ugandan Shilling", "East African Pound"], correct: 0 },
+        { question: "Which lake is shared by Kenya, Uganda, and Tanzania?", options: ["Lake Victoria", "Lake Tanganyika", "Lake Malawi", "Lake Turkana"], correct: 0 },
+        { question: "What is the largest national park in Kenya?", options: ["Tsavo East", "Amboseli", "Maasai Mara", "Lake Nakuru"], correct: 0 },
+        { question: "Which mountain is the second highest in Africa?", options: ["Mount Kilimanjaro", "Mount Kenya", "Mount Elgon", "Mount Speke"], correct: 1 },
+        { question: "What year did Kenya gain independence?", options: ["1960", "1963", "1965", "1961"], correct: 1 },
+        { question: "Which is the oldest university in Kenya?", options: ["University of Nairobi", "Kenyatta University", "JKUAT", "Moi University"], correct: 0 },
+        { question: "How many counties does Kenya have?", options: ["41", "42", "47", "50"], correct: 2 },
+        { question: "What is the main export of Kenya?", options: ["Coffee", "Tea", "Flowers", "Oil"], correct: 2 },
+        { question: "Which president is known for ending colonial rule in Kenya?", options: ["Daniel arap Moi", "Jomo Kenyatta", "Uhuru Kenyatta", "Raila Odinga"], correct: 1 },
+        { question: "What is Kenya's official language?", options: ["Swahili", "English", "Kikuyu", "Both Swahili and English"], correct: 3 },
+        { question: "Which wildlife reserve is famous for the wildebeest migration?", options: ["Amboseli", "Maasai Mara", "Tsavo", "Samburu"], correct: 1 },
+        { question: "How many species of animals are found in the Maasai Mara?", options: ["Over 1000", "Over 500", "Over 1500", "Over 2000"], correct: 2 },
+        { question: "What is the Great Rift Valley known for?", options: ["Geological formation", "Wildlife", "Agriculture", "Mining"], correct: 0 },
+        { question: "Which Kenyan athlete won Olympic gold in running?", options: ["Julius Yego", "David Rudisha", "Faith Kipchoge", "Kipchoge Keino"], correct: 3 },
+        { question: "What is the largest desert in Kenya?", options: ["Chalbi Desert", "Shai Hills", "Simpson Desert", "Tana River Desert"], correct: 0 },
+        { question: "How many national parks are there in Kenya?", options: ["7", "9", "11", "15"], correct: 2 },
+        { question: "Which city is known as 'Silicon Savanna'?", options: ["Mombasa", "Nairobi", "Kisumu", "Nakuru"], correct: 1 },
+        { question: "What is the largest forest in Kenya?", options: ["Mau Forest", "Arabuko Sokoke", "Kakamega Forest", "Mount Kenya Forest"], correct: 0 },
+        { question: "Which island is a UNESCO World Heritage Site in Kenya?", options: ["Lamu", "Pemba", "Unguja", "Mafia"], correct: 0 },
+        { question: "What percentage of Kenya's land is arable?", options: ["15%", "25%", "35%", "45%"], correct: 1 },
+        { question: "Which Kenyan river is the longest?", options: ["Tana River", "Athi River", "Ewaso Nyiro", "Turkwel River"], correct: 0 },
+        { question: "What is the Kenyan national bird?", options: ["Fish Eagle", "Crowned Eagle", "Secretary Bird", "Marabou Stork"], correct: 0 },
+        { question: "How many languages are spoken in Kenya?", options: ["Over 40", "Over 60", "Over 80", "Over 100"], correct: 2 },
+        { question: "What is M-Pesa?", options: ["A bank", "A mobile money service", "A restaurant chain", "A car brand"], correct: 1 },
+        { question: "Which Kenyan company pioneered mobile money?", options: ["Safaricom", "Airtel", "Equity Bank", "Cooperative Bank"], correct: 0 },
+        { question: "What is the population of Kenya (approximately)?", options: ["30 million", "40 million", "50 million", "60 million"], correct: 1 },
+        { question: "Which is the only capital city with a national park?", options: ["Nairobi", "Mombasa", "Nairobi", "Dar es Salaam"], correct: 0 },
+        { question: "What is Kenya's GDP per capita (approximately)?", options: ["$800", "$1200", "$1800", "$2500"], correct: 2 },
+        { question: "Which ethnic group is the largest in Kenya?", options: ["Kikuyu", "Luhya", "Kalenjin", "Luo"], correct: 0 },
+        { question: "What year was the Mombasa Port established?", options: ["1200s", "1400s", "1600s", "1800s"], correct: 0 },
+        { question: "Which university has the largest enrollment in Kenya?", options: ["University of Nairobi", "Kenyatta University", "JKUAT", "Mount Kenya University"], correct: 1 },
+        { question: "What is the highest point in Kenya?", options: ["Peak 1", "Batian", "Point Lenana", "Both 2 and 3"], correct: 3 },
+        { question: "How much of Kenya is covered by forest?", options: ["5%", "7%", "10%", "15%"], correct: 1 },
+        { question: "Which sector employs the most people in Kenya?", options: ["Agriculture", "Manufacturing", "Services", "Mining"], correct: 0 },
+        { question: "What is the main religion in Kenya?", options: ["Christianity", "Islam", "Hinduism", "Buddhism"], correct: 0 },
+        { question: "How many Olympic medals has Kenya won?", options: ["Over 50", "Over 80", "Over 120", "Over 150"], correct: 2 },
+        { question: "What is Kenya known for producing (besides coffee)?", options: ["Tea", "Flowers", "Macadamia nuts", "All of the above"], correct: 3 },
+        { question: "Which national reserve is home to the Big Five?", options: ["Amboseli", "Samburu", "Maasai Mara", "Tsavo East"], correct: 2 },
+        { question: "What is the Mara River crossing known as?", options: ["River Jump", "Great Migration", "Wildlife Crossing", "Predator's Path"], correct: 1 },
+        { question: "How many rhinos are left in Kenya?", options: ["Around 500", "Around 1000", "Around 1500", "Around 2000"], correct: 1 },
+        { question: "What is Lake Turkana also known as?", options: ["Jade Sea", "Emerald Lake", "Sapphire Sea", "Ruby Lake"], correct: 0 },
+        { question: "Which Kenyan city is known for its tourism industry?", options: ["Nairobi", "Mombasa", "Kisumu", "Nakuru"], correct: 1 },
+        { question: "What percentage of Kenya is national parks and reserves?", options: ["5%", "8%", "12%", "15%"], correct: 2 },
+        { question: "Which is the oldest capital city of Kenya?", options: ["Nairobi", "Mombasa", "Fort Hall", "Kisumu"], correct: 1 },
+        { question: "What is the Kenyan national dance called?", options: ["Adumu", "Benga", "Taarab", "Mbalax"], correct: 0 },
+        { question: "How many UNESCO World Heritage Sites does Kenya have?", options: ["3", "5", "7", "9"], correct: 1 }
+    ];
+
+    // ============================================
+    // GIFT CATALOG
+    // ============================================
+
+    const GIFT_CATALOG = [
+        { id: 'gift1', name: '🎮 Game Voucher', description: '$10 Gaming Gift Card', cost: 500, category: 'gaming', image: '🎮' },
+        { id: 'gift2', name: '📱 Phone Credit', description: 'Airtime/Data top-up', cost: 200, category: 'mobile', image: '📱' },
+        { id: 'gift3', name: '🍕 Pizza Coupon', description: 'Free medium pizza', cost: 300, category: 'food', image: '🍕' },
+        { id: 'gift4', name: '🎬 Movie Ticket', description: 'Cinema ticket voucher', cost: 400, category: 'entertainment', image: '🎬' },
+        { id: 'gift5', name: '☕ Coffee Voucher', description: 'Free coffee & pastry', cost: 150, category: 'food', image: '☕' },
+        { id: 'gift6', name: '🎵 Music Subscription', description: '1-month music streaming', cost: 350, category: 'entertainment', image: '🎵' },
+        { id: 'gift7', name: '📚 Book Voucher', description: 'E-book store credit', cost: 250, category: 'education', image: '📚' },
+        { id: 'gift8', name: '🛍️ Shopping Voucher', description: 'Online store discount', cost: 450, category: 'shopping', image: '🛍️' },
+        { id: 'gift9', name: '🎨 Art Print', description: 'Digital art print', cost: 100, category: 'art', image: '🎨' },
+        { id: 'gift10', name: '🧘 Wellness Kit', description: 'Wellness e-book & guide', cost: 180, category: 'wellness', image: '🧘' }
+    ];
+
+    // ============================================
+    // AUTO-POST TEMPLATES
+    // ============================================
+
+    const POST_TEMPLATES = [
+        { text: "I told my boss I needed a raise because I'm the best worker here. He said 'You're also the only worker here.' I got the raise.", category: "Funny", imageKeyword: "happy person laughing portrait" },
+        { text: "My phone has more storage than my brain. I can remember 1000 songs but not what I ate for breakfast.", category: "Funny", imageKeyword: "confused person thinking" },
+        { text: "The best part about working from home is that my commute is 10 seconds. The worst part? My boss is always in my kitchen.", category: "Funny", imageKeyword: "person working on laptop smiling" },
+        { text: "I asked Google 'Why am I so tired?' It said 'Because you're always on your phone at 2 AM.'", category: "Funny", imageKeyword: "tired person in bed with phone" },
+        { text: "My dog thinks I'm a superhero. He gets excited every time I come home from the bathroom.", category: "Funny", imageKeyword: "person with dog happy" },
+        { text: "I'm not saying I'm old, but my back goes out more than I do.", category: "Funny", imageKeyword: "elderly person smiling" },
+        { text: "Your greatest strength is your ability to keep going when others give up. Keep pushing.", category: "Inspiration", imageKeyword: "determined person sunrise" },
+        { text: "The only person you should try to be better than is the person you were yesterday.", category: "Inspiration", imageKeyword: "person looking forward determined" },
+        { text: "Success is not about how many times you fall, but how many times you get back up.", category: "Inspiration", imageKeyword: "person getting up determined" },
+        { text: "Every morning is a new beginning. Make it count.", category: "Inspiration", imageKeyword: "person morning coffee smiling" }
+    ];
+
+    // ============================================
+    // FIREBASE INITIALIZATION
+    // ============================================
+
+    var auth = null;
+    var db = null;
+
+    // Wait for Firebase to load
+    function initFirebase() {
+        if (typeof firebase !== 'undefined') {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(FIREBASE_CONFIG);
+                console.log('✅ Firebase initialized');
+            } else {
+                console.log('⚠️ Firebase already initialized');
+            }
+            
+            auth = firebase.auth();
+            db = firebase.database();
+            
+            // Check Firebase connection
+            db.ref('.info/connected').on('value', function(snapshot) {
+                if (snapshot.val() === true) {
+                    console.log('🌐 Connected to Firebase');
+                } else {
+                    console.log('📡 Disconnected from Firebase');
+                }
+            });
+            
+            console.log('✅ Firebase ready!');
+            return true;
+        }
+        return false;
+    }
+
+    // Try to init Firebase, retry if not loaded
+    if (!initFirebase()) {
+        var retryCount = 0;
+        var retryInterval = setInterval(function() {
+            retryCount++;
+            if (initFirebase() || retryCount > 10) {
+                clearInterval(retryInterval);
+                if (retryCount > 10) {
+                    console.error('❌ Failed to load Firebase SDK');
+                }
+            }
+        }, 500);
+    }
+
+    // Loading screen timeout
+    var loadingTimeout = setTimeout(() => {
+        var loading = document.getElementById('loadingScreen');
+        if (loading) {
+            loading.classList.remove('active');
+            loading.style.display = 'none';
+        }
+        var authPage = document.getElementById('authPage');
+        if (authPage) {
+            authPage.style.display = 'flex';
+        }
+    }, 5000);
+
+    console.log('✅ Configuration loaded successfully');
+    </script>
 </head>
 <body>
 
@@ -372,7 +576,7 @@
     </div>
 </div>
 
-<!-- ADMIN PORTAL - UPDATED -->
+<!-- ADMIN PORTAL -->
 <div class="admin-portal" id="adminPortal">
     <div class="admin-header">
         <h2>⚙️ Admin Portal</h2>
@@ -389,7 +593,6 @@
         <button class="admin-tab" onclick="app.switchAdminTab('logs')">📋 Logs</button>
     </div>
     <div class="admin-content">
-        <!-- Dashboard -->
         <div class="admin-tab-content active" id="adminDashboard">
             <div class="admin-stat-grid">
                 <div class="admin-stat">
@@ -419,7 +622,6 @@
             </div>
         </div>
         
-        <!-- Users -->
         <div class="admin-tab-content" id="adminUsers">
             <div style="margin-bottom:16px;">
                 <input type="text" id="userSearchInput" placeholder="Search by name, email, or #hashtag..." class="form-input" onkeyup="app.searchUsers(this.value)" style="background: white; border: 2px solid #e5e7eb; padding: 12px; border-radius: 10px; font-size: 14px; transition: 0.2s;" onfocus="this.style.borderColor='#0088cc'; this.style.boxShadow='0 0 0 3px rgba(0,136,204,0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
@@ -427,7 +629,6 @@
             <div id="adminUsersList"></div>
         </div>
         
-        <!-- Incomplete Users -->
         <div class="admin-tab-content" id="adminIncomplete">
             <div style="margin-bottom: 16px; padding: 12px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
                 <div style="font-size: 14px; color: #92400e;">⚠️ Users who signed up but haven't completed their profile</div>
@@ -435,27 +636,22 @@
             <div id="incompleteUsersList"></div>
         </div>
         
-        <!-- Posts -->
         <div class="admin-tab-content" id="adminPosts">
             <div id="adminPostsList"></div>
         </div>
         
-        <!-- Analytics -->
         <div class="admin-tab-content" id="adminAnalytics">
             <div id="adminAnalytics"></div>
         </div>
         
-        <!-- Gifts -->
         <div class="admin-tab-content" id="adminGifts">
             <div id="adminGifts"></div>
         </div>
         
-        <!-- Notifications -->
         <div class="admin-tab-content" id="adminNotificationsTab">
             <div id="adminNotificationsList"></div>
         </div>
         
-        <!-- Logs -->
         <div class="admin-tab-content" id="adminLogs">
             <div id="activityLogList"></div>
         </div>
@@ -477,7 +673,7 @@
     </div>
 </div>
 
-<script src="js/app.js"></script>
+<script src="app.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof app !== 'undefined' && app.init) { 
