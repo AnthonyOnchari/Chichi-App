@@ -32,6 +32,33 @@ if (!initFirebase()) {
 }
 
 // ============================================
+// TRIVIA QUESTIONS DATABASE
+// ============================================
+
+var TRIVIA_QUESTIONS = [
+    { question: "What is the capital of France?", options: ["London", "Paris", "Berlin", "Madrid"], correct: 1 },
+    { question: "Which planet is closest to the Sun?", options: ["Venus", "Mercury", "Mars", "Earth"], correct: 1 },
+    { question: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], correct: 3 },
+    { question: "Who wrote Romeo and Juliet?", options: ["Jane Austen", "William Shakespeare", "Mark Twain", "Charles Dickens"], correct: 1 },
+    { question: "What is the smallest country in the world?", options: ["Monaco", "Vatican City", "Liechtenstein", "San Marino"], correct: 1 },
+    { question: "Which element has the symbol 'Au'?", options: ["Silver", "Gold", "Aluminum", "Argon"], correct: 1 },
+    { question: "What year did World War II end?", options: ["1943", "1944", "1945", "1946"], correct: 2 },
+    { question: "How many sides does a hexagon have?", options: ["5", "6", "7", "8"], correct: 1 },
+    { question: "What is the largest mammal on Earth?", options: ["African Elephant", "Blue Whale", "Giraffe", "Hippopotamus"], correct: 1 },
+    { question: "What is the chemical formula for water?", options: ["H2O2", "H2O", "H3O", "HO2"], correct: 1 },
+    { question: "Which country is known as the Land of the Rising Sun?", options: ["China", "Japan", "Thailand", "Vietnam"], correct: 1 },
+    { question: "What is the speed of light?", options: ["300,000 km/s", "150,000 km/s", "450,000 km/s", "100,000 km/s"], correct: 0 },
+    { question: "How many continents are there?", options: ["5", "6", "7", "8"], correct: 2 },
+    { question: "What is the tallest mountain in the world?", options: ["K2", "Mount Kilimanjaro", "Mount Everest", "Denali"], correct: 2 },
+    { question: "Which gas do plants need for photosynthesis?", options: ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"], correct: 2 },
+    { question: "What is the currency of Japan?", options: ["Won", "Peso", "Yuan", "Yen"], correct: 3 },
+    { question: "How many strings does a standard guitar have?", options: ["4", "5", "6", "7"], correct: 2 },
+    { question: "What is the boiling point of water?", options: ["50°C", "75°C", "100°C", "125°C"], correct: 2 },
+    { question: "Which planet is known as the Red Planet?", options: ["Jupiter", "Mars", "Saturn", "Venus"], correct: 1 },
+    { question: "What is the capital of Kenya?", options: ["Mombasa", "Nairobi", "Kisumu", "Nakuru"], correct: 1 }
+];
+
+// ============================================
 // APP OBJECT
 // ============================================
 
@@ -3961,50 +3988,74 @@ var app = {
         var html = `
             <div style="padding: 0; background: linear-gradient(135deg, #2d1b69 0%, #3d2680 100%); min-height: 100vh;">
                 
-                <!-- PROFILE PHOTO SECTION -->
-                <div style="position: relative; width: 100%; height: 320px; background: linear-gradient(135deg, #2d1b69 0%, #3d2680 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                    <div style="position: relative; cursor: pointer;" onclick="app.showProfilePhotoModal()">
+                <!-- PROFILE PHOTO SECTION - CARD DESIGN -->
+                <div style="position: relative; width: 100%; background: linear-gradient(135deg, #2d1b69 0%, #3d2680 100%); padding: 40px 20px; display: flex; align-items: center; justify-content: center; min-height: 350px;">
+                    <div style="position: relative; cursor: pointer; max-width: 240px;" onclick="app.showProfilePhotoModal()">
+                        <!-- Profile Card Container -->
                         <div style="
-                            width: 140px;
-                            height: 140px;
-                            border-radius: 50%;
-                            border: 3px solid rgba(255,255,255,0.5);
-                            box-shadow: 0 0 30px rgba(102, 126, 234, 0.4), 0 8px 32px rgba(0,0,0,0.2);
+                            background: white;
+                            border-radius: 20px;
                             overflow: hidden;
-                            background: linear-gradient(135deg, #667eea, #764ba2);
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-size: 60px;
-                            color: white;
-                            font-weight: 700;
+                            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
                             transition: all 0.3s;
-                            background-image: ${this.profile.profilePhoto ? 'url(' + this.profile.profilePhoto + ')' : 'none'};
-                            background-size: cover;
-                            background-position: center;
-                            filter: ${this.profile.profilePhoto ? 'brightness(1.1) contrast(1.05)' : 'none'};
-                            backdrop-filter: blur(8px);
-                        " onmouseover="this.style.transform='scale(1.08)'; this.style.boxShadow='0 0 40px rgba(102, 126, 234, 0.6), 0 12px 40px rgba(0,0,0,0.3)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 0 30px rgba(102, 126, 234, 0.4), 0 8px 32px rgba(0,0,0,0.2)'">
-                            ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
+                        " onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 30px 80px rgba(0,0,0,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 20px 60px rgba(0,0,0,0.3)'">
+                            
+                            <!-- Profile Image -->
+                            <div style="
+                                width: 220px;
+                                height: 220px;
+                                border-radius: 20px 20px 0 0;
+                                background: linear-gradient(135deg, #667eea, #764ba2);
+                                background-image: ${this.profile.profilePhoto ? 'url(' + this.profile.profilePhoto + ')' : 'none'};
+                                background-size: cover;
+                                background-position: center;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 80px;
+                                color: white;
+                                font-weight: 700;
+                                filter: ${this.profile.profilePhoto ? 'brightness(1.05)' : 'none'};
+                                position: relative;
+                                overflow: hidden;
+                            ">
+                                ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
+                                
+                                <!-- Edit Icon Overlay -->
+                                <div style="
+                                    position: absolute;
+                                    bottom: 8px;
+                                    right: 8px;
+                                    background: rgba(0,0,0,0.6);
+                                    border-radius: 50%;
+                                    width: 40px;
+                                    height: 40px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    color: white;
+                                    font-size: 16px;
+                                    border: 3px solid white;
+                                    backdrop-filter: blur(4px);
+                                    cursor: pointer;
+                                ">📷</div>
+                            </div>
+                            
+                            <!-- Name & Info Banner -->
+                            <div style="
+                                background: white;
+                                padding: 20px 16px;
+                                text-align: center;
+                                border-top: 1px solid #f0f0f0;
+                            ">
+                                <div style="font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 4px;">${this.profile.name || 'User'}</div>
+                                <div style="font-size: 13px; color: #0088cc; font-weight: 600;">@${username}</div>
+                                <div style="font-size: 11px; color: #6b7280; margin-top: 6px; background: #f0f4f8; padding: 4px 12px; border-radius: 12px; display: inline-block;">${tierData.label}</div>
+                            </div>
                         </div>
-                        <div style="
-                            position: absolute;
-                            bottom: 4px;
-                            right: 4px;
-                            background: rgba(0,0,0,0.7);
-                            border-radius: 50%;
-                            width: 36px;
-                            height: 36px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            color: white;
-                            font-size: 14px;
-                            border: 2px solid white;
-                            backdrop-filter: blur(4px);
-                        ">📷</div>
                     </div>
                     
+                    <!-- Navigation Buttons -->
                     <div style="position: absolute; top: 16px; left: 16px; background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
                         <button onclick="app.switchView('feed');" style="background: none; border: none; font-size: 20px; cursor: pointer; color: white;">‹</button>
                     </div>
@@ -5181,65 +5232,113 @@ var app = {
             return;
         }
         
-        var userInterests = this.profile.interests || [];
+        var userInterests = (this.profile && this.profile.interests) || [];
         
         if (userInterests.length === 0) {
             this.toast('📝 Add interests to your profile first', 'info');
             return;
         }
         
-        var similarUsers = Object.keys(this.users)
-            .filter(function(uid) { return uid !== self.user.uid; })
-            .map(function(uid) {
-                var user = self.users[uid];
-                var interests = user.interests || [];
-                var commonCount = interests.filter(function(i) { return userInterests.includes(i); }).length;
-                return { uid: uid, ...user, commonInterests: commonCount, interests: interests };
-            })
-            .filter(function(u) { return u.commonInterests > 0; })
-            .sort(function(a, b) { return b.commonInterests - a.commonInterests; })
-            .slice(0, 20);
-        
-        var html = `
-            <div class="modal" style="max-height: 80vh; overflow-y: auto;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <h2 style="font-weight: 700; margin-bottom: 20px; color: #1e293b;">🤝 People with Similar Interests</h2>
-                
-                ${similarUsers.length === 0 ? `
-                    <div style="text-align: center; color: #6b7280; padding: 40px 20px;">
-                        <div style="font-size: 48px; margin-bottom: 12px;">😔</div>
-                        No users found with similar interests yet
-                    </div>
-                ` : `
-                    <div style="display: flex; flex-direction: column; gap: 12px;">
-                        ${similarUsers.map(function(user) {
-                            var isFollowing = self.following && self.following[user.uid];
-                            return `
-                                <div style="background: white; border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;">
-                                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-                                        <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); background-image: url(${user.profilePhoto || ''}); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
-                                            ${!user.profilePhoto ? user.name.charAt(0).toUpperCase() : ''}
-                                        </div>
-                                        <div style="flex: 1;">
-                                            <div style="font-weight: 700; color: #1e293b; font-size: 14px;">${user.name}</div>
-                                            <div style="font-size: 12px; color: #6b7280;">${user.commonInterests} ${user.commonInterests === 1 ? 'interest' : 'interests'} in common</div>
-                                        </div>
-                                    </div>
-                                    <button onclick="app.followUser('${user.uid}', '${user.name}'); setTimeout(function() { app.showSimilarInterestsModal(); }, 300);" style="background: ${isFollowing ? '#e2e8f0' : 'var(--primary)'}; color: ${isFollowing ? '#1e293b' : 'white'}; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap;">
-                                        ${isFollowing ? '✓ Following' : 'Follow'}
-                                    </button>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                `}
+        // Show loading modal
+        var loadingModal = document.createElement('div');
+        loadingModal.className = 'modal-overlay active';
+        loadingModal.innerHTML = `
+            <div class="modal" style="text-align: center; padding: 40px;">
+                <div style="font-size: 32px; margin-bottom: 12px;">🔄</div>
+                <p style="color: #6b7280;">Finding users with similar interests...</p>
             </div>
         `;
+        document.body.appendChild(loadingModal);
         
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.innerHTML = html;
-        document.body.appendChild(modal);
+        // Fetch all users from Firebase
+        db.ref('users').once('value', function(snapshot) {
+            loadingModal.remove();
+            
+            if (!snapshot.exists()) {
+                self.toast('No users found yet', 'info');
+                return;
+            }
+            
+            var allUsers = snapshot.val();
+            var similarUsers = [];
+            
+            Object.keys(allUsers).forEach(function(uid) {
+                if (uid !== self.user.uid) {
+                    var user = allUsers[uid];
+                    var userProfileInterests = (user.interests || []);
+                    
+                    // Count common interests
+                    var commonCount = 0;
+                    userProfileInterests.forEach(function(interest) {
+                        if (userInterests.includes(interest)) {
+                            commonCount++;
+                        }
+                    });
+                    
+                    if (commonCount > 0) {
+                        similarUsers.push({
+                            uid: uid,
+                            name: user.name || 'User',
+                            profilePhoto: user.profilePhoto,
+                            commonInterests: commonCount,
+                            interests: userProfileInterests
+                        });
+                    }
+                }
+            });
+            
+            // Sort by most common interests
+            similarUsers.sort(function(a, b) {
+                return b.commonInterests - a.commonInterests;
+            });
+            
+            // Display modal
+            var html = `
+                <div class="modal" style="max-height: 80vh; overflow-y: auto;">
+                    <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+                    <h2 style="font-weight: 700; margin-bottom: 20px; color: #1e293b;">🤝 People with Similar Interests</h2>
+                    
+                    ${similarUsers.length === 0 ? `
+                        <div style="text-align: center; color: #6b7280; padding: 40px 20px;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">😔</div>
+                            No users found with similar interests yet. Try adding more interests to your profile!
+                        </div>
+                    ` : `
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            ${similarUsers.map(function(user) {
+                                var isFollowing = self.following && self.following[user.uid];
+                                return `
+                                    <div style="background: white; border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                                            <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); background-image: url(${user.profilePhoto || ''}); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; flex-shrink: 0;">
+                                                ${!user.profilePhoto ? user.name.charAt(0).toUpperCase() : ''}
+                                            </div>
+                                            <div style="flex: 1;">
+                                                <div style="font-weight: 700; color: #1e293b; font-size: 14px;">${user.name}</div>
+                                                <div style="font-size: 12px; color: #0088cc; font-weight: 600;">✓ ${user.commonInterests} ${user.commonInterests === 1 ? 'interest' : 'interests'} in common</div>
+                                                <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">${user.interests.slice(0, 2).join(', ')}</div>
+                                            </div>
+                                        </div>
+                                        <button onclick="app.followUser('${user.uid}', '${user.name.replace(/'/g, "\\'")}'); setTimeout(function() { app.showSimilarInterestsModal(); }, 300);" style="background: ${isFollowing ? '#e2e8f0' : 'var(--primary)'}; color: ${isFollowing ? '#1e293b' : 'white'}; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap; flex-shrink: 0;">
+                                            ${isFollowing ? '✓ Following' : 'Follow'}
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `}
+                </div>
+            `;
+            
+            var modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = html;
+            document.body.appendChild(modal);
+        }).catch(function(err) {
+            loadingModal.remove();
+            console.error('❌ Error loading users:', err);
+            self.toast('Error loading users. Try again.', 'error');
+        });
     },
 
     // ============================================
