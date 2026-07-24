@@ -7776,7 +7776,7 @@ var app = {
 // ============================================
 
 app.init();
-app.initMusic();
+// app.initMusic(); // Music disabled
 
 setTimeout(function() {
     if (app.user && app.user.email === 'support-chichi@gmail.com') {
@@ -7786,8 +7786,6 @@ setTimeout(function() {
 }, 3000);
 
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
-console.log('%c📱 Auto-posts every 10 minutes with unique content', 'color: #0088cc; font-size: 12px;');
 console.log('%c🧠 Trivia: CC Points 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
-console.log('%c🎰 Spin & Win: CC Points 5 per spin - Max CC Points 40!', 'color: #8b5cf6; font-size: 12px;');
 console.log('%c🛡️ Suspicious activity detection active!', 'color: #ef4444; font-size: 12px;');
 console.log('%c👨‍💻 Built by Anthony Onchari - Version V01A.01', 'color: #6b7280; font-size: 11px;');
