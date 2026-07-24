@@ -252,6 +252,10 @@ var app = {
         }, 1000);
         
         this.loadDarkModePreference();
+        
+        setTimeout(function() {
+        self.checkCoinNotifications();
+        }, 3000);
     },
 
     // ============================================
