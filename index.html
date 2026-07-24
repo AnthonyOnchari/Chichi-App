@@ -14,6 +14,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+    
+    <script src="js/config.js"></script>
 </head>
 <body>
 
@@ -56,7 +58,7 @@
         <div class="tab-content active" id="loginTab">
             <form onsubmit="app.handleLogin(event)">
                 <div class="form-group">
-                    <label class="form-label">Email</label>
+                    <label class="form-label">Email or Username</label>
                     <input type="text" class="form-input" id="loginEmail" placeholder="@username or email" required>
                 </div>
                 <div class="form-group">
@@ -154,14 +156,6 @@
         </div>
         
         <div class="header-actions">
-            <label class="music-toggle-3d" title="Toggle music">
-                <input type="checkbox" id="musicToggle" onchange="app.toggleMusic()">
-                <div class="toggle-cube">
-                    <div class="toggle-face front">🔇</div>
-                    <div class="toggle-face back">🎵</div>
-                </div>
-            </label>
-            
             <!-- DARK MODE TOGGLE -->
             <label class="dark-mode-toggle" title="Toggle dark mode">
                 <input type="checkbox" id="darkModeToggle" onchange="app.toggleDarkMode()">
@@ -193,27 +187,23 @@
 
         <!-- EXPLORE VIEW -->
         <div class="view" id="exploreView">
-            <!-- HEADER -->
             <div style="position: sticky; top: 0; z-index: 30; background: white; border-bottom: 1px solid #e0e0e0; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0;">🔍 Discover</h3>
                 <button style="background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 600;" onclick="app.loadExplore()">🔄 Refresh</button>
             </div>
             
-            <!-- SEARCH BAR -->
             <div style="padding: 16px; background: white; border-bottom: 1px solid #f0f0f0;">
                 <div style="display: flex; gap: 8px; background: #f5f5f5; border-radius: 24px; padding: 10px 16px; align-items: center;">
                     <span style="font-size: 20px;">🔍</span>
-                    <input type="text" id="exploreSearchInput" placeholder="Search users, posts, hashtags..." style="background: none; border: none; flex: 1; font-size: 15px; outline: none;" onkeyup="app.searchExploreUsers(this.value)">
+                    <input type="text" id="exploreSearchInput" placeholder="Search users..." style="background: none; border: none; flex: 1; font-size: 15px; outline: none;" onkeyup="app.searchExploreUsers(this.value)">
                 </div>
             </div>
             
-            <!-- SEARCH RESULTS (Right below search) -->
             <div id="exploreSearchResults" style="display: none; padding: 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                 <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #1e293b;">Search Results</h4>
                 <div id="exploreSearchResultsList"></div>
             </div>
             
-            <!-- QUICK DISCOVERY BUTTONS (Hidden when searching) -->
             <div id="quickDiscoverySection" style="padding: 16px; background: white; border-bottom: 1px solid #f0f0f0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
                 <button onclick="app.showSimilarInterestsModal()" style="background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border: none; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(6,182,212,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
                     🤝 Similar Interests
@@ -226,7 +216,6 @@
                 </button>
             </div>
             
-            <!-- TRENDING HASHTAGS SECTION (Hidden when searching) -->
             <div id="trendingSection" style="padding: 20px 16px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">🔥 Trending Now</h4>
@@ -237,7 +226,6 @@
                 </div>
             </div>
             
-            <!-- TRENDING POSTS SECTION (Hidden when searching) -->
             <div id="postsSection" style="padding: 0 16px 20px 16px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">📸 Trending Posts</h4>
@@ -384,7 +372,7 @@
     </div>
 </div>
 
-<!-- ADMIN PORTAL - UPDATED WITH NEW TABS -->
+<!-- ADMIN PORTAL - UPDATED -->
 <div class="admin-portal" id="adminPortal">
     <div class="admin-header">
         <h2>⚙️ Admin Portal</h2>
@@ -395,10 +383,8 @@
         <button class="admin-tab" onclick="app.switchAdminTab('users')">👥 Users</button>
         <button class="admin-tab" onclick="app.switchAdminTab('incomplete')">⚠️ Incomplete</button>
         <button class="admin-tab" onclick="app.switchAdminTab('posts')">📝 Posts</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('withdrawals')">💰 Withdrawals</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('payments')">⭐ Upgrades</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('spinner')">🎰 Spinner</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('triviaplans')">📚 Trivia Plans</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('analytics')">📈 Analytics</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('gifts')">🎁 Gifts</button>
         <button class="admin-tab" onclick="app.switchAdminTab('notifications')">🔔 Notifications</button>
         <button class="admin-tab" onclick="app.switchAdminTab('logs')">📋 Logs</button>
     </div>
@@ -415,19 +401,22 @@
                     <div class="admin-stat-label">Posts</div>
                 </div>
                 <div class="admin-stat">
+                    <div class="admin-stat-value" id="adminSignupCount">0</div>
+                    <div class="admin-stat-label">Today's Signups</div>
+                </div>
+                <div class="admin-stat">
                     <div class="admin-stat-value" id="adminBannedCount">0</div>
                     <div class="admin-stat-label">Banned Users</div>
                 </div>
                 <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminPendingCount">0</div>
-                    <div class="admin-stat-label">Pending Withdrawals</div>
+                    <div class="admin-stat-value" id="adminTotalEarned">0</div>
+                    <div class="admin-stat-label">💰 Coins Earned</div>
                 </div>
                 <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminApprovedCount">0</div>
-                    <div class="admin-stat-label">Approved Withdrawals</div>
+                    <div class="admin-stat-value" id="adminTotalSpent">0</div>
+                    <div class="admin-stat-label">🎁 Coins Spent</div>
                 </div>
             </div>
-            <div id="adminWithdrawals"></div>
         </div>
         
         <!-- Users -->
@@ -451,29 +440,14 @@
             <div id="adminPostsList"></div>
         </div>
         
-        <!-- Withdrawals -->
-        <div class="admin-tab-content" id="adminWithdrawalsTab">
-            <div id="adminWithdrawalsList"></div>
+        <!-- Analytics -->
+        <div class="admin-tab-content" id="adminAnalytics">
+            <div id="adminAnalytics"></div>
         </div>
         
-        <!-- Payments/Upgrades -->
-        <div class="admin-tab-content" id="adminPaymentsTab">
-            <div id="paymentVerificationsList"></div>
-        </div>
-        
-        <!-- Spinner -->
-        <div class="admin-tab-content" id="adminSpinnerTab">
-            <div id="adminSpinnerControls"></div>
-        </div>
-        
-        <!-- Trivia Plans -->
-        <div class="admin-tab-content" id="adminTriviaPlansTab">
-            <div id="adminTriviaPlansList"></div>
-        </div>
-        
-        <!-- Suspicious Activity -->
-        <div class="admin-tab-content" id="adminSuspiciousTab">
-            <div id="suspiciousActivityList"></div>
+        <!-- Gifts -->
+        <div class="admin-tab-content" id="adminGifts">
+            <div id="adminGifts"></div>
         </div>
         
         <!-- Notifications -->
@@ -488,33 +462,7 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="withdrawModal">
-    <div class="modal">
-        <div class="modal-close"><button onclick="app.closeWithdrawModal()">✕</button></div>
-        <h2 style="font-weight:700;margin-bottom:16px;">💰 Withdraw</h2>
-        <div style="background: #f0f7ff; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-            <div style="font-size: 14px; color: #1a202c;">Available Balance: <strong id="withdrawBalanceDisplay">KSh 0</strong></div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Amount (KSh)</label>
-            <input type="number" class="form-input" id="withdrawAmount" placeholder="Enter amount" min="1" step="0.1">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Method</label>
-            <select class="form-input" id="paymentMethod">
-                <option value="M-Pesa">M-Pesa</option>
-                <option value="Airtel Money">Airtel Money</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Account/Phone</label>
-            <input type="text" class="form-input" id="accountNumber" placeholder="0712345678">
-        </div>
-        <button type="button" class="btn-submit" onclick="app.processWithdrawal()">Withdraw</button>
-    </div>
-</div>
-
+<!-- LOGOUT MODAL -->
 <div class="logout-modal" id="logoutModal">
     <div class="logout-card">
         <h3>Logout?</h3>
@@ -528,8 +476,6 @@
         </div>
     </div>
 </div>
-
-<audio id="themeMusic" preload="auto"></audio>
 
 <script src="js/app.js"></script>
 <script>
