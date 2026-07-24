@@ -5455,8 +5455,230 @@ var app = {
 
     showTopCreatorsModal: function() {
         this.toast('🚀 Top creators feature coming soon!', 'info');
+    },
+
+    // ============================================
+    // HANDLE LOGIN
+    // ============================================
+
+    handleLogin: function(event) {
+        event.preventDefault();
+        var self = this;
+        var email = document.getElementById('loginEmail').value.trim();
+        var password = document.getElementById('loginPassword').value;
+        var loginBtn = document.getElementById('loginBtn');
+        var loginSpinner = document.querySelector('.login-spinner');
+        var loginText = document.querySelector('.login-btn-text');
+
+        if (!email || !password) {
+            this.toast('Please enter email and password', 'error');
+            return;
+        }
+
+        // Show spinner
+        if (loginSpinner) loginSpinner.style.display = 'inline';
+        if (loginText) loginText.style.display = 'none';
+        if (loginBtn) loginBtn.disabled = true;
+
+        // Sign in with Firebase
+        auth.signInWithEmailAndPassword(email, password)
+            .then(function(userCredential) {
+                self.toast('✅ Login successful!', 'success');
+                console.log('✅ User logged in:', userCredential.user.uid);
+                // Hide auth page
+                var authPage = document.getElementById('authPage');
+                if (authPage) {
+                    authPage.style.display = 'none';
+                    authPage.classList.add('hidden');
+                }
+                // Show main app
+                var mainApp = document.getElementById('mainApp');
+                if (mainApp) {
+                    mainApp.style.display = 'block';
+                    mainApp.style.visibility = 'visible';
+                }
+                // Clear form
+                document.getElementById('loginEmail').value = '';
+                document.getElementById('loginPassword').value = '';
+            })
+            .catch(function(error) {
+                console.error('Login error:', error.message);
+                var msg = error.message;
+                if (msg.includes('user-not-found')) {
+                    self.toast('User not found. Try signing up!', 'error');
+                } else if (msg.includes('wrong-password')) {
+                    self.toast('Wrong password. Try again!', 'error');
+                } else if (msg.includes('invalid-email')) {
+                    self.toast('Invalid email address', 'error');
+                } else {
+                    self.toast('Login failed: ' + msg, 'error');
+                }
+            })
+            .finally(function() {
+                // Hide spinner
+                if (loginSpinner) loginSpinner.style.display = 'none';
+                if (loginText) loginText.style.display = 'inline';
+                if (loginBtn) loginBtn.disabled = false;
+            });
+    },
+
+    // ============================================
+    // HANDLE SIGNUP
+    // ============================================
+
+    handleSignup: function(event) {
+        event.preventDefault();
+        var self = this;
+        var name = document.getElementById('signupName').value.trim();
+        var username = document.getElementById('signupUsername').value.trim().toLowerCase();
+        var email = document.getElementById('signupEmail').value.trim();
+        var password = document.getElementById('signupPassword').value;
+        var signupBtn = document.getElementById('signupBtn');
+        var signupSpinner = document.querySelector('.signup-spinner');
+        var signupText = document.querySelector('.signup-btn-text');
+
+        // Validation
+        if (!name || !username || !email || !password) {
+            this.toast('Please fill all fields', 'error');
+            return;
+        }
+
+        if (username.length < 3 || username.length > 20) {
+            this.toast('Username must be 3-20 characters', 'error');
+            return;
+        }
+
+        if (!/^[a-z0-9_]+$/.test(username)) {
+            this.toast('Username can only have letters, numbers, and _', 'error');
+            return;
+        }
+
+        if (password.length < 6) {
+            this.toast('Password must be at least 6 characters', 'error');
+            return;
+        }
+
+        // Show spinner
+        if (signupSpinner) signupSpinner.style.display = 'inline';
+        if (signupText) signupText.style.display = 'none';
+        if (signupBtn) signupBtn.disabled = true;
+
+        // Check if username exists
+        db.ref('users').orderByChild('username').equalTo(username).once('value')
+            .then(function(snapshot) {
+                if (snapshot.exists()) {
+                    self.toast('Username already taken!', 'error');
+                    throw new Error('Username taken');
+                }
+
+                // Create user with Firebase
+                return auth.createUserWithEmailAndPassword(email, password);
+            })
+            .then(function(userCredential) {
+                var uid = userCredential.user.uid;
+                
+                // Create user profile in database
+                var userData = {
+                    uid: uid,
+                    email: email,
+                    displayName: name,
+                    username: username,
+                    bio: '',
+                    profilePhoto: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1701234567/default-avatar_abcdef.png',
+                    followers: {},
+                    following: {},
+                    balance: 0,
+                    ccPoints: 0,
+                    tier: 'free',
+                    createdAt: new Date().toLocaleString('en-KE'),
+                    isActive: true
+                };
+
+                return db.ref('users').child(uid).set(userData);
+            })
+            .then(function() {
+                self.toast('✅ Account created! Welcome to CHICHI!', 'success');
+                console.log('✅ User account created');
+                
+                // Hide auth page
+                var authPage = document.getElementById('authPage');
+                if (authPage) {
+                    authPage.style.display = 'none';
+                    authPage.classList.add('hidden');
+                }
+                
+                // Show main app
+                var mainApp = document.getElementById('mainApp');
+                if (mainApp) {
+                    mainApp.style.display = 'block';
+                    mainApp.style.visibility = 'visible';
+                }
+                
+                // Clear form
+                document.getElementById('signupName').value = '';
+                document.getElementById('signupUsername').value = '';
+                document.getElementById('signupEmail').value = '';
+                document.getElementById('signupPassword').value = '';
+            })
+            .catch(function(error) {
+                console.error('Signup error:', error.message);
+                var msg = error.message;
+                if (msg === 'Username taken') {
+                    // Already handled
+                } else if (msg.includes('email-already-in-use')) {
+                    self.toast('Email already registered!', 'error');
+                } else if (msg.includes('invalid-email')) {
+                    self.toast('Invalid email address', 'error');
+                } else if (msg.includes('weak-password')) {
+                    self.toast('Password must be at least 6 characters', 'error');
+                } else {
+                    self.toast('Signup failed: ' + msg, 'error');
+                }
+            })
+            .finally(function() {
+                // Hide spinner
+                if (signupSpinner) signupSpinner.style.display = 'none';
+                if (signupText) signupText.style.display = 'inline';
+                if (signupBtn) signupBtn.disabled = false;
+            });
+    },
+
+    // ============================================
+    // CONTINUE AS GUEST
+    // ============================================
+
+    continueAsGuest: function() {
+        this.toast('Guest mode coming soon! Please sign up to use CHICHI.', 'info');
+    },
+
+    // ============================================
+    // SIGN IN WITH GOOGLE
+    // ============================================
+
+    signInWithGoogle: function() {
+        this.toast('Google Sign-in coming soon! Please use email/password for now.', 'info');
+    },
+
+    // ============================================
+    // FORGOT PASSWORD
+    // ============================================
+
+    showForgotPasswordModal: function() {
+        var email = prompt('Enter your email address:');
+        if (!email) return;
+
+        var self = this;
+        auth.sendPasswordResetEmail(email)
+            .then(function() {
+                self.toast('✅ Password reset email sent! Check your inbox.', 'success');
+            })
+            .catch(function(error) {
+                console.error('Password reset error:', error.message);
+                self.toast('Error: ' + error.message, 'error');
+            });
     }
 };
+
 
 // ============================================
 // INITIALIZE APP
