@@ -1,150 +1,3 @@
-// ============================================
-// SPINNER CONFIGURATION
-// ============================================
-
-
-// ============================================
-// PREMIUM/VIP TIERS
-// ============================================
-
-
-
-// ============================================
-// FIREBASE CONFIG
-// ============================================
-
-if (!firebase.apps.length) {
-    firebase.initializeApp(FIREBASE_CONFIG);
-    console.log('✅ Firebase initialized');
-} else {
-    console.log('⚠️ Firebase already initialized');
-}
-
-var auth = firebase.auth();
-var db = firebase.database();
-
-db.ref('.info/connected').on('value', function(snapshot) {
-    if (snapshot.val() === true) {
-        console.log('🌐 Connected to Firebase');
-    } else {
-        console.log('📡 Disconnected from Firebase');
-    }
-});
-
-var loadingTimeout = setTimeout(() => {
-    var loading = document.getElementById('loadingScreen');
-    if (loading) {
-        loading.classList.remove('active');
-        loading.style.display = 'none';
-    }
-    var authPage = document.getElementById('authPage');
-    if (authPage) {
-        authPage.style.display = 'flex';
-    }
-}, 3000);
-
-// ============================================
-// POST TEMPLATES
-// ============================================
-
-const POST_TEMPLATES = [
-    { text: "I told my boss I needed a raise because I'm the best worker here. He said 'You're also the only worker here.' I got the raise.", category: "Funny", imageKeyword: "happy person laughing portrait" },
-    { text: "My phone has more storage than my brain. I can remember 1000 songs but not what I ate for breakfast.", category: "Funny", imageKeyword: "confused person thinking" },
-    { text: "The best part about working from home is that my commute is 10 seconds. The worst part? My boss is always in my kitchen.", category: "Funny", imageKeyword: "person working on laptop smiling" },
-    { text: "I asked Google 'Why am I so tired?' It said 'Because you're always on your phone at 2 AM.'", category: "Funny", imageKeyword: "tired person in bed with phone" },
-    { text: "My dog thinks I'm a superhero. He gets excited every time I come home from the bathroom.", category: "Funny", imageKeyword: "person with dog happy" },
-    { text: "I'm not saying I'm old, but my back goes out more than I do.", category: "Funny", imageKeyword: "elderly person smiling" },
-    { text: "The best way to remember your wife's birthday is to forget it once.", category: "Funny", imageKeyword: "couple laughing together" },
-    { text: "I don't need a hair stylist, my pillow gives me a new style every morning.", category: "Funny", imageKeyword: "person with messy hair laughing" },
-    { text: "My brain has two modes: 'I can do anything' and 'What was I doing again?'", category: "Funny", imageKeyword: "confused person scratching head" },
-    { text: "The best exercise for losing weight is running out of patience.", category: "Funny", imageKeyword: "person exercising frustrated" },
-    { text: "My boss told me to have a good day. I went home.", category: "Funny", imageKeyword: "person leaving office happy" },
-    { text: "I'm not lazy, I'm on energy saving mode.", category: "Funny", imageKeyword: "person lying on couch relaxing" },
-    { text: "The only thing I'm good at is making bad decisions look good.", category: "Funny", imageKeyword: "person laughing at themselves" },
-    { text: "I need a 6-month vacation, twice a year.", category: "Funny", imageKeyword: "person on beach relaxing" },
-    { text: "My life is a series of naps interrupted by food.", category: "Funny", imageKeyword: "person sleeping peacefully" },
-    { text: "Your greatest strength is your ability to keep going when others give up. Keep pushing.", category: "Inspiration", imageKeyword: "determined person sunrise" },
-    { text: "The only person you should try to be better than is the person you were yesterday.", category: "Inspiration", imageKeyword: "person looking forward determined" },
-    { text: "Success is not about how many times you fall, but how many times you get back up.", category: "Inspiration", imageKeyword: "person getting up determined" },
-    { text: "Every morning is a new beginning. Make it count.", category: "Inspiration", imageKeyword: "person morning coffee smiling" },
-    { text: "Your potential is endless. Don't limit yourself.", category: "Inspiration", imageKeyword: "person with arms open confident" },
-    { text: "The best time to start was yesterday. The next best time is now.", category: "Inspiration", imageKeyword: "person starting journey determined" },
-    { text: "Believe you can and you're halfway there.", category: "Inspiration", imageKeyword: "confident person smiling" },
-    { text: "Your only limit is the one you set for yourself.", category: "Inspiration", imageKeyword: "person breaking through barrier" },
-    { text: "Dream big. Work hard. Stay focused.", category: "Inspiration", imageKeyword: "focused person working" },
-    { text: "You are stronger than you think.", category: "Inspiration", imageKeyword: "strong person confident" },
-    { text: "Success starts with self-belief.", category: "Inspiration", imageKeyword: "person believing in themselves" },
-    { text: "Be the energy you want to attract.", category: "Inspiration", imageKeyword: "happy positive person" },
-    { text: "Kenya's economy grew by 5.6% in 2023. The tech sector is leading the growth.", category: "Kenya News", imageKeyword: "Kenyan person in tech office" },
-    { text: "The Maasai Mara is considered the 7th wonder of the world. Over 1.5 million wildebeest migrate annually.", category: "Kenya News", imageKeyword: "Maasai person smiling" },
-    { text: "Kenyan youth are leading Africa's tech revolution. Over 200 startups launched this year.", category: "Kenya News", imageKeyword: "Kenyan youth coding smiling" },
-    { text: "Kenya is home to the world's largest refugee camp at Dadaab.", category: "Kenya News", imageKeyword: "Kenyan community together" },
-    { text: "Lake Victoria, the largest lake in Africa, is shared by Kenya, Uganda, and Tanzania.", category: "Kenya News", imageKeyword: "people at lake smiling" },
-    { text: "Kenya has 42 different ethnic communities, each with its own unique culture.", category: "Kenya News", imageKeyword: "Kenyan cultural dancers" },
-    { text: "The Kenyan shilling is one of the most stable currencies in East Africa.", category: "Kenya News", imageKeyword: "Kenyan business person" },
-    { text: "Kenya produces some of the world's best marathon runners.", category: "Kenya News", imageKeyword: "Kenyan runner smiling" },
-    { text: "Nairobi is the only capital city with a national park.", category: "Kenya News", imageKeyword: "person in Nairobi smiling" },
-    { text: "Kenyan coffee is among the best in the world.", category: "Kenya News", imageKeyword: "Kenyan coffee farmer smiling" },
-    { text: "AI is revolutionizing healthcare. New algorithms can detect diseases earlier than doctors.", category: "Tech", imageKeyword: "doctor with AI technology" },
-    { text: "Your smartphone is more powerful than the computers that sent humans to the moon.", category: "Tech", imageKeyword: "person amazed by phone" },
-    { text: "The world's fastest internet is in South Korea. 6G is coming soon.", category: "Tech", imageKeyword: "person on laptop excited" },
-    { text: "Blockchain technology is changing how we think about money and trust.", category: "Tech", imageKeyword: "person with blockchain concept" },
-    { text: "The first computer virus was created in 1983. It was called the 'Elk Cloner'.", category: "Tech", imageKeyword: "person at computer thinking" },
-    { text: "Cloud computing has revolutionized how businesses operate worldwide.", category: "Tech", imageKeyword: "business person using cloud" },
-    { text: "5G technology is transforming how we connect.", category: "Tech", imageKeyword: "person with 5G phone smiling" },
-    { text: "The future of work is remote and digital.", category: "Tech", imageKeyword: "person working remotely" },
-    { text: "A 10-minute daily meditation can reduce stress by 30%. Try it today.", category: "Wellness", imageKeyword: "person meditating peaceful" },
-    { text: "Walking 30 minutes a day can add 3 years to your life. It's that simple.", category: "Wellness", imageKeyword: "person walking happy smiling" },
-    { text: "The average person spends 2 hours a day on social media. Make it count.", category: "Wellness", imageKeyword: "person on phone mindful" },
-    { text: "Drinking water first thing in the morning boosts your metabolism.", category: "Wellness", imageKeyword: "person drinking water morning" },
-    { text: "Sleep is not a luxury, it's a necessity. Aim for 7-8 hours.", category: "Wellness", imageKeyword: "person sleeping peacefully" },
-    { text: "Reading 15 minutes a day can reduce stress by 60%.", category: "Wellness", imageKeyword: "person reading book relaxed" },
-    { text: "Yoga is the perfect way to start your day.", category: "Wellness", imageKeyword: "person doing yoga" },
-    { text: "Mental health matters. Take a break when you need to.", category: "Wellness", imageKeyword: "person taking a break" },
-    { text: "The best Kenyan dish? Some say Nyama Choma, others say Ugali. Try both!", category: "Food", imageKeyword: "people eating Kenyan food" },
-    { text: "Cooking is an art. Your kitchen is your canvas. Create something beautiful.", category: "Food", imageKeyword: "person cooking happy" },
-    { text: "Traditional Kenyan food is some of the most flavorful in the world.", category: "Food", imageKeyword: "Kenyan person eating" },
-    { text: "Chapati is life. That's a fact, not an opinion.", category: "Food", imageKeyword: "person making chapati" },
-    { text: "Good food equals good mood.", category: "Food", imageKeyword: "person eating happily" },
-    { text: "The best meals are shared with loved ones.", category: "Food", imageKeyword: "family eating together" },
-    { text: "Kenya has 8 national parks. Each one is unique. Visit them all.", category: "Travel", imageKeyword: "person on safari smiling" },
-    { text: "Travel makes you realize how beautiful the world truly is.", category: "Travel", imageKeyword: "person traveling happy" },
-    { text: "The Kenyan coast is one of the most beautiful places on Earth.", category: "Travel", imageKeyword: "person on Kenyan beach" },
-    { text: "Mombasa's old town is a UNESCO World Heritage site. It's worth a visit.", category: "Travel", imageKeyword: "person in Mombasa smiling" },
-    { text: "Adventure awaits. Go explore!", category: "Travel", imageKeyword: "adventurous person" },
-    { text: "Travel is the only thing you buy that makes you richer.", category: "Travel", imageKeyword: "happy traveler" },
-    { text: "Your brain is constantly changing. Every thought you have physically rewires your brain.", category: "Fun Facts", imageKeyword: "person thinking" },
-    { text: "The human body has 37 trillion cells. Each one is working right now to keep you alive.", category: "Fun Facts", imageKeyword: "healthy person smiling" },
-    { text: "Dolphins sleep with one eye open. Half their brain stays awake.", category: "Fun Facts", imageKeyword: "person amazed" },
-    { text: "The average person walks about 100,000 miles in their lifetime.", category: "Fun Facts", imageKeyword: "person walking" },
-    { text: "Your heart beats about 100,000 times per day. That's 2.5 billion times in a lifetime.", category: "Fun Facts", imageKeyword: "person with heart" },
-    { text: "The Great Wall of China is not visible from space. This is a common myth.", category: "Fun Facts", imageKeyword: "person traveling" },
-    { text: "Humans are the only animals that blush.", category: "Fun Facts", imageKeyword: "person blushing" },
-    { text: "Your body produces enough heat in 30 minutes to boil a gallon of water.", category: "Fun Facts", imageKeyword: "person feeling warm" },
-    { text: "The best relationships are built on trust, communication, and a good sense of humor.", category: "Relationships", imageKeyword: "couple laughing together" },
-    { text: "A happy relationship is about understanding, not agreement.", category: "Relationships", imageKeyword: "couple talking" },
-    { text: "Love is not about how many days you've been together, but how much you've grown together.", category: "Relationships", imageKeyword: "couple in love" },
-    { text: "The best love story is when you fall in love with the most unexpected person.", category: "Relationships", imageKeyword: "couple happy" },
-    { text: "Love is patient, love is kind. Love is everything.", category: "Relationships", imageKeyword: "couple hugging" },
-    { text: "A relationship is not a 50/50 deal. It's 100/100.", category: "Relationships", imageKeyword: "couple supporting each other" },
-];
-
-// ============================================
-// EARNING SETTINGS
-// ============================================
-
-
-// ============================================
-// TRIVIA QUESTIONS
-// ============================================
-
-
-
-
-// ============================================
-// APP OBJECT
-// ============================================
-
 var app = {
     user: null,
     profile: {},
@@ -169,8 +22,7 @@ var app = {
     onlineInterval: null,
     postedHistory: [],
     lastPostTime: 0,
-    autoPostInterval: null,
-    editProfilePhoto: null,
+        editProfilePhoto: null,
     triviaInterval: null,
     currentTrivia: null,
     triviaAnswered: false,
@@ -1211,7 +1063,7 @@ var app = {
                                 <div class="withdrawal-status ${w.status || 'pending'}">${(w.status || 'pending').toUpperCase()}</div>
                             </div>
                             <div class="withdrawal-details">
-                                <div>KSh ${w.amount || 0} • ${w.method || 'M-Pesa'}</div>
+                                <div>CC Points ${w.amount || 0} • ${w.method || 'M-Pesa'}</div>
                                 <div style="font-size: 0.75rem; margin-top: 4px;">${w.createdAt || 'N/A'}</div>
                             </div>
                         </div>
@@ -1257,7 +1109,7 @@ var app = {
                                 <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name} ${badgeDisplay} ${isBanned ? '🚫' : ''}</div>
                                 <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
                                 <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Joined: ${u.user.createdAt}</div>
-                                <div style="font-size: 0.75rem; color: var(--primary);">Balance: KSh ${(u.user.balance || 0).toFixed(2)}</div>
+                                <div style="font-size: 0.75rem; color: var(--primary);">Balance: CC Points ${(u.user.balance || 0).toFixed(2)}</div>
                                 <div style="font-size: 0.75rem; color: var(--primary);">Tier: ${tierData ? tierData.label : 'Free'}</div>
                                 ${isBanned ? `<div style="font-size: 0.7rem; color: #ef4444;">Banned: ${banData.reason || 'No reason'}</div>` : ''}
                             </div>
@@ -1410,7 +1262,7 @@ var app = {
                                 <div class="withdrawal-status ${statusClass}" style="background: ${statusColor}20; color: ${statusColor}; padding: 4px 12px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">${(w.status || 'pending').toUpperCase()}</div>
                             </div>
                             <div class="withdrawal-details" style="margin: 8px 0;">
-                                <div style="font-size: 0.9rem; font-weight: 600;">💰 KSh ${(w.amount || 0).toFixed(2)}</div>
+                                <div style="font-size: 0.9rem; font-weight: 600;">💰 CC Points ${(w.amount || 0).toFixed(2)}</div>
                                 <div style="font-size: 0.8rem; color: var(--text-light);">📱 ${w.method || 'M-Pesa'} • ${w.account || 'N/A'}</div>
                                 <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 2px;">📧 ${w.userEmail || 'No email'}</div>
                                 <div style="font-size: 0.7rem; color: var(--text-light); margin-top: 2px;">📅 ${w.createdAt || 'N/A'}</div>
@@ -1500,7 +1352,7 @@ var app = {
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
                                     <div style="font-weight: 600; font-size: 0.9rem;">${v.userName || 'Unknown'}</div>
-                                    <div style="font-size: 0.8rem; color: var(--text-light);">${v.tierName || 'Unknown tier'} - KSh ${v.amount || 0}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-light);">${v.tierName || 'Unknown tier'} - CC Points ${v.amount || 0}</div>
                                     <div style="font-size: 0.7rem; color: var(--text-light);">${v.time || 'N/A'}</div>
                                     <div style="font-size: 0.7rem; color: var(--text-light); margin-top: 4px; max-height: 60px; overflow-y: auto;">${v.confirmation || 'No message'}</div>
                                 </div>
@@ -1666,8 +1518,8 @@ var app = {
         window.ADMIN_SPINNER_OVERRIDES.forceWin = true;
         window.ADMIN_SPINNER_OVERRIDES.forceAmount = amount;
         
-        this.toast('✅ Next spin will force win KSh ' + amount, 'success');
-        this.logUserActivity('admin_force_win', 'Forced win of KSh ' + amount);
+        this.toast('✅ Next spin will force win CC Points ' + amount, 'success');
+        this.logUserActivity('admin_force_win', 'Forced win of CC Points ' + amount);
         document.getElementById('adminForceAmount').value = '';
     },
 
@@ -1724,7 +1576,7 @@ var app = {
             var totalAmount = 0;
             wins.forEach(function(w) {
                 var details = w.details || '';
-                var match = details.match(/KSh (\d+)/);
+                var match = details.match(/CC Points (\d+)/);
                 if (match) {
                     totalAmount += parseInt(match[1]);
                 }
@@ -1745,11 +1597,11 @@ var app = {
                     </div>
                     <div style="background: #f0f7ff; padding: 12px; border-radius: 8px; text-align: center;">
                         <div style="font-size: 11px; color: #6b7280;">Avg Win</div>
-                        <div style="font-size: 24px; font-weight: 700; color: #22c55e;">KSh ${avgWin}</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #22c55e;">CC Points ${avgWin}</div>
                     </div>
                 </div>
                 <div style="margin-top: 12px; text-align: center; font-size: 12px; color: #6b7280;">
-                    Total paid out: KSh ${totalAmount} from ${totalSpins} spins
+                    Total paid out: CC Points ${totalAmount} from ${totalSpins} spins
                 </div>
             `;
             
@@ -1975,23 +1827,29 @@ var app = {
                     <div style="font-size: 48px;">${tierData.badge || '⭐'}</div>
                     <div style="font-size: 24px; font-weight: 700;">${tierName}</div>
                     <div style="font-size: 14px; opacity: 0.9;">${tierData.bonus || ''}</div>
-                    <div style="font-size: 28px; font-weight: 800; margin-top: 8px;">KSh ${price}/month</div>
+                    <div style="font-size: 28px; font-weight: 800; margin-top: 8px;">CC Points ${price}/month</div>
                 </div>
                 
-                <div style="background: #fef3c7; padding: 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #f59e0b;">
-                    <div style="font-size: 13px; color: #78350f; line-height: 1.6;">
-                        💳 Premium is purchased through Google Play In-App Purchase.<br>
-                        <br>
-                        Click below to proceed with secure payment.
+                <div style="background: #f0f7ff; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                    <div style="font-size: 14px; font-weight: 600; color: #1a202c;">📱 How to Pay:</div>
+                    <div style="font-size: 13px; color: #6b7280; margin-top: 4px; line-height: 1.6;">
+                        1. Send CC Points ${price} to <strong style="color: #0088cc;">Till ${MPESA_TILL}</strong><br>
+                        2. Copy the M-Pesa confirmation message<br>
+                        3. Paste it below and submit
                     </div>
                 </div>
                 
-                <button onclick="this.closest('.modal-overlay').remove(); app.toast('✅ Redirecting to Google Play Store...', 'success');" style="background: ${tierData.badgeColor || 'var(--primary)'}; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
-                    💳 Upgrade Now
+                <div class="form-group">
+                    <label class="form-label">📋 M-Pesa Confirmation Message</label>
+                    <textarea id="paymentConfirmation" class="form-input" placeholder="Paste the M-Pesa confirmation message here..." style="min-height: 80px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;"></textarea>
+                </div>
+                
+                <button onclick="app.submitPaymentConfirmation('${tier}')" style="background: ${tierData.badgeColor || 'var(--primary)'}; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
+                    📤 Submit Payment
                 </button>
                 
                 <div style="margin-top: 12px; font-size: 12px; color: #6b7280; text-align: center;">
-                    ✅ Secure payment through Google Play Store
+                    ⏱️ Admin will verify and activate your account within 24 hours
                 </div>
             </div>
         `;
@@ -1999,18 +1857,29 @@ var app = {
     },
 
 
+    // ============================================
+    // SPINNER WHEEL - REAL SPINNING WHEEL
+    // ============================================
+
+
+
+
+
+
+
+
     updateBalanceDisplays: function() {
         var balanceDisplay = document.getElementById('balanceDisplay');
         if (balanceDisplay) {
-            balanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
         }
         var earnBalanceDisplay = document.getElementById('earnBalanceDisplay');
         if (earnBalanceDisplay) {
-            earnBalanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+            earnBalanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
         }
         var withdrawBalanceDisplay = document.getElementById('withdrawBalanceDisplay');
         if (withdrawBalanceDisplay) {
-            withdrawBalanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+            withdrawBalanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
         }
     },
 
@@ -2383,9 +2252,10 @@ var app = {
                 <div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 16px; padding: 20px; margin-bottom: 20px; color: white; text-align: center;">
                     <div style="font-size: 40px; margin-bottom: 8px;">💰</div>
                     <div style="font-size: 24px; font-weight: 700;">Your Balance</div>
-                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">KSh ${userBalance.toFixed(2)}</div>
+                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${userBalance.toFixed(2)}</div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                         <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
+                        <button 
                         ${userTier !== 'vip' ? `<button onclick="app.showPremiumPayment('premium')" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Upgrade</button>` : ''}
                     </div>
                     <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
@@ -2397,12 +2267,12 @@ var app = {
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
                     <h3 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px;">
                         <span>🧠</span> Trivia Challenge
-                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">KSh ${tierData.rewardPerQuestion}</span>
+                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">CC Points ${tierData.rewardPerQuestion}</span>
                     </h3>
                     <div style="color: #6b7280; font-size: 13px; margin-bottom: 12px;">
                         <div>📝 Questions remaining: ${remaining}</div>
                         <div>⏱️ Timer: ${tierData.timerSeconds} seconds</div>
-                        <div>💰 Reward: KSh ${tierData.rewardPerQuestion} per correct answer</div>
+                        <div>💰 Reward: CC Points ${tierData.rewardPerQuestion} per correct answer</div>
                         ${tierData.adsPerQuestion > 0 ? `<div>📺 Ads: ${tierData.adsPerQuestion} per question</div>` : '<div>✨ No ads!</div>'}
                         ${tierData.bonus ? `<div>🎁 ${tierData.bonus}</div>` : ''}
                     </div>
@@ -2417,10 +2287,9 @@ var app = {
                         <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">Max ${SPINNER_CONFIG.maxWin}</span>
                     </h3>
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
-                        Cost: KSh ${SPINNER_CONFIG.spinCost} per spin • Max Win: KSh ${SPINNER_CONFIG.maxWin}
+                        Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
                     </div>
-                        🎯 Spin Now
-                    </button>
+                    <button 
                 </div>
                 
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
@@ -2428,7 +2297,7 @@ var app = {
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Total Earned</div>
-                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">KSh ${userBalance.toFixed(2)}</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">CC Points ${userBalance.toFixed(2)}</div>
                         </div>
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Questions</div>
@@ -2484,9 +2353,10 @@ var app = {
                 <div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 16px; padding: 20px; margin-bottom: 20px; color: white; text-align: center;">
                     <div style="font-size: 40px; margin-bottom: 8px;">💰</div>
                     <div style="font-size: 24px; font-weight: 700;">Your Balance</div>
-                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">KSh ${this.balance.toFixed(2)}</div>
+                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                         <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
+                        <button 
                         ${userTier !== 'vip' ? `<button onclick="app.showPremiumPayment('premium')" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Upgrade</button>` : ''}
                     </div>
                     <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
@@ -2497,7 +2367,7 @@ var app = {
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
                     <h3 style="margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
                         <span>🧠</span> Trivia Challenge
-                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">KSh ${tierData.rewardPerQuestion}</span>
+                        <span style="font-size: 12px; background: #f59e0b; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">CC Points ${tierData.rewardPerQuestion}</span>
                     </h3>
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">
                         ⏱️ ${tierData.timerSeconds} seconds • ${remaining} questions left today
@@ -2521,10 +2391,9 @@ var app = {
                         <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 2px 10px; border-radius: 12px; margin-left: auto;">Max ${SPINNER_CONFIG.maxWin}</span>
                     </h3>
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
-                        Cost: KSh ${SPINNER_CONFIG.spinCost} per spin • Max Win: KSh ${SPINNER_CONFIG.maxWin}
+                        Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
                     </div>
-                        🎯 Spin Now
-                    </button>
+                    <button 
                 </div>
                 
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
@@ -2532,7 +2401,7 @@ var app = {
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Total Earned</div>
-                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">KSh ${this.balance.toFixed(2)}</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #0088cc;">CC Points ${this.balance.toFixed(2)}</div>
                         </div>
                         <div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 11px; color: #6b7280;">Questions</div>
@@ -2630,7 +2499,7 @@ var app = {
         if (correct) {
             resultArea.innerHTML = `
                 <div style="color: #22c55e; font-weight: 700; font-size: 18px;">✅ Correct!</div>
-                <div style="color: #6b7280; font-size: 14px;">You earned KSh ${tierData.rewardPerQuestion.toFixed(2)}!</div>
+                <div style="color: #6b7280; font-size: 14px;">You earned CC Points ${tierData.rewardPerQuestion.toFixed(2)}!</div>
             `;
             resultArea.style.background = '#dcfce7';
             
@@ -2639,10 +2508,10 @@ var app = {
             
             var balanceDisplay = document.getElementById('earnBalanceDisplay');
             if (balanceDisplay) {
-                balanceDisplay.textContent = 'KSh ' + self.balance.toFixed(2);
+                balanceDisplay.textContent = 'CC Points ' + self.balance.toFixed(2);
             }
             
-            self.toast('🎉 Correct! +KSh ' + tierData.rewardPerQuestion.toFixed(2), 'success');
+            self.toast('🎉 Correct! +CC Points ' + tierData.rewardPerQuestion.toFixed(2), 'success');
             self.incrementQuestionCount();
         } else {
             resultArea.innerHTML = `
@@ -2709,7 +2578,7 @@ var app = {
         var price = EARNING_SETTINGS[tier].price;
         var tierName = EARNING_SETTINGS[tier].label;
         
-        if (!confirm(`Upgrade to ${tierName} for KSh ${price}/month?`)) {
+        if (!confirm(`Upgrade to ${tierName} for CC Points ${price}/month?`)) {
             return;
         }
         
@@ -2718,7 +2587,7 @@ var app = {
         
         setTimeout(function() {
             if (self.balance < price) {
-                self.toast('❌ Insufficient balance. You need KSh ' + price, 'error');
+                self.toast('❌ Insufficient balance. You need CC Points ' + price, 'error');
                 return;
             }
             
@@ -2730,7 +2599,7 @@ var app = {
             self.toast('✅ Upgraded to ' + tierName + '! 🎉', 'success');
             self.renderEarn();
             self.loadProfile();
-            self.logUserActivity('upgrade_tier', 'Upgraded to ' + tierName + ' for KSh ' + price);
+            self.logUserActivity('upgrade_tier', 'Upgraded to ' + tierName + ' for CC Points ' + price);
         }, 1500);
     },
 
@@ -3049,7 +2918,7 @@ var app = {
                
                 var balanceDisplay = document.getElementById('balanceDisplay');
                 if (balanceDisplay) {
-                    balanceDisplay.textContent = 'KSh ' + self.balance.toFixed(2);
+                    balanceDisplay.textContent = 'CC Points ' + self.balance.toFixed(2);
                 }
                
                 var avatar = document.getElementById('quickPostAvatar');
@@ -3139,8 +3008,9 @@ var app = {
             <div style="margin:16px;">
                 <div class="balance-card">
                     <div class="balance-label">💰 Your Balance</div>
-                    <div class="balance-amount" id="balanceDisplay">KSh ${this.balance.toFixed(2)}</div>
+                    <div class="balance-amount" id="balanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
                     <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
+                    <button class="btn-withdraw" 
                 </div>
             </div>
             
@@ -3748,11 +3618,7 @@ var app = {
             clearInterval(this.onlineInterval);
             this.onlineInterval = null;
         }
-        if (this.autoPostInterval) {
-            clearInterval(this.autoPostInterval);
-            this.autoPostInterval = null;
-        }
-        if (this.triviaInterval) {
+                if (this.triviaInterval) {
             clearInterval(this.triviaInterval);
             this.triviaInterval = null;
         }
@@ -4439,7 +4305,7 @@ var app = {
         document.getElementById('withdrawAmount').min = 1;
         var balanceDisplay = document.getElementById('withdrawBalanceDisplay');
         if (balanceDisplay) {
-            balanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
         }
     },
 
@@ -4452,11 +4318,11 @@ var app = {
         var minAmount = 1;
         
         if (isNaN(amount) || amount < minAmount) {
-            this.toast('❌ Minimum withdrawal is KSh ' + minAmount, 'error');
+            this.toast('❌ Minimum withdrawal is CC Points ' + minAmount, 'error');
             return;
         }
         if (amount > this.balance) {
-            this.toast('❌ Insufficient balance. You have KSh ' + this.balance.toFixed(2), 'error');
+            this.toast('❌ Insufficient balance. You have CC Points ' + this.balance.toFixed(2), 'error');
             return;
         }
         
@@ -4485,15 +4351,15 @@ var app = {
         
         var balanceDisplay = document.getElementById('balanceDisplay');
         if (balanceDisplay) {
-            balanceDisplay.textContent = 'KSh ' + this.balance.toFixed(2);
+            balanceDisplay.textContent = 'CC Points ' + this.balance.toFixed(2);
         }
         
-        this.toast('✅ Withdrawal request submitted! KSh ' + amount.toFixed(2), 'success');
+        this.toast('✅ Withdrawal request submitted! CC Points ' + amount.toFixed(2), 'success');
         this.closeWithdrawModal();
         document.getElementById('withdrawAmount').value = '';
         document.getElementById('accountNumber').value = '';
         this.renderProfile();
-        this.logUserActivity('withdrawal_request', 'Requested withdrawal of KSh ' + amount);
+        this.logUserActivity('withdrawal_request', 'Requested withdrawal of CC Points ' + amount);
     },
 
     // ============================================
@@ -4532,28 +4398,6 @@ var app = {
         });
     },
 
-    getRandomImage: function(keyword) {
-        return new Promise(function(resolve, reject) {
-            var unsplashUrl = 'https://api.unsplash.com/photos/random?query=' + encodeURIComponent(keyword) + '&orientation=landscape';
-            fetch(unsplashUrl, {
-                headers: { 'Authorization': 'Client-ID 0Gsd_TnIf0UngbQD6aLSR-u6pTQf__o5W93K8Q30G7Q' }
-            })
-            .then(function(response) {
-                if (!response.ok) throw new Error('Unsplash API error');
-                return response.json();
-            })
-            .then(function(data) {
-                if (data && data.urls && data.urls.regular) { resolve(data.urls.regular); }
-                else { throw new Error('No image from Unsplash'); }
-            })
-            .catch(function() {
-                var width = 800 + Math.floor(Math.random() * 400);
-                var height = 600 + Math.floor(Math.random() * 300);
-                var seed = 'person' + Date.now() + Math.random();
-                resolve('https://picsum.photos/seed/' + seed + '/' + width + '/' + height);
-            });
-        });
-    },
 
     uploadImageToCloudinary: function(imageUrl) {
         return new Promise(function(resolve, reject) {
@@ -4576,72 +4420,7 @@ var app = {
         });
     },
 
-    performAutoPost: function() {
-        var self = this;
-        if (!self.user || self.user.email !== 'support-chichi@gmail.com') { return; }
-        
-        var now = Date.now();
-        var minutesSinceLastPost = (now - self.lastPostTime) / (1000 * 60);
-        if (minutesSinceLastPost < 10 && self.postedHistory.length > 0) { return; }
-        
-        var availableTemplates = self.getAvailableTemplates();
-        if (availableTemplates.length === 0) {
-            self.postedHistory = [];
-            self.savePostedHistory();
-            availableTemplates = POST_TEMPLATES.slice();
-        }
-        
-        var randomIndex = Math.floor(Math.random() * availableTemplates.length);
-        var selected = availableTemplates[randomIndex];
-        
-        self.getRandomImage(selected.imageKeyword)
-            .then(function(imageUrl) { return self.uploadImageToCloudinary(imageUrl); })
-            .then(function(finalImageUrl) {
-                var postData = {
-                    userId: self.user.uid,
-                    userName: 'SUPPORT@CHICHI',
-                    userPhoto: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png',
-                    photoUrl: finalImageUrl,
-                    caption: selected.text,
-                    hashtags: ['#CHICHI', '#AutoPost', '#' + selected.category.replace(/\s/g, '')],
-                    likes: {}, comments: [], commentedUsers: {}, downloads: 0,
-                    isAutoPost: true, isSupportPost: true, category: selected.category,
-                    source: 'CHICHI AI',
-                    createdAt: new Date().toLocaleString('en-KE'),
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                };
-                db.ref('posts').push(postData).then(function() {
-                    self.toast('🤖 New post from SUPPORT@CHICHI!', 'success');
-                    self.postedHistory.push({
-                        text: selected.text,
-                        category: selected.category,
-                        timestamp: Date.now()
-                    });
-                    self.lastPostTime = Date.now();
-                    self.savePostedHistory();
-                    setTimeout(function() { self.loadPosts(); }, 500);
-                });
-            }).catch(function(err) {
-                console.error('❌ Image error:', err);
-                setTimeout(function() { self.performAutoPost(); }, 30000);
-            });
-    },
 
-    startAutoPostScheduler: function() {
-        var self = this;
-        if (!self.user || self.user.email !== 'support-chichi@gmail.com') { return; }
-        
-        self.loadPostedHistory();
-        var now = Date.now();
-        var minutesSinceLastPost = (now - self.lastPostTime) / (1000 * 60);
-        if (self.postedHistory.length === 0 || minutesSinceLastPost >= 10) {
-            setTimeout(function() { self.performAutoPost(); }, 3000);
-        }
-        
-        if (self.autoPostInterval) { clearInterval(self.autoPostInterval); }
-        self.autoPostInterval = setInterval(function() { self.performAutoPost(); }, 60000);
-        console.log('✅ Auto-post scheduler running!');
-    },
 
     // ============================================
     // PREVIEW PHOTO
@@ -5385,13 +5164,13 @@ app.initMusic();
 setTimeout(function() {
     if (app.user && app.user.email === 'support-chichi@gmail.com') {
         console.log('🤖 Support account detected! Starting auto-post scheduler...');
-        app.startAutoPostScheduler();
+        
     }
 }, 3000);
 
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
 console.log('%c📱 Auto-posts every 10 minutes with unique content', 'color: #0088cc; font-size: 12px;');
-console.log('%c🧠 Trivia: KSh 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
-console.log('%c🎰 Spin & Win: KSh 5 per spin - Max KSh 40!', 'color: #8b5cf6; font-size: 12px;');
+console.log('%c🧠 Trivia: CC Points 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
+console.log('%c🎰 Spin & Win: CC Points 5 per spin - Max CC Points 40!', 'color: #8b5cf6; font-size: 12px;');
 console.log('%c🛡️ Suspicious activity detection active!', 'color: #ef4444; font-size: 12px;');
 console.log('%c👨‍💻 Built by Anthony Onchari - Version V01A.01', 'color: #6b7280; font-size: 11px;');
