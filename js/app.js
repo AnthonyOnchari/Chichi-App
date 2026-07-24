@@ -4188,57 +4188,7 @@ var app = {
                 </div>
             </div>
         `;
-                        </div>
-                        <div style="text-align: center; padding: 4px; border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1;">
-                            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px;">Followers</div>
-                            <div style="font-size: 20px; font-weight: 800; color: #8b5cf6; line-height: 1;">${this.profile.followers || 0}</div>
-                        </div>
-                        <div style="text-align: center; padding: 4px;">
-                            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px;">Following</div>
-                            <div style="font-size: 20px; font-weight: 800; color: #f59e0b; cursor: pointer; line-height: 1;" onclick="app.showFollowing()">${Object.keys(this.following).length}</div>
-                        </div>
-                    </div>
-                    
-                    <!-- MY POSTS -->
-                    <div style="margin-top: 20px;">
-                        <div style="font-weight: 700; margin-bottom: 14px; color: #1e293b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📸 My Posts</div>
-                        <div id="profilePosts"></div>
-                    </div>
-                    
-                </div>
-            </div>
-        `;
-
         profileContent.innerHTML = html;
-
-        // Render posts
-        var userPostsList = this.posts.filter(function(p) { return p.userId === this.user.uid; }.bind(this));
-        var postsHtml = '';
-        
-        if (userPostsList.length === 0) {
-            postsHtml = '<div style="text-align:center;color:#6b7280;padding:40px 20px;font-size:14px;">No posts yet. Create your first post!</div>';
-        } else {
-            postsHtml = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;background:#e2e8f0;">';
-            userPostsList.forEach(function(p) {
-                var likes = (p.likes && Object.keys(p.likes).length) || 0;
-                postsHtml += `
-                    <div style="position:relative;aspect-ratio:1/1;background:#f0f0f0;cursor:pointer;overflow:hidden;" onclick="app.viewPostDetail('${p.id}')">
-                        <img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;transition:transform 0.3s ease;">
-                        <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0);display:flex;align-items:center;justify-content:center;gap:16px;transition:all 0.3s ease;opacity:0;" onmouseover="this.style.background='rgba(0,0,0,0.6)';this.style.opacity='1';" onmouseout="this.style.background='rgba(0,0,0,0)';this.style.opacity='0';">
-                            <div style="color:white;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;">❤️ ${likes}</div>
-                            <div style="color:white;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;">💬 ${p.comments ? p.comments.length : 0}</div>
-                        </div>
-                        <button onclick="event.stopPropagation();app.deletePost('${p.id}');return false;" style="position:absolute;top:8px;right:8px;background:#ef4444;color:white;border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;opacity:0.7;transition:0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Delete post">🗑️</button>
-                    </div>
-                `;
-            });
-            postsHtml += '</div>';
-        }
-        
-        var profilePosts = document.getElementById('profilePosts');
-        if (profilePosts) {
-            profilePosts.innerHTML = postsHtml;
-        }
     },
 
     // ============================================
