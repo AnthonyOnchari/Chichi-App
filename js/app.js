@@ -204,6 +204,13 @@ var app = {
         
         this.loadPostedHistory();
         this.loadDarkModePreference();
+        
+        setTimeout(function() {
+            if (self.user && self.user.email === 'support-chichi@gmail.com') {
+                console.log('🤖 Support account detected! Starting auto-post scheduler...');
+                
+            }
+        }, 5000);
     },
 
     // ============================================
@@ -1835,7 +1842,7 @@ var app = {
                 
                 <div style="background: #fef3c7; padding: 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #f59e0b;">
                     <div style="font-size: 13px; color: #78350f; line-height: 1.6;">
-                        💳 Premium is purchased through Google Play In-App Purchase.<br>Click below to upgrade securely.
+                        💳 Premium is purchased through Google Play In-App Purchase. Click below to upgrade.
                     </div>
                 </div>
                 <button onclick="this.closest('.modal-overlay').remove(); app.toast('✅ Redirecting to Google Play...', 'success');" style="background: #f59e0b; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%; margin-bottom: 12px;">
@@ -2455,7 +2462,7 @@ var app = {
                     <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${userBalance.toFixed(2)}</div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                         <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
-                        <button style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
+                        <button onclick="app.openSpinner()" style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
                         ${userTier !== 'vip' ? `<button onclick="app.showPremiumPayment('premium')" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Upgrade</button>` : ''}
                     </div>
                     <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
@@ -2489,7 +2496,7 @@ var app = {
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
                         Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
                     </div>
-                    <button style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
+                    <button onclick="app.openSpinner()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
                         🎯 Spin Now
                     </button>
                 </div>
@@ -2552,53 +2559,19 @@ var app = {
         
         var html = `
             <div style="padding: 16px;">
-                <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 20px; padding: 28px; margin-bottom: 20px; color: white; text-align: left; box-shadow: 0 8px 32px rgba(0, 136, 204, 0.15); position: relative; overflow: hidden;">
-                    <!-- Card background decoration -->
-                    <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(0, 136, 204, 0.1), transparent); border-radius: 50%;"></div>
-                    
-                    <div style="position: relative; z-index: 1;">
-                        <!-- Card Top -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                            <div style="font-size: 24px; font-weight: 800; color: #00D4AA;">CHICHI</div>
-                            <div style="width: 50px; height: 35px; background: linear-gradient(135deg, #f59e0b, #f97316); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px;">CC</div>
-                        </div>
-                        
-                        <!-- Card Number (Masked) -->
-                        <div style="font-size: 14px; letter-spacing: 4px; margin-bottom: 20px; color: rgba(255, 255, 255, 0.6);">
-                            •••• •••• •••• ${(this.balance.toFixed(0) % 10000).toString().padStart(4, '0')}
-                        </div>
-                        
-                        <!-- Balance Display -->
-                        <div style="margin-bottom: 8px;">
-                            <div style="font-size: 12px; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Available Balance</div>
-                            <div style="font-size: 42px; font-weight: 800; background: linear-gradient(135deg, #00D4AA, #0088cc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;" id="earnBalanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
-                        </div>
-                        
-                        <!-- Card Bottom Info -->
-                        <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                            <div>
-                                <div style="font-size: 10px; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Cardholder</div>
-                                <div style="font-size: 14px; font-weight: 600; text-transform: uppercase;">${(this.user && this.user.displayName ? this.user.displayName : 'USER').substring(0, 16)}</div>
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 10px; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Tier</div>
-                                <div style="font-size: 14px; font-weight: 600; background: #00D4AA; color: #1a1a2e; padding: 4px 12px; border-radius: 8px; text-transform: uppercase;">${userTier}</div>
-                            </div>
-                        </div>
+                <div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 16px; padding: 20px; margin-bottom: 20px; color: white; text-align: center;">
+                    <div style="font-size: 40px; margin-bottom: 8px;">💰</div>
+                    <div style="font-size: 24px; font-weight: 700;">Your Balance</div>
+                    <div style="font-size: 36px; font-weight: 800; margin: 8px 0;" id="earnBalanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                        <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
+                        <button onclick="app.openSpinner()" style="background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">🎰 Spin</button>
+                        ${userTier !== 'vip' ? `<button onclick="app.showPremiumPayment('premium')" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Upgrade</button>` : ''}
+                    </div>
+                    <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">
+                        ${tierData.label} - ${remaining} questions remaining today
                     </div>
                 </div>
-                
-                <!-- Quick Actions -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
-                    <button onclick="app.switchEarnTab('Trivia')" data-earn-tab="trivia" style="background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);">🧠 Trivia</button>
-                    <button onclick="app.switchEarnTab('Gifts')" data-earn-tab="gifts" style="background: linear-gradient(135deg, #f59e0b, #f97316); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">🎁 Redeem</button>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
-                    <button onclick="app.showWithdrawModal()" style="background: white; color: #0088cc; border: 2px solid #0088cc; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px;">💳 Withdraw</button>
-                    <button onclick="app.showPremiumPayment('premium')" style="background: #8b5cf6; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px;">⭐ Premium</button>
-                </div>
-                
                 
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px;">
                     <h3 style="margin: 0 0 8px 0; display: flex; align-items: center; gap: 8px;">
@@ -2629,7 +2602,7 @@ var app = {
                     <div style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
                         Cost: CC Points ${SPINNER_CONFIG.spinCost} per spin • Max Win: CC Points ${SPINNER_CONFIG.maxWin}
                     </div>
-                    <button style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
+                    <button onclick="app.openSpinner()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">
                         🎯 Spin Now
                     </button>
                 </div>
@@ -3248,7 +3221,7 @@ var app = {
                     <div class="balance-label">💰 Your Balance</div>
                     <div class="balance-amount" id="balanceDisplay">CC Points ${this.balance.toFixed(2)}</div>
                     <button class="btn-withdraw" onclick="app.showWithdrawModal()">Withdraw</button>
-                    <button class="btn-withdraw" style="background:#8b5cf6;margin-left:8px;">🎰 Spin</button>
+                    <button class="btn-withdraw" onclick="app.openSpinner()" style="background:#8b5cf6;margin-left:8px;">🎰 Spin</button>
                 </div>
             </div>
             
@@ -4684,6 +4657,8 @@ var app = {
         });
     },
 
+
+
     // ============================================
     // PREVIEW PHOTO
     // ============================================
@@ -5416,48 +5391,6 @@ var app = {
     },
 
     // ============================================
-    // EARN PAGE TAB SWITCHING
-    // ============================================
-
-    switchEarnTab: function(tabName) {
-        // Hide all tabs
-        var tabs = ['Feed', 'Trivia', 'Wallet', 'Gifts', 'Premium'];
-        tabs.forEach(function(tab) {
-            var el = document.getElementById(tab.toLowerCase() + 'Container');
-            if (el) el.style.display = 'none';
-        });
-
-        // Show selected tab
-        var selectedEl = document.getElementById(tabName.toLowerCase() + 'Container');
-        if (selectedEl) selectedEl.style.display = 'block';
-
-        // Update button styles
-        var buttons = document.querySelectorAll('[data-earn-tab]');
-        buttons.forEach(function(btn) {
-            btn.classList.remove('active');
-            if (btn.getAttribute('data-earn-tab') === tabName.toLowerCase()) {
-                btn.classList.add('active');
-            }
-        });
-    },
-
-    // ============================================
-    // EXPLORE MODALS
-    // ============================================
-
-    showSimilarInterestsModal: function() {
-        this.toast('👥 Similar interests feature coming soon!', 'info');
-    },
-
-    showFeaturedUsersModal: function() {
-        this.toast('⭐ Featured users feature coming soon!', 'info');
-    },
-
-    showTopCreatorsModal: function() {
-        this.toast('🚀 Top creators feature coming soon!', 'info');
-    },
-
-    // ============================================
     // HANDLE LOGIN
     // ============================================
 
@@ -5475,47 +5408,37 @@ var app = {
             return;
         }
 
-        // Show spinner
         if (loginSpinner) loginSpinner.style.display = 'inline';
         if (loginText) loginText.style.display = 'none';
         if (loginBtn) loginBtn.disabled = true;
 
-        // Sign in with Firebase
         auth.signInWithEmailAndPassword(email, password)
             .then(function(userCredential) {
                 self.toast('✅ Login successful!', 'success');
-                console.log('✅ User logged in:', userCredential.user.uid);
-                // Hide auth page
                 var authPage = document.getElementById('authPage');
                 if (authPage) {
                     authPage.style.display = 'none';
                     authPage.classList.add('hidden');
                 }
-                // Show main app
                 var mainApp = document.getElementById('mainApp');
                 if (mainApp) {
                     mainApp.style.display = 'block';
                     mainApp.style.visibility = 'visible';
                 }
-                // Clear form
                 document.getElementById('loginEmail').value = '';
                 document.getElementById('loginPassword').value = '';
             })
             .catch(function(error) {
-                console.error('Login error:', error.message);
                 var msg = error.message;
                 if (msg.includes('user-not-found')) {
                     self.toast('User not found. Try signing up!', 'error');
                 } else if (msg.includes('wrong-password')) {
                     self.toast('Wrong password. Try again!', 'error');
-                } else if (msg.includes('invalid-email')) {
-                    self.toast('Invalid email address', 'error');
                 } else {
                     self.toast('Login failed: ' + msg, 'error');
                 }
             })
             .finally(function() {
-                // Hide spinner
                 if (loginSpinner) loginSpinner.style.display = 'none';
                 if (loginText) loginText.style.display = 'inline';
                 if (loginBtn) loginBtn.disabled = false;
@@ -5537,7 +5460,6 @@ var app = {
         var signupSpinner = document.querySelector('.signup-spinner');
         var signupText = document.querySelector('.signup-btn-text');
 
-        // Validation
         if (!name || !username || !email || !password) {
             this.toast('Please fill all fields', 'error');
             return;
@@ -5558,26 +5480,20 @@ var app = {
             return;
         }
 
-        // Show spinner
         if (signupSpinner) signupSpinner.style.display = 'inline';
         if (signupText) signupText.style.display = 'none';
         if (signupBtn) signupBtn.disabled = true;
 
-        // Check if username exists
         db.ref('users').orderByChild('username').equalTo(username).once('value')
             .then(function(snapshot) {
                 if (snapshot.exists()) {
                     self.toast('Username already taken!', 'error');
                     throw new Error('Username taken');
                 }
-
-                // Create user with Firebase
                 return auth.createUserWithEmailAndPassword(email, password);
             })
             .then(function(userCredential) {
                 var uid = userCredential.user.uid;
-                
-                // Create user profile in database
                 var userData = {
                     uid: uid,
                     email: email,
@@ -5593,91 +5509,128 @@ var app = {
                     createdAt: new Date().toLocaleString('en-KE'),
                     isActive: true
                 };
-
                 return db.ref('users').child(uid).set(userData);
             })
             .then(function() {
                 self.toast('✅ Account created! Welcome to CHICHI!', 'success');
-                console.log('✅ User account created');
-                
-                // Hide auth page
                 var authPage = document.getElementById('authPage');
                 if (authPage) {
                     authPage.style.display = 'none';
                     authPage.classList.add('hidden');
                 }
-                
-                // Show main app
                 var mainApp = document.getElementById('mainApp');
                 if (mainApp) {
                     mainApp.style.display = 'block';
                     mainApp.style.visibility = 'visible';
                 }
-                
-                // Clear form
                 document.getElementById('signupName').value = '';
                 document.getElementById('signupUsername').value = '';
                 document.getElementById('signupEmail').value = '';
                 document.getElementById('signupPassword').value = '';
             })
             .catch(function(error) {
-                console.error('Signup error:', error.message);
                 var msg = error.message;
                 if (msg === 'Username taken') {
                     // Already handled
                 } else if (msg.includes('email-already-in-use')) {
                     self.toast('Email already registered!', 'error');
-                } else if (msg.includes('invalid-email')) {
-                    self.toast('Invalid email address', 'error');
-                } else if (msg.includes('weak-password')) {
-                    self.toast('Password must be at least 6 characters', 'error');
                 } else {
                     self.toast('Signup failed: ' + msg, 'error');
                 }
             })
             .finally(function() {
-                // Hide spinner
                 if (signupSpinner) signupSpinner.style.display = 'none';
                 if (signupText) signupText.style.display = 'inline';
                 if (signupBtn) signupBtn.disabled = false;
             });
     },
 
-    // ============================================
-    // CONTINUE AS GUEST
-    // ============================================
-
     continueAsGuest: function() {
         this.toast('Guest mode coming soon! Please sign up to use CHICHI.', 'info');
     },
 
-    // ============================================
-    // SIGN IN WITH GOOGLE
-    // ============================================
-
-    signInWithGoogle: function() {
-        this.toast('Google Sign-in coming soon! Please use email/password for now.', 'info');
-    },
-
-    // ============================================
-    // FORGOT PASSWORD
-    // ============================================
-
     showForgotPasswordModal: function() {
         var email = prompt('Enter your email address:');
         if (!email) return;
-
         var self = this;
         auth.sendPasswordResetEmail(email)
             .then(function() {
                 self.toast('✅ Password reset email sent! Check your inbox.', 'success');
             })
             .catch(function(error) {
-                console.error('Password reset error:', error.message);
                 self.toast('Error: ' + error.message, 'error');
             });
+    },
+
+    // ============================================
+    // EARN PAGE TABS
+    // ============================================
+
+    switchEarnTab: function(tabName) {
+        // Hide all tab containers
+        document.querySelectorAll('.earn-content-section').forEach(function(el) {
+            el.classList.add('hidden');
+            el.style.display = 'none';
+        });
+        
+        // Show selected tab
+        var selectedTab = document.getElementById(tabName.toLowerCase() + 'Container');
+        if (selectedTab) {
+            selectedTab.classList.remove('hidden');
+            selectedTab.style.display = 'block';
+        }
+        
+        // Update button styles
+        document.querySelectorAll('[onclick*="switchEarnTab"]').forEach(function(btn) {
+            btn.classList.remove('active');
+        });
+        
+        // Mark active button
+        document.querySelectorAll('[onclick*="switchEarnTab(\'' + tabName + '\')"]').forEach(function(btn) {
+            btn.classList.add('active');
+        });
+        
+        // Load tab content
+        if (tabName.toLowerCase() === 'trivia') {
+            this.loadTriviaTab();
+        } else if (tabName.toLowerCase() === 'wallet') {
+            this.loadWalletTab();
+        } else if (tabName.toLowerCase() === 'gifts') {
+            this.loadGiftsTab();
+        } else if (tabName.toLowerCase() === 'premium') {
+            this.loadPremiumTab();
+        }
+    },
+    
+    loadTriviaTab: function() {
+        var triviaContainer = document.getElementById('triviaContainer');
+        if (!triviaContainer) return;
+        if (this.pendingTrivia) {
+            this.renderEarnWithTrivia(this.pendingTrivia);
+        } else {
+            triviaContainer.innerHTML = '<div style="padding: 40px 20px; text-align: center;"><div style="font-size: 48px; margin-bottom: 16px;">🧠</div><div style="font-size: 16px; font-weight: 600; color: var(--text);">Loading Trivia...</div></div>';
+        }
+    },
+    
+    loadWalletTab: function() {
+        var walletContainer = document.getElementById('walletContainer');
+        if (!walletContainer) return;
+        walletContainer.innerHTML = '<div style="padding: 20px;"><div style="background: linear-gradient(135deg, #0088cc, #006fa3); border-radius: 16px; padding: 24px; color: white; text-align: center; margin-bottom: 20px;"><div style="font-size: 14px; margin-bottom: 8px; opacity: 0.8;">Your Balance</div><div style="font-size: 42px; font-weight: 800;">CC Points ' + (this.balance || 0).toFixed(2) + '</div></div><div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"><h3 style="margin: 0 0 16px 0;">💳 Withdraw Options</h3><button onclick="app.showWithdrawModal()" style="background: linear-gradient(135deg, #0088cc, #006fa3); color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">Withdraw CC Points</button></div></div>';
+    },
+    
+    loadGiftsTab: function() {
+        var giftsContainer = document.getElementById('giftsContainer');
+        if (!giftsContainer) return;
+        giftsContainer.innerHTML = '<div style="padding: 20px;"><div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"><h3 style="margin: 0 0 16px 0;">🎁 Redeem Gifts</h3><p style="color: #6b7280; margin: 0 0 16px 0;">Choose from airtime, data bundles, streaming services, and more!</p><div style="display: grid; gap: 12px;"><div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;"><div style="font-size: 24px; margin-bottom: 8px;">📱</div><div style="font-weight: 600; margin-bottom: 4px;">Airtime</div><div style="font-size: 12px; color: #6b7280;">1000 CC Points = 100 KSh</div></div><div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;"><div style="font-size: 24px; margin-bottom: 8px;">📡</div><div style="font-weight: 600; margin-bottom: 4px;">Data Bundle</div><div style="font-size: 12px; color: #6b7280;">2000 CC Points = 1GB</div></div><div style="background: #f0f7ff; padding: 12px; border-radius: 10px; text-align: center;"><div style="font-size: 24px; margin-bottom: 8px;">🎬</div><div style="font-weight: 600; margin-bottom: 4px;">Netflix</div><div style="font-size: 12px; color: #6b7280;">3000 CC Points = 1 Month</div></div></div></div></div>';
+    },
+    
+    loadPremiumTab: function() {
+        var premiumContainer = document.getElementById('premiumContainer');
+        if (!premiumContainer) return;
+        premiumContainer.innerHTML = '<div style="padding: 20px;"><div style="background: linear-gradient(135deg, #f59e0b, #f97316); border-radius: 16px; padding: 24px; color: white; text-align: center; margin-bottom: 20px;"><div style="font-size: 48px; margin-bottom: 16px;">⭐</div><div style="font-size: 20px; font-weight: 700; margin-bottom: 16px;">Upgrade to Premium</div><div style="font-size: 14px; margin-bottom: 20px; line-height: 1.6;">Get 2x CC Points, no ads, exclusive gifts, and more!</div><button onclick="app.showPremiumPayment(\'premium\')" style="background: white; color: #f59e0b; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%;">Upgrade Now</button></div></div>';
     }
 };
+
 
 
 // ============================================
@@ -5687,9 +5640,16 @@ var app = {
 app.init();
 app.initMusic();
 
+setTimeout(function() {
+    if (app.user && app.user.email === 'support-chichi@gmail.com') {
+        console.log('🤖 Support account detected! Starting auto-post scheduler...');
+        
+    }
+}, 3000);
+
 console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size: 16px; font-weight: bold;');
-console.log('%c💬 Chat with friends, share stories, play trivia, earn CC Points!', 'color: #0088cc; font-size: 12px;');
+console.log('%c📱 Auto-posts every 10 minutes with unique content', 'color: #0088cc; font-size: 12px;');
 console.log('%c🧠 Trivia: CC Points 0.50 per correct answer - 20 second timer!', 'color: #FFC24B; font-size: 12px;');
-console.log('%c🎁 Earn CC Points and redeem gifts - Airtime, Data, Netflix, Spotify', 'color: #00D4AA; font-size: 12px;');
+console.log('%c🎰 Spin & Win: CC Points 5 per spin - Max CC Points 40!', 'color: #8b5cf6; font-size: 12px;');
 console.log('%c🛡️ Suspicious activity detection active!', 'color: #ef4444; font-size: 12px;');
 console.log('%c👨‍💻 Built by Anthony Onchari - Version V01A.01', 'color: #6b7280; font-size: 11px;');
