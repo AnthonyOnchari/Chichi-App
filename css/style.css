@@ -3905,7 +3905,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
         box-shadow: 0 0 0 8px rgba(0, 136, 204, 0);
     }
 }
-/* ===== ANIMATED AUTH PAGE ===== */
+/* ===== VIBRANT ANIMATED AUTH PAGE ===== */
 
 @keyframes slideInAuth {
     from {
@@ -3929,9 +3929,36 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     }
 }
 
-@keyframes float {
-    0%, 100% { transform: translateY(0px); }
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 136, 204, 0.3), inset 0 0 20px rgba(0, 136, 204, 0.1); }
+    50% { box-shadow: 0 0 40px rgba(0, 136, 204, 0.6), inset 0 0 30px rgba(0, 136, 204, 0.2); }
+}
+
+@keyframes buttonGlow {
+    0%, 100% { box-shadow: 0 0 20px rgba(200, 255, 0, 0.3); }
+    50% { box-shadow: 0 0 30px rgba(200, 255, 0, 0.6); }
+}
+
+@keyframes googleGlow {
+    0%, 100% { box-shadow: 0 0 15px rgba(66, 133, 244, 0.3), inset 0 0 15px rgba(66, 133, 244, 0.1); }
+    50% { box-shadow: 0 0 25px rgba(66, 133, 244, 0.5), inset 0 0 20px rgba(66, 133, 244, 0.15); }
+}
+
+@keyframes floatGlow {
+    0% { transform: translateY(0); }
     50% { transform: translateY(-8px); }
+    100% { transform: translateY(0); }
+}
+
+@keyframes tabUnderline {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
+@keyframes pulseGlow {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
 }
 
 /* Auth Page Container */
@@ -3948,6 +3975,34 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     padding: 20px;
     z-index: 9998;
     animation: fadeIn 0.5s ease-out;
+    overflow: hidden;
+}
+
+/* Background Glows */
+.auth-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.1;
+    pointer-events: none;
+}
+
+.auth-glow-1 {
+    width: 400px;
+    height: 400px;
+    background: #0088cc;
+    top: -100px;
+    left: -100px;
+    animation: floatGlow 8s ease-in-out infinite;
+}
+
+.auth-glow-2 {
+    width: 300px;
+    height: 300px;
+    background: #c8ff00;
+    bottom: -50px;
+    right: -50px;
+    animation: floatGlow 6s ease-in-out infinite reverse;
 }
 
 @keyframes fadeIn {
@@ -3960,11 +4015,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     background: #1a1a1a;
     border-radius: 24px;
     padding: 24px;
-    max-width: 360px;
+    max-width: 380px;
     width: 100%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 60px rgba(200, 255, 0, 0.05);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 60px rgba(0, 136, 204, 0.1);
+    border: 1px solid rgba(0, 136, 204, 0.2);
     animation: slideInAuth 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-    border: 1px solid rgba(200, 255, 0, 0.1);
+    position: relative;
+    z-index: 1;
 }
 
 .auth-card.auth-animate {
@@ -3979,18 +4036,95 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 
 .auth-header .auth-title-animate {
     font-family: 'Outfit', sans-serif;
-    font-size: 26px;
+    font-size: 32px;
     font-weight: 800;
-    color: #ffffff;
+    background: linear-gradient(135deg, #0088cc 0%, #00d4ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     margin: 0 0 4px 0;
     animation: fadeInTitle 0.8s ease-out 0.1s both;
+    text-shadow: 0 0 20px rgba(0, 136, 204, 0.3);
 }
 
 .auth-header .auth-subtitle-animate {
     color: #999;
-    font-size: 12px;
+    font-size: 13px;
     margin: 0;
     animation: fadeInTitle 0.8s ease-out 0.2s both;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+/* Tabs Container */
+.tabs-container {
+    margin-bottom: 20px;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    border-bottom: 2px solid #262626;
+}
+
+.tab {
+    flex: 1;
+    padding: 12px 14px;
+    background: none;
+    border: none;
+    color: #666;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 0.3s;
+    font-family: inherit;
+    position: relative;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.tab.active {
+    color: #c8ff00;
+}
+
+.tab-underline {
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: #c8ff00;
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+
+.tab.active .tab-underline {
+    transform: scaleX(1);
+}
+
+.tab:hover {
+    color: #999;
+}
+
+.tab-text {
+    display: block;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    animation: slideInAuth 0.4s ease-out;
+}
+
+.tab-content.active {
+    display: block;
 }
 
 /* Form Groups with Staggered Animation */
@@ -4003,61 +4137,34 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 .form-group.form-animate:nth-child(3) { animation-delay: 0.5s; }
 .form-group.form-animate:nth-child(4) { animation-delay: 0.6s; }
 
-/* Tabs */
-.tabs {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 18px;
-    background: #262626;
-    padding: 4px;
-    border-radius: 12px;
-}
-
-.tab {
-    flex: 1;
-    padding: 8px 12px;
-    background: none;
-    border: none;
-    color: #666;
-    font-weight: 600;
-    font-size: 12px;
-    cursor: pointer;
-    border-radius: 10px;
-    transition: all 0.3s;
-    font-family: inherit;
-}
-
-.tab.active {
-    background: #333;
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(200, 255, 0, 0.1);
-}
-
-.tab:hover {
-    color: #999;
-}
-
 /* Form Label & Input */
 .form-label {
     display: block;
     color: #999;
     font-size: 10px;
     font-weight: 600;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.6px;
+}
+
+.form-input-wrapper {
+    position: relative;
+    margin-bottom: 12px;
 }
 
 .form-input {
     width: 100%;
-    padding: 10px 12px;
+    padding: 11px 13px;
     background: #262626;
-    border: 1px solid #333;
+    border: 1.5px solid #333;
     border-radius: 10px;
     color: #fff;
-    font-size: 12px;
+    font-size: 13px;
     font-family: inherit;
     transition: all 0.3s;
+    position: relative;
+    z-index: 1;
 }
 
 .form-input::placeholder {
@@ -4067,38 +4174,91 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 .form-input:focus {
     outline: none;
     background: #2a2a2a;
-    border-color: #444;
-    box-shadow: 0 0 0 2px rgba(200, 255, 0, 0.1);
+    border-color: #0088cc;
+    box-shadow: 0 0 0 3px rgba(0, 136, 204, 0.2);
+}
+
+.input-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 10px;
+    background: linear-gradient(90deg, rgba(0, 136, 204, 0.1) 0%, transparent 50%, rgba(0, 136, 204, 0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.form-input:focus + .input-glow {
+    opacity: 1;
+    animation: pulseGlow 2s ease-in-out infinite;
 }
 
 /* Submit Button */
 .btn-submit {
     width: 100%;
-    padding: 11px;
+    padding: 12px;
     background: #c8ff00;
     color: #0a0a0a;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     font-weight: 700;
-    font-size: 13px;
+    font-size: 14px;
     cursor: pointer;
     transition: all 0.3s;
     font-family: inherit;
-    margin-top: 4px;
+    margin-top: 6px;
+    position: relative;
+    overflow: hidden;
 }
 
-.btn-submit.btn-animate {
+.btn-submit.glow-button {
     animation: slideInAuth 0.6s ease-out 0.7s both;
 }
 
 .btn-submit:hover {
     background: #deff33;
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(200, 255, 0, 0.3);
+    box-shadow: 0 8px 20px rgba(200, 255, 0, 0.4);
 }
 
 .btn-submit:active {
     transform: translateY(0);
+}
+
+.button-glow {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s;
+    pointer-events: none;
+}
+
+.btn-submit:hover .button-glow {
+    left: 100%;
+}
+
+/* Forgot Password Link */
+.forgot-link {
+    color: #c8ff00;
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.3s;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.forgot-link:hover {
+    color: #deff33;
+    background: rgba(200, 255, 0, 0.1);
+    text-decoration: underline;
 }
 
 /* Auth Divider */
@@ -4106,7 +4266,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 14px 0 10px 0;
+    margin: 16px 0 12px 0;
 }
 
 .auth-divider::before,
@@ -4114,13 +4274,15 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     content: '';
     flex: 1;
     height: 1px;
-    background: #333;
+    background: linear-gradient(90deg, transparent, #333, transparent);
 }
 
 .auth-divider span {
     color: #666;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 /* Social Buttons Row */
@@ -4133,9 +4295,9 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 
 .social-btn-google {
     flex: 1;
-    padding: 10px;
+    padding: 11px 12px;
     background: #262626;
-    border: 1px solid #333;
+    border: 1.5px solid #333;
     border-radius: 10px;
     color: #fff;
     cursor: pointer;
@@ -4148,86 +4310,72 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     font-size: 12px;
     font-weight: 600;
     height: 44px;
+    position: relative;
+    overflow: hidden;
+}
+
+.social-btn-google.glow-button-secondary {
+    border-color: #4285F4;
+    animation: googleGlow 3s ease-in-out infinite;
 }
 
 .social-btn-google:hover {
     background: #333;
     border-color: #4285F4;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+    box-shadow: 0 4px 15px rgba(66, 133, 244, 0.4);
 }
 
 .social-btn-google:active {
     transform: translateY(0);
 }
 
-/* ===== FAB BUTTON IN NAV ===== */
-.fab-button-nav {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #0088cc 0%, #006fa3 100%);
-    color: white;
-    border: none;
-    font-size: 1.4rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s;
-    box-shadow: 0 4px 16px rgba(0, 136, 204, 0.4);
-    z-index: 50;
-    margin: 0 2px;
-    font-weight: bold;
+.social-btn-google svg {
+    width: 18px;
+    height: 18px;
+    filter: drop-shadow(0 0 4px rgba(66, 133, 244, 0.3));
 }
 
-.fab-button-nav:hover {
-    transform: scale(1.08);
-    box-shadow: 0 6px 24px rgba(0, 136, 204, 0.5);
-}
-
-.fab-button-nav:active {
-    transform: scale(0.95);
-}
-
-/* ===== DEVELOPER MODAL ===== */
-.dev-modal {
-    max-width: 400px;
-}
-
-.dev-modal h3 {
-    color: #111;
-    font-weight: 700;
-}
-
-.dev-modal p {
-    color: #666;
-}
-
-/* Loading Spinner */
-#loadingScreen {
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-}
-
-.loading-text {
+/* Sign Up/Login Links */
+.signup-link,
+.login-link {
     color: #c8ff00;
-    font-size: 14px;
-    font-weight: 600;
-    animation: float 2s ease-in-out infinite;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.3s;
+    padding: 2px 4px;
+    border-radius: 3px;
 }
 
-/* Modal Overlay */
+.signup-link:hover,
+.login-link:hover {
+    color: #deff33;
+    text-decoration: underline;
+    text-shadow: 0 0 10px rgba(200, 255, 0, 0.3);
+}
+
+/* Modal Animations */
 .modal-overlay {
     background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
 }
 
 .modal {
-    background: #fff;
-    border: 1px solid #e5e7eb;
+    background: #1a1a1a;
+    border: 1px solid rgba(0, 136, 204, 0.2);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 136, 204, 0.1);
+}
+
+.modal.modal-animate {
+    animation: slideInAuth 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .modal h2 {
-    color: #111;
+    color: #fff;
+}
+
+.modal p {
+    color: #999;
 }
 
 .modal-close button {
@@ -4237,11 +4385,12 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     font-size: 20px;
     cursor: pointer;
     padding: 0;
-    transition: color 0.2s;
+    transition: all 0.2s;
 }
 
 .modal-close button:hover {
-    color: #111;
+    color: #c8ff00;
+    transform: scale(1.1);
 }
 
 @media (max-width: 480px) {
@@ -4250,28 +4399,36 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     }
 
     .auth-header .auth-title-animate {
-        font-size: 20px;
+        font-size: 26px;
     }
 
     .form-input {
-        padding: 8px 10px;
-        font-size: 11px;
+        padding: 9px 11px;
+        font-size: 12px;
     }
 
     .btn-submit {
-        padding: 9px;
-        font-size: 12px;
+        padding: 10px;
+        font-size: 13px;
     }
 
     .social-btn-google {
         height: 40px;
-        padding: 8px;
+        padding: 8px 10px;
         font-size: 11px;
     }
 
-    .fab-button-nav {
-        width: 48px;
-        height: 48px;
-        font-size: 20px;
+    .auth-glow-1 {
+        width: 300px;
+        height: 300px;
+        top: -80px;
+        left: -80px;
+    }
+
+    .auth-glow-2 {
+        width: 200px;
+        height: 200px;
+        bottom: -30px;
+        right: -30px;
     }
 }
