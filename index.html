@@ -406,7 +406,7 @@
         <!-- Users -->
         <div class="admin-tab-content" id="adminUsers">
             <div style="margin-bottom:16px;">
-                <input type="text" id="userSearchInput" placeholder="Search users..." class="form-input" onkeyup="app.searchUsers(this.value)">
+                <input type="text" id="userSearchInput" placeholder="Search users..." class="form-input" onkeyup="if(typeof app !== 'undefined' && app.searchUsers) app.searchUsers(this.value)">
             </div>
             <div id="adminUsersList"></div>
         </div>
