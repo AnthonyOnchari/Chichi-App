@@ -3905,25 +3905,10 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     }
 }
 /* =====================================
-   NEW FEATURES - CHICHI MODULES
+   CHICHI NEW FEATURES - COMPLETE STYLES
    ===================================== */
 
 /* Circular Avatar & Profile Photo */
-.circular-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.avatar-with-story-ring {
-  border: 3px solid;
-  border-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%) 1;
-  padding: 2px;
-}
-
 [data-profile-photo] {
   width: 120px;
   height: 120px;
@@ -3940,16 +3925,25 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   object-fit: cover;
 }
 
+.circular-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 /* Unread Badges */
 .unread-badge {
-  display: none;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
   min-width: 24px;
   height: 24px;
   padding: 0 6px;
-  background: #FF6B6B;
-  color: white;
+  background: #FF6B6B !important;
+  color: white !important;
   border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
@@ -3959,89 +3953,20 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   box-shadow: 0 2px 6px rgba(255, 107, 107, 0.3);
 }
 
-/* Modal Styles */
-.modal {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
+/* Modals */
+[data-open-unread-modal],
+[data-open-favorites-modal] {
   position: relative;
-  animation: scaleIn 0.3s ease-out;
-  margin: auto;
-  z-index: 1000;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-}
-
-.modal-overlay[style*="display: flex"] {
-  display: flex !important;
-}
-
-@keyframes scaleIn {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.modal-content {
-  width: 100%;
-  max-width: 500px;
-  max-height: 600px;
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 24px;
   cursor: pointer;
-  color: #999;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
+  transition: transform 0.2s;
 }
 
-.modal-close:hover {
-  color: #333;
+[data-open-unread-modal]:hover,
+[data-open-favorites-modal]:hover {
+  transform: scale(1.1);
 }
 
-/* Trivia & Earn */
+/* Trivia & Earn Styles */
 .trivia-section {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -4049,18 +3974,21 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   border-radius: 16px;
   text-align: center;
   margin-bottom: 30px;
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
 }
 
 .trivia-section h3 {
   font-size: 20px;
   font-weight: 700;
   margin-bottom: 8px;
+  margin: 0 0 8px 0;
 }
 
 .trivia-section p {
   font-size: 14px;
   opacity: 0.9;
   margin-bottom: 20px;
+  margin: 0 0 20px 0;
 }
 
 [data-start-trivia] {
@@ -4081,11 +4009,16 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: inherit;
 }
 
 [data-start-trivia]:hover {
-  transform: scale(1.05);
+  transform: scale(1.08);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+[data-start-trivia]:active {
+  transform: scale(0.95);
 }
 
 .circle-pulse {
@@ -4103,103 +4036,15 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     opacity: 1;
   }
   100% {
-    transform: scale(1.2);
+    transform: scale(1.3);
     opacity: 0;
   }
-}
-
-[data-trivia-modal] .trivia-content {
-  padding: 40px 20px;
-}
-
-.trivia-progress {
-  text-align: right;
-  color: #999;
-  font-size: 14px;
-  margin-bottom: 20px;
-}
-
-.trivia-content h3 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 20px 0;
-  color: #333;
-}
-
-.trivia-timer {
-  text-align: center;
-  margin: 30px 0;
-}
-
-.time-value {
-  font-size: 48px;
-  font-weight: 700;
-  color: #667eea;
-}
-
-.trivia-answers {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 20px 0;
-}
-
-.answer-btn {
-  padding: 14px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  background: #f9f9f9;
-  color: #333;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-}
-
-.answer-btn:hover:not(:disabled) {
-  border-color: #667eea;
-  background: #f5f5ff;
-}
-
-.answer-btn.correct-answer {
-  background: #d4edda;
-  border-color: #28a745;
-  color: #155724;
-}
-
-.answer-btn.wrong-answer {
-  background: #f8d7da;
-  border-color: #dc3545;
-  color: #721c24;
-}
-
-.trivia-button-group {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.next-question-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  padding: 12px 28px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.next-question-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 /* Gift Cards */
 .gift-cards-section {
   margin-top: 30px;
+  margin-bottom: 30px;
 }
 
 .gift-cards-section h3 {
@@ -4246,9 +4091,10 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 .gift-card-label {
   font-size: 12px;
   opacity: 0.9;
+  display: block;
 }
 
-/* Voice Call */
+/* Voice Call Button */
 [data-start-voice-call] {
   width: 44px;
   height: 44px;
@@ -4263,6 +4109,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  padding: 0;
 }
 
 [data-start-voice-call]:hover {
@@ -4270,70 +4117,11 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-[data-call-ui] {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 998;
-  pointer-events: auto;
+[data-start-voice-call]:active {
+  transform: scale(0.95);
 }
 
-.call-window {
-  pointer-events: auto;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 16px;
-  border-radius: 12px;
-  max-width: 300px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-
-.call-info {
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-.call-status {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-}
-
-.call-timer {
-  font-size: 28px;
-  font-weight: 700;
-  font-family: 'Courier New', monospace;
-}
-
-.call-controls {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.hang-up-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #dc3545;
-  border: none;
-  color: white;
-  font-size: 20px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hang-up-btn:hover {
-  background: #c82333;
-  transform: scale(1.1);
-}
-
-/* Interests */
+/* Interests Section */
 .profile-interests {
   background: #f9f9f9;
   padding: 20px;
@@ -4346,6 +4134,12 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   font-weight: 600;
   margin-bottom: 12px;
   color: var(--text);
+  margin: 0 0 12px 0;
+}
+
+.interests-input-group {
+  position: relative;
+  margin-bottom: 16px;
 }
 
 [data-interests-input] {
@@ -4355,7 +4149,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   border-radius: 8px;
   font-size: 14px;
   transition: border-color 0.2s;
-  margin-bottom: 12px;
+  font-family: inherit;
 }
 
 [data-interests-input]:focus {
@@ -4379,6 +4173,11 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   z-index: 100;
   flex-direction: column;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.interests-autocomplete-dropdown[style*="display: flex"],
+.interests-autocomplete-dropdown.show {
+  display: flex !important;
 }
 
 .autocomplete-item {
@@ -4468,6 +4267,8 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   cursor: pointer;
   transition: all 0.2s;
   margin-bottom: 20px;
+  font-family: inherit;
+  font-weight: 600;
 }
 
 [data-refresh-button]:hover {
@@ -4488,176 +4289,87 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   }
 }
 
-/* Unread List */
-.unread-list {
-  padding: 0;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-.unread-message-item {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+/* Messages Controls */
+.messages-controls {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
-.unread-message-item:last-child {
-  border-bottom: none;
-}
-
-.message-preview {
-  flex: 1;
-}
-
-.message-sender {
-  font-weight: 600;
-  font-size: 14px;
-  color: #333;
-  margin: 0 0 4px 0;
-}
-
-.message-text {
-  font-size: 13px;
-  color: #666;
-  margin: 0 0 4px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.message-time {
-  font-size: 12px;
-  color: #999;
-}
-
-.mark-read-btn {
-  padding: 6px 12px;
-  background: #f0f0f0;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.2s;
-}
-
-.mark-read-btn:hover {
-  background: #e0e0e0;
-}
-
-.no-unread,
-.no-favorites {
-  text-align: center;
-  padding: 40px 20px;
-  color: #999;
-  font-size: 14px;
-}
-
-/* Favorites List */
-.favorites-list {
-  padding: 0;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-.favorite-chat-item {
-  padding: 12px 20px;
-  border-bottom: 1px solid #f0f0f0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.favorite-chat-item:hover {
-  background: #f9f9f9;
-}
-
-.chat-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.chat-info {
-  flex: 1;
-}
-
-.chat-name {
-  font-weight: 600;
-  font-size: 14px;
-  color: #333;
-  margin: 0 0 2px 0;
-}
-
-.last-message {
-  font-size: 12px;
-  color: #999;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.remove-favorite-btn {
+.icon-btn {
   background: none;
   border: none;
-  color: #999;
+  font-size: 18px;
   cursor: pointer;
-  font-size: 16px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
+  padding: 6px;
+  transition: transform 0.2s;
 }
 
-.remove-favorite-btn:hover {
-  color: #dc3545;
+.icon-btn:hover {
+  transform: scale(1.2);
+}
+
+/* Circular Photo Container */
+.circular-photo-container {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  border: 3px solid var(--primary);
+}
+
+.circular-photo-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .modal-content {
-    max-width: 95%;
+  .trivia-section {
+    padding: 20px 15px;
   }
 
-  .call-window {
-    max-width: calc(100% - 20px);
+  [data-start-trivia] {
+    width: 100px;
+    height: 100px;
+    font-size: 14px;
   }
 
-  .profile-stats {
-    flex-direction: row;
-  }
-}
-
-@media (max-width: 480px) {
-  .modal-content {
-    max-width: 90%;
+  .gift-cards-section {
+    margin-top: 20px;
   }
 
-  [data-call-ui] {
-    top: 10px;
-    left: 10px;
-    right: 10px;
-    transform: none;
-  }
-
-  .call-window {
-    max-width: 100%;
-  }
-
-  .interest-tag {
-    font-size: 12px;
+  [data-gift-cards-scroll] {
+    height: 250px;
   }
 
   .profile-interests {
     padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  [data-start-trivia] {
+    width: 90px;
+    height: 90px;
+    font-size: 12px;
+  }
+
+  .trivia-section {
+    padding: 20px 10px;
+  }
+
+  .gift-card {
+    padding: 12px;
+  }
+
+  .gift-card-value {
+    font-size: 20px;
+  }
+
+  .interest-tag {
+    font-size: 12px;
   }
 }
