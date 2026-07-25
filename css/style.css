@@ -4163,35 +4163,27 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 
 /* ===== FAB BUTTON IN NAV ===== */
 .fab-button-nav {
-    position: relative;
-    width: 56px;
-    height: 56px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #c8ff00 0%, #deff33 100%);
-    color: #0a0a0a;
+    background: linear-gradient(135deg, #0088cc 0%, #006fa3 100%);
+    color: white;
     border: none;
-    font-size: 24px;
-    font-weight: bold;
+    font-size: 1.4rem;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(200, 255, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0, 136, 204, 0.4);
     z-index: 50;
-    margin: 0 -10px;
-    animation: float 3s ease-in-out infinite;
-}
-
-.fab-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    margin: 0 2px;
+    font-weight: bold;
 }
 
 .fab-button-nav:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(200, 255, 0, 0.5);
+    transform: scale(1.08);
+    box-shadow: 0 6px 24px rgba(0, 136, 204, 0.5);
 }
 
 .fab-button-nav:active {
