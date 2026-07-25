@@ -34,6 +34,7 @@
     <div class="consent-content">
         <div class="consent-text">
             We use cookies for analytics. By clicking "Accept", you consent to our use of cookies.
+            <a href="#" onclick="app.showConsentOptions(); return false;">Learn more</a>
         </div>
         <div class="consent-buttons">
             <button class="consent-btn consent-btn-manage" onclick="app.showConsentOptions()">Manage</button>
@@ -68,31 +69,20 @@
                 </div>
                 <button type="submit" class="btn-submit" id="loginBtn">
                     <span class="login-btn-text">Login</span>
-                    <span class="login-spinner" style="display: none; margin-left: 8px;">⏳</span>
+                    <span class="login-spinner" style="display: none;">⏳</span>
                 </button>
                 <div style="text-align: center; margin-top: 12px;">
                     <a href="#" onclick="app.showForgotPasswordModal(); return false;" style="color: var(--primary); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Forgot Password?</a>
                 </div>
-                <div style="margin-top: 20px; text-align: center;">
-                    <div style="display: flex; align-items: center; margin-bottom: 16px;">
-                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-                        <div style="padding: 0 12px; color: var(--text-light); font-size: 0.85rem;">Or continue with</div>
-                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-                    </div>
-                </div>
+                
+                <div class="auth-divider"><span>Or continue with</span></div>
                 <button type="button" class="social-btn" onclick="app.signInWithGoogle()" style="width: 100%;">
-                    <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
+                    <span style="font-size: 1.2rem;">🔵</span> Google
                 </button>
                 
-                <div style="margin-top: 16px; text-align: center;">
-                    <div style="display: flex; align-items: center; margin-bottom: 16px;">
-                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-                        <div style="padding: 0 12px; color: var(--text-light); font-size: 0.85rem;">Or browse</div>
-                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-                    </div>
-                </div>
-                <button type="button" class="btn-submit" onclick="app.continueAsGuest()" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none;">
-                    <span style="font-size: 1.2rem; margin-right: 8px;">👤</span> Continue as Guest
+                <div class="auth-divider"><span>Or browse</span></div>
+                <button type="button" class="btn-submit" onclick="app.continueAsGuest()" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #6366f1);">
+                    <span style="font-size: 1.2rem;">👤</span> Continue as Guest
                 </button>
             </form>
         </div>
@@ -120,66 +110,108 @@
                 
                 <button type="submit" class="btn-submit" id="signupBtn">
                     <span class="signup-btn-text">Create Account</span>
-                    <span class="signup-spinner" style="display: none; margin-left: 8px;">⏳</span>
-                </button>
-                <div style="margin-top: 20px; text-align: center;">
-                    <div style="display: flex; align-items: center; margin-bottom: 16px;">
-                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-                        <div style="padding: 0 12px; color: var(--text-light); font-size: 0.85rem;">Or sign up with</div>
-                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-                    </div>
-                </div>
-                <button type="button" class="social-btn" onclick="app.signInWithGoogle()" style="width: 100%;">
-                    <span style="font-size: 1.2rem; margin-right: 8px;">🔵</span> Google
+                    <span class="signup-spinner" style="display: none;">⏳</span>
                 </button>
                 
-                <div style="margin-top: 16px; text-align: center;">
-                    <div style="display: flex; align-items: center; margin-bottom: 16px;">
-                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-                        <div style="padding: 0 12px; color: var(--text-light); font-size: 0.85rem;">Or browse</div>
-                        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-                    </div>
-                </div>
-                <button type="button" class="btn-submit" onclick="app.continueAsGuest()" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #6366f1); border: none;">
-                    <span style="font-size: 1.2rem; margin-right: 8px;">👤</span> Continue as Guest
+                <div class="auth-divider"><span>Or sign up with</span></div>
+                <button type="button" class="social-btn" onclick="app.signInWithGoogle()" style="width: 100%;">
+                    <span style="font-size: 1.2rem;">🔵</span> Google
+                </button>
+                
+                <div class="auth-divider"><span>Or browse</span></div>
+                <button type="button" class="btn-submit" onclick="app.continueAsGuest()" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #6366f1);">
+                    <span style="font-size: 1.2rem;">👤</span> Continue as Guest
                 </button>
             </form>
         </div>
     </div>
 </div>
 
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="forgotPasswordModal" style="display:none;">
+    <div class="modal" style="max-width:400px;">
+        <div class="modal-close"><button onclick="app.closeForgotPasswordModal()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;">Reset Password</h2>
+        <p style="color:var(--text-light);margin-bottom:16px;">Enter your email to receive a password reset link.</p>
+        <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="forgotPasswordEmail" placeholder="your@email.com" required>
+        </div>
+        <button type="button" class="btn-submit" onclick="app.sendPasswordReset()">Send Reset Link</button>
+        <button type="button" class="btn-submit" onclick="app.closeForgotPasswordModal()" style="background:var(--light);color:var(--text);margin-top:8px;">Cancel</button>
+    </div>
+</div>
+
 <!-- MAIN APP -->
 <div class="main-app" id="mainApp">
+    <!-- APP HEADER -->
     <div class="app-header">
         <div class="header-left">
             <div id="storiesList"></div>
             <h1 class="header-title">CHICHI</h1>
         </div>
         
-        <div class="header-right">
-            <button class="header-icon" data-open-unread-modal title="Unread Messages" style="position: relative;">
-                🔔
-                <span class="unread-badge" style="display: none; position: absolute; top: -5px; right: -5px; background: #FF6B6B; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; display: flex; align-items: center; justify-content: center;">0</span>
-            </button>
-            <button class="header-icon" data-open-favorites-modal title="Favorites">❤️</button>
-            <button class="header-icon" onclick="app.logout()">👤</button>
-            <button class="header-icon" onclick="app.toggleAdminModal()">⚙️</button>
+        <div class="header-actions">
+            <button class="btn-icon" onclick="app.showHeaderMenu()">☰</button>
         </div>
     </div>
 
-    <div class="app-container">
-        <div class="sidebar">
+    <!-- APP CONTENT -->
+    <div class="app-content" id="appContent">
+        
+        <!-- FEED VIEW -->
+        <div class="view" id="feedView">
+            <div id="feedContainer"></div>
+        </div>
+
+        <!-- EXPLORE VIEW -->
+        <div class="view" id="exploreView">
+            <div id="exploreContainer"></div>
+        </div>
+
+        <!-- MESSAGES VIEW -->
+        <div class="view" id="messagesView">
+            <div class="messages-header">
+                <h2>Messages</h2>
+                <div class="messages-controls">
+                    <button class="icon-btn" onclick="app.showNotificationsTab()" title="Notifications">🔔</button>
+                    <button class="icon-btn" onclick="app.showFavoritesModal()" title="Favorites">❤️</button>
+                </div>
+            </div>
+            <div id="messagesFilterTabs" style="display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;">
+                <button class="message-filter-tab active" onclick="app.filterMessages('all')">All</button>
+                <button class="message-filter-tab" onclick="app.filterMessages('unread')">Unread</button>
+                <button class="message-filter-tab" onclick="app.filterMessages('favorites')">Favorites</button>
+            </div>
+            <div class="messages-container" id="messageList"></div>
+        </div>
+
+        <!-- EARN VIEW -->
+        <div class="view" id="earnView">
+            <div id="earnContainer"></div>
+        </div>
+
+        <!-- PROFILE VIEW -->
+        <div class="view" id="profileView">
+            <div id="profileContent"></div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <div class="bottom-nav">
+        <div class="nav-wrapper">
             <button class="nav-item active" onclick="app.switchView('feed')">
                 <span class="nav-icon">🏠</span>
                 <span class="nav-label">Feed</span>
             </button>
-            <button class="nav-item" onclick="app.switchView('discover')">
+            <button class="nav-item" onclick="app.switchView('explore')">
                 <span class="nav-icon">🔍</span>
-                <span class="nav-label">Discover</span>
+                <span class="nav-label">Explore</span>
             </button>
-            <button class="nav-item" onclick="app.switchView('messages')">
+            <button class="nav-item" onclick="app.switchView('messages')" id="messagesNavBtn">
                 <span class="nav-icon">💬</span>
                 <span class="nav-label">Messages</span>
+                <span class="nav-badge" id="messagesBadge" style="display:none;">0</span>
             </button>
             <button class="nav-item" onclick="app.switchView('earn')">
                 <span class="nav-icon">💰</span>
@@ -190,154 +222,51 @@
                 <span class="nav-label">Profile</span>
             </button>
         </div>
-
-        <div class="main-content">
-            <!-- FEED VIEW -->
-            <div class="view feed-view" id="feedView" style="display: flex;">
-                <div class="feed-container">
-                    <div id="postsFeed"></div>
-                </div>
-            </div>
-
-            <!-- DISCOVER VIEW -->
-            <div class="view discover-view" id="discoverView">
-                <div class="discover-header">
-                    <h2>Discover</h2>
-                    <button class="refresh-btn" data-refresh-button title="Refresh">🔄</button>
-                </div>
-                <div id="discoverContainer"></div>
-            </div>
-
-            <!-- MESSAGES VIEW -->
-            <div class="view messages-view" id="messagesView">
-                <div class="messages-container">
-                    <div class="messages-list">
-                        <div class="messages-header">
-                            <h2>Messages</h2>
-                            <div class="messages-controls">
-                                <button data-open-unread-modal class="icon-btn" title="Unread">🔔</button>
-                                <button data-open-favorites-modal class="icon-btn" title="Favorites">❤️</button>
-                            </div>
-                        </div>
-                        <div id="chatsList"></div>
-                    </div>
-                    <div class="messages-chat">
-                        <div class="chat-empty">Select a conversation</div>
-                        <div id="chatContainer" style="display: none; flex: 1; display: flex; flex-direction: column;">
-                            <div class="chat-header" id="chatHeader">
-                                <div class="chat-info">
-                                    <h3 id="chatName"></h3>
-                                </div>
-                                <button class="voice-call-btn" data-start-voice-call title="Start voice call">📞</button>
-                            </div>
-                            <div id="messagesContainer"></div>
-                            <div class="chat-input">
-                                <input type="text" id="messageInput" placeholder="Type a message..." />
-                                <button onclick="app.sendMessage()">Send</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- EARN VIEW -->
-            <div class="view earn-view" id="earnView">
-                <div class="earn-content">
-                    <h2>Earn Coins</h2>
-                    
-                    <!-- Trivia Section -->
-                    <div class="trivia-section">
-                        <h3>Daily Trivia</h3>
-                        <p>Answer questions and earn coins!</p>
-                        <button class="circle-start-button" data-start-trivia>
-                            <div class="circle-pulse"></div>
-                            <span>START</span>
-                        </button>
-                    </div>
-
-                    <!-- Gift Cards Auto-Scroll -->
-                    <div class="gift-cards-section">
-                        <h3>Gift Cards</h3>
-                        <div data-gift-cards-scroll class="gift-cards-container">
-                            <div class="gift-card">
-                                <span class="gift-card-value">100</span>
-                                <span class="gift-card-label">Coins</span>
-                            </div>
-                            <div class="gift-card">
-                                <span class="gift-card-value">500</span>
-                                <span class="gift-card-label">Coins</span>
-                            </div>
-                            <div class="gift-card">
-                                <span class="gift-card-value">1000</span>
-                                <span class="gift-card-label">Coins</span>
-                            </div>
-                            <div class="gift-card">
-                                <span class="gift-card-value">5000</span>
-                                <span class="gift-card-label">Coins</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="earnContainer"></div>
-                </div>
-            </div>
-
-            <!-- PROFILE VIEW -->
-            <div class="view profile-view" id="profileView">
-                <div class="profile-content">
-                    <div data-profile-photo class="circular-photo-container">
-                        <img id="profilePhoto" src="" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
-                    </div>
-                    
-                    <h2 id="profileName"></h2>
-                    <p id="profileUsername" style="color: var(--text-light); font-size: 0.9rem;"></p>
-                    
-                    <button class="refresh-btn" data-refresh-button title="Refresh">🔄</button>
-                    
-                    <!-- Interests Section -->
-                    <div class="profile-interests">
-                        <h3>Interests</h3>
-                        <div class="interests-input-group">
-                            <input 
-                                type="text" 
-                                data-interests-input 
-                                placeholder="Add an interest..."
-                                autocomplete="off"
-                            >
-                        </div>
-                        <div data-interests-tags class="interests-tags"></div>
-                    </div>
-
-                    <div id="profileContainer"></div>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
-<!-- POST CREATE MODAL -->
-<div class="modal-overlay" id="postCreateModal">
-    <div class="modal">
-        <div class="modal-close"><button onclick="app.closeCreatePostModal()">✕</button></div>
-        <h2>Create Post</h2>
-        <div id="postPreview" style="margin-bottom:16px;max-height:300px;overflow:hidden;border-radius:12px;background:var(--light);"></div>
-        <input type="file" id="photoInput" accept="image/*" onchange="app.previewPhoto()" style="display:none;">
+<!-- CHAT VIEW (Overlay) -->
+<div id="chatView" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;background:white;flex-direction:column;">
+    <div id="chatHeader">
+        <button id="chatBackBtn" onclick="app.closeChatView()">←</button>
+        <div id="chatHeaderAvatar">👤</div>
+        <div>
+            <div id="chatHeaderName">User</div>
+            <div id="chatHeaderStatus">Online</div>
+        </div>
+        <button id="chatMenuBtn" onclick="app.showChatMenu()">⋯</button>
+    </div>
+    <div id="chatMessages"></div>
+    <div id="chatInput">
+        <button class="attach-btn" onclick="app.attachImageToChat()">📎</button>
+        <input type="text" id="chatMessageInput" placeholder="Type a message...">
+        <button id="chatSendBtn" onclick="app.sendChatMessage()">➤</button>
+    </div>
+</div>
+
+<!-- CREATE POST MODAL -->
+<div class="modal-overlay" id="createModal" style="display:none;">
+    <div class="create-modal">
+        <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;">Create Post</h2>
+        <div id="photoPreview"></div>
+        <input type="file" id="photoInput" accept="image/*" style="display:none;">
         <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">
             📷 Choose Photo
         </button>
-        <textarea id="captionInput" placeholder="Write a caption..."></textarea>
+        <textarea id="captionInput" placeholder="Write a caption..." rows="3"></textarea>
         <button type="button" class="btn-submit" id="sharePostBtn" onclick="app.createPost()">
             <span class="share-btn-text">Share Post</span>
-            <span class="share-spinner" style="display: none; margin-left: 8px;">⏳</span>
+            <span class="share-spinner" style="display:none;">⏳</span>
         </button>
     </div>
 </div>
 
 <!-- ADMIN MODAL -->
-<div class="modal-overlay" id="adminModal">
-    <div class="modal" style="max-width:600px;">
+<div class="modal-overlay" id="adminModal" style="display:none;">
+    <div class="modal" style="max-width:400px;">
         <div class="modal-close"><button onclick="app.closeAdminModal()">✕</button></div>
-        <h2 style="font-weight:700;margin-bottom:16px;">Admin Panel</h2>
+        <h2 style="font-weight:700;margin-bottom:16px;">Admin Access</h2>
         <div class="form-group">
             <label class="form-label">Admin Password</label>
             <input type="password" id="adminPassword" class="form-input" placeholder="Enter password">
@@ -360,68 +289,61 @@
         <button class="admin-tab" onclick="app.switchAdminTab('analytics')">📈 Analytics</button>
         <button class="admin-tab" onclick="app.switchAdminTab('gifts')">🎁 Gifts</button>
         <button class="admin-tab" onclick="app.switchAdminTab('notifications')">🔔 Notifications</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('suspicious')">🚨 Suspicious</button>
         <button class="admin-tab" onclick="app.switchAdminTab('logs')">📋 Logs</button>
     </div>
     <div class="admin-content">
+        <!-- Dashboard -->
         <div class="admin-tab-content active" id="adminDashboard">
             <div class="admin-stat-grid">
-                <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminUserCount">0</div>
-                    <div class="admin-stat-label">Users</div>
-                </div>
-                <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminPostCount">0</div>
-                    <div class="admin-stat-label">Posts</div>
-                </div>
-                <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminSignupCount">0</div>
-                    <div class="admin-stat-label">Today's Signups</div>
-                </div>
-                <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminBannedCount">0</div>
-                    <div class="admin-stat-label">Banned Users</div>
-                </div>
-                <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminTotalEarned">0</div>
-                    <div class="admin-stat-label">💰 Coins Earned</div>
-                </div>
-                <div class="admin-stat">
-                    <div class="admin-stat-value" id="adminTotalSpent">0</div>
-                    <div class="admin-stat-label">🎁 Coins Spent</div>
-                </div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminUserCount">0</div><div class="admin-stat-label">Users</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminPostCount">0</div><div class="admin-stat-label">Posts</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminSignupCount">0</div><div class="admin-stat-label">Today's Signups</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminBannedCount">0</div><div class="admin-stat-label">Banned Users</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalEarned">0</div><div class="admin-stat-label">💰 Coins Earned</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalSpent">0</div><div class="admin-stat-label">🎁 Coins Spent</div></div>
             </div>
         </div>
         
+        <!-- Users -->
         <div class="admin-tab-content" id="adminUsers">
             <div style="margin-bottom:16px;">
-                <input type="text" id="userSearchInput" placeholder="Search by name, email, or #hashtag..." class="form-input" onkeyup="app.searchUsers(this.value)" style="background: white; border: 2px solid #e5e7eb; padding: 12px; border-radius: 10px; font-size: 14px; transition: 0.2s;" onfocus="this.style.borderColor='#0088cc'; this.style.boxShadow='0 0 0 3px rgba(0,136,204,0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                <input type="text" id="userSearchInput" placeholder="Search users..." class="form-input" onkeyup="app.searchUsers(this.value)">
             </div>
             <div id="adminUsersList"></div>
         </div>
         
+        <!-- Incomplete Users -->
         <div class="admin-tab-content" id="adminIncomplete">
-            <div style="margin-bottom: 16px; padding: 12px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                <div style="font-size: 14px; color: #92400e;">⚠️ Users who signed up but haven't completed their profile</div>
-            </div>
             <div id="incompleteUsersList"></div>
         </div>
         
+        <!-- Posts -->
         <div class="admin-tab-content" id="adminPosts">
             <div id="adminPostsList"></div>
         </div>
         
+        <!-- Analytics -->
         <div class="admin-tab-content" id="adminAnalytics">
             <div id="adminAnalytics"></div>
         </div>
         
+        <!-- Gifts -->
         <div class="admin-tab-content" id="adminGifts">
             <div id="adminGifts"></div>
         </div>
         
+        <!-- Notifications -->
         <div class="admin-tab-content" id="adminNotificationsTab">
             <div id="adminNotificationsList"></div>
         </div>
         
+        <!-- Suspicious Activity -->
+        <div class="admin-tab-content" id="adminSuspicious">
+            <div id="suspiciousActivityList"></div>
+        </div>
+        
+        <!-- Logs -->
         <div class="admin-tab-content" id="adminLogs">
             <div id="activityLogList"></div>
         </div>
@@ -443,20 +365,22 @@
     </div>
 </div>
 
+<!-- TOAST CONTAINER -->
+<div id="toastContainer"></div>
+
 <!-- APP JS -->
-<script src="/js/app.js"></script>
+<script src="js/app.js"></script>
 
 <script>
-    // Wait for Firebase and config to load, then init app
+    // Auto-init when Firebase is ready
     document.addEventListener('DOMContentLoaded', function() {
-        // Check if Firebase is ready
         if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
             console.log('✅ Firebase ready, starting app...');
             if (typeof app !== 'undefined' && app.init) {
                 app.init();
             }
         } else {
-            console.log('⏳ Waiting for Firebase to load...');
+            console.log('⏳ Waiting for Firebase...');
             var checkFirebase = setInterval(function() {
                 if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
                     clearInterval(checkFirebase);
@@ -467,10 +391,9 @@
                 }
             }, 500);
             
-            // Timeout after 10 seconds
             setTimeout(function() {
                 clearInterval(checkFirebase);
-                console.warn('⚠️ Firebase took too long to load, trying anyway...');
+                console.warn('⚠️ Firebase timeout, trying anyway...');
                 if (typeof app !== 'undefined' && app.init) {
                     app.init();
                 }
