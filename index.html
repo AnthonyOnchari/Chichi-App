@@ -246,7 +246,19 @@
 
         <!-- EXPLORE VIEW -->
         <div class="view" id="exploreView">
-            <div id="exploreContainer"></div>
+            <div id="exploreContainer" style="padding: 20px;">
+                <!-- Trending Hashtags Section -->
+                <div style="margin-bottom: 32px;">
+                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">🔥 Trending Now</h2>
+                    <div id="trendingHashtagsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;"></div>
+                </div>
+
+                <!-- Trending Posts Section -->
+                <div>
+                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">📱 Most Liked</h2>
+                    <div id="trendingPostsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+                </div>
+            </div>
         </div>
 
         <!-- MESSAGES VIEW -->
