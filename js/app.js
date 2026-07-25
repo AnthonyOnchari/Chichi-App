@@ -982,8 +982,8 @@ var app = {
     },
 
     switchAdminTab: function(tab) {
-        document.querySelectorAll('.admin-tab').forEach(function(t) { t.classList.remove('active'); });
-        document.querySelectorAll('.admin-tab-content').forEach(function(c) { c.classList.remove('active'); });
+        document.querySelectorAll('.admin-tab').forEach(function(t) { if (t && t.classList) t.classList.remove('active'); });
+        document.querySelectorAll('.admin-tab-content').forEach(function(c) { if (c && c.classList) c.classList.remove('active'); });
        
         var buttons = document.querySelectorAll('.admin-tab');
         var tabMap = ['dashboard', 'users', 'incomplete', 'posts', 'analytics', 'gifts', 'notifications', 'logs'];
@@ -2436,7 +2436,7 @@ var app = {
                 setTimeout(function() { self.trackUnreadMessages(); }, 100);
             }
            
-            if (document.getElementById('exploreView').classList.contains('active')) {
+            var exploreView = document.getElementById('exploreView'); if (exploreView && exploreView.classList.contains('active')) {
                 self.loadExplore();
             }
         });
@@ -6055,8 +6055,8 @@ var app = {
     // ============================================
 
     switchTab: function(tab) {
-        document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-        document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+        document.querySelectorAll('.tab').forEach(function(t) { if (t && t.classList) t.classList.remove('active'); });
+        document.querySelectorAll('.tab-content').forEach(function(c) { if (c && c.classList) c.classList.remove('active'); });
         document.querySelector('[onclick="app.switchTab(\'' + tab + '\')"]').classList.add('active');
         document.getElementById(tab + 'Tab').classList.add('active');
     },
@@ -6097,7 +6097,7 @@ var app = {
             chatView.style.zIndex = '';
         }
        
-        document.querySelectorAll('.nav-wrapper > .nav-item').forEach(function(n) { n.classList.remove('active'); });
+        document.querySelectorAll('.nav-wrapper > .nav-item').forEach(function(n) { if (n && n.classList) n.classList.remove('active'); });
        
         var viewElement = document.getElementById(view + 'View');
         if (viewElement) {
@@ -6127,11 +6127,11 @@ var app = {
         }
 
         var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
-        if (view === 'feed') navItems[0].classList.add('active');
-        else if (view === 'explore') navItems[1].classList.add('active');
-        else if (view === 'messages') navItems[2].classList.add('active');
-        else if (view === 'earn') navItems[3].classList.add('active');
-        else if (view === 'profile') navItems[4].classList.add('active');
+        if (view === 'feed' && navItems[0]) navItems[0].classList.add('active');
+        else if (view === 'explore' && navItems[1]) navItems[1].classList.add('active');
+        else if (view === 'messages' && navItems[2]) navItems[2].classList.add('active');
+        else if (view === 'earn' && navItems[3]) navItems[3].classList.add('active');
+        else if (view === 'profile' && navItems[4]) navItems[4].classList.add('active');
     },
 
     // ============================================
