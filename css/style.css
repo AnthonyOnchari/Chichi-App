@@ -1,3 +1,4 @@
+/* ===== ORIGINAL CHICHI CSS ===== */
 /* ============================================
    CHICHI - COMPLETE CSS (ALL FIXES APPLIED)
    ============================================ */
@@ -3904,6 +3905,211 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
         box-shadow: 0 0 0 8px rgba(0, 136, 204, 0);
     }
 }
+/* ===== OVERRIDE: COMPACT DARK AUTH PAGE ===== */
+
+.auth-page {
+    display: flex !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0a0a0a;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 9998;
+}
+
+.auth-card {
+    background: #1a1a1a;
+    border-radius: 24px;
+    padding: 24px;
+    max-width: 360px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.auth-header h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 4px 0;
+}
+
+.auth-header p {
+    color: #999;
+    font-size: 12px;
+    margin: 0;
+}
+
+.tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+    background: #262626;
+    padding: 4px;
+    border-radius: 12px;
+}
+
+.tab {
+    flex: 1;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    color: #666;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.3s;
+    font-family: inherit;
+}
+
+.tab.active {
+    background: #333;
+    color: #fff;
+}
+
+.tab:hover {
+    color: #999;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-label {
+    display: block;
+    color: #999;
+    font-size: 10px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: #262626;
+    border: 1px solid #333;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 12px;
+    font-family: inherit;
+    transition: all 0.3s;
+}
+
+.form-input::placeholder {
+    color: #555;
+}
+
+.form-input:focus {
+    outline: none;
+    background: #2a2a2a;
+    border-color: #444;
+    box-shadow: 0 0 0 2px rgba(200, 255, 0, 0.1);
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 11px;
+    background: #c8ff00;
+    color: #0a0a0a;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: inherit;
+    margin-top: 4px;
+}
+
+.btn-submit:hover {
+    background: #deff33;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(200, 255, 0, 0.3);
+}
+
+.btn-submit:active {
+    transform: translateY(0);
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0 10px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #333;
+}
+
+.auth-divider span {
+    color: #666;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.social-buttons-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.social-btn-small {
+    flex: 1;
+    padding: 8px;
+    background: #262626;
+    border: 1px solid #333;
+    border-radius: 10px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    height: 40px;
+}
+
+.social-btn-small:hover {
+    background: #333;
+    border-color: #444;
+    transform: translateY(-2px);
+}
+
+.social-btn-small:active {
+    transform: translateY(0);
+}
+
+.social-btn-small svg {
+    width: 18px;
+    height: 18px;
+    color: #fff;
+}
+
 /* ===== FAB BUTTON ===== */
 .fab-button {
     position: absolute;
@@ -3935,7 +4141,6 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     transform: scale(0.95);
 }
 
-/* Header Menu */
 .header-menu {
     position: absolute;
     top: 100%;
@@ -3973,295 +4178,39 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 }
 
 @media (max-width: 480px) {
+    .auth-card {
+        padding: 18px;
+    }
+
+    .auth-header h1 {
+        font-size: 20px;
+    }
+
+    .form-input {
+        padding: 8px 10px;
+        font-size: 11px;
+    }
+
+    .btn-submit {
+        padding: 9px;
+        font-size: 12px;
+    }
+
+    .social-btn-small {
+        height: 36px;
+        padding: 6px;
+    }
+
+    .social-btn-small svg {
+        width: 16px;
+        height: 16px;
+    }
+
     .fab-button {
         width: 48px;
         height: 48px;
         font-size: 20px;
         bottom: 70px;
         right: 12px;
-    }
-}
-
-/* ===== DARK MODE AUTH PAGE ===== */
-
-/* Auth Page Container */
-.auth-page {
-    display: flex !important;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #0a0a0a;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    z-index: 9998;
-}
-
-.auth-page.show {
-    display: flex !important;
-}
-
-/* Auth Card */
-.auth-card {
-    background: #1a1a1a;
-    border-radius: 24px;
-    padding: 32px;
-    max-width: 420px;
-    width: 100%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
-
-/* Auth Header */
-.auth-header {
-    text-align: center;
-    margin-bottom: 32px;
-}
-
-.auth-header h1 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 32px;
-    font-weight: 800;
-    color: #ffffff;
-    margin: 0 0 8px 0;
-    letter-spacing: -0.5px;
-}
-
-.auth-header p {
-    color: #999;
-    font-size: 14px;
-    margin: 0;
-}
-
-/* Tabs */
-.tabs {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 28px;
-    background: #262626;
-    padding: 4px;
-    border-radius: 12px;
-}
-
-.tab {
-    flex: 1;
-    padding: 10px 16px;
-    background: none;
-    border: none;
-    color: #666;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 10px;
-    transition: all 0.3s;
-    font-family: inherit;
-}
-
-.tab.active {
-    background: #333;
-    color: #fff;
-}
-
-.tab:hover {
-    color: #999;
-}
-
-/* Tab Content */
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* Form Group */
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-label {
-    display: block;
-    color: #999;
-    font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.form-input {
-    width: 100%;
-    padding: 14px 16px;
-    background: #262626;
-    border: 1px solid #333;
-    border-radius: 12px;
-    color: #fff;
-    font-size: 14px;
-    font-family: inherit;
-    transition: all 0.3s;
-}
-
-.form-input::placeholder {
-    color: #555;
-}
-
-.form-input:focus {
-    outline: none;
-    background: #2a2a2a;
-    border-color: #444;
-    box-shadow: 0 0 0 2px rgba(200, 255, 0, 0.1);
-}
-
-/* Submit Button */
-.btn-submit {
-    width: 100%;
-    padding: 14px;
-    background: #c8ff00;
-    color: #0a0a0a;
-    border: none;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 15px;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-family: inherit;
-    margin-top: 8px;
-}
-
-.btn-submit:hover {
-    background: #deff33;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(200, 255, 0, 0.3);
-}
-
-.btn-submit:active {
-    transform: translateY(0);
-}
-
-/* Auth Divider */
-.auth-divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 24px 0 16px 0;
-}
-
-.auth-divider::before,
-.auth-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: #333;
-}
-
-.auth-divider span {
-    color: #666;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-/* Social Button */
-.social-btn {
-    width: 100%;
-    padding: 12px 16px;
-    background: #262626;
-    color: #fff;
-    border: 1px solid #333;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-family: inherit;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.social-btn:hover {
-    background: #333;
-    border-color: #444;
-}
-
-/* Forgot Password */
-a[onclick*="showForgotPasswordModal"] {
-    color: #c8ff00 !important;
-    transition: color 0.2s;
-}
-
-a[onclick*="showForgotPasswordModal"]:hover {
-    color: #deff33 !important;
-}
-
-/* Loading Spinner */
-#loadingScreen {
-    background: #0a0a0a;
-}
-
-.loading-text {
-    color: #fff;
-    font-size: 16px;
-    font-weight: 600;
-}
-
-/* Modal Overlay */
-.modal-overlay {
-    background: rgba(0, 0, 0, 0.8);
-}
-
-.modal {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-.modal h2 {
-    color: #fff;
-}
-
-.modal p {
-    color: #999;
-}
-
-/* Consent Banner */
-.consent-banner {
-    background: #1a1a1a;
-    border-top: 1px solid #333;
-    color: #999;
-}
-
-.consent-btn {
-    background: #262626;
-    color: #fff;
-    border: 1px solid #333;
-}
-
-.consent-btn-accept {
-    background: #c8ff00;
-    color: #0a0a0a;
-    border: none;
-}
-
-@media (max-width: 480px) {
-    .auth-card {
-        padding: 24px;
-        border-radius: 20px;
-    }
-
-    .auth-header h1 {
-        font-size: 24px;
-    }
-
-    .form-input {
-        padding: 12px 14px;
-        font-size: 13px;
-    }
-
-    .btn-submit {
-        padding: 12px;
-        font-size: 14px;
     }
 }
