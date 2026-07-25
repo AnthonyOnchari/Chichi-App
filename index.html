@@ -48,7 +48,7 @@
     <div class="auth-card">
         <div class="auth-header">
             <h1>CHICHI</h1>
-            <p style="color: var(--text-light); margin: 0;">Social Media</p>
+            <p>Social Media</p>
         </div>
 
         <div class="tabs">
@@ -61,29 +61,38 @@
             <form onsubmit="app.handleLogin(event)">
                 <div class="form-group">
                     <label class="form-label">Email or Username</label>
-                    <input type="text" class="form-input" id="loginEmail" placeholder="@username or email" required>
+                    <input type="text" class="form-input" id="loginEmail" placeholder="Email address" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Password</label>
-                    <input type="password" class="form-input" id="loginPassword" placeholder="••••••" required>
+                    <input type="password" class="form-input" id="loginPassword" placeholder="Password" required>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 13px;">
+                    <label style="display: flex; align-items: center; gap: 6px; color: #999; cursor: pointer;">
+                        <input type="checkbox" style="width: 16px; height: 16px; cursor: pointer;">
+                        Remember me
+                    </label>
+                    <a href="#" onclick="app.showForgotPasswordModal(); return false;" style="color: #c8ff00; text-decoration: none; font-weight: 600;">Forgot Password?</a>
                 </div>
                 <button type="submit" class="btn-submit" id="loginBtn">
-                    <span class="login-btn-text">Login</span>
+                    <span class="login-btn-text">Log in</span>
                     <span class="login-spinner" style="display: none;">⏳</span>
                 </button>
-                <div style="text-align: center; margin-top: 12px;">
-                    <a href="#" onclick="app.showForgotPasswordModal(); return false;" style="color: var(--primary); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Forgot Password?</a>
-                </div>
                 
                 <div class="auth-divider"><span>Or continue with</span></div>
-                <button type="button" class="social-btn" onclick="app.signInWithGoogle()" style="width: 100%;">
+                <button type="button" class="social-btn" onclick="app.signInWithGoogle()">
                     <span style="font-size: 1.2rem;">🔵</span> Google
                 </button>
-                
-                <div class="auth-divider"><span>Or browse</span></div>
-                <button type="button" class="btn-submit" onclick="app.continueAsGuest()" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #6366f1);">
-                    <span style="font-size: 1.2rem;">👤</span> Continue as Guest
+                <button type="button" class="social-btn" onclick="app.signInWithGoogle()">
+                    <span style="font-size: 1.2rem;">🍎</span> Apple
                 </button>
+                <button type="button" class="social-btn" onclick="app.signInWithGoogle()">
+                    <span style="font-size: 1.2rem;">📘</span> Facebook
+                </button>
+                
+                <div style="text-align: center; margin-top: 20px; font-size: 13px; color: #666;">
+                    New to CHICHI? <a href="#" onclick="app.switchTab('signup'); return false;" style="color: #c8ff00; text-decoration: none; font-weight: 600;">Sign up</a>
+                </div>
             </form>
         </div>
 
@@ -97,15 +106,15 @@
                 <div class="form-group">
                     <label class="form-label">Username</label>
                     <input type="text" class="form-input" id="signupUsername" placeholder="@username" required>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">3-20 characters, letters and numbers only</div>
+                    <div style="font-size: 11px; color: #666; margin-top: 6px;">3-20 characters, letters and numbers only</div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Email</label>
+                    <label class="form-label">Email Address</label>
                     <input type="email" class="form-input" id="signupEmail" placeholder="your@email.com" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Password</label>
-                    <input type="password" class="form-input" id="signupPassword" placeholder="Min 6 chars" required>
+                    <input type="password" class="form-input" id="signupPassword" placeholder="Min 6 characters" required>
                 </div>
                 
                 <button type="submit" class="btn-submit" id="signupBtn">
@@ -114,14 +123,23 @@
                 </button>
                 
                 <div class="auth-divider"><span>Or sign up with</span></div>
-                <button type="button" class="social-btn" onclick="app.signInWithGoogle()" style="width: 100%;">
+                <button type="button" class="social-btn" onclick="app.signInWithGoogle()">
                     <span style="font-size: 1.2rem;">🔵</span> Google
                 </button>
-                
-                <div class="auth-divider"><span>Or browse</span></div>
-                <button type="button" class="btn-submit" onclick="app.continueAsGuest()" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #6366f1);">
-                    <span style="font-size: 1.2rem;">👤</span> Continue as Guest
+                <button type="button" class="social-btn" onclick="app.signInWithGoogle()">
+                    <span style="font-size: 1.2rem;">🍎</span> Apple
                 </button>
+                <button type="button" class="social-btn" onclick="app.signInWithGoogle()">
+                    <span style="font-size: 1.2rem;">📘</span> Facebook
+                </button>
+                
+                <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #666;">
+                    Already have an account? <a href="#" onclick="app.switchTab('login'); return false;" style="color: #c8ff00; text-decoration: none; font-weight: 600;">Log in</a>
+                </div>
+                
+                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #333; font-size: 11px; color: #666; text-align: center;">
+                    By signing up you agree to our <a href="#" style="color: #c8ff00; text-decoration: none;">Terms of Service</a> and <a href="#" style="color: #c8ff00; text-decoration: none;">Privacy Policy</a>
+                </div>
             </form>
         </div>
     </div>
@@ -152,7 +170,12 @@
         </div>
         
         <div class="header-actions">
-            <button class="btn-icon" onclick="app.showHeaderMenu()">☰</button>
+            <button class="btn-icon" id="headerMenuBtn" onclick="app.showHeaderMenu()">☰</button>
+            <div class="header-menu" id="headerMenu" style="display:none;position:absolute;top:100%;right:0;background:white;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.15);min-width:180px;z-index:1000;">
+                <button onclick="app.switchView('profile')" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;">👤 Profile</button>
+                <button onclick="app.toggleAdminModal()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-top:1px solid #e5e7eb;">⚙️ Admin</button>
+                <button onclick="app.showLogout()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-top:1px solid #e5e7eb;border-radius:0 0 12px 12px;">🚪 Logout</button>
+            </div>
         </div>
     </div>
 
@@ -222,6 +245,8 @@
                 <span class="nav-label">Profile</span>
             </button>
         </div>
+        <!-- FAB BUTTON -->
+        <button class="fab-button" onclick="app.openCreateModal()" title="Create Post">+</button>
     </div>
 </div>
 

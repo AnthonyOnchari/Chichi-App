@@ -982,8 +982,8 @@ var app = {
     },
 
     switchAdminTab: function(tab) {
-        document.querySelectorAll('.admin-tab').forEach(function(t) { t.classList.remove('active'); });
-        document.querySelectorAll('.admin-tab-content').forEach(function(c) { c.classList.remove('active'); });
+        document.querySelectorAll('.admin-tab').forEach(function(t) { if (t && t.classList) t.classList.remove('active'); });
+        document.querySelectorAll('.admin-tab-content').forEach(function(c) { if (c && c.classList) c.classList.remove('active'); });
        
         var buttons = document.querySelectorAll('.admin-tab');
         var tabMap = ['dashboard', 'users', 'incomplete', 'posts', 'analytics', 'gifts', 'notifications', 'logs'];
@@ -2436,7 +2436,7 @@ var app = {
                 setTimeout(function() { self.trackUnreadMessages(); }, 100);
             }
            
-            if (document.getElementById('exploreView').classList.contains('active')) {
+            var exploreView = document.getElementById('exploreView'); if (exploreView && exploreView.classList.contains('active')) {
                 self.loadExplore();
             }
         });
@@ -6055,8 +6055,8 @@ var app = {
     // ============================================
 
     switchTab: function(tab) {
-        document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-        document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+        document.querySelectorAll('.tab').forEach(function(t) { if (t && t.classList) t.classList.remove('active'); });
+        document.querySelectorAll('.tab-content').forEach(function(c) { if (c && c.classList) c.classList.remove('active'); });
         document.querySelector('[onclick="app.switchTab(\'' + tab + '\')"]').classList.add('active');
         document.getElementById(tab + 'Tab').classList.add('active');
     },
@@ -6097,7 +6097,7 @@ var app = {
             chatView.style.zIndex = '';
         }
        
-        document.querySelectorAll('.nav-wrapper > .nav-item').forEach(function(n) { n.classList.remove('active'); });
+        document.querySelectorAll('.nav-wrapper > .nav-item').forEach(function(n) { if (n && n.classList) n.classList.remove('active'); });
        
         var viewElement = document.getElementById(view + 'View');
         if (viewElement) {
@@ -6127,11 +6127,11 @@ var app = {
         }
 
         var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
-        if (view === 'feed') navItems[0].classList.add('active');
-        else if (view === 'explore') navItems[1].classList.add('active');
-        else if (view === 'messages') navItems[2].classList.add('active');
-        else if (view === 'earn') navItems[3].classList.add('active');
-        else if (view === 'profile') navItems[4].classList.add('active');
+        if (view === 'feed' && navItems[0]) navItems[0].classList.add('active');
+        else if (view === 'explore' && navItems[1]) navItems[1].classList.add('active');
+        else if (view === 'messages' && navItems[2]) navItems[2].classList.add('active');
+        else if (view === 'earn' && navItems[3]) navItems[3].classList.add('active');
+        else if (view === 'profile' && navItems[4]) navItems[4].classList.add('active');
     },
 
     // ============================================
@@ -8353,7 +8353,753 @@ var app = {
 };
 
 // ============================================
-// INITIALIZE APP
+// CHICHI FEATURE MODULES EMBEDDED
+// ============================================
+
+// ===== MESSAGES MODULE =====
+const messagesModule = (() => {
+  let db;
+  let currentUserId;
+  let messageStates = {};
+  let favorites = new Set();
+
+  const init = (firebaseDB, userId) => {
+    db = firebaseDB;
+    currentUserId = userId;
+    loadMessageStates();
+    loadFavorites();
+    initializeMessageListeners();
+    renderUnreadBadges();
+  };
+
+  const loadMessageStates = () => {
+    db.ref(`users/${currentUserId}/messageStates`).on('value', (snapshot) => {
+      messageStates = snapshot.val() || {};
+    });
+  };
+
+  const loadFavorites = () => {
+    db.ref(`users/${currentUserId}/favorites`).on('value', (snapshot) => {
+      favorites = new Set(snapshot.val() || []);
+    });
+  };
+
+  const markMessageAsRead = (messageId, chatPartnerId) => {
+    messageStates[messageId] = {
+      read: true,
+      timestamp: Date.now(),
+      partnerId: chatPartnerId
+    };
+    db.ref(`users/${currentUserId}/messageStates/${messageId}`).set({
+      read: true,
+      timestamp: Date.now(),
+      partnerId: chatPartnerId
+    });
+    removeUnreadBadge(messageId);
+  };
+
+  const getUnreadCount = (chatPartnerId) => {
+    return Object.values(messageStates).filter(
+      msg => !msg.read && msg.partnerId === chatPartnerId
+    ).length;
+  };
+
+  const initializeMessageListeners = () => {
+    document.addEventListener('click', (e) => {
+      const chatItem = e.target.closest('[data-chat-partner-id]');
+      if (chatItem) {
+        const partnerId = chatItem.dataset.chatPartnerId;
+        markChatAsRead(partnerId);
+      }
+
+      const messageEl = e.target.closest('[data-message-id]');
+      if (messageEl) {
+        const messageId = messageEl.dataset.messageId;
+        const partnerId = messageEl.dataset.chatPartnerId;
+        markMessageAsRead(messageId, partnerId);
+      }
+
+      const favoriteBtn = e.target.closest('[data-toggle-favorite]');
+      if (favoriteBtn) {
+        const partnerId = favoriteBtn.dataset.toggleFavorite;
+        toggleFavorite(partnerId);
+      }
+
+      if (e.target.closest('[data-open-unread-modal]')) {
+        showUnreadModal();
+      }
+
+      if (e.target.closest('[data-open-favorites-modal]')) {
+        showFavoritesModal();
+      }
+    });
+  };
+
+  const markChatAsRead = (chatPartnerId) => {
+    Object.keys(messageStates).forEach(msgId => {
+      if (messageStates[msgId].partnerId === chatPartnerId && !messageStates[msgId].read) {
+        messageStates[msgId].read = true;
+        db.ref(`users/${currentUserId}/messageStates/${msgId}`).update({ read: true });
+      }
+    });
+    renderUnreadBadges();
+  };
+
+  const renderUnreadBadges = () => {
+    document.querySelectorAll('[data-chat-partner-id]').forEach(chatItem => {
+      const partnerId = chatItem.dataset.chatPartnerId;
+      const count = getUnreadCount(partnerId);
+      let badge = chatItem.querySelector('[data-unread-badge]');
+
+      if (count > 0) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.setAttribute('data-unread-badge', '');
+          badge.className = 'unread-badge';
+          chatItem.appendChild(badge);
+        }
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'flex';
+      } else if (badge) {
+        badge.style.display = 'none';
+      }
+    });
+  };
+
+  const removeUnreadBadge = (messageId) => {
+    const msgEl = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (msgEl) {
+      const badge = msgEl.querySelector('[data-unread-badge]');
+      if (badge) badge.style.display = 'none';
+    }
+  };
+
+  const toggleFavorite = (partnerId) => {
+    if (favorites.has(partnerId)) {
+      favorites.delete(partnerId);
+    } else {
+      favorites.add(partnerId);
+    }
+    db.ref(`users/${currentUserId}/favorites`).set(Array.from(favorites));
+    updateFavoriteButtonState(partnerId);
+  };
+
+  const updateFavoriteButtonState = (partnerId) => {
+    const favoriteBtn = document.querySelector(`[data-toggle-favorite="${partnerId}"]`);
+    if (favoriteBtn) {
+      if (favorites.has(partnerId)) {
+        favoriteBtn.classList.add('favorite-active');
+        favoriteBtn.innerHTML = '❤️';
+      } else {
+        favoriteBtn.classList.remove('favorite-active');
+        favoriteBtn.innerHTML = '🤍';
+      }
+    }
+  };
+
+  const showUnreadModal = () => {
+    const unreadMessages = Object.entries(messageStates)
+      .filter(([_, msg]) => !msg.read)
+      .map(([id, msg]) => ({ id, ...msg }));
+
+    const modal = document.createElement('div');
+    modal.className = 'modal unread-messages-modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Unread Messages</h2>
+          <button class="modal-close" data-close-modal>✕</button>
+        </div>
+        <div class="unread-list">
+          ${unreadMessages.length > 0 ? unreadMessages.map(msg => `
+            <div class="unread-message-item" data-message-id="${msg.id}">
+              <div class="message-preview">
+                <p class="message-sender">From: ${msg.partnerId}</p>
+                <p class="message-text">Message preview...</p>
+                <span class="message-time">${new Date(msg.timestamp).toLocaleTimeString()}</span>
+              </div>
+              <button class="mark-read-btn" data-mark-read="${msg.id}">Mark as Read</button>
+            </div>
+          `).join('') : '<p class="no-unread">All caught up!</p>'}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+
+    modal.querySelector('[data-close-modal]').addEventListener('click', () => {
+      modal.remove();
+    });
+
+    modal.querySelectorAll('[data-mark-read]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const msgId = e.target.dataset.markRead;
+        const partnerId = messageStates[msgId].partnerId;
+        markMessageAsRead(msgId, partnerId);
+        e.target.closest('.unread-message-item').remove();
+      });
+    });
+  };
+
+  const showFavoritesModal = () => {
+    const favoriteChats = Array.from(favorites);
+    const modal = document.createElement('div');
+    modal.className = 'modal favorites-modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Favorites</h2>
+          <button class="modal-close" data-close-modal>✕</button>
+        </div>
+        <div class="favorites-list">
+          ${favoriteChats.length > 0 ? favoriteChats.map(partnerId => `
+            <div class="favorite-chat-item" data-chat-partner-id="${partnerId}">
+              <img class="chat-avatar" src="path/to/avatar/${partnerId}.jpg" alt="${partnerId}">
+              <div class="chat-info">
+                <p class="chat-name">${partnerId}</p>
+                <p class="last-message">Last message...</p>
+              </div>
+              <button class="remove-favorite-btn" data-remove-favorite="${partnerId}">✕</button>
+            </div>
+          `).join('') : '<p class="no-favorites">No favorites yet</p>'}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+
+    modal.querySelector('[data-close-modal]').addEventListener('click', () => {
+      modal.remove();
+    });
+
+    modal.querySelectorAll('[data-remove-favorite]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const partnerId = e.target.dataset.removeFavorite;
+        toggleFavorite(partnerId);
+        e.target.closest('.favorite-chat-item').remove();
+      });
+    });
+  };
+
+  return {
+    init,
+    markMessageAsRead,
+    markChatAsRead,
+    getUnreadCount,
+    toggleFavorite,
+    showUnreadModal,
+    showFavoritesModal,
+    renderUnreadBadges
+  };
+})();
+
+// ===== PROFILE UI MODULE =====
+const profileModule = (() => {
+  let db;
+  let currentUserId;
+  let userInterests = new Set();
+
+  const INTEREST_LIBRARY = [
+    'Travel', 'Photography', 'Music', 'Art', 'Technology', 'Sports', 'Fitness', 'Cooking',
+    'Reading', 'Movies', 'Gaming', 'Fashion', 'Nature', 'Animals', 'Design', 'Writing',
+    'Dancing', 'Yoga', 'Meditation', 'Adventure', 'Coffee', 'Wine', 'Beer', 'Hiking',
+    'Camping', 'Surfing', 'Skateboarding', 'Cycling', 'Swimming', 'Running', 'Gardening',
+    'Volunteering', 'Charity', 'Community', 'Environment', 'Science', 'History', 'Culture',
+    'Languages', 'Education'
+  ];
+
+  const init = (firebaseDB, userId) => {
+    db = firebaseDB;
+    currentUserId = userId;
+    loadUserInterests();
+    initializeInterestsAutocomplete();
+  };
+
+  const loadUserInterests = () => {
+    db.ref(`users/${currentUserId}/profile/interests`).on('value', (snapshot) => {
+      userInterests = new Set(snapshot.val() || []);
+      renderInterestTags();
+    });
+  };
+
+  const initializeInterestsAutocomplete = () => {
+    const interestsInput = document.querySelector('[data-interests-input]');
+    if (!interestsInput) return;
+
+    const autoCompleteContainer = document.createElement('div');
+    autoCompleteContainer.className = 'interests-autocomplete-dropdown';
+    autoCompleteContainer.setAttribute('data-interests-dropdown', '');
+    interestsInput.parentElement.appendChild(autoCompleteContainer);
+
+    interestsInput.addEventListener('input', (e) => {
+      const value = e.target.value.trim().toLowerCase();
+
+      if (!value) {
+        autoCompleteContainer.style.display = 'none';
+        return;
+      }
+
+      const filtered = INTEREST_LIBRARY.filter(interest =>
+        interest.toLowerCase().startsWith(value) &&
+        !userInterests.has(interest)
+      );
+
+      if (filtered.length === 0) {
+        autoCompleteContainer.style.display = 'none';
+        return;
+      }
+
+      autoCompleteContainer.innerHTML = filtered.map(interest => `
+        <div class="autocomplete-item" data-suggest-interest="${interest}">
+          <span class="interest-text">${interest}</span>
+          <span class="add-icon">+</span>
+        </div>
+      `).join('');
+
+      autoCompleteContainer.style.display = 'flex';
+    });
+
+    document.addEventListener('click', (e) => {
+      const suggestItem = e.target.closest('[data-suggest-interest]');
+      if (suggestItem) {
+        const interest = suggestItem.dataset.suggestInterest;
+        addInterest(interest);
+        interestsInput.value = '';
+        autoCompleteContainer.style.display = 'none';
+      }
+    });
+  };
+
+  const addInterest = (interest) => {
+    if (userInterests.has(interest)) return;
+    userInterests.add(interest);
+    db.ref(`users/${currentUserId}/profile/interests`).set(Array.from(userInterests));
+    renderInterestTags();
+  };
+
+  const removeInterest = (interest) => {
+    userInterests.delete(interest);
+    db.ref(`users/${currentUserId}/profile/interests`).set(Array.from(userInterests));
+    renderInterestTags();
+  };
+
+  const renderInterestTags = () => {
+    const tagsContainer = document.querySelector('[data-interests-tags]');
+    if (!tagsContainer) return;
+
+    tagsContainer.innerHTML = Array.from(userInterests).map(interest => `
+      <div class="interest-tag" data-interest="${interest}">
+        <span class="tag-text">${interest}</span>
+        <button class="tag-remove" data-remove-interest="${interest}" type="button">✕</button>
+      </div>
+    `).join('');
+
+    tagsContainer.querySelectorAll('[data-remove-interest]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const interest = btn.dataset.removeInterest;
+        removeInterest(interest);
+      });
+    });
+  };
+
+  return {
+    init,
+    addInterest,
+    removeInterest
+  };
+})();
+
+// ===== VOICE CALL MODULE =====
+const voiceCallModule = (() => {
+  let db;
+  let currentUserId;
+  let currentUsername;
+  let localStream;
+  let peerConnection;
+  let inCall = false;
+
+  const ICE_SERVERS = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+  };
+
+  const init = (firebaseDB, userId, username) => {
+    db = firebaseDB;
+    currentUserId = userId;
+    currentUsername = username;
+    initializeCallUI();
+  };
+
+  const initializeCallUI = () => {
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('[data-start-voice-call]')) {
+        const recipientId = e.target.closest('[data-start-voice-call]').dataset.startVoiceCall;
+        initiateCall(recipientId);
+      }
+      if (e.target.closest('[data-hang-up-call]')) {
+        hangUp();
+      }
+    });
+  };
+
+  const initiateCall = async (recipientId) => {
+    if (inCall) return;
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: false
+      });
+
+      peerConnection = new RTCPeerConnection(ICE_SERVERS);
+      localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+      });
+
+      peerConnection.ontrack = (event) => {
+        const audio = document.querySelector('[data-remote-audio]') || document.createElement('audio');
+        audio.setAttribute('data-remote-audio', '');
+        audio.autoplay = true;
+        audio.srcObject = event.streams[0];
+        if (!audio.parentElement) document.body.appendChild(audio);
+      };
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          sendSignalingMessage(recipientId, { type: 'ice-candidate', candidate: event.candidate });
+        }
+      };
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      sendSignalingMessage(recipientId, { type: 'offer', offer });
+      
+      showCallInProgress(recipientId);
+      inCall = true;
+    } catch (error) {
+      console.error('Error initiating call:', error);
+    }
+  };
+
+  const sendSignalingMessage = (recipientId, message) => {
+    db.ref(`callSignaling/${recipientId}`).push({
+      from: currentUserId,
+      fromUsername: currentUsername,
+      ...message
+    });
+  };
+
+  const hangUp = () => {
+    if (!inCall) return;
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+    if (peerConnection) {
+      peerConnection.close();
+    }
+    inCall = false;
+    const callUI = document.querySelector('[data-call-ui]');
+    if (callUI) callUI.remove();
+  };
+
+  const showCallInProgress = (peerId) => {
+    let callUI = document.querySelector('[data-call-ui]');
+    if (!callUI) {
+      callUI = document.createElement('div');
+      callUI.setAttribute('data-call-ui', '');
+      callUI.className = 'call-ui-container';
+      document.body.appendChild(callUI);
+    }
+
+    callUI.innerHTML = `
+      <div class="call-window">
+        <div class="call-info">
+          <p class="call-status">In call with ${peerId}</p>
+          <div class="call-timer">00:00</div>
+        </div>
+        <div class="call-controls">
+          <button class="hang-up-btn" data-hang-up-call>📵</button>
+        </div>
+      </div>
+    `;
+
+    let seconds = 0;
+    setInterval(() => {
+      seconds++;
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      const timerDisplay = document.querySelector('[data-call-ui] .call-timer');
+      if (timerDisplay) {
+        timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+    }, 1000);
+  };
+
+  return {
+    init,
+    initiateCall,
+    hangUp
+  };
+})();
+
+// ===== EARN/TRIVIA MODULE =====
+const earnModule = (() => {
+  let db;
+  let currentUserId;
+  let isTrivia = false;
+  let currentQuestionIndex = 0;
+  let triviaQuestions = [];
+  let timeRemaining = 30;
+  let timerInterval = null;
+  let answered = false;
+
+  const DEFAULT_QUESTIONS = [
+    { id: 1, question: 'What is the capital of France?', answers: ['Paris', 'London', 'Berlin', 'Madrid'], correct: 0 },
+    { id: 2, question: 'What is 2 + 2?', answers: ['3', '4', '5', '6'], correct: 1 },
+    { id: 3, question: 'Who wrote Romeo and Juliet?', answers: ['Mark Twain', 'Jane Austen', 'Shakespeare', 'Dickens'], correct: 2 }
+  ];
+
+  const init = (firebaseDB, userId) => {
+    db = firebaseDB;
+    currentUserId = userId;
+    loadTriviaQuestions();
+    initializeEarnUI();
+    initializeGiftCardScroll();
+  };
+
+  const loadTriviaQuestions = () => {
+    db.ref('trivia/questions').on('value', (snapshot) => {
+      triviaQuestions = snapshot.val() || DEFAULT_QUESTIONS;
+    });
+  };
+
+  const initializeEarnUI = () => {
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('[data-start-trivia]')) {
+        startTrivia();
+      }
+      if (e.target.closest('[data-answer-question]')) {
+        handleAnswerClick(e.target.closest('[data-answer-question]'));
+      }
+      if (e.target.closest('[data-next-question]')) {
+        nextQuestion();
+      }
+    });
+  };
+
+  const startTrivia = () => {
+    if (isTrivia) return;
+    isTrivia = true;
+    currentQuestionIndex = 0;
+    answered = false;
+    showTriviaModal();
+    displayQuestion();
+    startTimer();
+  };
+
+  const displayQuestion = () => {
+    if (currentQuestionIndex >= triviaQuestions.length) {
+      showTriviaComplete();
+      return;
+    }
+
+    const question = triviaQuestions[currentQuestionIndex];
+    const modal = document.querySelector('[data-trivia-modal]');
+    if (!modal) return;
+
+    const content = modal.querySelector('.trivia-content');
+    content.innerHTML = `
+      <div class="trivia-progress">
+        <span>${currentQuestionIndex + 1}/${triviaQuestions.length}</span>
+      </div>
+      <h3>${question.question}</h3>
+      <div class="trivia-timer">
+        <div class="time-value">${timeRemaining}</div>s
+      </div>
+      <div class="trivia-answers">
+        ${question.answers.map((answer, idx) => `
+          <button class="answer-btn" data-answer-question data-answer-index="${idx}">
+            ${String.fromCharCode(65 + idx)}. ${answer}
+          </button>
+        `).join('')}
+      </div>
+      <div class="trivia-button-group" style="display: none;">
+        <button class="next-question-btn" data-next-question>Next Question</button>
+      </div>
+    `;
+
+    answered = false;
+    timeRemaining = 30;
+  };
+
+  const startTimer = () => {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timeRemaining--;
+      updateTimerDisplay();
+
+      if (timeRemaining <= 0) {
+        clearInterval(timerInterval);
+        if (!answered) timeExpired();
+      }
+    }, 1000);
+  };
+
+  const updateTimerDisplay = () => {
+    const timeValue = document.querySelector('.time-value');
+    if (timeValue) timeValue.textContent = timeRemaining;
+  };
+
+  const handleAnswerClick = (btn) => {
+    if (answered) return;
+    answered = true;
+    clearInterval(timerInterval);
+
+    const answerIndex = parseInt(btn.dataset.answerIndex);
+    const question = triviaQuestions[currentQuestionIndex];
+    const isCorrect = answerIndex === question.correct;
+
+    const allButtons = document.querySelectorAll('[data-answer-question]');
+    allButtons.forEach((b, idx) => {
+      if (idx === question.correct) {
+        b.classList.add('correct-answer');
+      } else if (idx === answerIndex && !isCorrect) {
+        b.classList.add('wrong-answer');
+      }
+      b.disabled = true;
+    });
+
+    setTimeout(() => {
+      const buttonGroup = document.querySelector('[data-trivia-modal] .trivia-button-group');
+      if (buttonGroup) buttonGroup.style.display = 'flex';
+    }, 2000);
+  };
+
+  const timeExpired = () => {
+    answered = true;
+    const question = triviaQuestions[currentQuestionIndex];
+    const allButtons = document.querySelectorAll('[data-answer-question]');
+    allButtons.forEach((b, idx) => {
+      if (idx === question.correct) b.classList.add('correct-answer');
+      b.disabled = true;
+    });
+
+    setTimeout(() => {
+      const buttonGroup = document.querySelector('[data-trivia-modal] .trivia-button-group');
+      if (buttonGroup) buttonGroup.style.display = 'flex';
+    }, 2000);
+  };
+
+  const nextQuestion = () => {
+    currentQuestionIndex++;
+    if (currentQuestionIndex < triviaQuestions.length) {
+      displayQuestion();
+      startTimer();
+    } else {
+      showTriviaComplete();
+    }
+  };
+
+  const showTriviaComplete = () => {
+    const modal = document.querySelector('[data-trivia-modal]');
+    if (!modal) return;
+    const content = modal.querySelector('.trivia-content');
+    content.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px;">
+        <h2>Quiz Complete! 🎉</h2>
+        <p style="margin: 16px 0;">You've earned coins!</p>
+        <p style="font-size: 32px; font-weight: 700; color: #667eea; margin: 20px 0;">+100 Coins</p>
+        <button class="btn-primary" onclick="earnModule.closeTrivia()">Play Again</button>
+      </div>
+    `;
+  };
+
+  const showTriviaModal = () => {
+    let modal = document.querySelector('[data-trivia-modal]');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.setAttribute('data-trivia-modal', '');
+      modal.className = 'modal trivia-modal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <button class="modal-close" onclick="earnModule.closeTrivia()">✕</button>
+          <div class="trivia-content"></div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
+  };
+
+  const closeTrivia = () => {
+    isTrivia = false;
+    currentQuestionIndex = 0;
+    answered = false;
+    clearInterval(timerInterval);
+    const modal = document.querySelector('[data-trivia-modal]');
+    if (modal) modal.style.display = 'none';
+  };
+
+  const initializeGiftCardScroll = () => {
+    const container = document.querySelector('[data-gift-cards-scroll]');
+    if (!container) return;
+
+    const cards = container.querySelectorAll('.gift-card');
+    const clonedCards = Array.from(cards).map(card => card.cloneNode(true));
+    clonedCards.forEach(card => container.appendChild(card));
+
+    let scrollPos = 0;
+    setInterval(() => {
+      scrollPos += 2;
+      if (scrollPos >= container.scrollHeight / 2) scrollPos = 0;
+      container.scrollTop = scrollPos;
+    }, 50);
+  };
+
+  return {
+    init,
+    closeTrivia,
+    nextQuestion
+  };
+})();
+
+
+// ============================================
+// INITIALIZE ALL MODULES
+// ============================================
+
+firebase.auth().onAuthStateChanged(function(user) {
+  if (user && typeof app !== 'undefined' && app.user) {
+    const userId = user.uid;
+    const db = firebase.database();
+    
+    // Initialize feature modules
+    if (typeof messagesModule !== 'undefined') {
+      messagesModule.init(db, userId);
+      console.log('✓ Messages module initialized');
+    }
+    if (typeof profileModule !== 'undefined') {
+      profileModule.init(db, userId);
+      console.log('✓ Profile module initialized');
+    }
+    if (typeof voiceCallModule !== 'undefined') {
+      voiceCallModule.init(db, userId, app.profile.name || user.email || 'User');
+      console.log('✓ Voice call module initialized');
+    }
+    if (typeof earnModule !== 'undefined') {
+      earnModule.init(db, userId);
+      console.log('✓ Earn/Trivia module initialized');
+    }
+    console.log('✅ All CHICHI modules initialized!');
+  }
+});
+
+// ============================================
+// START APP
 // ============================================
 
 app.init();
@@ -8362,4 +9108,4 @@ console.log('%c✅ CHICHI App Loaded Successfully!', 'color: #00D4AA; font-size:
 console.log('%c💰 Chichi Coins - Earn by answering trivia!', 'color: #FFC24B; font-size: 12px;');
 console.log('%c🎁 Gift Catalog - Redeem coins for awesome rewards!', 'color: #8b5cf6; font-size: 12px;');
 console.log('%c📊 User engagement & revenue tracking active!', 'color: #3b82f6; font-size: 12px;');
-console.log('%c👨‍💻 Built by Anthony Onchari - Version V02A.01', 'color: #6b7280; font-size: 11px;');
+console.log('%c👨‍💻 Built by Anthony Onchari - All Features Included!', 'color: #6b7280; font-size: 11px;');
