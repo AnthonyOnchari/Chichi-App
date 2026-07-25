@@ -3988,7 +3988,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
-    filter: blur(8px);
+    filter: blur(4px);
     z-index: 0;
     transform: scale(1.05);
 }
