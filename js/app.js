@@ -9099,6 +9099,85 @@ firebase.auth().onAuthStateChanged(function(user) {
 });
 
 // ============================================
+// FORGOT PASSWORD & DEVELOPER INFO FUNCTIONS
+// ============================================
+
+// Forgot Password Modal
+app.showForgotPasswordModal = function() {
+    var modal = document.getElementById('forgotPasswordModal');
+    if (modal) modal.style.display = 'flex';
+};
+
+app.closeForgotPasswordModal = function() {
+    var modal = document.getElementById('forgotPasswordModal');
+    if (modal) modal.style.display = 'none';
+};
+
+app.sendPasswordReset = function() {
+    var email = document.getElementById('forgotPasswordEmail').value;
+    if (!email) {
+        if (typeof app.toast === 'function') {
+            app.toast('Please enter your email', 'error');
+        }
+        return;
+    }
+    
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+        firebase.auth().sendPasswordResetEmail(email)
+            .then(function() {
+                if (typeof app.toast === 'function') {
+                    app.toast('Reset link sent to ' + email, 'success');
+                } else {
+                    alert('Password reset email sent to ' + email);
+                }
+                app.closeForgotPasswordModal();
+                document.getElementById('forgotPasswordEmail').value = '';
+            })
+            .catch(function(error) {
+                if (typeof app.toast === 'function') {
+                    app.toast('Error: ' + error.message, 'error');
+                } else {
+                    alert('Error: ' + error.message);
+                }
+            });
+    }
+};
+
+// Developer Info Modal
+app.showDeveloperInfo = function() {
+    var modal = document.getElementById('developerModal');
+    if (modal) modal.style.display = 'flex';
+};
+
+app.closeDeveloperInfo = function() {
+    var modal = document.getElementById('developerModal');
+    if (modal) modal.style.display = 'none';
+};
+
+// Header Menu Toggle
+app.showHeaderMenu = function() {
+    var menu = document.getElementById('headerMenu');
+    if (menu) {
+        if (menu.style.display === 'none' || !menu.style.display) {
+            menu.style.display = 'block';
+        } else {
+            menu.style.display = 'none';
+        }
+    }
+};
+
+// Close menu on click outside
+if (typeof document !== 'undefined') {
+    document.addEventListener('click', function(e) {
+        var menu = document.getElementById('headerMenu');
+        var btn = document.getElementById('headerMenuBtn');
+        if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+            menu.style.display = 'none';
+        }
+    });
+}
+
+// ============================================
 // START APP
 // ============================================
 
