@@ -263,19 +263,37 @@
 
         <!-- MESSAGES VIEW -->
         <div class="view" id="messagesView">
-            <div class="messages-header">
-                <h2>Messages</h2>
-                <div class="messages-controls">
-                    <button class="icon-btn" onclick="app.showNotificationsTab()" title="Notifications">🔔</button>
-                    <button class="icon-btn" onclick="app.showFavoritesModal()" title="Favorites">❤️</button>
+            <!-- Messages Header -->
+            <div class="messages-header" style="padding: 16px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #1a202c;">Messages</h2>
+                <div class="messages-controls" style="display: flex; gap: 8px;">
+                    <button class="icon-btn" onclick="if(typeof app !== 'undefined' && app.showNotificationsTab) app.showNotificationsTab()" title="Notifications" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 8px;">🔔</button>
+                    <button class="icon-btn" onclick="if(typeof app !== 'undefined' && app.showFavoritesModal) app.showFavoritesModal()" title="Favorites" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 8px;">❤️</button>
                 </div>
             </div>
-            <div id="messagesFilterTabs" style="display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;">
-                <button class="message-filter-tab active" onclick="app.filterMessages('all')">All</button>
-                <button class="message-filter-tab" onclick="app.filterMessages('unread')">Unread</button>
-                <button class="message-filter-tab" onclick="app.filterMessages('favorites')">Favorites</button>
+
+            <!-- Search Bar -->
+            <div style="padding: 12px 16px; background: white; border-bottom: 1px solid #f3f4f6;">
+                <input type="text" id="messageSearchInput" placeholder="🔍 Search messages or people..." style="width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 13px; font-family: inherit;" onkeyup="if(typeof app !== 'undefined' && app.searchMessages) app.searchMessages(this.value)">
             </div>
-            <div class="messages-container" id="messageList"></div>
+
+            <!-- Filter Tabs -->
+            <div id="messagesFilterTabs" style="display: flex; gap: 8px; padding: 12px 16px; overflow-x: auto; background: white; border-bottom: 1px solid #f3f4f6;">
+                <button class="message-filter-tab active" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('all')" style="padding: 8px 14px; background: #0088cc; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">All</button>
+                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('unread')" style="padding: 8px 14px; background: #f3f4f6; color: #666; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">Unread</button>
+                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('favorites')" style="padding: 8px 14px; background: #f3f4f6; color: #666; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">❤️ Favorites</button>
+                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('archived')" style="padding: 8px 14px; background: #f3f4f6; color: #666; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">📦 Archived</button>
+            </div>
+
+            <!-- Messages List -->
+            <div class="messages-container" id="messageList" style="display: flex; flex-direction: column; background: white;"></div>
+
+            <!-- Empty State -->
+            <div id="messagesEmpty" style="text-align: center; padding: 60px 20px; color: #9ca3af;">
+                <div style="font-size: 40px; margin-bottom: 12px;">💬</div>
+                <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">No messages yet</div>
+                <div style="font-size: 12px; color: #d1d5db;">Start a conversation with someone!</div>
+            </div>
         </div>
 
         <!-- EARN VIEW -->
