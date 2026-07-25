@@ -7,15 +7,18 @@
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- CSS - Updated path -->
+    <!-- CSS -->
     <link rel="stylesheet" href="css/style.css">
+    
+    <!-- NEW: CHICHI Features CSS -->
+    <link rel="stylesheet" href="css/chichi-features.css">
     
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
-    <!-- CONFIG - Now at root level -->
+    <!-- CONFIG -->
     <script src="config.js"></script>
 </head>
 <body>
@@ -156,218 +159,178 @@
             <h1 class="header-title">CHICHI</h1>
         </div>
         
-        <div class="header-actions">
-            <!-- DARK MODE TOGGLE -->
-            <label class="dark-mode-toggle" title="Toggle dark mode">
-                <input type="checkbox" id="darkModeToggle" onchange="app.toggleDarkMode()">
-                <div class="toggle-cube">
-                    <div class="toggle-face front">☀️</div>
-                    <div class="toggle-face back">🌙</div>
-                </div>
-            </label>
+        <div class="header-right">
+            <!-- NEW: Message controls -->
+            <button class="header-icon" data-open-unread-modal title="Unread Messages" style="position: relative;">
+                🔔
+                <span class="unread-badge" style="display: none; position: absolute; top: -5px; right: -5px; background: #FF6B6B; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; display: flex; align-items: center; justify-content: center;">0</span>
+            </button>
+            <button class="header-icon" data-open-favorites-modal title="Favorites">❤️</button>
+            <!-- End new message controls -->
             
-            <button class="btn-icon" onclick="app.loadPosts()" id="refreshFeedBtn">↻</button>
-            <button class="btn-icon" onclick="app.showHeaderMenu()">⋯</button>
-        </div>
-        
-        <div id="headerMenu" style="display: none; position: fixed; top: 48px; right: 12px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 150px;">
-            <button onclick="app.openAdminModal(); app.closeHeaderMenu();" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f0f0f0;">⚙️ Admin</button>
-            <button onclick="app.showLogout(); app.closeHeaderMenu();" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #ef4444;">🚪 Logout</button>
+            <button class="header-icon" onclick="app.logout()">👤</button>
+            <button class="header-icon" onclick="app.toggleAdminModal()">⚙️</button>
         </div>
     </div>
 
-    <div class="app-content">
-        <!-- FEED VIEW -->
-        <div class="view active" id="feedView">
-            <div id="quickPostBox" class="quick-post" onclick="app.showCreateModal()" style="cursor: pointer;">
-                <div class="quick-post-avatar" id="quickPostAvatar">U</div>
-                <input type="text" class="quick-post-input" placeholder="Share something..." readonly>
-            </div>
-            <div id="feedContainer"></div>
+    <div class="app-container">
+        <div class="sidebar">
+            <button class="nav-item active" onclick="app.switchView('feed')">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Feed</span>
+            </button>
+            <button class="nav-item" onclick="app.switchView('discover')">
+                <span class="nav-icon">🔍</span>
+                <span class="nav-label">Discover</span>
+            </button>
+            <button class="nav-item" onclick="app.switchView('messages')">
+                <span class="nav-icon">💬</span>
+                <span class="nav-label">Messages</span>
+            </button>
+            <button class="nav-item" onclick="app.switchView('earn')">
+                <span class="nav-icon">💰</span>
+                <span class="nav-label">Earn</span>
+            </button>
+            <button class="nav-item" onclick="app.switchView('profile')">
+                <span class="nav-icon">👤</span>
+                <span class="nav-label">Profile</span>
+            </button>
         </div>
 
-        <!-- EXPLORE VIEW -->
-        <div class="view" id="exploreView">
-            <div style="position: sticky; top: 0; z-index: 30; background: white; border-bottom: 1px solid #e0e0e0; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0;">🔍 Discover</h3>
-                <button style="background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 600;" onclick="app.loadExplore()">🔄 Refresh</button>
-            </div>
-            
-            <div style="padding: 16px; background: white; border-bottom: 1px solid #f0f0f0;">
-                <div style="display: flex; gap: 8px; background: #f5f5f5; border-radius: 24px; padding: 10px 16px; align-items: center;">
-                    <span style="font-size: 20px;">🔍</span>
-                    <input type="text" id="exploreSearchInput" placeholder="Search users..." style="background: none; border: none; flex: 1; font-size: 15px; outline: none;" onkeyup="app.searchExploreUsers(this.value)">
+        <div class="main-content">
+            <!-- FEED VIEW -->
+            <div class="view feed-view" id="feedView" style="display: flex;">
+                <div class="feed-container">
+                    <div id="postsFeed"></div>
                 </div>
             </div>
-            
-            <div id="exploreSearchResults" style="display: none; padding: 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #1e293b;">Search Results</h4>
-                <div id="exploreSearchResultsList"></div>
-            </div>
-            
-            <div id="quickDiscoverySection" style="padding: 16px; background: white; border-bottom: 1px solid #f0f0f0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                <button onclick="app.showSimilarInterestsModal()" style="background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border: none; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(6,182,212,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                    🤝 Similar Interests
-                </button>
-                <button onclick="app.showFeaturedUsersModal()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(245,158,11,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                    ⭐ Featured
-                </button>
-                <button onclick="app.showTopCreatorsModal()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(139,92,246,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                    👑 Top Creators
-                </button>
-            </div>
-            
-            <div id="trendingSection" style="padding: 20px 16px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">🔥 Trending Now</h4>
-                    <button onclick="app.calculateTrendingHashtags(); app.renderTrendingInExplore();" style="background: none; border: none; color: var(--primary); cursor: pointer; font-size: 12px; font-weight: 600;">Refresh</button>
-                </div>
-                <div id="trendingHashtagsContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div style="text-align: center; color: #6b7280; padding: 30px;">Loading...</div>
-                </div>
-            </div>
-            
-            <div id="postsSection" style="padding: 0 16px 20px 16px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">📸 Trending Posts</h4>
-                    <span style="font-size: 12px; color: #6b7280;">Most liked</span>
-                </div>
-                <div id="trendingPostsContainer" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; background: #e2e8f0;">
-                    <div style="text-align: center; color: #6b7280; padding: 60px 20px; grid-column: 1/-1;">Loading...</div>
-                </div>
-            </div>
-        </div>
 
-        <!-- MESSAGES VIEW -->
-        <div class="view" id="messagesView">
-            <div class="messages-header">
-                <h2>Messages</h2>
-                <div style="display: flex; background: #f0f0f0; border-radius: 24px; padding: 8px 12px; margin-bottom: 12px;">
-                    <span style="font-size: 18px; margin-right: 8px;">🔍</span>
-                    <input type="text" placeholder="Search conversations..." id="messagesSearchInput" onkeyup="app.searchMessages(this.value)" style="background: none; border: none; flex: 1; font-size: 14px; outline: none;">
+            <!-- DISCOVER VIEW -->
+            <div class="view discover-view" id="discoverView">
+                <div class="discover-header">
+                    <h2>Discover</h2>
+                    <button class="refresh-btn" data-refresh-button title="Refresh">🔄</button>
                 </div>
-                <div id="messagesFilterTabs">
-                    <button class="message-filter-tab active" onclick="app.filterMessages('all')">💬 All</button>
-                    <button class="message-filter-tab" onclick="app.filterMessages('unread')">📬 Unread</button>
-                    <button class="message-filter-tab" onclick="app.filterMessages('favorites')">⭐ Favorites</button>
-                    <button class="message-filter-tab" onclick="app.showNotificationsTab()">🔔 Notifications</button>
+                <div id="discoverContainer"></div>
+            </div>
+
+            <!-- MESSAGES VIEW -->
+            <div class="view messages-view" id="messagesView">
+                <div class="messages-container">
+                    <div class="messages-list">
+                        <div class="messages-header">
+                            <h2>Messages</h2>
+                            <div class="messages-controls">
+                                <button data-open-unread-modal class="icon-btn" title="Unread">🔔</button>
+                                <button data-open-favorites-modal class="icon-btn" title="Favorites">❤️</button>
+                            </div>
+                        </div>
+                        <div id="chatsList"></div>
+                    </div>
+                    <div class="messages-chat">
+                        <div class="chat-empty">Select a conversation</div>
+                        <div id="chatContainer" style="display: none; flex: 1; display: flex; flex-direction: column;">
+                            <div class="chat-header" id="chatHeader">
+                                <div class="chat-info">
+                                    <h3 id="chatName"></h3>
+                                </div>
+                                <!-- NEW: Voice call button -->
+                                <button class="voice-call-btn" data-start-voice-call title="Start voice call">📞</button>
+                            </div>
+                            <div id="messagesContainer"></div>
+                            <div class="chat-input">
+                                <input type="text" id="messageInput" placeholder="Type a message..." />
+                                <button onclick="app.sendMessage()">Send</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="messages-container" id="messageList"></div>
-        </div>
 
-        <!-- CHAT VIEW -->
-        <div id="chatView">
-            <div id="chatHeader">
-                <button id="chatBackBtn" onclick="app.closeChatView()">←</button>
-                <div id="chatHeaderAvatar"></div>
-                <div style="flex:1;">
-                    <div id="chatHeaderName" style="font-weight:700;font-size:16px;color:white;"></div>
-                    <div id="chatHeaderStatus" style="font-size:11px;color:rgba(255,255,255,0.85);">Active now</div>
+            <!-- EARN VIEW -->
+            <div class="view earn-view" id="earnView">
+                <div class="earn-content">
+                    <h2>Earn Coins</h2>
+                    
+                    <!-- NEW: Trivia Section -->
+                    <div class="trivia-section">
+                        <h3>Daily Trivia</h3>
+                        <p>Answer questions and earn coins!</p>
+                        <button class="circle-start-button" data-start-trivia>
+                            <div class="circle-pulse"></div>
+                            <span>START</span>
+                        </button>
+                    </div>
+
+                    <!-- NEW: Gift Cards Auto-Scroll -->
+                    <div class="gift-cards-section">
+                        <h3>Gift Cards</h3>
+                        <div data-gift-cards-scroll class="gift-cards-container">
+                            <div class="gift-card">
+                                <span class="gift-card-value">100</span>
+                                <span class="gift-card-label">Coins</span>
+                            </div>
+                            <div class="gift-card">
+                                <span class="gift-card-value">500</span>
+                                <span class="gift-card-label">Coins</span>
+                            </div>
+                            <div class="gift-card">
+                                <span class="gift-card-value">1000</span>
+                                <span class="gift-card-label">Coins</span>
+                            </div>
+                            <div class="gift-card">
+                                <span class="gift-card-value">5000</span>
+                                <span class="gift-card-label">Coins</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="earnContainer"></div>
                 </div>
-                <button id="chatMenuBtn" onclick="app.showChatMenu()" style="font-size:22px;background:rgba(255,255,255,0.1);border-radius:8px;padding:6px 10px;">⋮</button>
             </div>
-            
-            <div id="chatMessages"></div>
-            
-            <div id="typingIndicator" style="display:none;padding:6px 16px;background:#f3f4f6;border-radius:8px;margin:0 16px 8px;font-size:13px;color:#6b7280;">Someone is typing...</div>
-            
-            <div id="lastMessagePreview" style="
-                position: relative;
-                margin: 0 16px 8px;
-                background: linear-gradient(135deg, #f3f4f6, #ffffff);
-                border: 1px solid var(--border);
-                border-radius: 10px;
-                padding: 12px;
-                font-size: 12px;
-                color: var(--text-light);
-                display: none;
-                animation: slideUp 0.3s ease;
-                box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-                border-left: 3px solid var(--primary);
-                max-height: 80px;
-                overflow: hidden;
-            "></div>
-            
-            <div id="chatInput">
-                <button class="attach-btn" onclick="document.getElementById('chatImageInput').click()" style="background:none;border:none;font-size:20px;cursor:pointer;padding:8px;opacity:0.6;">📎</button>
-                <input type="file" id="chatImageInput" style="display:none;" accept="image/*" multiple onchange="app.handleChatImageUpload(event)">
-                <input type="text" id="chatMessageInput" placeholder="Type a message..." oninput="app.onChatInputChange(event, window.currentChatUid)" onfocus="var chatMessages=document.getElementById('chatMessages');if(chatMessages){setTimeout(function(){chatMessages.scrollTop=chatMessages.scrollHeight;},50);}app.showLastMessagePreview();" onblur="app.hideLastMessagePreview();" onkeypress="if(event.key==='Enter' && !event.shiftKey) { app.sendChatMessage(); event.preventDefault(); }">
-                <button id="chatSendBtn" onclick="app.sendChatMessage()">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
 
-        <!-- EARN VIEW -->
-        <div class="view" id="earnView">
-            <div id="earnContainer"></div>
-        </div>
+            <!-- PROFILE VIEW -->
+            <div class="view profile-view" id="profileView">
+                <div class="profile-content">
+                    <!-- NEW: Circular profile photo -->
+                    <div data-profile-photo class="circular-photo-container">
+                        <img id="profilePhoto" src="" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    
+                    <h2 id="profileName"></h2>
+                    <p id="profileUsername" style="color: var(--text-light); font-size: 0.9rem;"></p>
+                    
+                    <!-- Refresh button -->
+                    <button class="refresh-btn" data-refresh-button title="Refresh">🔄</button>
+                    
+                    <!-- NEW: Interests Section -->
+                    <div class="profile-interests">
+                        <h3>Interests</h3>
+                        <div class="interests-input-group">
+                            <input 
+                                type="text" 
+                                data-interests-input 
+                                placeholder="Add an interest..."
+                                autocomplete="off"
+                            >
+                        </div>
+                        <div data-interests-tags class="interests-tags"></div>
+                    </div>
 
-        <!-- PROFILE VIEW -->
-        <div class="view" id="profileView">
-            <div id="profileContent"></div>
-        </div>
-    </div>
-
-    <!-- BOTTOM NAV -->
-    <div class="bottom-nav">
-        <div class="nav-wrapper">
-            <div class="nav-item active" onclick="app.switchView('feed')">
-                <div class="nav-icon">🏠</div>
-                <div class="nav-label">Home</div>
-            </div>
-            <div class="nav-item" onclick="app.switchView('explore')">
-                <div class="nav-icon">🔍</div>
-                <div class="nav-label">Explore</div>
-            </div>
-            <div class="nav-item" onclick="app.switchView('messages')" style="position: relative;">
-                <div class="nav-icon">💬</div>
-                <div class="nav-label">Chats</div>
-                <div class="nav-badge" id="messagesBadge" style="display: none;">0</div>
-            </div>
-            
-            <button class="fab-button" onclick="app.showCreateModal()">✚</button>
-            
-            <div class="nav-item" onclick="app.switchView('earn')">
-                <div class="nav-icon">💰</div>
-                <div class="nav-label">Earn</div>
-            </div>
-            <div class="nav-item" onclick="app.switchView('profile')">
-                <div class="nav-icon">👤</div>
-                <div class="nav-label">Profile</div>
-            </div>
-            <div class="nav-item" onclick="app.showAbout()">
-                <div class="nav-icon">ℹ️</div>
-                <div class="nav-label">About</div>
+                    <div id="profileContainer"></div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ALL MODALS -->
-<div class="modal-overlay" id="forgotPasswordModal">
+<!-- POST CREATE MODAL -->
+<div class="modal-overlay" id="postCreateModal">
     <div class="modal">
-        <div class="modal-close"><button onclick="app.closeForgotPasswordModal()">✕</button></div>
-        <h2 style="font-weight:700;margin-bottom:16px;">Reset Password</h2>
-        <div class="form-group">
-            <label class="form-label">Email Address</label>
-            <input type="email" id="forgotPasswordEmail" class="form-input" placeholder="your@email.com">
-        </div>
-        <button type="button" class="btn-submit" onclick="app.sendPasswordReset()">Send Reset Link</button>
-    </div>
-</div>
-
-<div class="modal-overlay" id="createModal">
-    <div class="create-modal">
-        <div class="modal-close">
-            <button onclick="app.closeCreateModal()">✕</button>
-        </div>
-        <h2 style="font-weight: 700; margin-bottom: 16px;">Create Post</h2>
-        <div id="photoPreview"></div>
-        <input type="file" id="photoInput" style="display: none;" accept="image/*">
+        <div class="modal-close"><button onclick="app.closeCreatePostModal()">✕</button></div>
+        <h2>Create Post</h2>
+        <div id="postPreview" style="margin-bottom:16px;max-height:300px;overflow:hidden;border-radius:12px;background:var(--light);"></div>
+        <input type="file" id="photoInput" accept="image/*" onchange="app.previewPhoto()" style="display:none;">
         <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">
             📷 Choose Photo
         </button>
@@ -379,6 +342,7 @@
     </div>
 </div>
 
+<!-- ADMIN MODAL -->
 <div class="modal-overlay" id="adminModal">
     <div class="modal" style="max-width:600px;">
         <div class="modal-close"><button onclick="app.closeAdminModal()">✕</button></div>
@@ -488,7 +452,13 @@
     </div>
 </div>
 
-<!-- APP JS - Updated path -->
+<!-- CHICHI Feature Modules -->
+<script src="js/messages-module.js"></script>
+<script src="js/earn-trivia-module.js"></script>
+<script src="js/voice-call-module.js"></script>
+<script src="js/profile-ui-module.js"></script>
+
+<!-- APP JS -->
 <script src="js/app.js"></script>
 
 <script>
@@ -522,6 +492,34 @@
             }, 10000);
         }
     });
+
+    // Initialize CHICHI modules after Firebase is ready
+    setTimeout(function() {
+        if (typeof firebase !== 'undefined' && firebase.apps.length > 0 && firebase.auth().currentUser) {
+            const userId = firebase.auth().currentUser.uid;
+            const username = firebase.auth().currentUser.displayName || firebase.auth().currentUser.email;
+            
+            console.log('🚀 Initializing CHICHI modules...');
+            
+            // Initialize all feature modules
+            if (typeof messagesModule !== 'undefined') {
+                messagesModule.init(firebase.database(), userId);
+                console.log('✓ Messages module initialized');
+            }
+            if (typeof earnModule !== 'undefined') {
+                earnModule.init(firebase.database(), userId);
+                console.log('✓ Earn/Trivia module initialized');
+            }
+            if (typeof voiceCallModule !== 'undefined') {
+                voiceCallModule.init(firebase.database(), userId, username);
+                console.log('✓ Voice call module initialized');
+            }
+            if (typeof profileModule !== 'undefined') {
+                profileModule.init(firebase.database(), userId);
+                console.log('✓ Profile module initialized');
+            }
+        }
+    }, 3000);
 </script>
 
 </body>
