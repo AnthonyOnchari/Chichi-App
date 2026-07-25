@@ -1,4 +1,4 @@
-/* ===== ORIGINAL CHICHI CSS ===== */
+/* Include original CSS first */
 /* ============================================
    CHICHI - COMPLETE CSS (ALL FIXES APPLIED)
    ============================================ */
@@ -3905,8 +3905,36 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
         box-shadow: 0 0 0 8px rgba(0, 136, 204, 0);
     }
 }
-/* ===== OVERRIDE: COMPACT DARK AUTH PAGE ===== */
+/* ===== ANIMATED AUTH PAGE ===== */
 
+@keyframes slideInAuth {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInTitle {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+}
+
+/* Auth Page Container */
 .auth-page {
     display: flex !important;
     position: fixed;
@@ -3914,41 +3942,68 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     left: 0;
     width: 100%;
     height: 100%;
-    background: #0a0a0a;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
     align-items: center;
     justify-content: center;
     padding: 20px;
     z-index: 9998;
+    animation: fadeIn 0.5s ease-out;
 }
 
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Auth Card with Animation */
 .auth-card {
     background: #1a1a1a;
     border-radius: 24px;
     padding: 24px;
     max-width: 360px;
     width: 100%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 60px rgba(200, 255, 0, 0.05);
+    animation: slideInAuth 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid rgba(200, 255, 0, 0.1);
 }
 
+.auth-card.auth-animate {
+    animation: slideInAuth 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Auth Header with Animation */
 .auth-header {
     text-align: center;
     margin-bottom: 20px;
 }
 
-.auth-header h1 {
+.auth-header .auth-title-animate {
     font-family: 'Outfit', sans-serif;
     font-size: 26px;
     font-weight: 800;
     color: #ffffff;
     margin: 0 0 4px 0;
+    animation: fadeInTitle 0.8s ease-out 0.1s both;
 }
 
-.auth-header p {
+.auth-header .auth-subtitle-animate {
     color: #999;
     font-size: 12px;
     margin: 0;
+    animation: fadeInTitle 0.8s ease-out 0.2s both;
 }
 
+/* Form Groups with Staggered Animation */
+.form-group.form-animate {
+    animation: slideInAuth 0.6s ease-out backwards;
+}
+
+.form-group.form-animate:nth-child(1) { animation-delay: 0.3s; }
+.form-group.form-animate:nth-child(2) { animation-delay: 0.4s; }
+.form-group.form-animate:nth-child(3) { animation-delay: 0.5s; }
+.form-group.form-animate:nth-child(4) { animation-delay: 0.6s; }
+
+/* Tabs */
 .tabs {
     display: flex;
     gap: 12px;
@@ -3975,24 +4030,14 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 .tab.active {
     background: #333;
     color: #fff;
+    box-shadow: 0 2px 8px rgba(200, 255, 0, 0.1);
 }
 
 .tab:hover {
     color: #999;
 }
 
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-.form-group {
-    margin-bottom: 12px;
-}
-
+/* Form Label & Input */
 .form-label {
     display: block;
     color: #999;
@@ -4026,6 +4071,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     box-shadow: 0 0 0 2px rgba(200, 255, 0, 0.1);
 }
 
+/* Submit Button */
 .btn-submit {
     width: 100%;
     padding: 11px;
@@ -4041,6 +4087,10 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     margin-top: 4px;
 }
 
+.btn-submit.btn-animate {
+    animation: slideInAuth 0.6s ease-out 0.7s both;
+}
+
 .btn-submit:hover {
     background: #deff33;
     transform: translateY(-2px);
@@ -4051,6 +4101,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     transform: translateY(0);
 }
 
+/* Auth Divider */
 .auth-divider {
     display: flex;
     align-items: center;
@@ -4072,109 +4123,133 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     font-weight: 600;
 }
 
+/* Social Buttons Row */
 .social-buttons-row {
     display: flex;
     gap: 8px;
     margin-bottom: 14px;
+    animation: slideInAuth 0.6s ease-out 0.8s both;
 }
 
-.social-btn-small {
+.social-btn-google {
     flex: 1;
-    padding: 8px;
+    padding: 10px;
     background: #262626;
     border: 1px solid #333;
     border-radius: 10px;
     color: #fff;
     cursor: pointer;
     transition: all 0.3s;
+    font-family: inherit;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: inherit;
-    height: 40px;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    height: 44px;
 }
 
-.social-btn-small:hover {
+.social-btn-google:hover {
     background: #333;
-    border-color: #444;
+    border-color: #4285F4;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
 }
 
-.social-btn-small:active {
+.social-btn-google:active {
     transform: translateY(0);
 }
 
-.social-btn-small svg {
-    width: 18px;
-    height: 18px;
-    color: #fff;
-}
-
-/* ===== FAB BUTTON ===== */
-.fab-button {
-    position: absolute;
-    bottom: 80px;
-    right: 20px;
+/* ===== FAB BUTTON IN NAV ===== */
+.fab-button-nav {
+    position: relative;
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #0088cc 0%, #006fa3 100%);
-    color: white;
+    background: linear-gradient(135deg, #c8ff00 0%, #deff33 100%);
+    color: #0a0a0a;
     border: none;
-    font-size: 28px;
+    font-size: 24px;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 136, 204, 0.4);
+    box-shadow: 0 4px 12px rgba(200, 255, 0, 0.4);
     transition: all 0.3s;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    z-index: 50;
+    margin: 0 -10px;
+    animation: float 3s ease-in-out infinite;
 }
 
-.fab-button:hover {
+.fab-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fab-button-nav:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(0, 136, 204, 0.6);
+    box-shadow: 0 6px 20px rgba(200, 255, 0, 0.5);
 }
 
-.fab-button:active {
+.fab-button-nav:active {
     transform: scale(0.95);
 }
 
-.header-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    margin-top: 8px;
-    min-width: 180px;
-    z-index: 1000;
+/* ===== DEVELOPER MODAL ===== */
+.dev-modal {
+    max-width: 400px;
 }
 
-.header-menu button {
-    width: 100%;
-    padding: 12px 16px;
-    border: none;
-    background: none;
-    text-align: left;
-    cursor: pointer;
+.dev-modal h3 {
+    color: #111;
+    font-weight: 700;
+}
+
+.dev-modal p {
+    color: #666;
+}
+
+/* Loading Spinner */
+#loadingScreen {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+}
+
+.loading-text {
+    color: #c8ff00;
     font-size: 14px;
-    transition: background 0.2s;
-    font-family: inherit;
+    font-weight: 600;
+    animation: float 2s ease-in-out infinite;
 }
 
-.header-menu button:hover {
-    background: #f9fafb;
+/* Modal Overlay */
+.modal-overlay {
+    background: rgba(0, 0, 0, 0.8);
 }
 
-.header-menu button:first-child {
-    border-radius: 12px 12px 0 0;
+.modal {
+    background: #fff;
+    border: 1px solid #e5e7eb;
 }
 
-.header-menu button:last-child {
-    border-radius: 0 0 12px 12px;
+.modal h2 {
+    color: #111;
+}
+
+.modal-close button {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s;
+}
+
+.modal-close button:hover {
+    color: #111;
 }
 
 @media (max-width: 480px) {
@@ -4182,7 +4257,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
         padding: 18px;
     }
 
-    .auth-header h1 {
+    .auth-header .auth-title-animate {
         font-size: 20px;
     }
 
@@ -4196,21 +4271,15 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
         font-size: 12px;
     }
 
-    .social-btn-small {
-        height: 36px;
-        padding: 6px;
+    .social-btn-google {
+        height: 40px;
+        padding: 8px;
+        font-size: 11px;
     }
 
-    .social-btn-small svg {
-        width: 16px;
-        height: 16px;
-    }
-
-    .fab-button {
+    .fab-button-nav {
         width: 48px;
         height: 48px;
         font-size: 20px;
-        bottom: 70px;
-        right: 12px;
     }
 }
