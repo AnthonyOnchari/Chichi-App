@@ -510,7 +510,7 @@
 
 <!-- EDIT PROFILE MODAL -->
 <div class="modal-overlay" id="editProfileModal" style="display: none;">
-    <div class="modal" style="max-width: 500px;">
+    <div class="modal" style="max-width: 500px; max-height: 85vh; overflow-y: auto;">
         <div class="modal-close"><button onclick="app.closeProfileSettings()">✕</button></div>
         <h2 style="font-weight: 700; margin-bottom: 20px;">✏️ Edit Profile</h2>
         
@@ -526,7 +526,12 @@
         
         <div style="margin-bottom: 20px;">
             <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Bio</label>
-            <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
+            <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box; min-height: 80px; resize: vertical;"></textarea>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #1a202c;">🏷️ Interests (Update)</label>
+            <div id="editProfileInterests" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; min-height: 80px;"></div>
         </div>
         
         <div style="display: flex; gap: 10px;">
