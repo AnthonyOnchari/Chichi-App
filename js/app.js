@@ -5954,7 +5954,6 @@ var app = {
         var name = document.getElementById('editProfileName').value.trim();
         var username = document.getElementById('editProfileUsername').value.trim();
         var bio = document.getElementById('editProfileBio').value.trim();
-        var interestsInput = document.getElementById('editProfileInterests') ? document.getElementById('editProfileInterests').value.trim() : '';
         var self = this;
        
         if (!name) {
@@ -5977,7 +5976,18 @@ var app = {
             return;
         }
        
-        var interests = interestsInput ? interestsInput.split(',').map(function(i) { return i.trim(); }).filter(function(i) { return i; }) : (this.profile.interests || []);
+        // Capture selected interests from checkboxes
+        var interestCheckboxes = document.querySelectorAll('.edit-interest-checkbox:checked');
+        var interests = [];
+        interestCheckboxes.forEach(function(checkbox) {
+            interests.push(checkbox.value);
+        });
+        
+        if (interests.length === 0) {
+            this.toast('Please select at least 1 interest', 'error');
+            return;
+        }
+        
         if (interests.length > 10) {
             this.toast('Maximum 10 interests allowed', 'error');
             return;
@@ -9602,6 +9612,7 @@ app.removeAdmin = function(email) {
 
 // Show profile settings modal
 app.showProfileSettings = function() {
+    var self = this;
     if (!this.user) {
         this.toast('❌ Please log in first', 'error');
         return;
@@ -9617,6 +9628,37 @@ app.showProfileSettings = function() {
     document.getElementById('editProfileName').value = this.profile.name || '';
     document.getElementById('editProfileUsername').value = this.profile.username || '';
     document.getElementById('editProfileBio').value = this.profile.bio || '';
+    
+    // Populate interests with editing capability
+    var interestsContainer = document.getElementById('editProfileInterests');
+    var currentInterests = this.profile.interests || [];
+    
+    var allInterests = ['Music', 'Sports', 'Travel', 'Art', 'Tech', 'Food', 'Fitness', 'Books', 'Movies', 'Nature', 'Gaming', 'Photography', 'Writing', 'Cooking', 'Yoga'];
+    
+    var interestsHtml = allInterests.map(function(interest) {
+        var isSelected = currentInterests.includes(interest);
+        return `
+            <label style="display:flex;align-items:center;padding:6px 12px;background:${isSelected ? '#0088cc' : '#fff'};border:2px solid ${isSelected ? '#0088cc' : '#cbd5e1'};border-radius:20px;cursor:pointer;transition:0.2s;font-size:12px;color:${isSelected ? '#fff' : '#1a202c'};font-weight:${isSelected ? '600' : '500'};">
+                <input type="checkbox" class="edit-interest-checkbox" value="${interest}" ${isSelected ? 'checked' : ''} style="margin-right:6px;cursor:pointer;accent-color:#0088cc;" onchange="
+                    var label = this.parentElement;
+                    if(this.checked) {
+                        label.style.background='#0088cc';
+                        label.style.borderColor='#0088cc';
+                        label.style.color='#fff';
+                        label.style.fontWeight='600';
+                    } else {
+                        label.style.background='#fff';
+                        label.style.borderColor='#cbd5e1';
+                        label.style.color='#1a202c';
+                        label.style.fontWeight='500';
+                    }
+                ">
+                <span>${interest}</span>
+            </label>
+        `;
+    }).join('');
+    
+    interestsContainer.innerHTML = interestsHtml;
     
     // Show modal
     modal.style.display = 'flex';
