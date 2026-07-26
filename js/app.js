@@ -154,8 +154,8 @@ var app = {
                     } else {
                         self.profile = {
                             name: u.displayName || 'User',
-                            email: u.email,
-                            username: u.email.split('@')[0] || 'user',
+                            email: u.email || '',
+                            username: (u.email || 'user').split('@')[0] || 'user',
                             bio: '',
                             profilePhoto: u.photoURL || '',
                             coverImage: '',
@@ -164,8 +164,12 @@ var app = {
                             following: 0,
                             triviaAnswered: [],
                             tier: 'free',
-                            interests: []
+                            interests: [],
+                            createdAt: new Date().toLocaleString('en-KE')
                         };
+                        
+                        // Save new user profile to Firebase
+                        db.ref('users/' + u.uid).set(self.profile);
                     }
                     self.loadProfile();
                     self.checkAndShowUsernameSetup();
@@ -1091,8 +1095,8 @@ var app = {
                 if (!user.username || user.username.trim() === '') {
                     usersWithoutUsername.push({
                         uid: uid,
-                        name: user.name,
-                        email: user.email
+                        name: user.name || 'Unnamed User',
+                        email: user.email || '(no email)'
                     });
                 }
             }
@@ -1108,9 +1112,9 @@ var app = {
                                 <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                                     ${usersWithoutUsername.map(u => `
                                         <div style="background: white; border-radius: 8px; padding: 8px 12px; font-size: 12px;">
-                                            <span style="font-weight: 600; color: #1e293b;">${u.name}</span>
-                                            <span style="color: #6b7280; font-size: 11px;">(${u.email})</span>
-                                            <button onclick="app.fixUserUsername('${u.uid}', '${u.name}', '${u.email}')" style="margin-left: 8px; padding: 4px 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px;">Fix</button>
+                                            <span style="font-weight: 600; color: #1e293b;">${u.name || 'Unnamed'}</span>
+                                            <span style="color: #6b7280; font-size: 11px;">(${u.email || 'no email'})</span>
+                                            <button onclick="app.fixUserUsername('${u.uid}', '${u.name || 'Unnamed'}', '${u.email || ''}')" style="margin-left: 8px; padding: 4px 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px;">Fix</button>
                                         </div>
                                     `).join('')}
                                 </div>
@@ -1133,20 +1137,26 @@ var app = {
                         var banData = bannedUsers[u.uid] || {};
                         var usernameDisplay = u.user.username ? `<div style="font-size: 0.75rem; color: #3b82f6; margin-top: 2px;">@${u.user.username}</div>` : '<div style="font-size: 0.75rem; color: #ef4444; margin-top: 2px;">❌ NO USERNAME</div>';
                         
+                        // Safe data extraction with fallbacks
+                        var userEmail = u.user.email || '(email not set)';
+                        var userCreatedAt = u.user.createdAt || '(date not available)';
+                        var userBalance = (u.user.balance || 0).toFixed(2);
+                        var userFollowers = u.user.followers || 0;
+                        
                         html += `
                             <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; ${isBanned ? 'background: #fef2f2;' : ''}">
                                 <div>
-                                    <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name} ${isBanned ? '🚫' : ''}</div>
-                                    <div style="font-size: 0.8rem; color: var(--text-light);">${u.user.email}</div>
+                                    <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name || 'Unknown User'} ${isBanned ? '🚫' : ''}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-light);">${userEmail}</div>
                                     ${usernameDisplay}
-                                    <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">Joined: ${u.user.createdAt}</div>
-                                    <div style="font-size: 0.75rem; color: var(--primary);">💰 ${(u.user.balance || 0).toFixed(2)} Coins</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">📅 ${userCreatedAt}</div>
+                                    <div style="font-size: 0.75rem; color: var(--primary);">💰 ${userBalance} Coins</div>
                                     ${isBanned ? `<div style="font-size: 0.7rem; color: #ef4444;">Banned: ${banData.reason || 'No reason'}</div>` : ''}
                                 </div>
                                 <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                                    <span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">${u.user.followers || 0} followers</span>
+                                    <span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">👥 ${userFollowers}</span>
                                     ${!u.user.username ? `
-                                        <button onclick="app.fixUserUsername('${u.uid}', '${u.user.name}', '${u.user.email}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Fix Username</button>
+                                        <button onclick="app.fixUserUsername('${u.uid}', '${u.user.name}', '${userEmail}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Fix Username</button>
                                     ` : ''}
                                     <button onclick="app.showBalanceEditor('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">💰 Balance</button>
                                     ${isBanned ? `
