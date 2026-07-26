@@ -10942,3 +10942,30 @@ app.setTheme = function(theme) {
     }
     this.toast('Theme: ' + theme, 'success');
 };
+
+
+// Video Call Functions (additional)
+app.initiateVideoCall = function() {
+    if (!this.currentChat || !this.user) return;
+    var callId = 'call_' + Date.now();
+    var callData = {initiator: this.user.uid, recipient: this.currentChat.uid, status: 'ringing', type: 'video', startTime: firebase.database.ServerValue.TIMESTAMP};
+    db.ref('calls/' + callId).set(callData);
+    this.currentCallId = callId;
+    this.displayVideoCallUI('outgoing');
+};
+
+app.acceptVideoCall = function() {
+    if (!this.currentCallId) return;
+    db.ref('calls/' + this.currentCallId).update({status: 'accepted'});
+    this.connectCall(this.currentCallId);
+};
+
+app.displayVideoCallUI = function(state) {
+    var existing = document.getElementById('videoCallUI');
+    if (existing) existing.remove();
+    var callUI = document.createElement('div');
+    callUI.id = 'videoCallUI';
+    callUI.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;';
+    callUI.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;width:100%;"><video id="remoteVideo" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;bottom:100px;right:20px;width:100px;height:133px;background:#1f2937;border-radius:8px;overflow:hidden;"><video id="miniLocalVideo" style="width:100%;height:100%;object-fit:cover;"></video></div></div><div style="background:rgba(0,0,0,0.7);padding:16px;display:flex;gap:12px;justify-content:center;width:100%;"><button style="width:50px;height:50px;border-radius:50%;background:#475569;color:white;border:none;font-size:20px;cursor:pointer;">📹</button><button style="width:50px;height:50px;border-radius:50%;background:#475569;color:white;border:none;font-size:20px;cursor:pointer;">🎤</button><button onclick="app.endVoiceCall();" style="width:50px;height:50px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:20px;cursor:pointer;">✕</button></div>';
+    document.body.appendChild(callUI);
+};
