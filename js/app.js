@@ -9355,6 +9355,7 @@ app.checkAdminStatus = function() {
     }
     
     var userEmail = this.user.email.toLowerCase();
+    var encodedEmail = userEmail.replace(/\./g, '_'); // Replace dots with underscores for Firebase key
     var isDefaultAdmin = this.DEFAULT_ADMINS.indexOf(userEmail) > -1;
     
     var self = this;
@@ -9362,7 +9363,7 @@ app.checkAdminStatus = function() {
     // Check if in custom admin list
     db.ref('adminUsers').once('value').then(function(snapshot) {
         var admins = snapshot.val() || {};
-        var isCustomAdmin = admins[userEmail] || false;
+        var isCustomAdmin = admins[encodedEmail] || false;
         
         self.isAdmin = isDefaultAdmin || isCustomAdmin;
         
@@ -9398,17 +9399,18 @@ app.loadAdminList = function() {
         // Add default admins
         var allAdmins = {};
         self.DEFAULT_ADMINS.forEach(function(email) {
-            allAdmins[email] = true;
+            allAdmins[email] = 'default';
         });
         
-        // Add custom admins
-        for (var email in admins) {
-            allAdmins[email] = true;
+        // Add custom admins (decode email keys by replacing underscores back to dots)
+        for (var encodedEmail in admins) {
+            var decodedEmail = encodedEmail.replace(/_/g, '.'); // Replace underscores back to dots
+            allAdmins[decodedEmail] = 'custom';
         }
         
         // Display
         for (var email in allAdmins) {
-            var isDefault = self.DEFAULT_ADMINS.indexOf(email) > -1;
+            var isDefault = allAdmins[email] === 'default';
             html += '<div style="display: flex; align-items: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb; gap: 12px;">';
             html += '<div style="flex: 1;"><div style="font-weight: 600; font-size: 14px;">' + email + '</div>';
             if (isDefault) {
@@ -9459,8 +9461,11 @@ app.addAdmin = function() {
     
     var self = this;
     
+    // Encode email for Firebase (replace dots with underscores)
+    var encodedEmail = email.replace(/\./g, '_');
+    
     // Add to database
-    db.ref('adminUsers/' + email).set(true).then(function() {
+    db.ref('adminUsers/' + encodedEmail).set(true).then(function() {
         self.toast('✅ ' + email + ' is now an admin!', 'success');
         emailInput.value = '';
         self.loadAdminList();
@@ -9480,7 +9485,10 @@ app.removeAdmin = function(email) {
     
     var self = this;
     
-    db.ref('adminUsers/' + email).remove().then(function() {
+    // Encode email for Firebase (replace dots with underscores)
+    var encodedEmail = email.replace(/\./g, '_');
+    
+    db.ref('adminUsers/' + encodedEmail).remove().then(function() {
         self.toast('✅ ' + email + ' admin access removed', 'success');
         self.loadAdminList();
     }).catch(function(err) {
