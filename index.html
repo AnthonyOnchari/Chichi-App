@@ -230,7 +230,7 @@
             <button class="btn-icon" id="headerMenuBtn" onclick="app.showHeaderMenu()">☰</button>
             <div class="header-menu" id="headerMenu" style="display:none;position:absolute;top:100%;right:0;background:white;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.15);min-width:180px;z-index:1000;">
                 <button onclick="app.switchView('profile')" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;">👤 Profile</button>
-                <button onclick="app.toggleAdminModal()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-top:1px solid #e5e7eb;">⚙️ Admin</button>
+                <button id="adminMenuBtn" onclick="app.toggleAdminModal()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-top:1px solid #e5e7eb; display:none;">⚙️ Admin</button>
                 <button onclick="app.showLogout()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-top:1px solid #e5e7eb;border-radius:0 0 12px 12px;">🚪 Logout</button>
             </div>
         </div>
@@ -425,6 +425,7 @@
         <button class="admin-tab" onclick="app.switchAdminTab('posts')">📝 Posts</button>
         <button class="admin-tab" onclick="app.switchAdminTab('analytics')">📈 Analytics</button>
         <button class="admin-tab" onclick="app.switchAdminTab('gifts')">🎁 Gifts</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('admins')">👑 Admin Access</button>
         <button class="admin-tab" onclick="app.switchAdminTab('notifications')">🔔 Notifications</button>
         <button class="admin-tab" onclick="app.switchAdminTab('suspicious')">🚨 Suspicious</button>
         <button class="admin-tab" onclick="app.switchAdminTab('logs')">📋 Logs</button>
@@ -470,6 +471,26 @@
             <div id="adminGifts"></div>
         </div>
         
+        <!-- Admin Access Management -->
+        <div class="admin-tab-content" id="adminAdmins">
+            <div style="margin-bottom: 24px; padding: 16px; background: #f0f7ff; border-radius: 12px; border: 1px solid #bfdbfe;">
+                <h3 style="margin-top: 0; color: #1e40af;">👑 Manage Admin Access</h3>
+                <p style="font-size: 12px; color: #64748b; margin-bottom: 16px;">Add or remove administrators from CHICHI. Only existing admins can modify this list.</p>
+                
+                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                    <input type="email" id="newAdminEmail" placeholder="Enter email to add as admin..." style="flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
+                    <button onclick="if(typeof app !== 'undefined' && app.addAdmin) app.addAdmin()" style="padding: 10px 16px; background: #0088cc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">➕ Add Admin</button>
+                </div>
+            </div>
+            
+            <h3 style="margin: 20px 0 12px; font-size: 14px; font-weight: 700; color: #1a202c;">Current Admins:</h3>
+            <div id="adminAccessList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            
+            <div style="margin-top: 24px; padding: 12px; background: #fef2f2; border-radius: 8px; font-size: 12px; color: #7c2d12;">
+                <strong>⚠️ Default Admins:</strong> support-chichi@gmail.com, onchari.dev@gmail.com
+            </div>
+        </div>
+        
         <!-- Notifications -->
         <div class="admin-tab-content" id="adminNotificationsTab">
             <div id="adminNotificationsList"></div>
@@ -483,6 +504,34 @@
         <!-- Logs -->
         <div class="admin-tab-content" id="adminLogs">
             <div id="activityLogList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT PROFILE MODAL -->
+<div class="modal-overlay" id="editProfileModal" style="display: none;">
+    <div class="modal" style="max-width: 500px;">
+        <div class="modal-close"><button onclick="app.closeProfileSettings()">✕</button></div>
+        <h2 style="font-weight: 700; margin-bottom: 20px;">✏️ Edit Profile</h2>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Full Name *</label>
+            <input type="text" id="editProfileName" placeholder="Your full name" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Username</label>
+            <input type="text" id="editProfileUsername" placeholder="Your username (no spaces)" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Bio</label>
+            <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button onclick="app.closeProfileSettings()" style="flex: 1; padding: 12px; background: #f3f4f6; color: #1a202c; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">Cancel</button>
+            <button onclick="app.saveProfileChanges()" style="flex: 1; padding: 12px; background: #0088cc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">✅ Save Changes</button>
         </div>
     </div>
 </div>
