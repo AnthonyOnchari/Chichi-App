@@ -9430,6 +9430,605 @@ app.searchExplorePeople = function(query) {
 };
 
 // Explore People - Load featured
+// ============================================
+// PHASE 1: CORE MESSAGING FEATURES
+// ============================================
+
+// PHASE 1.1: Delivery Status (✓ ✓✓ ✓✓✓)
+app.trackDeliveryStatus = function(msgId, status) {
+    if (!this.user) return;
+    var self = this;
+    db.ref('messages/' + msgId + '/status').set(status).catch(function(err) {
+        console.error('Delivery status error:', err);
+    });
+};
+
+app.updateMessageStatus = function(msgId, newStatus) {
+    if (!this.user) return;
+    var statusMap = {'sent': '✓', 'delivered': '✓✓', 'read': '✓✓✓'};
+    var indicator = statusMap[newStatus] || '✓';
+    var elem = document.querySelector('[data-msg-id="' + msgId + '"] .delivery-status');
+    if (elem) {
+        elem.textContent = indicator;
+        elem.className = 'delivery-status delivery-' + newStatus;
+    }
+};
+
+// PHASE 1.2: Typing Indicators
+app.startTypingIndicator = function() {
+    if (!this.currentChat || !this.user) return;
+    var self = this;
+    var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+    db.ref('typing/' + key + '/' + self.user.uid).set({typing: true, since: Date.now()});
+    
+    if (this.typingTimeout) clearTimeout(this.typingTimeout);
+    this.typingTimeout = setTimeout(function() {
+        self.stopTypingIndicator();
+    }, 3000);
+};
+
+app.stopTypingIndicator = function() {
+    if (!this.currentChat || !this.user) return;
+    var key = [this.user.uid, this.currentChat.uid].sort().join('_');
+    db.ref('typing/' + key + '/' + this.user.uid).remove();
+};
+
+app.displayTypingIndicator = function(userName) {
+    var chatMsgs = document.getElementById('chatMessages');
+    if (!chatMsgs) return;
+    
+    var existing = chatMsgs.querySelector('.typing-indicator');
+    if (existing) existing.remove();
+    
+    var typingDiv = document.createElement('div');
+    typingDiv.className = 'typing-indicator';
+    typingDiv.innerHTML = '<div style="font-size:13px;color:#6b7280;font-style:italic;padding:8px;"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span> ' + userName + ' is typing...</div>';
+    chatMsgs.appendChild(typingDiv);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+};
+
+app.trackTyping = function() {
+    if (!this.currentChat) return;
+    var self = this;
+    var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+    
+    if (this.typingListener) db.ref('typing/' + key).off();
+    
+    this.typingListener = db.ref('typing/' + key).on('value', function(snapshot) {
+        var typing = snapshot.val();
+        var typingUsers = [];
+        if (typing) {
+            Object.keys(typing).forEach(function(uid) {
+                if (uid !== self.user.uid && typing[uid].typing) {
+                    typingUsers.push(self.users[uid] ? self.users[uid].name : 'User');
+                }
+            });
+        }
+        
+        var existing = document.querySelector('.typing-indicator');
+        if (typingUsers.length > 0) {
+            if (!existing) self.displayTypingIndicator(typingUsers[0]);
+        } else if (existing) {
+            existing.remove();
+        }
+    });
+};
+
+// PHASE 1.3: Online Status & Last Seen
+app.updatePresence = function(online) {
+    if (!this.user) return;
+    var self = this;
+    var presenceRef = db.ref('presence/' + this.user.uid);
+    
+    presenceRef.set({
+        online: online,
+        lastSeen: firebase.database.ServerValue.TIMESTAMP
+    }).catch(function(err) {
+        console.error('Presence update error:', err);
+    });
+};
+
+app.trackPresence = function() {
+    if (!this.currentChat || !this.user) return;
+    var self = this;
+    var otherUserId = this.currentChat.uid;
+    
+    if (this.presenceListener) db.ref('presence/' + otherUserId).off();
+    
+    this.presenceListener = db.ref('presence/' + otherUserId).on('value', function(snapshot) {
+        var presence = snapshot.val();
+        var headerStatus = document.querySelector('.chat-header-status');
+        
+        if (headerStatus && presence) {
+            if (presence.online) {
+                headerStatus.innerHTML = '🟢 Online';
+                headerStatus.style.color = '#10b981';
+            } else {
+                var lastSeen = presence.lastSeen ? self.formatTimeAgo(new Date(presence.lastSeen)) : 'a long time ago';
+                headerStatus.innerHTML = '⚫ Last seen ' + lastSeen;
+                headerStatus.style.color = '#9ca3af';
+            }
+        }
+    });
+};
+
+// PHASE 1.4: Edit Messages
+app.editMessage = function(msgId, chatKey) {
+    if (!this.user) return;
+    var self = this;
+    
+    var currentMsg = null;
+    if (this.chatMessages && this.chatMessages[chatKey]) {
+        this.chatMessages[chatKey].forEach(function(msg) {
+            if (msg.id === msgId) currentMsg = msg;
+        });
+    }
+    
+    if (!currentMsg) return;
+    
+    var modal = document.createElement('div');
+    modal.id = 'editMessageModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+    modal.innerHTML = `
+        <div style="background:white;border-radius:12px;padding:20px;width:90%;max-width:400px;box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+            <div style="font-size:18px;font-weight:700;margin-bottom:15px;">Edit Message</div>
+            <textarea id="editMessageText" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;min-height:80px;font-size:14px;">${currentMsg.text}</textarea>
+            <div style="display:flex;gap:10px;margin-top:15px;">
+                <button onclick="document.getElementById('editMessageModal').remove();" style="flex:1;padding:10px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Cancel</button>
+                <button onclick="app.saveEditMessage('${msgId}', '${chatKey}', document.getElementById('editMessageText').value);" style="flex:1;padding:10px;background:#2e5bff;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Save</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
+app.saveEditMessage = function(msgId, chatKey, newText) {
+    if (!this.user || !newText.trim()) return;
+    
+    var self = this;
+    newText = newText.trim();
+    
+    db.ref('messages/' + msgId).update({
+        text: newText,
+        edited: true,
+        editedAt: firebase.database.ServerValue.TIMESTAMP
+    }).then(function() {
+        db.ref('chats/' + chatKey + '/messages/' + msgId).update({
+            text: newText,
+            edited: true,
+            editedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        document.getElementById('editMessageModal').remove();
+        self.displayChatMessages(self.chatMessages[chatKey], chatKey);
+    }).catch(function(err) {
+        self.toast('Error editing message', 'error');
+    });
+};
+
+// PHASE 1.5: Delete Messages (Soft Delete)
+app.deleteMessage = function(msgId, chatKey) {
+    if (!this.user) return;
+    
+    if (!confirm('Delete this message?')) return;
+    
+    var self = this;
+    db.ref('messages/' + msgId).update({
+        deleted: true,
+        deletedAt: firebase.database.ServerValue.TIMESTAMP
+    }).then(function() {
+        db.ref('chats/' + chatKey + '/messages/' + msgId).update({
+            deleted: true,
+            deletedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        self.displayChatMessages(self.chatMessages[chatKey], chatKey);
+    }).catch(function(err) {
+        self.toast('Error deleting message', 'error');
+    });
+};
+
+// PHASE 1.6: Message Search
+app.searchMessages = function(query) {
+    if (!this.currentChat || !query.trim()) {
+        document.querySelectorAll('.message-highlight').forEach(function(el) {
+            el.classList.remove('message-highlight');
+        });
+        return;
+    }
+    
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    var results = [];
+    
+    if (this.chatMessages && this.chatMessages[chatKey]) {
+        this.chatMessages[chatKey].forEach(function(msg, idx) {
+            if (msg && msg.text && msg.text.toLowerCase().includes(query.toLowerCase())) {
+                results.push({msg: msg, idx: idx});
+            }
+        });
+    }
+    
+    if (results.length > 0) {
+        results.forEach(function(result) {
+            var msgEl = document.querySelector('[data-msg-id="' + result.msg.id + '"]');
+            if (msgEl) msgEl.classList.add('message-highlight');
+        });
+        this.toast('Found ' + results.length + ' results', 'info');
+    } else {
+        this.toast('No messages found', 'info');
+    }
+};
+
+// PHASE 1.7: Message Copy
+app.copyMessageToClipboard = function(text) {
+    var self = this;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() {
+            self.toast('✓ Copied to clipboard', 'success');
+        }).catch(function() {
+            self.fallbackCopy(text);
+        });
+    } else {
+        this.fallbackCopy(text);
+    }
+};
+
+app.fallbackCopy = function(text) {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    this.toast('✓ Copied', 'success');
+};
+
+// PHASE 1.8: Message Action Menu
+app.showMessageActionMenu = function(msgId, event) {
+    if (!this.user) return;
+    
+    event.stopPropagation();
+    
+    var existing = document.querySelector('.message-action-menu');
+    if (existing) existing.remove();
+    
+    var menu = document.createElement('div');
+    menu.className = 'message-action-menu';
+    menu.style.cssText = 'position:fixed;top:' + event.clientY + 'px;left:' + event.clientX + 'px;background:white;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:9999;min-width:150px;overflow:hidden;';
+    
+    var msgEl = document.querySelector('[data-msg-id="' + msgId + '"]');
+    var msgText = msgEl ? msgEl.querySelector('.message-bubble').textContent : '';
+    
+    menu.innerHTML = `
+        <div style="padding:8px 0;">
+            <div onclick="app.copyMessageToClipboard('${msgText.replace(/'/g, "\\'")}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;hover:background:#f3f4f6;font-size:14px;">📋 Copy</div>
+            <div onclick="app.editMessage('${msgId}','${[this.user.uid, this.currentChat.uid].sort().join('_')}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;">✏️ Edit</div>
+            <div onclick="app.deleteMessage('${msgId}','${[this.user.uid, this.currentChat.uid].sort().join('_')}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;color:#ef4444;">🗑️ Delete</div>
+            <div onclick="app.pinMessage('${msgId}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;">📌 Pin</div>
+            <div onclick="app.forwardMessage('${msgId}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;">↪️ Forward</div>
+        </div>
+    `;
+    
+    document.body.appendChild(menu);
+    
+    document.addEventListener('click', function() {
+        if (menu.parentNode) menu.remove();
+    }, {once: true});
+};
+
+app.longPressMessage = function(msgId, event) {
+    if (!this.user) return;
+    
+    if (event.type === 'contextmenu') {
+        event.preventDefault();
+        this.showMessageActionMenu(msgId, event);
+    } else {
+        var self = this;
+        var pressTimer = setTimeout(function() {
+            self.showMessageActionMenu(msgId, {clientX: event.touches[0].clientX, clientY: event.touches[0].clientY, stopPropagation: function(){}});
+        }, 500);
+        
+        var clearTimer = function() { clearTimeout(pressTimer); };
+        event.target.addEventListener('touchend', clearTimer, {once: true});
+        event.target.addEventListener('touchmove', clearTimer, {once: true});
+    }
+};
+
+// ============================================
+// PHASE 2: ADVANCED MESSAGING FEATURES
+// ============================================
+
+// PHASE 2.1: Emoji Reactions
+app.addReaction = function(msgId, emoji) {
+    if (!this.user) return;
+    var self = this;
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    
+    db.ref('messages/' + msgId + '/reactions/' + emoji).once('value').then(function(snapshot) {
+        var users = snapshot.val() || [];
+        if (!Array.isArray(users)) users = [];
+        
+        if (!users.includes(self.user.uid)) {
+            users.push(self.user.uid);
+        }
+        
+        db.ref('messages/' + msgId + '/reactions/' + emoji).set(users).then(function() {
+            db.ref('chats/' + chatKey + '/messages/' + msgId + '/reactions/' + emoji).set(users);
+            self.displayChatMessages(self.chatMessages[chatKey], chatKey);
+        });
+    });
+};
+
+app.removeReaction = function(msgId, emoji) {
+    if (!this.user) return;
+    var self = this;
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    
+    db.ref('messages/' + msgId + '/reactions/' + emoji).once('value').then(function(snapshot) {
+        var users = snapshot.val() || [];
+        if (!Array.isArray(users)) users = [];
+        
+        users = users.filter(function(uid) { return uid !== self.user.uid; });
+        
+        if (users.length > 0) {
+            db.ref('messages/' + msgId + '/reactions/' + emoji).set(users);
+            db.ref('chats/' + chatKey + '/messages/' + msgId + '/reactions/' + emoji).set(users);
+        } else {
+            db.ref('messages/' + msgId + '/reactions/' + emoji).remove();
+            db.ref('chats/' + chatKey + '/messages/' + msgId + '/reactions/' + emoji).remove();
+        }
+        
+        self.displayChatMessages(self.chatMessages[chatKey], chatKey);
+    });
+};
+
+app.displayReactions = function(msgId, reactions) {
+    if (!reactions || Object.keys(reactions).length === 0) return '';
+    
+    var html = '<div class="emoji-reaction-container" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">';
+    var self = this;
+    
+    Object.keys(reactions).forEach(function(emoji) {
+        var count = reactions[emoji].length;
+        var hasReacted = reactions[emoji].includes(self.user.uid);
+        html += '<div onclick="app.' + (hasReacted ? 'removeReaction' : 'addReaction') + '(\'' + msgId + '\', \'' + emoji + '\');" style="display:inline-flex;align-items:center;gap:4px;background:' + (hasReacted ? '#dbeafe' : '#f3f4f6') + ';padding:4px 8px;border-radius:12px;cursor:pointer;font-size:12px;border:1px solid ' + (hasReacted ? '#0ea5e9' : '#e5e7eb') + ';">' + emoji + ' <span>' + count + '</span></div>';
+    });
+    
+    html += '<div onclick="app.showEmojiPicker(\'' + msgId + '\');" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:#f3f4f6;border-radius:50%;cursor:pointer;font-size:12px;">+</div></div>';
+    
+    return html;
+};
+
+app.showEmojiPicker = function(msgId) {
+    var self = this;
+    var emojis = ['👍', '❤️', '😂', '😢', '🔥', '😍', '🎉', '👏', '🙏', '💯'];
+    
+    var modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:9999;';
+    modal.innerHTML = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">' + emojis.map(function(emoji) {
+        return '<div onclick="app.addReaction(\'' + msgId + '\', \'' + emoji + '\');document.querySelector(\'[data-emoji-modal=true]\').remove();" style="font-size:24px;cursor:pointer;padding:8px;border-radius:8px;text-align:center;hover:background:#f3f4f6;">' + emoji + '</div>';
+    }).join('') + '</div>';
+    modal.setAttribute('data-emoji-modal', 'true');
+    
+    document.body.appendChild(modal);
+    
+    document.addEventListener('click', function() {
+        var m = document.querySelector('[data-emoji-modal=true]');
+        if (m) m.remove();
+    }, {once: true});
+};
+
+// PHASE 2.2: Voice Messages
+app.startVoiceRecording = function() {
+    if (!this.user) return;
+    var self = this;
+    
+    var modal = document.createElement('div');
+    modal.id = 'voiceRecordingModal';
+    modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:9999;text-align:center;';
+    modal.innerHTML = `
+        <div style="font-size:18px;font-weight:700;margin-bottom:15px;">🎤 Recording...</div>
+        <div id="recordingTime" style="font-size:24px;font-weight:700;color:#2e5bff;margin-bottom:15px;">00:00</div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+            <button onclick="app.stopVoiceRecording();" style="padding:10px 20px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Stop</button>
+            <button onclick="document.getElementById('voiceRecordingModal').remove();if(app.mediaRecorder)app.mediaRecorder.stop();" style="padding:10px 20px;background:#9ca3af;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Cancel</button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream) {
+            var mediaRecorder = new MediaRecorder(stream);
+            var audioChunks = [];
+            
+            self.mediaRecorder = mediaRecorder;
+            self.audioChunks = audioChunks;
+            self.recordingStartTime = Date.now();
+            
+            var timeDisplay = setInterval(function() {
+                var elapsed = Math.floor((Date.now() - self.recordingStartTime) / 1000);
+                var mins = Math.floor(elapsed / 60);
+                var secs = elapsed % 60;
+                document.getElementById('recordingTime').textContent = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+                
+                if (elapsed > 120) {
+                    clearInterval(timeDisplay);
+                    self.stopVoiceRecording();
+                }
+            }, 100);
+            
+            self.recordingTimeInterval = timeDisplay;
+            
+            mediaRecorder.addEventListener('dataavailable', function(event) {
+                audioChunks.push(event.data);
+            });
+            
+            mediaRecorder.start();
+        }).catch(function(err) {
+            self.toast('Microphone access denied', 'error');
+            document.getElementById('voiceRecordingModal').remove();
+        });
+    } else {
+        this.toast('Voice recording not supported', 'error');
+    }
+};
+
+app.stopVoiceRecording = function() {
+    if (!this.mediaRecorder) return;
+    
+    var self = this;
+    this.mediaRecorder.stop();
+    clearInterval(this.recordingTimeInterval);
+    
+    this.mediaRecorder.addEventListener('stop', function() {
+        var audioBlob = new Blob(self.audioChunks, {type: 'audio/wav'});
+        self.uploadVoiceToCloudinary(audioBlob);
+        
+        if (document.getElementById('voiceRecordingModal')) {
+            document.getElementById('voiceRecordingModal').remove();
+        }
+        
+        self.mediaRecorder.stream.getTracks().forEach(function(track) { track.stop(); });
+    }, {once: true});
+};
+
+app.uploadVoiceToCloudinary = function(audioBlob) {
+    if (!this.user) return;
+    var self = this;
+    
+    var formData = new FormData();
+    formData.append('file', audioBlob);
+    formData.append('upload_preset', 'chichi_audio');
+    formData.append('resource_type', 'auto');
+    
+    fetch('https://api.cloudinary.com/v1_1/u1uilb6f/upload', {
+        method: 'POST',
+        body: formData
+    }).then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.secure_url) {
+            self.sendVoiceMessage(data.secure_url, Math.round(audioBlob.size / 8000));
+        } else {
+            self.toast('Upload failed', 'error');
+        }
+    }).catch(function(err) {
+        self.toast('Upload error', 'error');
+    });
+};
+
+app.sendVoiceMessage = function(voiceUrl, duration) {
+    if (!this.currentChat || !this.user) return;
+    
+    var self = this;
+    var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+    var now = Date.now();
+    
+    var voiceMsg = {
+        sender: self.user.uid,
+        voiceUrl: voiceUrl,
+        duration: duration,
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        status: 'delivered'
+    };
+    
+    db.ref('messages/' + key).push().set(voiceMsg).then(function(ref) {
+        db.ref('chats/' + key + '/messages/' + ref.key).set(voiceMsg);
+        self.displayChatMessages(self.chatMessages[key], key);
+        self.toast('🎤 Voice message sent', 'success');
+    }).catch(function(err) {
+        self.toast('Error sending voice message', 'error');
+    });
+};
+
+app.playVoiceMessage = function(voiceUrl, duration) {
+    var audio = new Audio(voiceUrl);
+    audio.play().catch(function(err) {
+        console.error('Play error:', err);
+    });
+};
+
+app.displayVoiceMessage = function(voiceUrl, duration) {
+    if (!voiceUrl) return '';
+    var mins = Math.floor(duration / 60);
+    var secs = duration % 60;
+    var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
+    
+    return `<div class="voice-message" style="background:#f3f4f6;border-radius:8px;padding:10px;margin:8px 0;">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <button onclick="app.playVoiceMessage('${voiceUrl}',${duration});" style="background:#2e5bff;color:white;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;">▶️</button>
+            <div style="flex:1;">
+                <div class="voice-progress" style="background:#e5e7eb;border-radius:4px;height:3px;"></div>
+            </div>
+            <span style="font-size:12px;color:#6b7280;">${timeStr}</span>
+        </div>
+    </div>`;
+};
+
+// PHASE 2.3: Link Previews
+app.detectLinks = function(text) {
+    var urlRegex = /(https?:\/\/[^\s]+)/g;
+    var links = text.match(urlRegex);
+    if (links) links.forEach(function(link) { app.fetchLinkPreview(link); });
+    return links;
+};
+
+app.fetchLinkPreview = function(url) {
+    var self = this;
+    
+    fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(url)).then(function(res) { return res.json(); })
+      .then(function(data) {
+        var parser = new DOMParser();
+        var html = parser.parseFromString(data.contents, 'text/html');
+        
+        var title = html.querySelector('meta[property="og:title"]')?.getAttribute('content') || html.querySelector('title')?.textContent || 'Link';
+        var description = html.querySelector('meta[property="og:description"]')?.getAttribute('content') || html.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+        var image = html.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
+        
+        self.displayLinkPreview(url, {title: title, description: description, image: image});
+    }).catch(function(err) {
+        console.error('Link preview error:', err);
+    });
+};
+
+app.displayLinkPreview = function(url, metadata) {
+    return `<div class="link-preview-card" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:8px 0;cursor:pointer;" onclick="window.open('${url}','_blank');">
+        <div style="display:flex;gap:12px;">
+            ${metadata.image ? '<img src="' + metadata.image + '" style="width:80px;height:80px;object-fit:cover;">' : ''}
+            <div style="flex:1;padding:12px;overflow:hidden;">
+                <div style="font-weight:600;font-size:14px;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${metadata.title}</div>
+                <div style="font-size:12px;color:#6b7280;margin-top:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${metadata.description}</div>
+                <div style="font-size:11px;color:#9ca3af;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${new URL(url).hostname}</div>
+            </div>
+        </div>
+    </div>`;
+};
+
+// PHASE 2.4: Scroll to Latest
+app.showScrollLatestButton = function() {
+    var chatMsgs = document.getElementById('chatMessages');
+    if (!chatMsgs) return;
+    
+    var existing = document.querySelector('.scroll-to-latest-btn');
+    if (existing) return;
+    
+    var btn = document.createElement('button');
+    btn.className = 'scroll-to-latest-btn';
+    btn.textContent = '↓ New messages';
+    btn.style.cssText = 'position:absolute;bottom:60px;right:20px;background:#2e5bff;color:white;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.1);z-index:100;';
+    btn.onclick = function() { app.scrollToLatest(); };
+    
+    chatMsgs.parentElement.style.position = 'relative';
+    chatMsgs.parentElement.appendChild(btn);
+};
+
+app.scrollToLatest = function() {
+    var chatMsgs = document.getElementById('chatMessages');
+    if (chatMsgs) {
+        chatMsgs.scrollTop = chatMsgs.scrollHeight;
+        var btn = document.querySelector('.scroll-to-latest-btn');
+        if (btn) btn.remove();
+    }
+};
+
 app.loadExplorePeople = function() {
     var container = document.getElementById('explorePeopleContainer');
     if (!container) return;
@@ -9802,4 +10401,544 @@ app.animateBalanceIncrease = function(oldBalance, earnedAmount) {
             }
         }
     }, 25);
+};
+
+
+// ============================================
+// PHASE 1, 2, 3: ALL ADVANCED FEATURES
+// ============================================
+
+// PHASE 1: Delivery Status
+app.trackDeliveryStatus = function(msgId, status) {
+    if (!this.user) return;
+    db.ref('messages/' + msgId + '/status').set(status).catch(function(err) {
+        console.error('Delivery status error:', err);
+    });
+};
+
+app.updateMessageStatus = function(msgId, newStatus) {
+    var statusMap = {'sent': '✓', 'delivered': '✓✓', 'read': '✓✓✓'};
+    var indicator = statusMap[newStatus] || '✓';
+    var elem = document.querySelector('[data-msg-id="' + msgId + '"] .delivery-status');
+    if (elem) {
+        elem.textContent = indicator;
+        elem.className = 'delivery-status delivery-' + newStatus;
+    }
+};
+
+// PHASE 1: Typing Indicators
+app.startTypingIndicator = function() {
+    if (!this.currentChat || !this.user) return;
+    var self = this;
+    var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+    db.ref('typing/' + key + '/' + self.user.uid).set({typing: true, since: Date.now()});
+    if (this.typingTimeout) clearTimeout(this.typingTimeout);
+    this.typingTimeout = setTimeout(function() { self.stopTypingIndicator(); }, 3000);
+};
+
+app.stopTypingIndicator = function() {
+    if (!this.currentChat || !this.user) return;
+    var key = [this.user.uid, this.currentChat.uid].sort().join('_');
+    db.ref('typing/' + key + '/' + this.user.uid).remove();
+};
+
+app.displayTypingIndicator = function(userName) {
+    var chatMsgs = document.getElementById('chatMessages');
+    if (!chatMsgs) return;
+    var existing = chatMsgs.querySelector('.typing-indicator');
+    if (existing) existing.remove();
+    var typingDiv = document.createElement('div');
+    typingDiv.className = 'typing-indicator';
+    typingDiv.innerHTML = '<div style="font-size:13px;color:#6b7280;font-style:italic;padding:8px;"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span> ' + userName + ' is typing...</div>';
+    chatMsgs.appendChild(typingDiv);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+};
+
+app.trackTyping = function() {
+    if (!this.currentChat) return;
+    var self = this;
+    var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+    if (this.typingListener) db.ref('typing/' + key).off();
+    this.typingListener = db.ref('typing/' + key).on('value', function(snapshot) {
+        var typing = snapshot.val();
+        var typingUsers = [];
+        if (typing) {
+            Object.keys(typing).forEach(function(uid) {
+                if (uid !== self.user.uid && typing[uid].typing) {
+                    typingUsers.push(self.users[uid] ? self.users[uid].name : 'User');
+                }
+            });
+        }
+        var existing = document.querySelector('.typing-indicator');
+        if (typingUsers.length > 0) {
+            if (!existing) self.displayTypingIndicator(typingUsers[0]);
+        } else if (existing) {
+            existing.remove();
+        }
+    });
+};
+
+// PHASE 1: Online Status
+app.updatePresence = function(online) {
+    if (!this.user) return;
+    db.ref('presence/' + this.user.uid).set({
+        online: online,
+        lastSeen: firebase.database.ServerValue.TIMESTAMP
+    }).catch(function(err) { console.error('Presence error:', err); });
+};
+
+app.trackPresence = function() {
+    if (!this.currentChat || !this.user) return;
+    var self = this;
+    var otherUserId = this.currentChat.uid;
+    if (this.presenceListener) db.ref('presence/' + otherUserId).off();
+    this.presenceListener = db.ref('presence/' + otherUserId).on('value', function(snapshot) {
+        var presence = snapshot.val();
+        var headerStatus = document.querySelector('.chat-header-status');
+        if (headerStatus && presence) {
+            if (presence.online) {
+                headerStatus.innerHTML = '🟢 Online';
+                headerStatus.style.color = '#10b981';
+            } else {
+                var lastSeen = presence.lastSeen ? self.formatTimeAgo(new Date(presence.lastSeen)) : 'a long time ago';
+                headerStatus.innerHTML = '⚫ Last seen ' + lastSeen;
+                headerStatus.style.color = '#9ca3af';
+            }
+        }
+    });
+};
+
+// PHASE 1: Edit/Delete Messages
+app.editMessage = function(msgId, chatKey) {
+    if (!this.user) return;
+    var currentMsg = null;
+    if (this.chatMessages && this.chatMessages[chatKey]) {
+        this.chatMessages[chatKey].forEach(function(msg) { if (msg && msg.id === msgId) currentMsg = msg; });
+    }
+    if (!currentMsg) return;
+    var modal = document.createElement('div');
+    modal.id = 'editMessageModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+    modal.innerHTML = '<div style="background:white;border-radius:12px;padding:20px;width:90%;max-width:400px;"><div style="font-size:18px;font-weight:700;margin-bottom:15px;">Edit Message</div><textarea id="editMessageText" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;min-height:80px;">' + (currentMsg.text || '') + '</textarea><div style="display:flex;gap:10px;margin-top:15px;"><button onclick="document.getElementById(\'editMessageModal\').remove();" style="flex:1;padding:10px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer;">Cancel</button><button onclick="app.saveEditMessage(\'' + msgId + '\',\'' + chatKey + '\',document.getElementById(\'editMessageText\').value);" style="flex:1;padding:10px;background:#2e5bff;color:white;border:none;border-radius:8px;cursor:pointer;">Save</button></div></div>';
+    document.body.appendChild(modal);
+};
+
+app.saveEditMessage = function(msgId, chatKey, newText) {
+    if (!this.user || !newText.trim()) return;
+    var self = this;
+    newText = newText.trim();
+    db.ref('messages/' + msgId).update({text: newText, edited: true, editedAt: firebase.database.ServerValue.TIMESTAMP}).then(function() {
+        db.ref('chats/' + chatKey + '/messages/' + msgId).update({text: newText, edited: true, editedAt: firebase.database.ServerValue.TIMESTAMP});
+        document.getElementById('editMessageModal').remove();
+        self.displayChatMessages(self.chatMessages[chatKey], chatKey);
+    }).catch(function() { self.toast('Error editing message', 'error'); });
+};
+
+app.deleteMessage = function(msgId, chatKey) {
+    if (!this.user) return;
+    if (!confirm('Delete this message?')) return;
+    var self = this;
+    db.ref('messages/' + msgId).update({deleted: true, deletedAt: firebase.database.ServerValue.TIMESTAMP}).then(function() {
+        db.ref('chats/' + chatKey + '/messages/' + msgId).update({deleted: true, deletedAt: firebase.database.ServerValue.TIMESTAMP});
+        self.displayChatMessages(self.chatMessages[chatKey], chatKey);
+    }).catch(function() { self.toast('Error deleting message', 'error'); });
+};
+
+// PHASE 1: Copy Message
+app.copyMessageToClipboard = function(text) {
+    var self = this;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() { self.toast('✓ Copied', 'success'); }).catch(function() { self.fallbackCopy(text); });
+    } else {
+        this.fallbackCopy(text);
+    }
+};
+
+app.fallbackCopy = function(text) {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    this.toast('✓ Copied', 'success');
+};
+
+// PHASE 2: Emoji Reactions
+app.addReaction = function(msgId, emoji) {
+    if (!this.user) return;
+    var self = this;
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    db.ref('messages/' + msgId + '/reactions/' + emoji).once('value').then(function(snapshot) {
+        var users = snapshot.val() || [];
+        if (!Array.isArray(users)) users = [];
+        if (!users.includes(self.user.uid)) users.push(self.user.uid);
+        db.ref('messages/' + msgId + '/reactions/' + emoji).set(users).then(function() {
+            db.ref('chats/' + chatKey + '/messages/' + msgId + '/reactions/' + emoji).set(users);
+            self.displayChatMessages(self.chatMessages[chatKey], chatKey);
+        });
+    });
+};
+
+app.removeReaction = function(msgId, emoji) {
+    if (!this.user) return;
+    var self = this;
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    db.ref('messages/' + msgId + '/reactions/' + emoji).once('value').then(function(snapshot) {
+        var users = snapshot.val() || [];
+        if (!Array.isArray(users)) users = [];
+        users = users.filter(function(uid) { return uid !== self.user.uid; });
+        if (users.length > 0) {
+            db.ref('messages/' + msgId + '/reactions/' + emoji).set(users);
+            db.ref('chats/' + chatKey + '/messages/' + msgId + '/reactions/' + emoji).set(users);
+        } else {
+            db.ref('messages/' + msgId + '/reactions/' + emoji).remove();
+            db.ref('chats/' + chatKey + '/messages/' + msgId + '/reactions/' + emoji).remove();
+        }
+        self.displayChatMessages(self.chatMessages[chatKey], chatKey);
+    });
+};
+
+// PHASE 2: Voice Messages
+app.startVoiceRecording = function() {
+    if (!this.user) return;
+    var self = this;
+    var modal = document.createElement('div');
+    modal.id = 'voiceRecordingModal';
+    modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:12px;padding:20px;z-index:9999;text-align:center;';
+    modal.innerHTML = '<div style="font-size:18px;font-weight:700;margin-bottom:15px;">🎤 Recording...</div><div id="recordingTime" style="font-size:24px;font-weight:700;color:#2e5bff;margin-bottom:15px;">00:00</div><div style="display:flex;gap:10px;"><button onclick="app.stopVoiceRecording();" style="flex:1;padding:10px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;">Stop</button></div>';
+    document.body.appendChild(modal);
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream) {
+            var mediaRecorder = new MediaRecorder(stream);
+            var audioChunks = [];
+            self.mediaRecorder = mediaRecorder;
+            self.audioChunks = audioChunks;
+            self.recordingStartTime = Date.now();
+            var timeDisplay = setInterval(function() {
+                var elapsed = Math.floor((Date.now() - self.recordingStartTime) / 1000);
+                var mins = Math.floor(elapsed / 60);
+                var secs = elapsed % 60;
+                var timeEl = document.getElementById('recordingTime');
+                if (timeEl) timeEl.textContent = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+                if (elapsed > 120) { clearInterval(timeDisplay); self.stopVoiceRecording(); }
+            }, 100);
+            self.recordingTimeInterval = timeDisplay;
+            mediaRecorder.addEventListener('dataavailable', function(event) { audioChunks.push(event.data); });
+            mediaRecorder.start();
+        }).catch(function() { self.toast('Microphone access denied', 'error'); });
+    }
+};
+
+app.stopVoiceRecording = function() {
+    if (!this.mediaRecorder) return;
+    var self = this;
+    this.mediaRecorder.stop();
+    clearInterval(this.recordingTimeInterval);
+    this.mediaRecorder.addEventListener('stop', function() {
+        var audioBlob = new Blob(self.audioChunks, {type: 'audio/wav'});
+        self.uploadVoiceToCloudinary(audioBlob);
+        var modal = document.getElementById('voiceRecordingModal');
+        if (modal) modal.remove();
+        self.mediaRecorder.stream.getTracks().forEach(function(track) { track.stop(); });
+    }, {once: true});
+};
+
+app.uploadVoiceToCloudinary = function(audioBlob) {
+    if (!this.user) return;
+    var self = this;
+    var formData = new FormData();
+    formData.append('file', audioBlob);
+    formData.append('upload_preset', 'chichi_audio');
+    formData.append('resource_type', 'auto');
+    fetch('https://api.cloudinary.com/v1_1/u1uilb6f/upload', {method: 'POST', body: formData}).then(function(res) { return res.json(); })
+      .then(function(data) { if (data.secure_url) self.sendVoiceMessage(data.secure_url, Math.round(audioBlob.size / 8000)); else self.toast('Upload failed', 'error'); })
+      .catch(function() { self.toast('Upload error', 'error'); });
+};
+
+app.sendVoiceMessage = function(voiceUrl, duration) {
+    if (!this.currentChat || !this.user) return;
+    var self = this;
+    var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+    var voiceMsg = {sender: self.user.uid, voiceUrl: voiceUrl, duration: duration, timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'delivered'};
+    db.ref('messages/' + key).push().set(voiceMsg).then(function(ref) {
+        db.ref('chats/' + key + '/messages/' + ref.key).set(voiceMsg);
+        self.displayChatMessages(self.chatMessages[key], key);
+        self.toast('🎤 Voice message sent', 'success');
+    }).catch(function() { self.toast('Error sending voice message', 'error'); });
+};
+
+app.playVoiceMessage = function(voiceUrl) {
+    new Audio(voiceUrl).play().catch(function(err) { console.error('Play error:', err); });
+};
+
+// PHASE 3: Voice Calls
+app.initiateVoiceCall = function() {
+    if (!this.currentChat || !this.user) return;
+    var self = this;
+    var callId = 'call_' + Date.now();
+    var callData = {initiator: self.user.uid, recipient: self.currentChat.uid, initiatorName: self.profile.name, status: 'ringing', type: 'audio', startTime: firebase.database.ServerValue.TIMESTAMP};
+    db.ref('calls/' + callId).set(callData);
+    self.currentCallId = callId;
+    self.displayCallUI('outgoing');
+    var checkAnswer = setInterval(function() {
+        db.ref('calls/' + callId + '/status').once('value').then(function(snapshot) {
+            var status = snapshot.val();
+            if (status === 'accepted') { clearInterval(checkAnswer); self.connectCall(callId); }
+            else if (status === 'declined') { clearInterval(checkAnswer); self.toast('Call declined', 'info'); self.closeCallUI(); }
+        });
+    }, 1000);
+    setTimeout(function() { if (self.currentCallId === callId) { clearInterval(checkAnswer); db.ref('calls/' + callId).update({status: 'missed'}); self.toast('Call timed out', 'info'); self.closeCallUI(); } }, 60000);
+};
+
+app.acceptVoiceCall = function() {
+    if (!this.currentCallId) return;
+    db.ref('calls/' + this.currentCallId).update({status: 'accepted'});
+    this.connectCall(this.currentCallId);
+};
+
+app.endVoiceCall = function() {
+    if (!this.currentCallId) return;
+    db.ref('calls/' + this.currentCallId).update({status: 'ended', endTime: firebase.database.ServerValue.TIMESTAMP});
+    this.currentCallId = null;
+    this.closeCallUI();
+};
+
+app.connectCall = function(callId) {
+    this.toast('📞 Call connected', 'success');
+    this.displayCallUI('connected');
+    var self = this;
+    this.callStartTime = Date.now();
+    this.callTimer = setInterval(function() {
+        var duration = Math.floor((Date.now() - self.callStartTime) / 1000);
+        var mins = Math.floor(duration / 60);
+        var secs = duration % 60;
+        var timerEl = document.querySelector('.call-duration');
+        if (timerEl) timerEl.textContent = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+    }, 1000);
+};
+
+app.displayCallUI = function(state) {
+    var existing = document.getElementById('callUI');
+    if (existing) existing.remove();
+    var callUI = document.createElement('div');
+    callUI.id = 'callUI';
+    callUI.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0f172a,#1e293b);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;';
+    var statusText = state === 'outgoing' ? '📞 Calling...' : state === 'connected' ? '📞 Connected' : '📞 Incoming Call';
+    callUI.innerHTML = '<div style="text-align:center;color:white;"><div style="font-size:48px;margin-bottom:16px;">👤</div><div style="font-size:20px;font-weight:700;margin-bottom:8px;">' + (this.currentChat ? this.currentChat.name : 'User') + '</div><div style="font-size:14px;color:#cbd5e1;margin-bottom:16px;">' + statusText + '</div>' + (state === 'connected' ? '<div class="call-duration" style="font-size:24px;color:#10b981;font-weight:700;margin-bottom:16px;">00:00</div>' : '') + '<div style="display:flex;gap:16px;justify-content:center;">' + (state === 'outgoing' ? '<button onclick="app.endVoiceCall();" style="width:60px;height:60px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:24px;cursor:pointer;">✕</button>' : state === 'connected' ? '<button onclick="app.endVoiceCall();" style="width:60px;height:60px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:24px;cursor:pointer;">✕</button>' : '<button onclick="app.acceptVoiceCall();" style="width:60px;height:60px;border-radius:50%;background:#10b981;color:white;border:none;font-size:24px;cursor:pointer;">✓</button><button onclick="app.endVoiceCall();" style="width:60px;height:60px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:24px;cursor:pointer;">✕</button>') + '</div></div>';
+    document.body.appendChild(callUI);
+};
+
+app.closeCallUI = function() {
+    var callUI = document.getElementById('callUI');
+    if (callUI) callUI.remove();
+    if (this.callTimer) clearInterval(this.callTimer);
+};
+
+// PHASE 3: Message Pinning
+app.pinMessage = function(msgId) {
+    if (!this.user || !this.currentChat) return;
+    var self = this;
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    var msgText = '';
+    if (this.chatMessages && this.chatMessages[chatKey]) {
+        this.chatMessages[chatKey].forEach(function(msg) { if (msg && msg.id === msgId) msgText = msg.text || '(image)'; });
+    }
+    db.ref('pinned/' + chatKey + '/' + msgId).set({pinnedAt: firebase.database.ServerValue.TIMESTAMP, pinnedBy: this.user.uid, text: msgText}).then(function() {
+        db.ref('messages/' + msgId).update({isPinned: true});
+        self.toast('📌 Message pinned', 'success');
+        self.displayPinnedMessages();
+    });
+};
+
+app.unpinMessage = function(msgId) {
+    if (!this.user || !this.currentChat) return;
+    var self = this;
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    db.ref('pinned/' + chatKey + '/' + msgId).remove().then(function() {
+        db.ref('messages/' + msgId).update({isPinned: false});
+        self.displayPinnedMessages();
+    });
+};
+
+app.displayPinnedMessages = function() {
+    if (!this.user || !this.currentChat) return;
+    var self = this;
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    db.ref('pinned/' + chatKey).once('value').then(function(snapshot) {
+        var pinned = snapshot.val();
+        var chatHeader = document.querySelector('.chat-header');
+        var existing = document.querySelector('.pinned-section');
+        if (existing) existing.remove();
+        if (pinned && Object.keys(pinned).length > 0) {
+            var pinnedHtml = '<div class="pinned-section" style="background:#f0fdf4;border-bottom:1px solid #e5e7eb;padding:12px;display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;font-size:12px;color:#059669;">📌 PINNED</div><div style="font-size:13px;color:#1f2937;margin-top:4px;">' + Object.values(pinned)[0].text + '</div></div></div>';
+            if (chatHeader) chatHeader.insertAdjacentHTML('afterend', pinnedHtml);
+        }
+    });
+};
+
+// PHASE 3: Message Forwarding
+app.forwardMessage = function(msgId) {
+    if (!this.user) return;
+    var self = this;
+    var msgText = '';
+    Object.keys(this.chatMessages || {}).forEach(function(key) {
+        if (self.chatMessages[key]) {
+            self.chatMessages[key].forEach(function(msg) { if (msg && msg.id === msgId) msgText = msg.text || '(image)'; });
+        }
+    });
+    var conversations = [];
+    db.ref('messages').once('value').then(function(snapshot) {
+        if (snapshot.val()) {
+            Object.keys(snapshot.val()).forEach(function(chatKey) {
+                if (chatKey.includes(self.user.uid)) {
+                    var parts = chatKey.split('_');
+                    var otherUserId = parts[0] === self.user.uid ? parts[1] : parts[0];
+                    if (self.users[otherUserId] && self.users[otherUserId].name) {
+                        conversations.push({uid: otherUserId, name: self.users[otherUserId].name, chatKey: chatKey});
+                    }
+                }
+            });
+        }
+        var modal = document.createElement('div');
+        modal.id = 'forwardModal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+        modal.innerHTML = '<div style="background:white;border-radius:12px;padding:20px;width:90%;max-width:400px;"><div style="font-size:18px;font-weight:700;margin-bottom:15px;">Forward to:</div>' + conversations.map(function(conv) {
+            return '<div onclick="app.sendForwardedMessage(\'' + msgText.replace(/'/g, "\\'") + '\',\'' + conv.chatKey + '\');document.getElementById(\'forwardModal\').remove();" style="padding:12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;cursor:pointer;">' + conv.name + '</div>';
+        }).join('') + '</div>';
+        document.body.appendChild(modal);
+    });
+};
+
+app.sendForwardedMessage = function(text, targetChatKey) {
+    if (!this.user) return;
+    var self = this;
+    var msg = {text: text, sender: this.user.uid, timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'delivered', forward: {fromUserId: this.currentChat.uid, fromUserName: this.currentChat.name}};
+    db.ref('messages/' + targetChatKey).push().set(msg).then(function(ref) {
+        db.ref('chats/' + targetChatKey + '/messages/' + ref.key).set(msg);
+        self.toast('↪️ Message forwarded', 'success');
+    });
+};
+
+// PHASE 3: Media Gallery
+app.loadMediaGallery = function() {
+    if (!this.currentChat) return;
+    var self = this;
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    var images = [];
+    if (this.chatMessages && this.chatMessages[chatKey]) {
+        this.chatMessages[chatKey].forEach(function(msg) { if (msg && msg.image) images.push(msg.image); });
+    }
+    this.displayMediaGallery(images);
+};
+
+app.displayMediaGallery = function(images) {
+    var modal = document.createElement('div');
+    modal.id = 'mediaGalleryModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;overflow-y:auto;padding:20px;';
+    modal.innerHTML = '<div style="max-width:1200px;margin:0 auto;"><div style="text-align:right;margin-bottom:15px;"><button onclick="document.getElementById(\'mediaGalleryModal\').remove();" style="background:#ef4444;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;">Close</button></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;">' + images.map(function(img) {
+        return '<img src="' + img + '" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;" onclick="app.viewMediaInFull(\'' + img + '\');"/>';
+    }).join('') + '</div></div>';
+    document.body.appendChild(modal);
+};
+
+app.viewMediaInFull = function(imageUrl) {
+    var fullView = document.createElement('div');
+    fullView.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center;z-index:10000;';
+    fullView.innerHTML = '<img src="' + imageUrl + '" style="max-width:90%;max-height:90%;"/><button onclick="this.parentElement.remove();" style="position:absolute;top:20px;right:20px;background:#ef4444;color:white;border:none;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;">×</button>';
+    document.body.appendChild(fullView);
+};
+
+// PHASE 3: Mute Conversations
+app.muteConversation = function() {
+    if (!this.user || !this.currentChat) return;
+    var self = this;
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    db.ref('muted/' + this.user.uid + '/' + chatKey).set(true).then(function() {
+        self.toast('🔕 Chat muted', 'success');
+        self.displayMuteStatus();
+    });
+};
+
+app.unmuteConversation = function() {
+    if (!this.user || !this.currentChat) return;
+    var self = this;
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    db.ref('muted/' + this.user.uid + '/' + chatKey).remove().then(function() {
+        self.toast('🔔 Chat unmuted', 'success');
+        self.displayMuteStatus();
+    });
+};
+
+app.displayMuteStatus = function() {
+    if (!this.user || !this.currentChat) return;
+    var self = this;
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    db.ref('muted/' + this.user.uid + '/' + chatKey).once('value').then(function(snapshot) {
+        var isMuted = snapshot.val();
+        var chatHeader = document.querySelector('.chat-header-mute');
+        if (chatHeader) {
+            if (isMuted) {
+                chatHeader.innerHTML = '🔕 Muted';
+                chatHeader.style.color = '#ef4444';
+            } else {
+                chatHeader.innerHTML = '🔔 Unmuted';
+                chatHeader.style.color = '#10b981';
+            }
+        }
+    });
+};
+
+// PHASE 3: Call Notifications
+app.showCallNotification = function(callerName) {
+    var notification = document.createElement('div');
+    notification.style.cssText = 'position:fixed;top:20px;right:20px;background:white;border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:10000;';
+    notification.innerHTML = '<div style="font-weight:700;margin-bottom:8px;">📞 ' + callerName + ' is calling...</div><div style="display:flex;gap:8px;"><button onclick="app.acceptVoiceCall();this.parentElement.parentElement.remove();" style="flex:1;padding:8px 16px;background:#10b981;color:white;border:none;border-radius:8px;cursor:pointer;">Accept</button><button onclick="app.endVoiceCall();this.parentElement.parentElement.remove();" style="flex:1;padding:8px 16px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;">Decline</button></div>';
+    document.body.appendChild(notification);
+    this.playRingtone();
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+};
+
+app.showMissedCallNotification = function(callerName) {
+    var notification = document.createElement('div');
+    notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#fef2f2;border-radius:12px;padding:16px;z-index:10000;border:1px solid #fee2e2;';
+    notification.innerHTML = '<div style="color:#991b1b;font-weight:600;">📵 Missed call from ' + callerName + '</div>';
+    document.body.appendChild(notification);
+    setTimeout(function() { notification.remove(); }, 5000);
+};
+
+app.playRingtone = function() {
+    var context = new (window.AudioContext || window.webkitAudioContext)();
+    var osc = context.createOscillator();
+    var gain = context.createGain();
+    osc.connect(gain);
+    gain.connect(context.destination);
+    osc.frequency.value = 800;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, context.currentTime);
+    osc.start(context.currentTime);
+    osc.stop(context.currentTime + 0.5);
+};
+
+// UI RESTRUCTURE
+app.removeHeaderDarkMode = function() {
+    var btn = document.getElementById('darkModeToggle');
+    if (btn) btn.style.display = 'none';
+};
+
+app.addSettingsThemeToggle = function() {
+    var settings = document.querySelector('.settings-menu');
+    if (settings) {
+        settings.innerHTML += '<div style="padding:16px;border-top:1px solid #e5e7eb;"><div style="font-weight:600;margin-bottom:8px;">🌙 Theme</div><label style="display:flex;gap:8px;margin-bottom:8px;"><input type="radio" name="theme" value="light" onchange="app.setTheme(\'light\');" style="cursor:pointer;"/><span>Light</span></label><label style="display:flex;gap:8px;"><input type="radio" name="theme" value="dark" onchange="app.setTheme(\'dark\');" style="cursor:pointer;"/><span>Dark</span></label></div>';
+    }
+};
+
+app.setTheme = function(theme) {
+    localStorage.setItem('chichi-theme', theme);
+    if (theme === 'dark') {
+        document.body.style.filter = 'invert(1) hue-rotate(180deg)';
+    } else {
+        document.body.style.filter = 'none';
+    }
+    this.toast('Theme: ' + theme, 'success');
 };
