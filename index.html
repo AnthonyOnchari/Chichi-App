@@ -552,6 +552,230 @@
     </div>
 </div>
 
+
+<!-- ==================== NEW FEATURE MODALS ==================== -->
+
+<!-- EMOJI PICKER MODAL -->
+<div class="modal-overlay" id="emojiPickerModal" style="display:none;">
+    <div class="modal emoji-picker-modal">
+        <div class="modal-header">
+            <h3>React with emoji</h3>
+            <button onclick="app.closeEmojiPicker()" class="modal-close">✕</button>
+        </div>
+        <div class="emoji-picker-grid">
+            <button class="emoji-btn" onclick="app.addReaction('👍')">👍</button>
+            <button class="emoji-btn" onclick="app.addReaction('❤️')">❤️</button>
+            <button class="emoji-btn" onclick="app.addReaction('😂')">😂</button>
+            <button class="emoji-btn" onclick="app.addReaction('😢')">😢</button>
+            <button class="emoji-btn" onclick="app.addReaction('🔥')">🔥</button>
+            <button class="emoji-btn" onclick="app.addReaction('🎉')">🎉</button>
+            <button class="emoji-btn" onclick="app.addReaction('😡')">😡</button>
+            <button class="emoji-btn" onclick="app.addReaction('👏')">👏</button>
+            <button class="emoji-btn" onclick="app.addReaction('💯')">💯</button>
+            <button class="emoji-btn" onclick="app.addReaction('😍')">😍</button>
+            <button class="emoji-btn" onclick="app.addReaction('🤔')">🤔</button>
+            <button class="emoji-btn" onclick="app.addReaction('🙏')">🙏</button>
+        </div>
+    </div>
+</div>
+
+<!-- VOICE RECORDING MODAL -->
+<div class="modal-overlay" id="voiceRecordingModal" style="display:none;">
+    <div class="modal voice-recording-modal">
+        <div class="modal-header">
+            <h3>Recording Audio</h3>
+        </div>
+        <div class="voice-recording-content">
+            <div class="recording-timer" id="recordingTimer">0:00</div>
+            <div class="recording-visualizer">
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+            </div>
+            <div class="recording-buttons">
+                <button onclick="app.cancelVoiceRecording()" class="btn-secondary">Cancel</button>
+                <button onclick="app.stopVoiceRecording()" class="btn-primary">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CALL UI MODAL -->
+<div class="modal-overlay" id="callModal" style="display:none;">
+    <div class="call-container">
+        <video id="remoteVideo" class="video-remote" autoplay playsinline></video>
+        <video id="localVideo" class="video-local" autoplay muted playsinline></video>
+        
+        <div class="call-header">
+            <h3 id="callName">Caller</h3>
+            <div class="call-duration" id="callDuration">00:00</div>
+        </div>
+        
+        <div class="call-controls">
+            <button id="toggleMicBtn" onclick="app.toggleCallMic()" class="call-control-btn">🎤</button>
+            <button id="toggleCameraBtn" onclick="app.toggleCallCamera()" class="call-control-btn">📹</button>
+            <button onclick="app.endCall()" class="call-control-btn call-end-btn">✕</button>
+        </div>
+    </div>
+</div>
+
+<!-- INCOMING CALL NOTIFICATION -->
+<div id="incomingCallNotification" class="incoming-call-notification" style="display:none;">
+    <div class="incoming-call-content">
+        <div class="incoming-call-avatar">
+            <img id="incomingAvatar" src="" alt="Caller">
+        </div>
+        <h3 id="incomingName">Caller Name</h3>
+        <p id="incomingType">is calling...</p>
+        
+        <div class="incoming-call-actions">
+            <button onclick="app.declineIncomingCall()" class="btn-decline">Decline</button>
+            <button onclick="app.acceptIncomingCall()" class="btn-accept">Accept</button>
+        </div>
+    </div>
+</div>
+
+<!-- MEDIA GALLERY MODAL -->
+<div class="modal-overlay" id="mediaGalleryModal" style="display:none;">
+    <div class="modal media-gallery-modal">
+        <div class="modal-header">
+            <h3>Media Gallery</h3>
+            <button onclick="app.closeMediaGallery()" class="modal-close">✕</button>
+        </div>
+        <div id="mediaGalleryGrid" class="media-gallery-grid">
+            <!-- Images will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<!-- IMAGE VIEWER MODAL -->
+<div class="modal-overlay" id="imageViewerModal" style="display:none;">
+    <div class="image-viewer-container">
+        <button onclick="app.closeImageViewer()" class="close-btn">✕</button>
+        <img id="imageViewerSrc" src="" alt="Image">
+    </div>
+</div>
+
+<!-- MESSAGE ACTION MENU -->
+<div id="messageActionMenu" class="message-action-menu" style="display:none;">
+    <button onclick="app.copyMessage()" class="menu-item">📋 Copy</button>
+    <button onclick="app.editMessage()" class="menu-item">✏️ Edit</button>
+    <button onclick="app.pinMessage()" class="menu-item">📌 Pin</button>
+    <button onclick="app.forwardMessage()" class="menu-item">↪️ Forward</button>
+    <button onclick="app.deleteMessage()" class="menu-item delete">🗑️ Delete</button>
+</div>
+
+<!-- FORWARD MESSAGE MODAL -->
+<div class="modal-overlay" id="forwardModal" style="display:none;">
+    <div class="modal forward-modal">
+        <div class="modal-header">
+            <h3>Forward to...</h3>
+            <button onclick="app.closeForwardModal()" class="modal-close">✕</button>
+        </div>
+        <div id="forwardContactsList" class="forward-contacts-list">
+            <!-- Contacts will be listed here -->
+        </div>
+    </div>
+</div>
+
+<!-- PINNED MESSAGES BANNER -->
+<div id="pinnedBanner" class="pinned-banner" style="display:none;">
+    <div class="pinned-header">
+        <span>📌 Pinned Messages</span>
+        <button onclick="app.closePinnedBanner()">✕</button>
+    </div>
+    <div id="pinnedContent" class="pinned-content"></div>
+</div>
+
+<!-- CHAT INFO SIDEBAR -->
+<div id="chatInfoSidebar" class="chat-info-sidebar" style="display:none;">
+    <div class="sidebar-header">
+        <h3>Chat Info</h3>
+        <button onclick="app.closeChatInfo()" class="close-btn">✕</button>
+    </div>
+    
+    <div class="chat-info-content">
+        <img id="infoAvatar" class="info-avatar" src="" alt="Avatar">
+        <h4 id="infoName">Chat Name</h4>
+        <p id="infoStatus">Online</p>
+        
+        <div class="info-section">
+            <h5>Media</h5>
+            <button onclick="app.showMediaGallery()" class="btn-small">View All</button>
+        </div>
+        
+        <div class="info-section">
+            <h5>Actions</h5>
+            <button onclick="app.clearChat()" class="btn-small">Clear Chat</button>
+            <button onclick="app.muteChat()" class="btn-small">Mute</button>
+            <button onclick="app.blockUser()" class="btn-small btn-danger">Block</button>
+        </div>
+    </div>
+</div>
+
+<!-- TYPING INDICATOR -->
+<div id="typingIndicator" class="typing-indicator" style="display:none;">
+    <span id="typingUserName">User</span> is typing
+    <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+</div>
+
+<!-- SCROLL TO LATEST BUTTON -->
+<button id="scrollToLatestBtn" class="scroll-to-latest-btn" onclick="app.scrollToLatest()" style="display:none;">
+    <span>⬇️ New Messages</span>
+</button>
+
+<!-- LINK PREVIEW CARD TEMPLATE -->
+<template id="linkPreviewTemplate">
+    <div class="link-preview-card">
+        <div class="link-preview-image">
+            <img class="link-preview-img" src="" alt="Preview">
+        </div>
+        <div class="link-preview-content">
+            <h4 class="link-preview-title">Title</h4>
+            <p class="link-preview-desc">Description</p>
+            <a class="link-preview-url" href="" target="_blank">Open Link</a>
+        </div>
+    </div>
+</template>
+
+<!-- VOICE MESSAGE PLAYER TEMPLATE -->
+<template id="voiceMessageTemplate">
+    <div class="voice-message">
+        <button class="voice-play-btn" onclick="app.playVoiceMessage(event)">▶</button>
+        <div class="voice-progress">
+            <div class="progress-bar"></div>
+        </div>
+        <span class="voice-duration">0:00</span>
+    </div>
+</template>
+
+<!-- REACTIONS DISPLAY TEMPLATE -->
+<template id="reactionTemplate">
+    <div class="reaction-badge">
+        <span class="reaction-emoji">👍</span>
+        <span class="reaction-count">1</span>
+    </div>
+</template>
+
+<!-- MESSAGE DELIVERY STATUS -->
+<template id="deliveryStatusTemplate">
+    <span class="delivery-status">✓</span>
+</template>
+
+<!-- ERROR/SUCCESS TOASTS -->
+<div id="errorToast" class="toast error-toast" style="display:none;">
+    <span id="errorToastMessage">Error message</span>
+</div>
+
+<div id="successToast" class="toast success-toast" style="display:none;">
+    <span id="successToastMessage">Success message</span>
+</div>
+
+<!-- AUDIO ELEMENT FOR RINGTONE -->
+<audio id="ringtoneAudio" src="data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==" style="display:none;"></audio>
+
 <!-- DEVELOPER INFO MODAL -->
 <div class="modal-overlay" id="developerModal" style="display:none;">
     <div class="modal dev-modal">
