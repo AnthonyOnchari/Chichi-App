@@ -5981,22 +5981,8 @@ var app = {
             return;
         }
        
-        // Capture selected interests from checkboxes
-        var interestCheckboxes = document.querySelectorAll('.edit-interest-checkbox:checked');
-        var interests = [];
-        interestCheckboxes.forEach(function(checkbox) {
-            interests.push(checkbox.value);
-        });
-        
-        if (interests.length === 0) {
-            this.toast('Please select at least 1 interest', 'error');
-            return;
-        }
-        
-        if (interests.length > 10) {
-            this.toast('Maximum 10 interests allowed', 'error');
-            return;
-        }
+        // Keep existing interests (don't change them)
+        var interests = this.profile.interests || [];
        
         this.toast('⏳ Saving profile...', 'info');
        
@@ -9637,64 +9623,6 @@ app.showProfileSettings = function() {
     if (nameField) nameField.value = this.profile.name || '';
     if (usernameField) usernameField.value = this.profile.username || '';
     if (bioField) bioField.value = this.profile.bio || '';
-    
-    // Populate interests with editing capability
-    var interestsContainer = document.getElementById('editProfileInterests');
-    if (interestsContainer) {
-        var currentInterests = this.profile.interests || [];
-        var allInterests = ['Music', 'Sports', 'Travel', 'Art', 'Tech', 'Food', 'Fitness', 'Books', 'Movies', 'Nature', 'Gaming', 'Photography', 'Writing', 'Cooking', 'Yoga'];
-        
-        // Clear the container first
-        interestsContainer.textContent = '';
-        
-        // Create and append interest labels
-        allInterests.forEach(function(interest) {
-            var isSelected = currentInterests.includes(interest);
-            
-            var label = document.createElement('label');
-            label.style.display = 'flex';
-            label.style.alignItems = 'center';
-            label.style.padding = '6px 12px';
-            label.style.background = isSelected ? '#0088cc' : '#fff';
-            label.style.border = '2px solid ' + (isSelected ? '#0088cc' : '#cbd5e1');
-            label.style.borderRadius = '20px';
-            label.style.cursor = 'pointer';
-            label.style.transition = '0.2s';
-            label.style.fontSize = '12px';
-            label.style.color = isSelected ? '#fff' : '#1a202c';
-            label.style.fontWeight = isSelected ? '600' : '500';
-            
-            var checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'edit-interest-checkbox';
-            checkbox.value = interest;
-            checkbox.checked = isSelected;
-            checkbox.style.marginRight = '6px';
-            checkbox.style.cursor = 'pointer';
-            checkbox.style.accentColor = '#0088cc';
-            
-            checkbox.addEventListener('change', function() {
-                if (this.checked) {
-                    label.style.background = '#0088cc';
-                    label.style.borderColor = '#0088cc';
-                    label.style.color = '#fff';
-                    label.style.fontWeight = '600';
-                } else {
-                    label.style.background = '#fff';
-                    label.style.borderColor = '#cbd5e1';
-                    label.style.color = '#1a202c';
-                    label.style.fontWeight = '500';
-                }
-            });
-            
-            var span = document.createElement('span');
-            span.textContent = interest;
-            
-            label.appendChild(checkbox);
-            label.appendChild(span);
-            interestsContainer.appendChild(label);
-        });
-    }
     
     // Show modal
     modal.style.display = 'flex';
