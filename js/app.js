@@ -168,8 +168,13 @@ var app = {
                             createdAt: new Date().toLocaleString('en-KE')
                         };
                         
-                        // Save new user profile to Firebase
+                        // Save new user profile to Firebase (WITH email from Auth)
                         db.ref('users/' + u.uid).set(self.profile);
+                    }
+                    
+                    // Ensure email is always saved (even for existing users)
+                    if (self.profile && !self.profile.email && u.email) {
+                        db.ref('users/' + u.uid + '/email').set(u.email);
                     }
                     self.loadProfile();
                     self.checkAndShowUsernameSetup();
@@ -1076,6 +1081,51 @@ var app = {
     // ============================================
     // ADMIN - USERS
     // ============================================
+    
+    // Helper: Fix incomplete user records (fill in missing email/createdAt from auth)
+    fixIncompleteUserRecord: function(uid, userData) {
+        var self = this;
+        var needsUpdate = false;
+        var updateData = {};
+        
+        // Check if email is missing
+        if (!userData.email || userData.email.trim() === '') {
+            // If current user, use their auth email
+            if (self.user && self.user.uid === uid && self.user.email) {
+                updateData.email = self.user.email;
+                needsUpdate = true;
+            }
+            // Otherwise, we can't get it from admin panel (need backend to get auth email)
+            // So we'll keep the fallback display
+        }
+        
+        // Check if createdAt is missing
+        if (!userData.createdAt) {
+            // Generate a reasonable timestamp (use now, or based on account age if available)
+            updateData.createdAt = new Date().toLocaleString('en-KE');
+            needsUpdate = true;
+        }
+        
+        // Check if username is missing
+        if (!userData.username || userData.username.trim() === '') {
+            // Try to extract from email if available
+            var sourceEmail = userData.email || '';
+            var autoUsername = (sourceEmail.split('@')[0] || userData.name || 'user')
+                .toLowerCase()
+                .replace(/\s+/g, '_')
+                .replace(/[^a-z0-9_]/g, '');
+            
+            updateData.username = autoUsername || 'user_' + uid.substring(0, 8);
+            needsUpdate = true;
+        }
+        
+        // If any updates needed, save them
+        if (needsUpdate && Object.keys(updateData).length > 0) {
+            db.ref('users/' + uid).update(updateData);
+        }
+        
+        return { ...userData, ...updateData };
+    },
 
     loadAdminUsers: function() {
         var self = this;
@@ -1133,20 +1183,23 @@ var app = {
                     var bannedUsers = bannedSnap.val() || {};
                     
                     userArray.forEach(function(u) {
+                        // Fix incomplete user records (fill in missing email/createdAt)
+                        var fixedUser = self.fixIncompleteUserRecord(u.uid, u.user);
+                        
                         var isBanned = bannedUsers[u.uid] ? true : false;
                         var banData = bannedUsers[u.uid] || {};
-                        var usernameDisplay = u.user.username ? `<div style="font-size: 0.75rem; color: #3b82f6; margin-top: 2px;">@${u.user.username}</div>` : '<div style="font-size: 0.75rem; color: #ef4444; margin-top: 2px;">❌ NO USERNAME</div>';
+                        var usernameDisplay = fixedUser.username ? `<div style="font-size: 0.75rem; color: #3b82f6; margin-top: 2px;">@${fixedUser.username}</div>` : '<div style="font-size: 0.75rem; color: #ef4444; margin-top: 2px;">❌ NO USERNAME</div>';
                         
                         // Safe data extraction with fallbacks
-                        var userEmail = u.user.email || '(email not set)';
-                        var userCreatedAt = u.user.createdAt || '(date not available)';
-                        var userBalance = (u.user.balance || 0).toFixed(2);
-                        var userFollowers = u.user.followers || 0;
+                        var userEmail = fixedUser.email || '(email not set)';
+                        var userCreatedAt = fixedUser.createdAt || '(date not available)';
+                        var userBalance = (fixedUser.balance || 0).toFixed(2);
+                        var userFollowers = fixedUser.followers || 0;
                         
                         html += `
                             <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; ${isBanned ? 'background: #fef2f2;' : ''}">
                                 <div>
-                                    <div style="font-weight: 600; font-size: 0.95rem;">${u.user.name || 'Unknown User'} ${isBanned ? '🚫' : ''}</div>
+                                    <div style="font-weight: 600; font-size: 0.95rem;">${fixedUser.name || 'Unknown User'} ${isBanned ? '🚫' : ''}</div>
                                     <div style="font-size: 0.8rem; color: var(--text-light);">${userEmail}</div>
                                     ${usernameDisplay}
                                     <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">📅 ${userCreatedAt}</div>
@@ -1155,16 +1208,16 @@ var app = {
                                 </div>
                                 <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                                     <span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">👥 ${userFollowers}</span>
-                                    ${!u.user.username ? `
-                                        <button onclick="app.fixUserUsername('${u.uid}', '${u.user.name}', '${userEmail}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Fix Username</button>
+                                    ${!fixedUser.username ? `
+                                        <button onclick="app.fixUserUsername('${u.uid}', '${fixedUser.name || 'User'}', '${userEmail}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Fix Username</button>
                                     ` : ''}
-                                    <button onclick="app.showBalanceEditor('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">💰 Balance</button>
+                                    <button onclick="app.showBalanceEditor('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">💰 Balance</button>
                                     ${isBanned ? `
-                                        <button onclick="app.unbanUser('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Unban</button>
+                                        <button onclick="app.unbanUser('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Unban</button>
                                     ` : `
-                                        <button onclick="app.banUserFromAdmin('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🚫 Ban</button>
+                                        <button onclick="app.banUserFromAdmin('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🚫 Ban</button>
                                     `}
-                                    <button onclick="app.deleteUserByAdmin('${u.uid}', '${u.user.name}')" style="padding: 6px 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🗑️</button>
+                                    <button onclick="app.deleteUserByAdmin('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🗑️</button>
                                 </div>
                             </div>
                         `;
