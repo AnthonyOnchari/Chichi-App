@@ -1,4748 +1,640 @@
-/* Include original CSS first */
-/* ============================================
-   CHICHI - COMPLETE CSS (ALL FIXES APPLIED)
-   ============================================ */
-
-/* ===== RESET & BASE ===== */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-:root {
-    --primary: #0088cc;
-    --primary-dark: #006fa3;
-    --primary-light: #31a3e0;
-    --text: #111827;
-    --text-light: #6b7280;
-    --border: #e5e7eb;
-    --light: #f9fafb;
-    --bg: #ffffff;
-    --dark-bg: #0f172a;
-    --shadow: 0 2px 12px rgba(0,0,0,0.08);
-    --radius: 16px;
-    --transition: 0.3s ease;
-}
-
-html, body {
-    font-family: 'Sora', 'Plus Jakarta Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
-    background: var(--light);
-    color: var(--text);
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-    margin: 0;
-    padding: 0;
-    scrollbar-width: none;
-    -webkit-tap-highlight-color: transparent;
-    position: fixed;
-}
-
-html::-webkit-scrollbar, body::-webkit-scrollbar {
-    width: 0;
-    display: none;
-}
-
-* {
-    scrollbar-width: none;
-}
-*::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-}
-
-/* ===== LOADING SCREEN ===== */
-#loadingScreen {
-    display: flex;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--dark-bg);
-    z-index: 10001;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 30px;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-
-#loadingScreen.active {
-    display: flex;
-    visibility: visible;
-    opacity: 1;
-}
-
-#loadingScreen.hidden {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    z-index: -1 !important;
-}
-
-.loading-spinner {
-    width: 60px;
-    height: 60px;
-    position: relative;
-}
-
-.loading-spinner::before {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: conic-gradient(from 0deg, #2E5BFF, #FFC24B, #2E5BFF);
-    border-radius: 50%;
-    animation: spinGradient 2s linear infinite;
-}
-
-.loading-spinner::after {
-    content: '';
-    position: absolute;
-    width: 52px;
-    height: 52px;
-    background: var(--dark-bg);
-    border-radius: 50%;
-    top: 4px;
-    left: 4px;
-    z-index: 1;
-}
-
-@keyframes spinGradient {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-.loading-text {
-    color: white;
-    font-size: 16px;
-    font-weight: 500;
-    letter-spacing: 1px;
-}
-
-.loading-progress {
-    width: 200px;
-    height: 3px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.loading-progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #2E5BFF, #FFC24B);
-    border-radius: 10px;
-    animation: progressPulse 1.5s ease-in-out infinite;
-    box-shadow: 0 0 20px rgba(46, 91, 255, 0.6);
-}
-
-@keyframes progressPulse {
-    0% { width: 10%; }
-    50% { width: 70%; }
-    100% { width: 100%; }
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-@keyframes smoothFadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* ===== AUTH PAGE ===== */
-.auth-page {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    padding: 20px;
-    transition: opacity 0.3s ease;
-    z-index: 9998;
-    visibility: hidden;
-    opacity: 0;
-}
-
-.auth-page.show {
-    display: flex;
-    visibility: visible;
-    opacity: 1;
-}
-
-.auth-page.hidden {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-}
-
-.auth-card {
-    background: white;
-    border-radius: 28px;
-    padding: 28px;
-    max-width: 420px;
-    width: 100%;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-    animation: smoothFadeIn 0.5s ease;
-}
-
-.auth-header h1 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 2rem;
-    font-weight: 900;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 8px;
-    letter-spacing: -1px;
-}
-
-.tabs {
-    display: flex;
-    border-bottom: 2px solid var(--border);
-    margin-bottom: 24px;
-}
-
-.tab {
-    flex: 1;
-    padding: 12px;
-    text-align: center;
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--text-light);
-    border: none;
-    background: none;
-    position: relative;
-    transition: 0.3s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.tab.active {
-    color: var(--primary);
-}
-
-.tab.active::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: var(--primary);
-}
-
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: var(--text);
-}
-
-.form-input {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid var(--border);
-    border-radius: 14px;
-    font-size: 0.95rem;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-    transition: 0.3s;
-    background: var(--light);
-    color: var(--text);
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(0, 136, 204, 0.1);
-    background: white;
-}
-
-.btn-submit {
-    width: 100%;
-    padding: 13px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    border: none;
-    border-radius: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-    transition: 0.3s;
-}
-
-.btn-submit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 136, 204, 0.3);
-}
-
-.btn-submit:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.social-btn {
-    flex: 1;
-    padding: 12px;
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9rem;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-    transition: 0.3s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text);
-    gap: 8px;
-}
-
-.social-btn:hover {
-    background: var(--light);
-    border-color: var(--primary);
-}
-
-.social-btn:active {
-    transform: scale(0.98);
-}
-
-.auth-divider {
-    text-align: center;
-    color: var(--text-light);
-    font-size: 13px;
-    margin: 16px 0;
-    position: relative;
-}
-
-.auth-divider::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: var(--border);
-}
-
-.auth-divider span {
-    background: white;
-    padding: 0 12px;
-    position: relative;
-    z-index: 1;
-}
-
-.auth-footer {
-    text-align: center;
-    margin-top: 16px;
-    font-size: 13px;
-    color: var(--text-light);
-}
-
-.auth-footer a {
-    color: var(--primary);
-    text-decoration: none;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-/* ===== MAIN APP LAYOUT ===== */
-.main-app {
-    display: none;
-    flex-direction: column;
-    height: 100vh;
-    width: 100%;
-    overflow: hidden;
-    position: relative;
-    z-index: 1;
-    animation: smoothFadeIn 0.5s ease;
-}
-
-.main-app.active { 
-    display: flex; 
-}
-
-/* ===== APP HEADER ===== */
-.app-header {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    padding: 6px 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    z-index: 50;
-    position: relative;
-    min-height: 48px;
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex: 1;
-    overflow: hidden;
-}
-
-#storiesList {
-    display: flex;
-    gap: 4px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 2px 0;
-    min-height: 44px;
-    align-items: center;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    flex-shrink: 0;
-}
-
-#storiesList::-webkit-scrollbar {
-    height: 2px;
-}
-
-#storiesList::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.3);
-    border-radius: 2px;
-}
-
-.story-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.story-avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #2E5BFF, #0088cc);
-    border: 2px solid white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    color: white;
-    font-weight: bold;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    overflow: hidden;
-    background-size: cover;
-    background-position: center;
-    flex-shrink: 0;
-}
-
-.create-story-avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #FFC24B, #FFB91A);
-    border: 2px dashed white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    position: relative;
-    flex-shrink: 0;
-}
-
-.create-story-avatar::after {
-    content: '+';
-    position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 14px;
-    height: 14px;
-    background: #2E5BFF;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 8px;
-    font-weight: bold;
-    border: 2px solid white;
-}
-
-.story-name, .create-story-name {
-    font-size: 8px;
-    color: rgba(255,255,255,0.8);
-    max-width: 40px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-align: center;
-}
-
-.header-title {
-    font-family: 'Outfit', sans-serif;
-    font-size: 1rem;
-    font-weight: 800;
-    margin: 0;
-    letter-spacing: 1.5px;
-    white-space: nowrap;
-    color: white;
-    flex-shrink: 0;
-}
-
-.header-actions {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    flex-shrink: 0;
-}
-
-.btn-icon {
-    background: rgba(255,255,255,0.15);
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 8px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    transition: 0.3s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.btn-icon:hover {
-    background: rgba(255,255,255,0.25);
-}
-
-/* ===== APP CONTENT ===== */
-.app-content {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    background: var(--light);
-    position: relative;
-    width: 100%;
-    height: 100%;
-    -webkit-overflow-scrolling: touch;
-}
-
-.app-content::-webkit-scrollbar {
-    width: 0;
-}
-
-/* ===== VIEWS ===== */
-.view {
-    display: none !important;
-    visibility: hidden;
-    opacity: 0;
-    width: 100%;
-    min-height: 100%;
-    height: auto;
-    overflow-y: auto;
-    overflow-x: hidden;
-    flex-direction: column;
-    padding-bottom: 80px;
-    animation: smoothFadeIn 0.4s ease;
-    position: relative;
-    z-index: 1;
-    pointer-events: none;
-    background: var(--light);
-}
-
-.view.active { 
-    display: flex !important;
-    visibility: visible;
-    opacity: 1;
-    z-index: 10;
-    pointer-events: auto;
-}
-
-/* ===== BOTTOM NAV ===== */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 60;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 6px 12px 10px;
-    background: white;
-    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
-    flex-shrink: 0;
-    height: 66px;
-    border-radius: 20px 20px 0 0;
-}
-
-.nav-wrapper {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    gap: 2px;
-    width: 100%;
-    max-width: 500px;
-    position: relative;
-}
-
-.nav-item {
-    flex: 0 0 auto;
-    text-align: center;
-    padding: 4px 8px;
-    cursor: pointer;
-    color: var(--text-light);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1px;
-    font-size: 0.55rem;
-    transition: 0.3s;
-    border-radius: 12px;
-    position: relative;
-    min-width: 42px;
-    background: none;
-    border: none;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.nav-item:hover {
-    background: rgba(0, 136, 204, 0.05);
-}
-
-.nav-item.active {
-    color: var(--primary);
-    background: rgba(0, 136, 204, 0.15);
-}
-
-.nav-icon {
-    font-size: 1.2rem;
-    line-height: 1;
-}
-
-.nav-badge {
-    position: absolute;
-    top: -4px;
-    right: 0px;
-    width: 16px;
-    height: 16px;
-    background: #ff4444;
-    border-radius: 50%;
-    color: white;
-    font-size: 0.5rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid white;
-}
-
-.nav-label {
-    font-size: 0.5rem;
-    font-weight: 600;
-}
-
-/* ===== FAB BUTTON ===== */
-.fab-button {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    border: none;
-    cursor: pointer;
-    font-size: 1.4rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.3s;
-    box-shadow: 0 4px 16px rgba(0, 136, 204, 0.4);
-    flex-shrink: 0;
-    margin: 0 2px;
-    order: 0;
-}
-
-.fab-button:hover {
-    transform: scale(1.08);
-    box-shadow: 0 6px 24px rgba(0, 136, 204, 0.5);
-}
-
-.fab-button:active {
-    transform: scale(0.95);
-}
-
-/* ===== FEED ===== */
-.quick-post {
-    background: white;
-    padding: 10px 16px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-shrink: 0;
-    margin: 8px 16px;
-    border-radius: 18px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-.quick-post:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.quick-post-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--primary);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    background-size: cover;
-    background-position: center;
-    flex-shrink: 0;
-}
-
-.quick-post-input {
-    flex: 1;
-    background: var(--light);
-    border: none;
-    border-radius: 20px;
-    padding: 8px 12px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    color: var(--text-light);
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-#feedContainer {
-    flex: 1;
-    overflow: visible;
-    width: 100%;
-    padding: 0 0 80px 0;
-    background: var(--light);
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-/* ===== POST ===== */
-.post {
-    background: white;
-    margin: 12px 8px;
-    border-radius: 16px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    overflow: hidden;
-    animation: smoothFadeIn 0.4s ease;
-    transition: all 0.3s ease;
-}
-
-.post-header {
-    padding: 12px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.post-user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
-}
-
-.post-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--primary);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    background-size: cover;
-    background-position: center;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.post-name { 
-    font-weight: 600; 
-    font-size: 0.9rem; 
-    cursor: pointer; 
-}
-
-.post-time { 
-    font-size: 0.75rem; 
-    color: var(--text-light); 
-}
-
-.post-menu {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.2rem;
-    color: var(--text-light);
-    transition: 0.3s;
-    padding: 4px;
-}
-
-.post-menu:hover {
-    color: var(--primary);
-}
-
-.post-image {
-    width: 100%;
-    height: auto;
-    max-height: 450px;
-    object-fit: cover;
-    display: block;
-    background: var(--light);
-}
-
-.post-caption {
-    padding: 14px 16px;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 1rem;
-    line-height: 1.8;
-    font-weight: 500;
-    color: #1f2937;
-    word-break: break-word;
-    overflow-wrap: break-word;
-}
-
-.post-stats {
-    padding: 0 16px 8px;
-    font-size: 0.8rem;
-    color: var(--text-light);
-}
-
-.post-actions {
-    padding: 8px;
-    display: flex;
-    gap: 4px;
-    background: white;
-    border-top: 1px solid var(--border);
-    justify-content: space-around;
-}
-
-.post-action {
-    flex: 1;
-    text-align: center;
-    cursor: pointer;
-    padding: 10px 8px;
-    border: none;
-    background: transparent;
-    color: var(--text-light);
-    font-size: 0.75rem;
-    font-weight: 600;
-    transition: all 0.2s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    border-radius: 10px;
-    touch-action: manipulation;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.post-action:hover {
-    background: rgba(0, 136, 204, 0.1);
-    color: var(--primary);
-    transform: scale(1.05);
-}
-
-.post-action:active {
-    transform: scale(0.95);
-}
-
-.post-action.liked {
-    color: #ff4444;
-    font-weight: 700;
-}
-
-/* ============================================
-   MESSAGES & CHAT STYLING
-   ============================================ */
-
-#messagesView {
-    flex-direction: column;
-    margin: 0 auto;
-}
-
-.messages-header {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    background: white;
-    padding: 16px;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.messages-header h2 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 24px;
-    font-weight: 700;
-    margin: 0 0 12px 0;
-}
-
-.messages-container {
-    flex: 1;
-    overflow-y: auto;
-    background: white;
-    padding-bottom: 80px;
-}
-
-.message-filter-tab {
-    padding: 8px 16px;
-    border-radius: 20px;
-    border: 1px solid #ddd;
-    background: white;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 13px;
-    transition: all 0.3s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.message-filter-tab:hover {
-    border-color: #0088cc;
-    color: #0088cc;
-}
-
-.message-filter-tab.active {
-    background: #0088cc;
-    color: white;
-    border-color: #0088cc;
-}
-
-#messagesFilterTabs {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 8px;
-}
-
-.message-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: white;
-    border-bottom: 1px solid #f0f0f0;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.message-item:hover {
-    background: #f9f9f9;
-}
-
-.message-item.unread {
-    background: #e6f2ff;
-}
-
-.message-item-avatar {
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #0088cc, #006fa3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 18px;
-    flex-shrink: 0;
-    background-size: cover;
-    background-position: center;
-}
-
-.message-item-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.message-item-name {
-    font-weight: 600;
-    font-size: 15px;
-    margin: 0;
-}
-
-.message-item-preview {
-    font-size: 13px;
-    color: #6b7280;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin: 0;
-}
-
-.message-item-time {
-    font-size: 12px;
-    color: #9ca3af;
-    margin: 0;
-}
-
-.message-item-unread {
-    width: 20px;
-    height: 20px;
-    background: #0088cc;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    flex-shrink: 0;
-}
-
-/* ===== CHAT VIEW ===== */
-#chatView {
-    display: none;
-    flex-direction: column;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 200;
-    background: white;
-}
-
-#chatView.active {
-    display: flex !important;
-}
-
-#chatHeader {
-    position: sticky;
-    top: 0;
-    z-index: 210;
-    background: linear-gradient(135deg, #0088cc, #006fa3);
-    color: white;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 2px 8px rgba(0, 136, 204, 0.2);
-    flex-shrink: 0;
-}
-
-#chatHeader button {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    font-size: 22px;
-    padding: 6px;
-    transition: transform 0.2s;
-    opacity: 0.9;
-}
-
-#chatHeader button:hover {
-    transform: scale(1.1);
-    opacity: 1;
-}
-
-#chatBackBtn {
-    font-size: 24px;
-    padding: 4px 8px;
-}
-
-#chatHeaderAvatar {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 18px;
-    flex-shrink: 0;
-    background-size: cover;
-    background-position: center;
-    border: 2px solid rgba(255,255,255,0.3);
-}
-
-#chatHeaderName {
-    font-weight: 700;
-    font-size: 16px;
-    flex: 1;
-    color: white;
-}
-
-#chatHeaderStatus {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.85);
-}
-
-#chatMenuBtn {
-    font-size: 22px;
-    padding: 6px 10px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 8px;
-}
-
-#chatMenuBtn:hover {
-    background: rgba(255,255,255,0.2);
-}
-
-#chatMessages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    background: #f5f5f5;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-bottom: 100px;
-}
-
-.message-group {
-    display: flex;
-    gap: 8px;
-}
-
-.message-group.own {
-    justify-content: flex-end;
-}
-
-.message-group.other {
-    justify-content: flex-start;
-}
-
-.message-avatar {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #0088cc, #006fa3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 12px;
-    flex-shrink: 0;
-    background-size: cover;
-    background-position: center;
-}
-
-.message-group.own .message-avatar {
-    display: none;
-}
-
-.message-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    max-width: 75%;
-}
-
-.message-group.own .message-wrapper {
-    align-items: flex-end;
-}
-
-.message-sender {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 0 12px;
-    color: #0088cc;
-}
-
-.message-group.own .message-sender {
-    display: none;
-}
-
-.message-bubble {
-    padding: 10px 14px;
-    border-radius: 18px;
-    word-wrap: break-word;
-    font-size: 15px;
-    line-height: 1.5;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-
-.message-group.own .message-bubble {
-    background: #0088cc;
-    color: white;
-    border-radius: 18px 4px 18px 18px;
-}
-
-.message-group.other .message-bubble {
-    background: white;
-    color: #111827;
-    border-radius: 18px 18px 4px 18px;
-    border: 1px solid #e5e7eb;
-}
-
-.message-meta {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 10px;
-    padding: 0 12px;
-    color: #9ca3af;
-}
-
-.message-group.own .message-meta {
-    justify-content: flex-end;
-}
-
-.message-read-receipt {
-    color: #0088cc;
-}
-
-.message-date-divider {
-    text-align: center;
-    font-size: 12px;
-    color: #9ca3af;
-    padding: 8px;
-    margin: 8px 0;
-}
-
-#chatInput {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 205;
-    width: 100%;
-    background: white;
-    border-top: 1px solid #e5e7eb;
-    padding: 10px 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-#chatMessageInput {
-    flex: 1;
-    padding: 10px 14px;
-    border: 2px solid #e5e7eb;
-    border-radius: 24px;
-    font-size: 14px;
-    outline: none;
-    background: #f9fafb;
-    transition: all 0.2s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-#chatMessageInput:focus {
-    border-color: #0088cc;
-    background: white;
-    box-shadow: 0 0 0 3px rgba(0, 136, 204, 0.1);
-}
-
-#chatSendBtn {
-    background: linear-gradient(135deg, #0088cc, #006fa3);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
-    cursor: pointer;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s;
-    box-shadow: 0 2px 8px rgba(0, 136, 204, 0.3);
-    flex-shrink: 0;
-}
-
-#chatSendBtn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 16px rgba(0, 136, 204, 0.4);
-}
-
-#chatSendBtn:active {
-    transform: scale(0.95);
-}
-
-#chatInput button.attach-btn {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    padding: 8px;
-    opacity: 0.6;
-    transition: all 0.2s;
-    color: #666;
-}
-
-#chatInput button.attach-btn:hover {
-    opacity: 1;
-    color: #0088cc;
-}
-
-#typingIndicator {
-    display: none;
-    padding: 6px 16px;
-    background: #f3f4f6;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-}
-
-/* ============================================
-   PROFILE
-   ============================================ */
-.profile-header {
-    background: white;
-    padding: 16px;
-    border-radius: 18px;
-    margin: 16px;
-    flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.profile-top {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 12px;
-}
-
-.profile-avatar-large {
-    width: 80px;
-    height: 80px;
-    border-radius: 20px;
-    background: var(--primary);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.5rem;
-    background-size: cover;
-    background-position: center;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-.profile-avatar-large:hover {
-    transform: scale(1.05);
-}
-
-.profile-info { flex: 1; }
-
-.profile-name { 
-    font-family: 'Outfit', sans-serif;
-    font-weight: 700; 
-    font-size: 1.1rem; 
-    margin-bottom: 4px; 
-}
-
-.profile-email { 
-    font-size: 0.8rem; 
-    color: var(--text-light); 
-}
-
-.profile-stats {
-    display: flex;
-    gap: 16px;
-    margin-top: 8px;
-}
-
-.profile-stat {
-    text-align: center;
-    cursor: pointer;
-}
-
-.profile-stat-value { 
-    font-family: 'Outfit', sans-serif;
-    font-weight: 700; 
-    font-size: 1rem; 
-}
-
-.profile-stat-label { 
-    font-size: 0.75rem; 
-    color: var(--text-light); 
-}
-
-.balance-card {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    border-radius: 20px;
-    padding: 20px;
-    margin: 16px;
-    text-align: center;
-    box-shadow: 0 8px 16px rgba(0,136,204,0.3);
-}
-
-.balance-label { 
-    font-size: 0.9rem; 
-    opacity: 0.9; 
-}
-
-.balance-amount { 
-    font-family: 'Outfit', sans-serif;
-    font-size: 2rem; 
-    font-weight: 800; 
-    margin: 8px 0; 
-}
-
-.btn-edit {
-    width: 100%;
-    padding: 10px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 12px;
-    transition: 0.3s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.btn-withdraw {
-    padding: 10px 20px;
-    background: white;
-    color: var(--primary);
-    border: 2px solid white;
-    border-radius: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: 0.3s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.btn-withdraw:hover {
-    background: rgba(255,255,255,0.2);
-    color: white;
-}
-
-/* ============================================
-   EXPLORE
-   ============================================ */
-#exploreView {
-    padding-bottom: 80px;
-}
-
-#exploreSearchResults {
-    padding: 16px;
-    border-top: 1px solid #f0f0f0;
-}
-
-.explore-search-user {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    background: white;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    border: 1px solid #f0f0f0;
-    transition: 0.2s;
-}
-
-.explore-search-user:hover {
-    border-color: var(--primary);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-/* ============================================
-   EARN PAGE (Formerly Groups)
-   ============================================ */
-#earnView {
-    padding-bottom: 80px;
-    background: var(--light);
-}
-
-#earnContainer {
-    padding: 0 0 20px 0;
-}
-
-.earn-card {
-    background: white;
-    border-radius: 16px;
-    padding: 16px;
-    margin: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.earn-card .title {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.earn-card .subtitle {
-    color: var(--text-light);
-    font-size: 14px;
-    margin-bottom: 12px;
-}
-
-.earn-btn {
-    width: 100%;
-    padding: 12px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-    transition: 0.3s;
-}
-
-.earn-btn:hover {
-    transform: scale(1.02);
-    box-shadow: 0 4px 16px rgba(0,136,204,0.3);
-}
-
-.earn-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin: 16px;
-}
-
-.earn-stat {
-    background: white;
-    border-radius: 12px;
-    padding: 16px;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.earn-stat-value {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--primary);
-}
-
-.earn-stat-label {
-    font-size: 11px;
-    color: var(--text-light);
-    margin-top: 4px;
-}
-
-/* ============================================
-   SEARCH
-   ============================================ */
-.search-modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 999;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    backdrop-filter: blur(2px);
-    animation: smoothFadeIn 0.3s ease;
-}
-
-.search-modal-overlay.active {
-    display: flex;
-}
-
-.search-modal-box {
-    background: white;
-    width: 100%;
-    max-width: 450px;
-    height: 85vh;
-    max-height: 600px;
-    border-radius: 28px;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    overflow: hidden;
-    animation: smoothFadeIn 0.3s ease;
-}
-
-.search-modal-header {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    padding: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
-    border-radius: 28px 28px 0 0;
-}
-
-.search-modal-close {
-    background: rgba(255,255,255,0.2);
-    border: none;
-    color: white;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.3s;
-}
-
-.search-modal-close:hover {
-    background: rgba(255,255,255,0.3);
-}
-
-.search-box-input {
-    flex: 1;
-    border: none;
-    background: white;
-    padding: 10px 14px;
-    border-radius: 20px;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-    font-size: 0.9rem;
-    color: var(--text);
-}
-
-.search-box-input:focus {
-    outline: none;
-}
-
-.search-results-container {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-}
-
-.search-user {
-    background: white;
-    padding: 12px 16px;
-    margin-bottom: 8px;
-    border-radius: 16px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    border: 1px solid var(--border);
-}
-
-.search-user-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: var(--primary);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-    background-size: cover;
-    background-position: center;
-}
-
-.search-user-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.search-user-name { 
-    font-weight: 600; 
-    font-size: 0.95rem; 
-}
-
-.search-user-email { 
-    font-size: 0.75rem; 
-    color: var(--text-light); 
-}
-
-.search-user-followers { 
-    font-size: 0.75rem; 
-    color: var(--text-light); 
-    margin-top: 2px; 
-}
-
-.search-user-actions {
-    display: flex;
-    gap: 6px;
-    flex-shrink: 0;
-}
-
-.search-msg-btn {
-    background: var(--primary);
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 16px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.75rem;
-    transition: 0.3s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.search-msg-btn:hover {
-    background: var(--primary-dark);
-}
-
-.search-view-btn {
-    background: var(--border);
-    color: var(--text);
-    border: none;
-    padding: 6px 12px;
-    border-radius: 16px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.75rem;
-    transition: 0.3s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.search-view-btn:hover {
-    background: #d1d5db;
-}
-
-/* ============================================
-   MODALS
-   ============================================ */
-.modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 99999 !important;
-    align-items: center;
-    justify-content: center;
-    animation: smoothFadeIn 0.3s ease;
-    overflow: auto;
-}
-
-.modal-overlay.active {
-    display: flex !important;
-}
-
-.modal, .create-modal {
-    background: white;
-    width: 90%;
-    max-width: 500px;
-    border-radius: 20px;
-    padding: 24px;
-    max-height: 90vh;
-    overflow-y: auto;
-    overflow-x: hidden;
-    animation: smoothFadeIn 0.3s ease;
-    -webkit-overflow-scrolling: touch;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.modal::-webkit-scrollbar, .create-modal::-webkit-scrollbar {
-    width: 0;
-}
-
-.modal-close {
-    text-align: right;
-    margin-bottom: 12px;
-}
-
-.modal-close button {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--text-light);
-    transition: 0.3s;
-}
-
-.modal-close button:hover {
-    color: var(--text);
-}
-
-#photoPreview {
-    width: 100%;
-    padding: 14px;
-    border-radius: 14px;
-    background: rgba(0, 136, 204, 0.1);
-    border: 2px dashed var(--primary);
-    margin-bottom: 16px;
-    cursor: pointer;
-    transition: 0.3s;
-    display: none;
-    text-align: center;
-    color: var(--primary);
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-#photoPreview:hover {
-    background: rgba(0, 136, 204, 0.15);
-}
-
-.photo-button {
-    width: 100%;
-    padding: 12px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    border: none;
-    border-radius: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-bottom: 12px;
-    transition: 0.3s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-#captionInput {
-    width: 100%;
-    padding: 14px;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 0.95rem;
-    resize: vertical;
-    min-height: 80px;
-    margin-bottom: 12px;
-    transition: 0.3s;
-    color: var(--text);
-    line-height: 1.5;
-}
-
-#captionInput:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(0, 136, 204, 0.1);
-}
-
-/* ===== LOGOUT MODAL ===== */
-.logout-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 3000;
-    align-items: center;
-    justify-content: center;
-    animation: smoothFadeIn 0.3s ease;
-}
-
-.logout-modal.active {
-    display: flex;
-}
-
-.logout-card {
-    background: white;
-    border-radius: 20px;
-    padding: 24px;
-    width: 90%;
-    max-width: 300px;
-    text-align: center;
-    animation: smoothFadeIn 0.3s ease;
-}
-
-.logout-card h3 { 
-    font-family: 'Outfit', sans-serif;
-    margin-bottom: 8px; 
-}
-
-.logout-card p { 
-    color: var(--text-light); 
-    margin-bottom: 20px; 
-}
-
-.logout-buttons {
-    display: flex;
-    gap: 8px;
-}
-
-.logout-buttons button {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: 0.3s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.logout-cancel {
-    background: var(--light);
-    color: var(--text);
-}
-
-.logout-cancel:hover {
-    background: var(--border);
-}
-
-.logout-confirm {
-    background: #ff4444;
-    color: white;
-}
-
-.logout-confirm:hover {
-    background: #dc2626;
-}
-
-/* ===== TOAST ===== */
-.toast {
-    position: fixed;
-    bottom: 100px;
-    left: 20px;
-    right: 20px;
-    background: white;
-    padding: 12px 16px;
-    border-radius: 14px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 10000;
-    font-size: 0.8rem;
-    font-weight: 500;
-    animation: smoothFadeIn 0.3s ease;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.toast.success {
-    border-left: 4px solid var(--primary);
-    color: var(--primary);
-}
-
-.toast.error {
-    border-left: 4px solid #ff4444;
-    color: #ff4444;
-}
-
-.toast.info {
-    border-left: 4px solid #3b82f6;
-    color: #3b82f6;
-}
-
-/* ============================================
-   STORY MODAL
-   ============================================ */
-.story-modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.7);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    animation: smoothFadeIn 0.3s ease;
-}
-
-.story-modal-overlay.active {
-    display: flex;
-}
-
-.story-modal {
-    background: white;
-    border-radius: 24px;
-    max-width: 400px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: smoothFadeIn 0.3s ease;
-}
-
-.story-modal-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.story-modal-header h2 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 18px;
-    margin: 0;
-}
-
-.story-modal-close {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: var(--text-light);
-    padding: 4px 8px;
-}
-
-.story-modal-content {
-    padding: 16px 20px;
-}
-
-.story-form-group {
-    margin-bottom: 16px;
-}
-
-.story-form-label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: var(--text);
-}
-
-.story-file-input {
-    width: 100%;
-    padding: 10px;
-    border: 2px dashed var(--border);
-    border-radius: 12px;
-    cursor: pointer;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.story-form-input,
-.story-form-textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 2px solid var(--border);
-    border-radius: 10px;
-    font-size: 14px;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-    transition: 0.3s;
-}
-
-.story-form-input:focus,
-.story-form-textarea:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(0, 136, 204, 0.1);
-}
-
-.story-form-textarea {
-    min-height: 60px;
-    resize: vertical;
-}
-
-.story-modal-footer {
-    padding: 12px 20px 20px;
-    display: flex;
-    gap: 10px;
-}
-
-.story-btn-cancel {
-    flex: 1;
-    padding: 10px;
-    background: var(--light);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-    transition: 0.3s;
-}
-
-.story-btn-cancel:hover {
-    background: var(--border);
-}
-
-.story-btn-upload {
-    flex: 1;
-    padding: 10px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-    transition: 0.3s;
-}
-
-.story-btn-upload:hover {
-    transform: scale(1.02);
-}
-
-.story-spinner {
-    display: none;
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-    margin: 0 auto;
-}
-
-.story-btn-upload.loading .story-spinner {
-    display: block;
-}
-
-.story-btn-upload.loading .story-btn-text {
-    display: none;
-}
-
-/* ============================================
-   MUSIC TOGGLE
-   ============================================ */
-.music-toggle-3d {
-    position: relative;
-    width: 32px;
-    height: 32px;
-    cursor: pointer;
-    perspective: 1000px;
-    margin: 0 4px;
-}
-
-.toggle-cube {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 0.6s ease;
-}
-
-.music-toggle-3d input:checked ~ .toggle-cube {
-    transform: rotateY(180deg);
-}
-
-.music-toggle-3d.playing .toggle-cube {
-    animation: musicPulse 0.6s ease-in-out infinite;
-}
-
-@keyframes musicPulse {
-    0%, 100% {
-        transform: rotateY(180deg) scale(1);
-    }
-    50% {
-        transform: rotateY(180deg) scale(1.12);
-    }
-}
-
-.toggle-face {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    font-size: 14px;
-    font-weight: bold;
-    backface-visibility: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    border: 2px solid #2E5BFF;
-}
-
-.toggle-face.front {
-    background: linear-gradient(135deg, #2E5BFF 0%, #0088cc 100%);
-    color: white;
-    z-index: 2;
-}
-
-.toggle-face.back {
-    background: linear-gradient(135deg, #FFC24B 0%, #FFB91A 100%);
-    color: #222;
-    z-index: 1;
-    transform: rotateY(180deg);
-    box-shadow: 0 2px 8px rgba(255, 194, 75, 0.3);
-}
-
-.music-toggle-3d input {
-    display: none;
-}
-
-.music-toggle-3d:hover .toggle-face {
-    transform: scale(1.05);
-}
-
-/* ============================================
-   DARK MODE TOGGLE
-   ============================================ */
-.dark-mode-toggle {
-    position: relative;
-    width: 32px;
-    height: 32px;
-    cursor: pointer;
-    perspective: 1000px;
-    margin: 0 4px;
-}
-
-.dark-mode-toggle .toggle-cube {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 0.6s ease;
-}
-
-.dark-mode-toggle input:checked ~ .toggle-cube {
-    transform: rotateY(180deg);
-}
-
-.dark-mode-toggle .toggle-face {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    font-size: 14px;
-    font-weight: bold;
-    backface-visibility: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    border: 2px solid #FFC24B;
-}
-
-.dark-mode-toggle .toggle-face.front {
-    background: linear-gradient(135deg, #FFC24B 0%, #FFB91A 100%);
-    color: #222;
-    z-index: 2;
-}
-
-.dark-mode-toggle .toggle-face.back {
-    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
-    color: #FFC24B;
-    z-index: 1;
-    transform: rotateY(180deg);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-
-.dark-mode-toggle input {
-    display: none;
-}
-
-.dark-mode-toggle:hover .toggle-face {
-    transform: scale(1.05);
-}
-
-/* ============================================
-   CONSENT BANNER
-   ============================================ */
-.consent-banner {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: white;
-    padding: 20px;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-    z-index: 10000;
-    border-top: 4px solid var(--primary);
-    display: none;
-}
-
-.consent-banner.show {
-    display: block;
-}
-
-.consent-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-}
-
-.consent-text {
-    flex: 1;
-    font-size: 0.9rem;
-    color: var(--text);
-    line-height: 1.5;
-}
-
-.consent-text a {
-    color: var(--primary);
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.consent-buttons {
-    display: flex;
-    gap: 12px;
-    flex-shrink: 0;
-}
-
-.consent-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: 0.3s;
-    white-space: nowrap;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.consent-btn-accept {
-    background: var(--primary);
-    color: white;
-}
-
-.consent-btn-accept:hover {
-    background: var(--primary-dark);
-}
-
-.consent-btn-manage {
-    background: var(--light);
-    color: var(--text);
-    border: 1px solid var(--border);
-}
-
-.consent-btn-manage:hover {
-    background: var(--border);
-}
-
-/* ============================================
-   ADMIN
-   ============================================ */
-.admin-portal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 4000;
-    background: var(--light);
-    flex-direction: column;
-}
-
-.admin-portal.active {
-    display: flex;
-}
-
-.admin-header {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    padding: 16px;
-    text-align: center;
-    flex-shrink: 0;
-}
-
-.admin-header h2 {
-    font-family: 'Outfit', sans-serif;
-    margin: 0;
-    font-size: 1.3rem;
-}
-
-.admin-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-}
-
-.admin-tabs {
-    display: flex;
-    gap: 4px;
-    padding: 12px 16px;
-    background: white;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    overflow-x: auto;
-}
-
-.admin-tab {
-    padding: 8px 16px;
-    background: var(--light);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--text-light);
-    transition: 0.3s;
-    white-space: nowrap;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.admin-tab:hover {
-    background: var(--border);
-}
-
-.admin-tab.active {
-    background: var(--primary);
-    color: white;
-}
-
-.admin-tab-content {
-    display: none;
-}
-
-.admin-tab-content.active {
-    display: block;
-}
-
-.admin-stat-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.admin-stat {
-    background: white;
-    border-radius: 12px;
-    padding: 14px;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.admin-stat-value {
-    font-family: 'Outfit', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary);
-}
-
-.admin-stat-label {
-    font-size: 0.8rem;
-    color: var(--text-light);
-    margin-top: 4px;
-}
-
-.admin-close-btn {
-    background: white;
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 10px 16px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
-    width: 100%;
-    margin-top: 16px;
-    transition: 0.3s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.admin-close-btn:hover {
-    background: var(--light);
-}
-
-/* ===== WITHDRAWAL CARDS ===== */
-.withdrawal-card {
-    background: white;
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    border-left: 4px solid var(--primary);
-}
-
-.withdrawal-card.pending {
-    border-left-color: #f59e0b;
-}
-
-.withdrawal-card.approved {
-    border-left-color: #22c55e;
-}
-
-.withdrawal-card.rejected {
-    border-left-color: #ff4444;
-}
-
-.withdrawal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.withdrawal-user {
-    font-weight: 700;
-    font-size: 0.95rem;
-}
-
-.withdrawal-status {
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-}
-
-.withdrawal-status.pending {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.withdrawal-status.approved {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.withdrawal-status.rejected {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.withdrawal-details {
-    font-size: 0.8rem;
-    color: var(--text-light);
-    margin-bottom: 8px;
-}
-
-.withdrawal-actions {
-    display: flex;
-    gap: 6px;
-}
-
-.withdrawal-actions button {
-    flex: 1;
-    padding: 6px;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.3s;
-    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
-}
-
-.admin-approve {
-    background: #22c55e;
-    color: white;
-}
-
-.admin-approve:hover {
-    background: #16a34a;
-}
-
-.admin-reject {
-    background: #ff4444;
-    color: white;
-}
-
-.admin-reject:hover {
-    background: #dc2626;
-}
-/* ============================================
-   ADMIN - NEW TABS STYLES
-   ============================================ */
-
-/* Suspicious Activity Cards */
-.suspicious-card {
-    background: white;
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    border-left: 4px solid #f59e0b;
-    transition: all 0.3s ease;
-}
-
-.suspicious-card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.suspicious-card.critical {
-    border-left-color: #dc2626;
-    background: #fef2f2;
-}
-
-.suspicious-card.high {
-    border-left-color: #ef4444;
-    background: #fef2f2;
-}
-
-.suspicious-card.medium {
-    border-left-color: #f59e0b;
-    background: #fffbeb;
-}
-
-.suspicious-card.low {
-    border-left-color: #22c55e;
-    background: #f0fdf4;
-}
-
-.suspicious-card.resolved {
-    opacity: 0.6;
-    border-left-color: #9ca3af;
-}
-
-.suspicious-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.suspicious-user {
-    font-weight: 700;
-    font-size: 0.95rem;
-}
-
-.suspicious-reason {
-    font-size: 0.85rem;
-    color: var(--text-light);
-    margin-bottom: 4px;
-}
-
-.suspicious-time {
-    font-size: 0.7rem;
-    color: var(--text-light);
-}
-
-.suspicious-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-}
-
-.suspicious-actions button {
-    padding: 4px 12px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.7rem;
-    transition: all 0.3s;
-}
-
-.suspicious-ban-btn {
-    background: #ef4444;
-    color: white;
-}
-
-.suspicious-ban-btn:hover {
-    background: #dc2626;
-}
-
-.suspicious-resolve-btn {
-    background: #22c55e;
-    color: white;
-}
-
-.suspicious-resolve-btn:hover {
-    background: #16a34a;
-}
-
-/* Notification Cards */
-.notification-card {
-    background: white;
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    border-left: 4px solid #0088cc;
-    transition: all 0.3s ease;
-}
-
-.notification-card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.notification-card.unread {
-    background: #f0f7ff;
-}
-
-.notification-card.read {
-    opacity: 0.6;
-}
-
-.notification-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
-}
-
-.notification-message {
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-.notification-severity {
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.65rem;
-    font-weight: 700;
-}
-
-.notification-severity.critical {
-    background: #dc2626;
-    color: white;
-}
-
-.notification-severity.high {
-    background: #ef4444;
-    color: white;
-}
-
-.notification-severity.medium {
-    background: #f59e0b;
-    color: white;
-}
-
-.notification-severity.low {
-    background: #22c55e;
-    color: white;
-}
-
-.notification-time {
-    font-size: 0.7rem;
-    color: var(--text-light);
-}
-
-.notification-actions {
-    margin-top: 8px;
-}
-
-.notification-actions button {
-    padding: 4px 12px;
-    background: #0088cc;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.7rem;
-    transition: all 0.3s;
-}
-
-.notification-actions button:hover {
-    background: #006fa3;
-}
-
-/* User Ban Status in Users List */
-.user-banned {
-    background: #fef2f2 !important;
-    border-left: 4px solid #ef4444;
-}
-
-.user-ban-badge {
-    background: #ef4444;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.6rem;
-    font-weight: 700;
-    margin-left: 6px;
-}
-
-/* Earn Page - Tier Badges */
-.tier-badge {
-    padding: 2px 12px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 700;
-}
-
-.tier-badge.free {
-    background: #e5e7eb;
-    color: #6b7280;
-}
-
-.tier-badge.premium {
-    background: #f59e0b;
-    color: white;
-}
-
-.tier-badge.vip {
-    background: #8b5cf6;
-    color: white;
-}
-
-/* Dark Mode Adjustments */
-:root.dark-mode .suspicious-card {
-    background: #1a1a1a;
-    border-color: #333;
-}
-
-:root.dark-mode .suspicious-card.critical {
-    background: #1f0a0a;
-    border-left-color: #dc2626;
-}
-
-:root.dark-mode .suspicious-card.high {
-    background: #1f0a0a;
-    border-left-color: #ef4444;
-}
-
-:root.dark-mode .suspicious-card.medium {
-    background: #1a1400;
-    border-left-color: #f59e0b;
-}
-
-:root.dark-mode .suspicious-card.low {
-    background: #0a1a0a;
-    border-left-color: #22c55e;
-}
-
-:root.dark-mode .notification-card {
-    background: #1a1a1a;
-}
-
-:root.dark-mode .notification-card.unread {
-    background: #0a1a2a;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    .suspicious-card,
-    .notification-card {
-        padding: 10px;
-    }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>CHICHI - Social Media</title>
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    .suspicious-actions {
-        flex-wrap: wrap;
-    }
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
     
-    .suspicious-actions button {
-        flex: 1;
-        min-width: 60px;
-    }
-}
-
-/* ============================================
-   DARK MODE
-   ============================================ */
-
-:root.dark-mode {
-    --primary: #00a3ff;
-    --primary-dark: #0088cc;
-    --primary-light: #33b3ff;
-    --text: #f0f0f0;
-    --text-light: #b0b0b0;
-    --border: #333333;
-    --light: #1a1a1a;
-    --bg: #0a0a0a;
-    --dark-bg: #000000;
-}
-
-:root.dark-mode body {
-    background: var(--bg);
-    color: var(--text);
-}
-
-:root.dark-mode .auth-page {
-    background: linear-gradient(135deg, #0066aa 0%, #004488 100%);
-}
-
-:root.dark-mode .auth-card {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .form-input {
-    background: #222;
-    border-color: #333;
-    color: var(--text);
-}
-
-:root.dark-mode .form-input:focus {
-    border-color: var(--primary);
-    background: #2a2a2a;
-}
-
-:root.dark-mode .post {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .quick-post {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .quick-post-input {
-    background: #222;
-    color: var(--text-light);
-}
-
-:root.dark-mode .post-caption {
-    color: #e0e0e0;
-}
-
-:root.dark-mode .bottom-nav {
-    background: #1a1a1a;
-    border-top: 1px solid #333;
-}
-
-:root.dark-mode .modal,
-:root.dark-mode .create-modal {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .messages-header {
-    background: #1a1a1a;
-    border-bottom: 1px solid #333;
-}
-
-:root.dark-mode .messages-container {
-    background: var(--bg);
-}
-
-:root.dark-mode .message-item {
-    background: #1a1a1a;
-    border-bottom: 1px solid #333;
-}
-
-:root.dark-mode .message-item:hover {
-    background: #222;
-}
-
-:root.dark-mode .message-item-preview {
-    color: #b0b0b0;
-}
-
-:root.dark-mode #chatHeader {
-    background: linear-gradient(135deg, #0066aa 0%, #004488 100%);
-}
-
-:root.dark-mode #chatMessages {
-    background: #0a0a0a;
-}
-
-:root.dark-mode .message-bubble {
-    background: #222;
-    color: #e0e0e0;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .message-group.own .message-bubble {
-    background: var(--primary);
-    color: white;
-}
-
-:root.dark-mode .profile-header {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .balance-card {
-    background: linear-gradient(135deg, #0066aa 0%, #004488 100%);
-}
-
-:root.dark-mode #exploreView {
-    background: var(--bg);
-}
-
-:root.dark-mode #earnView {
-    background: var(--bg);
-}
-
-:root.dark-mode .earn-card {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .earn-stat {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .consent-banner {
-    background: #1a1a1a;
-    border-top: 4px solid var(--primary);
-}
-
-:root.dark-mode .logout-card {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .form-label {
-    color: var(--text);
-}
-
-:root.dark-mode .story-modal {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .story-modal-header {
-    border-bottom: 1px solid #333;
-}
-
-:root.dark-mode .story-form-input,
-:root.dark-mode .story-form-textarea {
-    background: #222;
-    border-color: #333;
-    color: var(--text);
-}
-
-:root.dark-mode .story-form-input:focus,
-:root.dark-mode .story-form-textarea:focus {
-    background: #2a2a2a;
-    border-color: var(--primary);
-}
-
-:root.dark-mode .admin-portal {
-    background: var(--bg);
-}
-
-:root.dark-mode .admin-header {
-    background: linear-gradient(135deg, #0066aa 0%, #004488 100%);
-}
-
-:root.dark-mode .admin-content {
-    background: var(--bg);
-}
-
-:root.dark-mode .admin-tab {
-    background: #222;
-    color: var(--text-light);
-}
-
-:root.dark-mode .admin-tab:hover {
-    background: #333;
-}
-
-:root.dark-mode .admin-tab.active {
-    background: var(--primary);
-    color: white;
-}
-
-:root.dark-mode .admin-stat {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .withdrawal-card {
-    background: #1a1a1a;
-    border-left: 4px solid var(--primary);
-}
-
-:root.dark-mode #chatMessageInput {
-    background: #222;
-    border-color: #333;
-    color: var(--text);
-}
-
-:root.dark-mode #chatMessageInput:focus {
-    background: #2a2a2a;
-    border-color: var(--primary);
-}
-
-:root.dark-mode #chatInput {
-    background: #1a1a1a;
-    border-top: 1px solid #333;
-}
-
-:root.dark-mode .search-modal-box {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .search-user {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .search-box-input {
-    background: #222;
-    color: var(--text);
-}
-
-:root.dark-mode .toast {
-    background: #1a1a1a;
-    color: var(--text);
-}
-
-/* ============================================
-   DARK MODE - EXPLORE PAGE
-   ============================================ */
-
-:root.dark-mode #exploreView {
-    background: var(--bg);
-}
-
-:root.dark-mode #featuredUsersContainer,
-:root.dark-mode #trendingHashtagsContainer,
-:root.dark-mode #topCreatorsContainer {
-    color: var(--text);
-}
-
-:root.dark-mode #featuredUsersContainer > div,
-:root.dark-mode #trendingHashtagsContainer > div,
-:root.dark-mode #topCreatorsContainer > div {
-    background: #1a1a1a !important;
-    border: 1px solid #333 !important;
-}
-
-/* ============================================
-   DARK MODE - COMPREHENSIVE STYLING
-   ============================================ */
-
-:root.dark-mode .view {
-    background: var(--bg);
-    color: var(--text);
-}
-
-:root.dark-mode [style*="color: #1e293b"],
-:root.dark-mode [style*="color:#1e293b"] {
-    color: #e0e0e0 !important;
-}
-
-:root.dark-mode [style*="color: #1a202c"],
-:root.dark-mode [style*="color:#1a202c"] {
-    color: #e0e0e0 !important;
-}
-
-:root.dark-mode [style*="background: white"],
-:root.dark-mode [style*="background:white"] {
-    background: #1a1a1a !important;
-    color: var(--text) !important;
-}
-
-:root.dark-mode div[style*="background: white"] {
-    background: #1a1a1a !important;
-    color: var(--text) !important;
-}
-
-:root.dark-mode .earnContainer {
-    background: var(--bg);
-}
-
-:root.dark-mode .earn-card {
-    background: #1a1a1a;
-    color: var(--text);
-}
-
-:root.dark-mode .credit-card {
-    background: linear-gradient(135deg, #1a1a1a, #0f0f0f);
-    color: var(--text);
-}
-
-:root.dark-mode .plan-info {
-    background: #1a1a1a;
-    color: var(--text);
-    border: 1px solid #333;
-}
-
-:root.dark-mode .earning-item {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .spinner-result {
-    background: #1a1a1a;
-    color: var(--text);
-}
-
-:root.dark-mode .modal-overlay {
-    background: rgba(0, 0, 0, 0.8);
-}
-
-:root.dark-mode .transaction-item {
-    background: #1a1a1a;
-    border-bottom: 1px solid #333;
-    color: var(--text);
-}
-
-:root.dark-mode .stats-grid {
-    background: #1a1a1a;
-    border: 1px solid #333;
-}
-
-:root.dark-mode .profile-badge {
-    background: #1a1a1a;
-    color: var(--text);
-    border: 1px solid #333;
-}
-
-:root.dark-mode .interest-tag {
-    background: #222;
-    color: var(--text);
-}
-
-:root.dark-mode .about-section {
-    background: #1a1a1a;
-    color: var(--text);
-    border: 1px solid #333;
-}
-
-:root.dark-mode .explore-card {
-    background: #1a1a1a;
-    color: var(--text);
-    border: 1px solid #333;
-}
-
-:root.dark-mode .trending-item {
-    background: #1a1a1a;
-    color: var(--text);
-    border: 1px solid #333;
-}
-
-:root.dark-mode input[type="text"],
-:root.dark-mode input[type="email"],
-:root.dark-mode input[type="number"],
-:root.dark-mode textarea {
-    background: #222 !important;
-    color: var(--text) !important;
-    border-color: #333 !important;
-}
-
-:root.dark-mode input[type="text"]:focus,
-:root.dark-mode input[type="email"]:focus,
-:root.dark-mode input[type="number"]:focus,
-:root.dark-mode textarea:focus {
-    background: #2a2a2a !important;
-    border-color: var(--primary) !important;
-}
-
-/* ============================================
-   HEATMAP & ANIMATIONS
-   ============================================ */
-
-@keyframes heatmapBlink {
-    0% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.9), 0 0 30px rgba(0, 212, 255, 0.5);
-    }
-    50% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1.3);
-        box-shadow: 0 0 25px rgba(0, 212, 255, 1), 0 0 50px rgba(0, 212, 255, 0.7);
-    }
-    100% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.9), 0 0 30px rgba(0, 212, 255, 0.5);
-    }
-}
-
-@keyframes livePulse {
-    0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.2;
-        transform: scale(0.5);
-    }
-}
-
-#liveDot {
-    animation: livePulse 1.5s ease-in-out infinite;
-}
-
-@keyframes countPulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.7;
-    }
-}
-
-#liveAccountCount {
-    animation: countPulse 2s ease-in-out infinite;
-}
-
-#liveProgressBar {
-    transition: width 0.8s ease;
-}
-
-/* ============================================
-   RESPONSIVE
-   ============================================ */
-@media (max-width: 768px) {
-    .nav-item {
-        padding: 4px 6px;
-        font-size: 0.5rem;
-        min-width: 36px;
-    }
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
-    .nav-icon {
-        font-size: 1rem;
-    }
+    <!-- CONFIG -->
+    <script src="config.js"></script>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loadingScreen" class="active">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading CHICHI</div>
+    <div class="loading-progress">
+        <div class="loading-progress-bar"></div>
+    </div>
+</div>
+
+<!-- CONSENT BANNER -->
+<div id="consentBanner" class="consent-banner">
+    <div class="consent-content">
+        <div class="consent-text">
+            We use cookies for analytics. By clicking "Accept", you consent to our use of cookies.
+            <a href="#" onclick="app.showConsentOptions(); return false;">Learn more</a>
+        </div>
+        <div class="consent-buttons">
+            <button class="consent-btn consent-btn-manage" onclick="app.showConsentOptions()">Manage</button>
+            <button class="consent-btn consent-btn-accept" onclick="app.acceptConsent()">Accept</button>
+        </div>
+    </div>
+</div>
+
+<!-- AUTH PAGE -->
+<div class="auth-page" id="authPage">
+    <!-- Blurred Background Image -->
+    <div class="auth-bg-image"></div>
+    <!-- Dark Overlay -->
+    <div class="auth-overlay"></div>
     
-    .fab-button {
-        width: 44px;
-        height: 44px;
-        font-size: 1.2rem;
-    }
-    
-    .bottom-nav {
-        padding: 4px 8px 8px;
-        height: 58px;
-        border-radius: 16px 16px 0 0;
-    }
-    
-    .messages-header h2 {
-        font-size: 20px;
-    }
-    
-    .story-avatar, .create-story-avatar {
-        width: 30px;
-        height: 30px;
-        font-size: 10px;
-    }
-    
-    .header-title {
-        font-size: 0.85rem;
-    }
-    
-    .app-header {
-        padding: 4px 10px;
-        min-height: 42px;
-    }
-    
-    .consent-content {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .consent-buttons {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .consent-btn {
-        width: 100%;
-    }
-}
-
-@media (max-width: 480px) {
-    .view {
-        padding-bottom: 60px;
-    }
-    
-    .nav-item {
-        padding: 2px 4px;
-        font-size: 0.45rem;
-        min-width: 30px;
-    }
-    
-    .nav-icon {
-        font-size: 0.9rem;
-    }
-    
-    .fab-button {
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
-    }
-    
-    .bottom-nav {
-        padding: 3px 6px 6px;
-        height: 50px;
-        border-radius: 12px 12px 0 0;
-    }
-    
-    .message-item-avatar {
-        width: 36px;
-        height: 36px;
-        min-width: 36px;
-        font-size: 13px;
-    }
-    
-    .message-item {
-        padding: 8px 12px;
-    }
-    
-    .post {
-        margin: 8px 4px;
-    }
-    
-    .story-avatar, .create-story-avatar {
-        width: 26px;
-        height: 26px;
-        font-size: 9px;
-    }
-    
-    .header-title {
-        font-size: 0.75rem;
-        letter-spacing: 1px;
-    }
-    
-    .app-header {
-        padding: 3px 8px;
-        min-height: 38px;
-    }
-    
-    .message-wrapper {
-        max-width: 85%;
-    }
-    
-    .message-bubble {
-        font-size: 14px;
-        padding: 8px 12px;
-    }
-    
-    #chatHeader {
-        padding: 10px 12px;
-    }
-    
-    #chatHeader button {
-        font-size: 18px;
-        padding: 4px;
-    }
-    
-    #chatHeaderAvatar {
-        width: 36px;
-        height: 36px;
-        min-width: 36px;
-        font-size: 14px;
-    }
-    
-    #chatHeaderName {
-        font-size: 14px;
-    }
-    
-    #chatMessages {
-        padding: 10px;
-        padding-bottom: 80px;
-    }
-    
-    #chatInput {
-        padding: 8px 10px;
-    }
-    
-    #chatMessageInput {
-        font-size: 13px;
-        padding: 8px 12px;
-    }
-    
-    #chatSendBtn {
-        width: 38px;
-        height: 38px;
-        font-size: 15px;
-    }
-    
-    .auth-card {
-        padding: 20px;
-    }
-    
-    .auth-header h1 {
-        font-size: 1.6rem;
-    }
-    
-    .modal, .create-modal {
-        padding: 16px;
-        border-radius: 20px 20px 0 0;
-    }
-}
-
-/* ============================================
-   NEW FEATURES - PROFILE IMAGE RING
-   ============================================ */
-
-.profile-image-ring {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    position: relative;
-    background: linear-gradient(135deg, #0088cc, #31a3e0);
-    padding: 3px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.profile-image-ring img {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    border: 3px solid white;
-    object-fit: cover;
-    display: block;
-}
-
-.profile-image-ring::before {
-    content: '';
-    position: absolute;
-    top: -5px;
-    left: -5px;
-    right: -5px;
-    bottom: -5px;
-    border-radius: 50%;
-    background: conic-gradient(
-        from 0deg,
-        #0088cc 0deg,
-        #31a3e0 90deg,
-        #0088cc 180deg,
-        #31a3e0 270deg,
-        #0088cc 360deg
-    );
-    z-index: -1;
-    opacity: 0.4;
-    animation: ringPulse 3s ease-in-out infinite;
-}
-
-@keyframes ringPulse {
-    0%, 100% {
-        opacity: 0.4;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.7;
-        transform: scale(1.02);
-    }
-}
-
-.profile-image-ring:hover {
-    transform: scale(1.05);
-}
-
-/* ============================================
-   NEW FEATURES - TRIVIA START BUTTON
-   ============================================ */
-
-#triviaStartBtn {
-    display: flex !important;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    padding: 40px 20px;
-    text-align: center;
-    animation: slideUp 0.5s ease;
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.trivia-start-btn {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 8px;
-    font-weight: 700;
-    background: linear-gradient(135deg, #0088cc, #31a3e0);
-    border: none;
-    color: white;
-    cursor: pointer;
-    transition: all 0.3s;
-    box-shadow: 0 4px 15px rgba(0, 136, 204, 0.3);
-}
-
-.trivia-start-btn:hover {
-    transform: scale(1.08);
-    box-shadow: 0 6px 20px rgba(0, 136, 204, 0.5);
-}
-
-.trivia-start-btn:active {
-    transform: scale(0.95);
-}
-
-/* ============================================
-   NEW FEATURES - TRIVIA NEXT OVERLAY
-   ============================================ */
-
-#triviaNextOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
-    animation: fadeIn 0.3s ease;
-}
-
-#triviaNextOverlay.show {
-    display: flex;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-.trivia-next-btn {
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    font-size: 24px;
-    background: linear-gradient(135deg, #10b981, #34d399);
-    border: 5px solid white;
-    color: white;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 8px;
-    transition: all 0.3s;
-    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
-}
-
-.trivia-next-btn:hover {
-    transform: scale(1.12);
-    box-shadow: 0 12px 32px rgba(16, 185, 129, 0.6);
-}
-
-.trivia-next-btn:active {
-    transform: scale(0.95);
-}
-
-/* ============================================
-   NEW FEATURES - GIFTS AUTO-SCROLL
-   ============================================ */
-
-.gifts-scroll-container {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-height: 400px;
-    overflow-y: auto;
-    scroll-snap-type: y mandatory;
-    padding: 12px 0;
-    animation: slideUp 0.4s ease;
-}
-
-.gifts-scroll-container::-webkit-scrollbar {
-    width: 4px;
-}
-
-.gifts-scroll-container::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 10px;
-}
-
-.gifts-scroll-container::-webkit-scrollbar-thumb {
-    background: rgba(0, 136, 204, 0.3);
-    border-radius: 10px;
-}
-
-.gifts-scroll-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 136, 204, 0.5);
-}
-
-.gift-card {
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-}
-
-.airtime-gift-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    padding: 20px;
-    color: white;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-    border: 2px solid transparent;
-}
-
-.airtime-gift-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
-    border-color: white;
-}
-
-.airtime-gift-info {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.airtime-gift-name {
-    font-weight: 700;
-    font-size: 14px;
-}
-
-.airtime-gift-cost {
-    font-size: 12px;
-    opacity: 0.9;
-}
-
-.airtime-gift-credits {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    width: fit-content;
-}
-
-/* ============================================
-   NEW FEATURES - MESSAGE DELETION
-   ============================================ */
-
-.message-context-menu {
-    position: absolute;
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px;
-    z-index: 1000;
-    min-width: 140px;
-    box-shadow: var(--shadow);
-    animation: slideDown 0.2s ease;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.message-context-menu button {
-    width: 100%;
-    background: none;
-    border: none;
-    padding: 10px 12px;
-    text-align: left;
-    cursor: pointer;
-    font-size: 13px;
-    border-radius: 6px;
-    transition: all 0.2s;
-}
-
-.message-context-menu button:hover {
-    background: #f3f4f6;
-    color: #ef4444;
-}
-
-.message-item {
-    position: relative;
-    transition: all 0.2s;
-}
-
-.message-item:hover {
-    background: rgba(0, 136, 204, 0.05);
-}
-
-.message-item-actions {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0;
-    transition: all 0.2s;
-}
-
-.message-item:hover .message-item-actions {
-    opacity: 1;
-}
-
-.message-delete-btn {
-    background: #fee2e2;
-    color: #dc2626;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    transition: all 0.2s;
-}
-
-.message-delete-btn:hover {
-    background: #fca5a5;
-    transform: scale(1.05);
-}
-
-/* ============================================
-   NEW FEATURES - NOTIFICATIONS
-   ============================================ */
-
-.notifications-tab {
-    padding: 12px;
-    background: linear-gradient(135deg, #fef3c7, #fef08a);
-    border-radius: 10px;
-    border: 1px solid #fcd34d;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    font-size: 13px;
-    margin-bottom: 12px;
-}
-
-.notifications-tab:hover {
-    background: linear-gradient(135deg, #fcd34d, #fbbf24);
-    transform: translateX(4px);
-}
-
-.notifications-badge {
-    background: #dc2626;
-    color: white;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.1);
-        opacity: 0.8;
-    }
-}
-
-.notification-item {
-    background: linear-gradient(135deg, #fef3c7, #ffffff);
-    border-left: 4px solid #f59e0b;
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.notification-item:hover {
-    transform: translateX(4px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-}
-
-.notification-icon {
-    font-size: 20px;
-    margin-bottom: 8px;
-}
-
-.notification-title {
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 4px;
-}
-
-.notification-message {
-    font-size: 13px;
-    color: var(--text-light);
-    line-height: 1.4;
-}
-
-.notification-time {
-    font-size: 11px;
-    color: #9ca3af;
-    margin-top: 8px;
-}
-
-/* ============================================
-   NEW FEATURES - UNREAD BADGE
-   ============================================ */
-
-.chat-unread-badge {
-    background: var(--primary);
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    margin-left: auto;
-    animation: badgePulse 2s ease-in-out infinite;
-}
-
-@keyframes badgePulse {
-    0%, 100% {
-        box-shadow: 0 0 0 0 rgba(0, 136, 204, 0.7);
-    }
-    50% {
-        box-shadow: 0 0 0 8px rgba(0, 136, 204, 0);
-    }
-}
-/* ===== VIBRANT ANIMATED AUTH PAGE ===== */
-
-@keyframes slideInAuth {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes fadeInTitle {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes glow {
-    0%, 100% { box-shadow: 0 0 20px rgba(0, 136, 204, 0.3), inset 0 0 20px rgba(0, 136, 204, 0.1); }
-    50% { box-shadow: 0 0 40px rgba(0, 136, 204, 0.6), inset 0 0 30px rgba(0, 136, 204, 0.2); }
-}
-
-@keyframes buttonGlow {
-    0%, 100% { box-shadow: 0 0 20px rgba(200, 255, 0, 0.3); }
-    50% { box-shadow: 0 0 30px rgba(200, 255, 0, 0.6); }
-}
-
-@keyframes googleGlow {
-    0%, 100% { box-shadow: 0 0 15px rgba(66, 133, 244, 0.3), inset 0 0 15px rgba(66, 133, 244, 0.1); }
-    50% { box-shadow: 0 0 25px rgba(66, 133, 244, 0.5), inset 0 0 20px rgba(66, 133, 244, 0.15); }
-}
-
-@keyframes floatGlow {
-    0% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-    100% { transform: translateY(0); }
-}
-
-@keyframes tabUnderline {
-    from { transform: scaleX(0); }
-    to { transform: scaleX(1); }
-}
-
-@keyframes pulseGlow {
-    0% { opacity: 0.5; }
-    50% { opacity: 1; }
-    100% { opacity: 0.5; }
-}
-
-/* Auth Page Container */
-.auth-page {
-    display: flex !important;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    z-index: 9998;
-    animation: fadeIn 0.5s ease-out;
-    overflow: hidden;
-}
-
-/* Background Image with Blur */
-.auth-bg-image {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('https://res.cloudinary.com/u1uilb6f/image/upload/v1785000264/0fb4659eacc91305db29e373797813d6_ibotkq.jpg');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    filter: blur(8px);
-    z-index: 0;
-    transform: scale(1.05);
-}
-
-/* Dark Overlay */
-.auth-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, rgba(10, 10, 10, 0.75) 0%, rgba(26, 26, 26, 0.85) 100%);
-    z-index: 0;
-}
-
-/* Background Glows */
-.auth-glow {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.1;
-    pointer-events: none;
-}
-
-.auth-glow-1 {
-    width: 400px;
-    height: 400px;
-    background: #0088cc;
-    top: -100px;
-    left: -100px;
-    animation: floatGlow 8s ease-in-out infinite;
-}
-
-.auth-glow-2 {
-    width: 300px;
-    height: 300px;
-    background: #c8ff00;
-    bottom: -50px;
-    right: -50px;
-    animation: floatGlow 6s ease-in-out infinite reverse;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Auth Card with Animation */
-.auth-card {
-    background: rgba(26, 26, 26, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 24px;
-    padding: 24px;
-    max-width: 340px;
-    width: 100%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 60px rgba(0, 136, 204, 0.15);
-    border: 1px solid rgba(0, 136, 204, 0.3);
-    animation: slideInAuth 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-    position: relative;
-    z-index: 1;
-}
-
-.auth-card.auth-animate {
-    animation: slideInAuth 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Auth Header with Animation */
-.auth-header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.auth-header .auth-title-animate {
-    font-family: 'Outfit', sans-serif;
-    font-size: 32px;
-    font-weight: 800;
-    background: linear-gradient(135deg, #0088cc 0%, #00d4ff 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin: 0 0 4px 0;
-    animation: fadeInTitle 0.8s ease-out 0.1s both;
-    text-shadow: 0 0 20px rgba(0, 136, 204, 0.3);
-}
-
-.auth-header .auth-subtitle-animate {
-    color: #999;
-    font-size: 13px;
-    margin: 0;
-    animation: fadeInTitle 0.8s ease-out 0.2s both;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
-
-/* Tabs Container */
-.tabs-container {
-    margin-bottom: 20px;
-}
-
-/* Tabs */
-.tabs {
-    display: flex;
-    gap: 0;
-    background: transparent;
-    padding: 0;
-    border-radius: 0;
-    border-bottom: 2px solid #262626;
-}
-
-.tab {
-    flex: 1;
-    padding: 12px 14px;
-    background: none;
-    border: none;
-    color: #666;
-    font-weight: 700;
-    font-size: 13px;
-    cursor: pointer;
-    border-radius: 0;
-    transition: all 0.3s;
-    font-family: inherit;
-    position: relative;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.tab.active {
-    color: #c8ff00;
-}
-
-.tab-underline {
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: #c8ff00;
-    border-radius: 2px;
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.3s ease;
-}
-
-.tab.active .tab-underline {
-    transform: scaleX(1);
-}
-
-.tab:hover {
-    color: #999;
-}
-
-.tab-text {
-    display: block;
-}
-
-/* Tab Content */
-.tab-content {
-    display: none;
-    animation: slideInAuth 0.4s ease-out;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* Form Groups with Staggered Animation */
-.form-group.form-animate {
-    animation: slideInAuth 0.6s ease-out backwards;
-}
-
-.form-group.form-animate:nth-child(1) { animation-delay: 0.3s; }
-.form-group.form-animate:nth-child(2) { animation-delay: 0.4s; }
-.form-group.form-animate:nth-child(3) { animation-delay: 0.5s; }
-.form-group.form-animate:nth-child(4) { animation-delay: 0.6s; }
-
-/* Form Label & Input */
-.form-label {
-    display: block;
-    color: #999;
-    font-size: 10px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-}
-
-.form-input-wrapper {
-    position: relative;
-    margin-bottom: 12px;
-}
-
-.form-input {
-    width: 100%;
-    padding: 11px 13px;
-    background: #262626;
-    border: 1.5px solid #333;
-    border-radius: 10px;
-    color: #fff;
-    font-size: 13px;
-    font-family: inherit;
-    transition: all 0.3s;
-    position: relative;
-    z-index: 1;
-}
-
-.form-input::placeholder {
-    color: #555;
-}
-
-.form-input:focus {
-    outline: none;
-    background: #2a2a2a;
-    border-color: #0088cc;
-    box-shadow: 0 0 0 3px rgba(0, 136, 204, 0.2);
-}
-
-.input-glow {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 10px;
-    background: linear-gradient(90deg, rgba(0, 136, 204, 0.1) 0%, transparent 50%, rgba(0, 136, 204, 0.1) 100%);
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-    z-index: 0;
-}
-
-.form-input:focus + .input-glow {
-    opacity: 1;
-    animation: pulseGlow 2s ease-in-out infinite;
-}
-
-/* Submit Button */
-.btn-submit {
-    width: 100%;
-    padding: 12px;
-    background: #c8ff00;
-    color: #0a0a0a;
-    border: none;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-family: inherit;
-    margin-top: 6px;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-submit.glow-button {
-    animation: slideInAuth 0.6s ease-out 0.7s both;
-}
-
-.btn-submit:hover {
-    background: #deff33;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(200, 255, 0, 0.4);
-}
-
-.btn-submit:active {
-    transform: translateY(0);
-}
-
-.button-glow {
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s;
-    pointer-events: none;
-}
-
-.btn-submit:hover .button-glow {
-    left: 100%;
-}
-
-/* Forgot Password Link */
-.forgot-link {
-    color: #c8ff00;
-    text-decoration: none;
-    font-size: 11px;
-    font-weight: 600;
-    transition: all 0.3s;
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
-.forgot-link:hover {
-    color: #deff33;
-    background: rgba(200, 255, 0, 0.1);
-    text-decoration: underline;
-}
-
-/* Auth Divider */
-.auth-divider {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 16px 0 12px 0;
-}
-
-.auth-divider::before,
-.auth-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #333, transparent);
-}
-
-.auth-divider span {
-    color: #666;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Social Buttons Row */
-.social-buttons-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 14px;
-    animation: slideInAuth 0.6s ease-out 0.8s both;
-}
-
-.social-btn-google {
-    flex: 1;
-    padding: 11px 12px;
-    background: #262626;
-    border: 1.5px solid #333;
-    border-radius: 10px;
-    color: #fff;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-family: inherit;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    height: 44px;
-    position: relative;
-    overflow: hidden;
-}
-
-.social-btn-google.glow-button-secondary {
-    border-color: #4285F4;
-    animation: googleGlow 3s ease-in-out infinite;
-}
-
-.social-btn-google:hover {
-    background: #333;
-    border-color: #4285F4;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(66, 133, 244, 0.4);
-}
-
-.social-btn-google:active {
-    transform: translateY(0);
-}
-
-.social-btn-google svg {
-    width: 18px;
-    height: 18px;
-    filter: drop-shadow(0 0 4px rgba(66, 133, 244, 0.3));
-}
-
-/* Sign Up/Login Links */
-.signup-link,
-.login-link {
-    color: #c8ff00;
-    text-decoration: none;
-    font-weight: 700;
-    transition: all 0.3s;
-    padding: 2px 4px;
-    border-radius: 3px;
-}
-
-.signup-link:hover,
-.login-link:hover {
-    color: #deff33;
-    text-decoration: underline;
-    text-shadow: 0 0 10px rgba(200, 255, 0, 0.3);
-}
-
-/* Modal Animations */
-.modal-overlay {
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(5px);
-}
-
-.modal {
-    background: #1a1a1a;
-    border: 1px solid rgba(0, 136, 204, 0.2);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 136, 204, 0.1);
-}
-
-.modal.modal-animate {
-    animation: slideInAuth 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.modal h2 {
-    color: #fff;
-}
-
-.modal p {
-    color: #999;
-}
-
-.modal-close button {
-    background: none;
-    border: none;
-    color: #666;
-    font-size: 20px;
-    cursor: pointer;
-    padding: 0;
-    transition: all 0.2s;
-}
-
-.modal-close button:hover {
-    color: #c8ff00;
-    transform: scale(1.1);
-}
-
-@media (max-width: 480px) {
-    .auth-bg-image {
-        background-attachment: scroll;
-    }
-
-    .auth-card {
-        padding: 18px;
-    }
-
-    .auth-header .auth-title-animate {
-        font-size: 26px;
-    }
-
-    .form-input {
-        padding: 9px 11px;
-        font-size: 12px;
-    }
-
-    .btn-submit {
-        padding: 10px;
-        font-size: 13px;
-    }
-
-    .social-btn-google {
-        height: 40px;
-        padding: 8px 10px;
-        font-size: 11px;
-    }
-
-    .auth-glow-1 {
-        width: 300px;
-        height: 300px;
-        top: -80px;
-        left: -80px;
-    }
-
-    .auth-glow-2 {
-        width: 200px;
-        height: 200px;
-        bottom: -30px;
-        right: -30px;
-    }
-}
-
-
-/* ===== MESSAGES PAGE STYLING ===== */
-
-.messages-container {
-    padding: 0;
-    background: white;
-}
-
-.message-item {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid #f3f4f6;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.message-item:hover {
-    background: #f9fafb;
-}
-
-.message-item.unread {
-    background: #f0f7ff;
-    border-left: 3px solid #0088cc;
-}
-
-.message-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #0088cc, #006fa3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 16px;
-    margin-right: 12px;
-    background-size: cover;
-    background-position: center;
-    flex-shrink: 0;
-    position: relative;
-}
-
-.message-avatar.online::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 12px;
-    height: 12px;
-    background: #10b981;
-    border-radius: 50%;
-    border: 2px solid white;
-}
-
-.message-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.message-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 4px;
-}
-
-.message-name {
-    font-weight: 600;
-    font-size: 14px;
-    color: #1a202c;
-}
-
-.message-time {
-    font-size: 12px;
-    color: #9ca3af;
-    margin-left: 8px;
-}
-
-.message-preview {
-    font-size: 13px;
-    color: #6b7280;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.message-preview.unread {
-    color: #111827;
-    font-weight: 500;
-}
-
-.message-badge {
-    background: #0088cc;
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    margin-left: 8px;
-    flex-shrink: 0;
-}
-
-.message-filter-tab.active {
-    background: #0088cc !important;
-    color: white !important;
-}
-
-@media (max-width: 480px) {
-    .message-avatar {
-        width: 40px;
-        height: 40px;
-        font-size: 14px;
-    }
-
-    .message-item {
-        padding: 10px 12px;
-    }
-
-    .message-name {
-        font-size: 13px;
-    }
-
-    .message-preview {
-        font-size: 12px;
-    }
-}
-
-
-/* ===== EXPLORE PAGE STYLING ===== */
-
-#exploreContainer {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-#exploreSearchResults {
-    background: white;
-    border-radius: 12px;
-    padding: 16px;
-    border: 1px solid #e5e7eb;
-}
-
-#exploreSearchResultsContainer {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.explore-people-card {
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    padding: 14px;
-    text-align: center;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.explore-people-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 136, 204, 0.15);
-    transform: translateY(-2px);
-}
-
-.explore-people-avatar {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #0088cc, #006fa3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 18px;
-    margin: 0 auto 10px;
-    flex-shrink: 0;
-}
-
-.explore-people-avatar img {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.explore-people-name {
-    font-weight: 600;
-    font-size: 13px;
-    color: #1a202c;
-    margin-bottom: 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.explore-people-username {
-    font-size: 11px;
-    color: #6b7280;
-    margin-bottom: 8px;
-}
-
-.explore-people-followers {
-    font-size: 11px;
-    color: #9ca3af;
-    margin-bottom: 10px;
-}
-
-.explore-search-input {
-    width: 100%;
-    padding: 12px 16px 12px 40px;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    font-size: 14px;
-    font-family: inherit;
-    transition: all 0.2s;
-}
-
-.explore-search-input:focus {
-    border-color: #0088cc;
-    box-shadow: 0 0 0 3px rgba(0, 136, 204, 0.1);
-    outline: none;
-}
-
-.explore-search-empty {
-    text-align: center;
-    padding: 24px;
-    color: #9ca3af;
-}
-
-.explore-search-empty-icon {
-    font-size: 28px;
-    margin-bottom: 8px;
-}
-
-.explore-search-empty-text {
-    font-size: 14px;
-}
-
-/* MANDATORY HASHTAG/INTERESTS MODAL - COMPACT */
-#mandatoryHashtagModal {
-    overflow: visible !important;
-}
-
-#mandatoryHashtagModal > div {
-    max-height: none !important;
-    overflow-y: visible !important;
-}
-
-@media (max-width: 768px) {
-    #exploreContainer {
-        padding: 16px;
-    }
-
-    .explore-people-card {
-        padding: 12px;
-    }
-
-    .explore-people-avatar {
-        width: 48px;
-        height: 48px;
-        font-size: 16px;
-    }
-
-    .explore-people-name {
-        font-size: 12px;
-    }
-    
-    /* Ensure modal fits on smaller screens */
-    #mandatoryHashtagModal > div {
-        max-width: 95% !important;
-        max-height: auto !important;
-        overflow-y: visible !important;
-    }
-}
+    <div class="auth-card auth-animate">
+        <!-- Animated Background Glow -->
+        <div class="auth-glow auth-glow-1"></div>
+        <div class="auth-glow auth-glow-2"></div>
+        
+        <div class="auth-header">
+            <h1 class="auth-title-animate">CHICHI</h1>
+            <p class="auth-subtitle-animate">Social Media</p>
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab active" onclick="app.switchTab('login')">
+                    <span class="tab-text">Login</span>
+                    <span class="tab-underline"></span>
+                </button>
+                <button class="tab" onclick="app.switchTab('signup')">
+                    <span class="tab-text">Sign Up</span>
+                    <span class="tab-underline"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- LOGIN TAB -->
+        <div class="tab-content active" id="loginTab">
+            <form onsubmit="app.handleLogin(event)">
+                <div class="form-group form-animate">
+                    <label class="form-label">Email address</label>
+                    <div class="form-input-wrapper">
+                        <input type="text" class="form-input" id="loginEmail" placeholder="your@email.com" required>
+                        <div class="input-glow"></div>
+                    </div>
+                </div>
+                <div class="form-group form-animate">
+                    <label class="form-label">Password</label>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label class="form-label" style="margin: 0;"></label>
+                        <a href="#" onclick="app.showForgotPasswordModal(); return false;" class="forgot-link">Forgot?</a>
+                    </div>
+                    <div class="form-input-wrapper">
+                        <input type="password" class="form-input" id="loginPassword" placeholder="••••••••" required>
+                        <div class="input-glow"></div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit btn-animate glow-button" id="loginBtn">
+                    <span class="login-btn-text">Log in</span>
+                    <span class="login-spinner" style="display: none;">⏳</span>
+                    <div class="button-glow"></div>
+                </button>
+                
+                <div class="auth-divider"><span>Or continue with</span></div>
+                
+                <!-- Google Only -->
+                <div class="social-buttons-row">
+                    <button type="button" class="social-btn-google form-animate glow-button-secondary" onclick="app.signInWithGoogle()" title="Sign in with Google">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        <span>Google</span>
+                        <div class="button-glow"></div>
+                    </button>
+                </div>
+                
+                <div style="text-align: center; margin-top: 16px; font-size: 12px; color: #999;">
+                    Don't have an account? <a href="#" onclick="app.switchTab('signup'); return false;" class="signup-link">Sign up</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- SIGNUP TAB -->
+        <div class="tab-content" id="signupTab">
+            <form onsubmit="app.handleSignup(event)">
+                <div class="form-group form-animate">
+                    <label class="form-label">Full Name</label>
+                    <div class="form-input-wrapper">
+                        <input type="text" class="form-input" id="signupName" placeholder="John Doe" required>
+                        <div class="input-glow"></div>
+                    </div>
+                </div>
+                <div class="form-group form-animate">
+                    <label class="form-label">Username</label>
+                    <div class="form-input-wrapper">
+                        <input type="text" class="form-input" id="signupUsername" placeholder="@username" required>
+                        <div class="input-glow"></div>
+                    </div>
+                </div>
+                <div class="form-group form-animate">
+                    <label class="form-label">Email Address</label>
+                    <div class="form-input-wrapper">
+                        <input type="email" class="form-input" id="signupEmail" placeholder="your@email.com" required>
+                        <div class="input-glow"></div>
+                    </div>
+                </div>
+                <div class="form-group form-animate">
+                    <label class="form-label">Password</label>
+                    <div class="form-input-wrapper">
+                        <input type="password" class="form-input" id="signupPassword" placeholder="Min 6 characters" required>
+                        <div class="input-glow"></div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-submit btn-animate glow-button" id="signupBtn">
+                    <span class="signup-btn-text">Create Account</span>
+                    <span class="signup-spinner" style="display: none;">⏳</span>
+                    <div class="button-glow"></div>
+                </button>
+                
+                <div class="auth-divider"><span>Or sign up with</span></div>
+                
+                <!-- Google Only -->
+                <div class="social-buttons-row">
+                    <button type="button" class="social-btn-google form-animate glow-button-secondary" onclick="app.signInWithGoogle()" title="Sign up with Google">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        <span>Google</span>
+                        <div class="button-glow"></div>
+                    </button>
+                </div>
+                
+                <div style="text-align: center; margin-top: 16px; font-size: 12px; color: #999;">
+                    Already have an account? <a href="#" onclick="app.switchTab('login'); return false;" class="login-link">Log in</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="forgotPasswordModal" style="display:none;">
+    <div class="modal modal-animate" style="max-width:360px;">
+        <div class="modal-close"><button onclick="app.closeForgotPasswordModal()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:12px;color:#fff;">Reset Password</h2>
+        <p style="color:#999;margin-bottom:16px;font-size:13px;">Enter your email to receive a password reset link.</p>
+        <div class="form-group">
+            <label class="form-label">Email</label>
+            <div class="form-input-wrapper">
+                <input type="email" class="form-input" id="forgotPasswordEmail" placeholder="your@email.com" required>
+                <div class="input-glow"></div>
+            </div>
+        </div>
+        <button type="button" class="btn-submit glow-button" onclick="app.sendPasswordReset()">Send Reset Link</button>
+        <button type="button" class="btn-submit" onclick="app.closeForgotPasswordModal()" style="background:#262626;color:#999;margin-top:8px;">Cancel</button>
+    </div>
+</div>
+
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="forgotPasswordModal" style="display:none;">
+    <div class="modal" style="max-width:400px;">
+        <div class="modal-close"><button onclick="app.closeForgotPasswordModal()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;">Reset Password</h2>
+        <p style="color:var(--text-light);margin-bottom:16px;">Enter your email to receive a password reset link.</p>
+        <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="forgotPasswordEmail" placeholder="your@email.com" required>
+        </div>
+        <button type="button" class="btn-submit" onclick="app.sendPasswordReset()">Send Reset Link</button>
+        <button type="button" class="btn-submit" onclick="app.closeForgotPasswordModal()" style="background:var(--light);color:var(--text);margin-top:8px;">Cancel</button>
+    </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="main-app" id="mainApp">
+    <!-- APP HEADER -->
+    <div class="app-header">
+        <div class="header-left">
+            <div id="storiesList"></div>
+            <h1 class="header-title">CHICHI</h1>
+        </div>
+        
+        <div class="header-actions">
+            <button class="btn-icon" id="darkModeToggle" onclick="app.toggleDarkMode()" title="Toggle Dark Mode" style="font-size:18px;margin-right:8px;">🌙</button>
+            <button class="btn-icon" id="headerMenuBtn" onclick="app.showHeaderMenu()">☰</button>
+            <div class="header-menu" id="headerMenu" style="display:none;position:absolute;top:100%;right:0;background:white;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.15);min-width:180px;z-index:1000;">
+                <button onclick="app.switchView('profile')" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;">👤 Profile</button>
+                <button id="adminMenuBtn" onclick="app.toggleAdminModal()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-top:1px solid #e5e7eb; display:none;">⚙️ Admin</button>
+                <button onclick="app.showLogout()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-top:1px solid #e5e7eb;border-radius:0 0 12px 12px;">🚪 Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP CONTENT -->
+    <div class="app-content" id="appContent">
+        
+        <!-- FEED VIEW -->
+        <div class="view" id="feedView">
+            <div id="feedContainer"></div>
+        </div>
+
+        <!-- EXPLORE VIEW -->
+        <div class="view" id="exploreView">
+            <div id="exploreContainer" style="padding: 20px;">
+                
+                <!-- Search People Section -->
+                <div style="margin-bottom: 24px;">
+                    <div style="position: relative;">
+                        <input type="text" id="exploreSearchInput" placeholder="🔍 Search people..." style="width: 100%; padding: 12px 16px 12px 40px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 14px; font-family: inherit; transition: 0.2s;" onfocus="this.style.borderColor='#0088cc'; this.style.boxShadow='0 0 0 3px rgba(0, 136, 204, 0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'" onkeyup="if(typeof app !== 'undefined' && app.searchExplorePeople) app.searchExplorePeople(this.value)">
+                        <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #9ca3af; pointer-events: none;">🔍</div>
+                    </div>
+                </div>
+
+                <!-- Search Results Container (Hidden by default) -->
+                <div id="exploreSearchResults" style="display: none; margin-bottom: 32px;">
+                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">👥 Search Results</h2>
+                    <div id="exploreSearchResultsContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                </div>
+
+                <!-- Trending Hashtags Section -->
+                <div style="margin-bottom: 32px;">
+                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">🔥 Trending Now</h2>
+                    <div id="trendingHashtagsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;"></div>
+                </div>
+
+                <!-- Explore People Section -->
+                <div style="margin-bottom: 32px;">
+                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">👥 People to Follow</h2>
+                    <div id="explorePeopleContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;"></div>
+                </div>
+
+                <!-- Trending Posts Section -->
+                <div>
+                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">📱 Most Liked</h2>
+                    <div id="trendingPostsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MESSAGES VIEW -->
+        <div class="view" id="messagesView">
+            <!-- Messages Header -->
+            <div class="messages-header" style="padding: 16px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #1a202c;">Messages</h2>
+                <div class="messages-controls" style="display: flex; gap: 8px;">
+                    <button class="icon-btn" onclick="if(typeof app !== 'undefined' && app.showNotificationsTab) app.showNotificationsTab()" title="Notifications" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 8px;">🔔</button>
+                    <button class="icon-btn" onclick="if(typeof app !== 'undefined' && app.showFavoritesModal) app.showFavoritesModal()" title="Favorites" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 8px;">❤️</button>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div style="padding: 12px 16px; background: white; border-bottom: 1px solid #f3f4f6;">
+                <input type="text" id="messageSearchInput" placeholder="🔍 Search messages or people..." style="width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 13px; font-family: inherit;" onkeyup="if(typeof app !== 'undefined' && app.searchMessages) app.searchMessages(this.value)">
+            </div>
+
+            <!-- Filter Tabs -->
+            <div id="messagesFilterTabs" style="display: flex; gap: 8px; padding: 12px 16px; overflow-x: auto; background: white; border-bottom: 1px solid #f3f4f6;">
+                <button class="message-filter-tab active" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('all')" style="padding: 8px 14px; background: #0088cc; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">All</button>
+                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('unread')" style="padding: 8px 14px; background: #f3f4f6; color: #666; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">Unread</button>
+                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('favorites')" style="padding: 8px 14px; background: #f3f4f6; color: #666; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">❤️ Favorites</button>
+                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('archived')" style="padding: 8px 14px; background: #f3f4f6; color: #666; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">📦 Archived</button>
+            </div>
+
+            <!-- Messages List -->
+            <div class="messages-container" id="messageList" style="display: flex; flex-direction: column; background: white;"></div>
+
+            <!-- Empty State -->
+            <div id="messagesEmpty" style="text-align: center; padding: 60px 20px; color: #9ca3af;">
+                <div style="font-size: 40px; margin-bottom: 12px;">💬</div>
+                <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">No messages yet</div>
+                <div style="font-size: 12px; color: #d1d5db;">Start a conversation with someone!</div>
+            </div>
+        </div>
+
+        <!-- EARN VIEW -->
+        <div class="view" id="earnView">
+            <div id="earnContainer"></div>
+        </div>
+
+        <!-- PROFILE VIEW -->
+        <div class="view" id="profileView">
+            <div id="profileContent"></div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <div class="bottom-nav">
+        <div class="nav-wrapper">
+            <button class="nav-item active" onclick="app.switchView('feed')">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Feed</span>
+            </button>
+            <button class="nav-item" onclick="app.switchView('explore')">
+                <span class="nav-icon">🔍</span>
+                <span class="nav-label">Explore</span>
+            </button>
+            <button class="nav-item" onclick="app.switchView('messages')" id="messagesNavBtn">
+                <span class="nav-icon">💬</span>
+                <span class="nav-label">Messages</span>
+                <span class="nav-badge" id="messagesBadge" style="display:none;">0</span>
+            </button>
+            <!-- FAB BUTTON IN CENTER -->
+            <button class="fab-button-nav" onclick="app.openCreateModal()" title="Create Post">+</button>
+            <button class="nav-item" onclick="app.switchView('earn')">
+                <span class="nav-icon">💰</span>
+                <span class="nav-label">Earn</span>
+            </button>
+            <button class="nav-item" onclick="app.switchView('profile')">
+                <span class="nav-icon">👤</span>
+                <span class="nav-label">Profile</span>
+            </button>
+            <button class="nav-item" onclick="app.showDeveloperInfo()">
+                <span class="nav-icon">👨‍💻</span>
+                <span class="nav-label">Dev</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- CHAT VIEW (Overlay) -->
+<div id="chatView" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;background:white;flex-direction:column;">
+    <div id="chatHeader">
+        <button id="chatBackBtn" onclick="app.closeChatView()">←</button>
+        <div id="chatHeaderAvatar">👤</div>
+        <div>
+            <div id="chatHeaderName">User</div>
+            <div id="chatHeaderStatus">Online</div>
+        </div>
+        <button id="chatMenuBtn" onclick="app.showChatMenu()">⋯</button>
+    </div>
+    <div id="chatMessages"></div>
+    <div id="chatInput">
+        <button class="attach-btn" onclick="app.attachImageToChat()">📎</button>
+        <input type="text" id="chatMessageInput" placeholder="Type a message...">
+        <button id="chatSendBtn" onclick="app.sendChatMessage()">➤</button>
+    </div>
+</div>
+
+<!-- CREATE POST MODAL -->
+<div class="modal-overlay" id="createModal" style="display:none;">
+    <div class="create-modal">
+        <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;">Create Post</h2>
+        <div id="photoPreview"></div>
+        <input type="file" id="photoInput" accept="image/*" style="display:none;">
+        <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">
+            📷 Choose Photo
+        </button>
+        <textarea id="captionInput" placeholder="Write a caption..." rows="3"></textarea>
+        <button type="button" class="btn-submit" id="sharePostBtn" onclick="app.createPost()">
+            <span class="share-btn-text">Share Post</span>
+            <span class="share-spinner" style="display:none;">⏳</span>
+        </button>
+    </div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div class="modal-overlay" id="adminModal" style="display:none;">
+    <div class="modal" style="max-width:400px;">
+        <div class="modal-close"><button onclick="app.closeAdminModal()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;">Admin Access</h2>
+        <div class="form-group">
+            <label class="form-label">Admin Password</label>
+            <input type="password" id="adminPassword" class="form-input" placeholder="Enter password">
+        </div>
+        <button type="button" class="btn-submit" onclick="app.verifyAdminPassword()">Verify</button>
+    </div>
+</div>
+
+<!-- ADMIN PORTAL -->
+<div class="admin-portal" id="adminPortal">
+    <div class="admin-header">
+        <h2>⚙️ Admin Portal</h2>
+        <button onclick="app.closeAdminPortal()" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 16px;border-radius:8px;cursor:pointer;font-weight:600;margin-top:8px;">Close</button>
+    </div>
+    <div class="admin-tabs">
+        <button class="admin-tab active" onclick="app.switchAdminTab('dashboard')">📊 Dashboard</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('users')">👥 Users</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('incomplete')">⚠️ Incomplete</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('posts')">📝 Posts</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('analytics')">📈 Analytics</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('gifts')">🎁 Gifts</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('admins')">👑 Admin Access</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('notifications')">🔔 Notifications</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('suspicious')">🚨 Suspicious</button>
+        <button class="admin-tab" onclick="app.switchAdminTab('logs')">📋 Logs</button>
+    </div>
+    <div class="admin-content">
+        <!-- Dashboard -->
+        <div class="admin-tab-content active" id="adminDashboard">
+            <div class="admin-stat-grid">
+                <div class="admin-stat"><div class="admin-stat-value" id="adminUserCount">0</div><div class="admin-stat-label">Users</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminPostCount">0</div><div class="admin-stat-label">Posts</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminSignupCount">0</div><div class="admin-stat-label">Today's Signups</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminBannedCount">0</div><div class="admin-stat-label">Banned Users</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalEarned">0</div><div class="admin-stat-label">💰 Coins Earned</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalSpent">0</div><div class="admin-stat-label">🎁 Coins Spent</div></div>
+            </div>
+        </div>
+        
+        <!-- Users -->
+        <div class="admin-tab-content" id="adminUsers">
+            <div style="margin-bottom:16px;">
+                <input type="text" id="userSearchInput" placeholder="Search users..." class="form-input" onkeyup="if(typeof app !== 'undefined' && app.searchUsers) app.searchUsers(this.value)">
+            </div>
+            <div id="adminUsersList"></div>
+        </div>
+        
+        <!-- Incomplete Users -->
+        <div class="admin-tab-content" id="adminIncomplete">
+            <div id="incompleteUsersList"></div>
+        </div>
+        
+        <!-- Posts -->
+        <div class="admin-tab-content" id="adminPosts">
+            <div id="adminPostsList"></div>
+        </div>
+        
+        <!-- Analytics -->
+        <div class="admin-tab-content" id="adminAnalytics">
+            <div id="adminAnalytics"></div>
+        </div>
+        
+        <!-- Gifts -->
+        <div class="admin-tab-content" id="adminGifts">
+            <div id="adminGifts"></div>
+        </div>
+        
+        <!-- Admin Access Management -->
+        <div class="admin-tab-content" id="adminAdmins">
+            <div style="margin-bottom: 24px; padding: 16px; background: #f0f7ff; border-radius: 12px; border: 1px solid #bfdbfe;">
+                <h3 style="margin-top: 0; color: #1e40af;">👑 Manage Admin Access</h3>
+                <p style="font-size: 12px; color: #64748b; margin-bottom: 16px;">Add or remove administrators from CHICHI. Only existing admins can modify this list.</p>
+                
+                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                    <input type="email" id="newAdminEmail" placeholder="Enter email to add as admin..." style="flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
+                    <button onclick="if(typeof app !== 'undefined' && app.addAdmin) app.addAdmin()" style="padding: 10px 16px; background: #0088cc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">➕ Add Admin</button>
+                </div>
+            </div>
+            
+            <h3 style="margin: 20px 0 12px; font-size: 14px; font-weight: 700; color: #1a202c;">Current Admins:</h3>
+            <div id="adminAccessList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            
+            <div style="margin-top: 24px; padding: 12px; background: #fef2f2; border-radius: 8px; font-size: 12px; color: #7c2d12;">
+                <strong>⚠️ Default Admins:</strong> support-chichi@gmail.com, onchari.dev@gmail.com
+            </div>
+        </div>
+        
+        <!-- Notifications -->
+        <div class="admin-tab-content" id="adminNotificationsTab">
+            <div id="adminNotificationsList"></div>
+        </div>
+        
+        <!-- Suspicious Activity -->
+        <div class="admin-tab-content" id="adminSuspicious">
+            <div id="suspiciousActivityList"></div>
+        </div>
+        
+        <!-- Logs -->
+        <div class="admin-tab-content" id="adminLogs">
+            <div id="activityLogList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT PROFILE MODAL -->
+<div class="modal-overlay" id="editProfileModal" style="display: none;">
+    <div class="modal" style="max-width: 500px; max-height: 85vh; overflow-y: auto;">
+        <div class="modal-close"><button onclick="app.closeProfileSettings()">✕</button></div>
+        <h2 style="font-weight: 700; margin-bottom: 20px;">✏️ Edit Profile</h2>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Full Name *</label>
+            <input type="text" id="editProfileName" placeholder="Your full name" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Username</label>
+            <input type="text" id="editProfileUsername" placeholder="Your username (no spaces)" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Bio</label>
+            <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box; min-height: 80px; resize: vertical;"></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button onclick="app.closeProfileSettings()" style="flex: 1; padding: 12px; background: #f3f4f6; color: #1a202c; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">Cancel</button>
+            <button onclick="app.saveProfileChanges()" style="flex: 1; padding: 12px; background: #0088cc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">✅ Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- LOGOUT MODAL -->
+<div class="logout-modal" id="logoutModal">
+    <div class="logout-card">
+        <h3>Logout?</h3>
+        <p>Are you sure you want to logout?</p>
+        <div class="logout-buttons">
+            <button class="logout-cancel" onclick="app.closeLogout()">Cancel</button>
+            <button class="logout-confirm" onclick="app.justLogout()">Logout</button>
+        </div>
+        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+            <button onclick="app.deleteAccountPermanently()" style="background:none;border:none;color:#ff4444;cursor:pointer;font-size:0.8rem;text-decoration:underline;">🗑️ Delete Account</button>
+        </div>
+    </div>
+</div>
+
+<!-- DEVELOPER INFO MODAL -->
+<div class="modal-overlay" id="developerModal" style="display:none;">
+    <div class="modal dev-modal">
+        <div class="modal-close"><button onclick="app.closeDeveloperInfo()">✕</button></div>
+        <div style="text-align:center;margin-bottom:20px;">
+            <div style="width:100px;height:100px;border-radius:50%;background:url('https://res.cloudinary.com/u1uilb6f/image/upload/v1784291624/1768467745366_1_lu01jr.jpg');background-size:cover;background-position:center;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:40px;border:3px solid #0088cc;"></div>
+            <h2 style="margin:0 0 4px 0;font-weight:700;font-size:22px;">Anthony Onchari</h2>
+            <p style="margin:0;color:#999;font-size:13px;font-weight:600;">👨‍💻 Developer & Digital Media Specialist</p>
+        </div>
+        
+        <div style="background:#f7fafc;padding:16px;border-radius:12px;margin-bottom:16px;border:1px solid #e2e8f0;">
+            <p style="margin:0;font-size:13px;line-height:1.7;color:#2d3748;">
+                Hey there! 👋 I'm <strong style="color:#0088cc;">Anthony</strong>, a Developer and Digital Media Specialist who loves building things that bring people and community together. I created <strong style="color:#0088cc;">CHICHI</strong> because I believe social media should feel like home — warm, real, and human.
+            </p>
+            <p style="margin-top:10px;margin-bottom:0;font-size:12px;color:#4a5568;border-top:1px solid #e2e8f0;padding-top:10px;">
+                This is <strong>Version V02A.01</strong> — the beginning of something beautiful. More features, more love, and more connection coming soon!
+            </p>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+            <div style="background:#ebf8ff;padding:12px 8px;border-radius:12px;text-align:center;">
+                <div style="font-size:24px;margin-bottom:4px;">💻</div>
+                <div style="font-size:11px;color:#2b6cb0;font-weight:600;">Web Developer</div>
+            </div>
+            <div style="background:#f0fff4;padding:12px 8px;border-radius:12px;text-align:center;">
+                <div style="font-size:24px;margin-bottom:4px;">📱</div>
+                <div style="font-size:11px;color:#276749;font-weight:600;">Digital Media</div>
+            </div>
+            <div style="background:#faf5ff;padding:12px 8px;border-radius:12px;text-align:center;">
+                <div style="font-size:24px;margin-bottom:4px;">🤝</div>
+                <div style="font-size:11px;color:#6b46c1;font-weight:600;">Community Builder</div>
+            </div>
+        </div>
+        
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+            <a href="https://wa.me/254701807001" target="_blank" style="flex:1;padding:10px;background:#25D366;color:white;text-align:center;border-radius:10px;text-decoration:none;font-size:12px;font-weight:600;min-width:80px;transition:0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">💬 WhatsApp</a>
+            <a href="https://www.facebook.com/profile.php?id=100088002065441" target="_blank" style="flex:1;padding:10px;background:#1877F2;color:white;text-align:center;border-radius:10px;text-decoration:none;font-size:12px;font-weight:600;min-width:80px;transition:0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">📘 Facebook</a>
+            <a href="https://www.linkedin.com/in/anthony-onchari-a3b87b270/" target="_blank" style="flex:1;padding:10px;background:#0A66C2;color:white;text-align:center;border-radius:10px;text-decoration:none;font-size:12px;font-weight:600;min-width:80px;transition:0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">💼 LinkedIn</a>
+        </div>
+        
+        <div style="background:#f9fafb;padding:12px;border-radius:10px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280;text-align:center;margin-bottom:12px;">
+            <p style="margin:0 0 6px 0;"><strong>CHICHI App</strong></p>
+            <p style="margin:0;">© 2026 Onchari Group • Version V02A.01</p>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer"></div>
+
+<!-- APP JS -->
+<script src="js/app.js"></script>
+
+<script>
+    // Auto-init when Firebase is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+            console.log('✅ Firebase ready, starting app...');
+            if (typeof app !== 'undefined' && app.init) {
+                app.init();
+            }
+        } else {
+            console.log('⏳ Waiting for Firebase...');
+            var checkFirebase = setInterval(function() {
+                if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                    clearInterval(checkFirebase);
+                    console.log('✅ Firebase loaded, starting app...');
+                    if (typeof app !== 'undefined' && app.init) {
+                        app.init();
+                    }
+                }
+            }, 500);
+            
+            setTimeout(function() {
+                clearInterval(checkFirebase);
+                console.warn('⚠️ Firebase timeout, trying anyway...');
+                if (typeof app !== 'undefined' && app.init) {
+                    app.init();
+                }
+            }, 10000);
+        }
+    });
+</script>
+
+</body>
+</html>
