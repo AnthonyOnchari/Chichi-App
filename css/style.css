@@ -4710,6 +4710,16 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
     font-size: 14px;
 }
 
+/* MANDATORY HASHTAG/INTERESTS MODAL - COMPACT */
+#mandatoryHashtagModal {
+    overflow: visible !important;
+}
+
+#mandatoryHashtagModal > div {
+    max-height: none !important;
+    overflow-y: visible !important;
+}
+
 @media (max-width: 768px) {
     #exploreContainer {
         padding: 16px;
@@ -4727,5 +4737,12 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 
     .explore-people-name {
         font-size: 12px;
+    }
+    
+    /* Ensure modal fits on smaller screens */
+    #mandatoryHashtagModal > div {
+        max-width: 95% !important;
+        max-height: auto !important;
+        overflow-y: visible !important;
     }
 }
