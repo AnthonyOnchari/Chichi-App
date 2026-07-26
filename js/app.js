@@ -1865,16 +1865,25 @@ var app = {
     },
 
     deleteGift: function(id) {
-        if (!confirm('Delete this gift?')) return;
+        if (!confirm('Permanently delete this gift?')) return;
         
+        var self = this;
+        
+        // Delete from memory
         if (window.GIFT_CATALOG) {
             var index = window.GIFT_CATALOG.findIndex(function(g) { return g.id === id; });
             if (index > -1) {
                 window.GIFT_CATALOG.splice(index, 1);
-                this.toast('✅ Gift deleted', 'success');
-                this.loadAdminGifts();
             }
         }
+        
+        // Delete from Firebase permanently
+        db.ref('gifts/' + id).remove().then(function() {
+            self.toast('✅ Gift permanently deleted', 'success');
+            self.loadAdminGifts();
+        }).catch(function(err) {
+            self.toast('❌ Error deleting gift: ' + err.message, 'error');
+        });
     },
 
     // ============================================
@@ -9634,4 +9643,109 @@ app.closeProfileSettings = function() {
     if (modal) {
         modal.style.display = 'none';
     }
+};
+
+
+// Enhanced Trivia Functions
+app.showTriviaStart = function() {
+    var remainingQuestions = this.getQuestionsRemaining();
+    if (remainingQuestions <= 0) {
+        this.toast('No trivia questions remaining today', 'info');
+        return;
+    }
+    
+    var tierData = EARNING_SETTINGS['free'];
+    var triviaContainer = document.getElementById('triviaQuestionArea');
+    
+    if (triviaContainer) {
+        triviaContainer.innerHTML = `
+            <div style="text-align: center; padding: 24px;">
+                <div style="font-size: 40px; margin-bottom: 12px;">🧠</div>
+                <div style="font-size: 18px; font-weight: 700; color: #1a202c; margin-bottom: 8px;">Ready for Trivia?</div>
+                <div style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">You have ${remainingQuestions} questions left today</div>
+                <button onclick="app.generateTriviaQuestion();" style="
+                    padding: 14px 32px;
+                    background: linear-gradient(135deg, #22c55e, #16a34a);
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    font-weight: 700;
+                    font-size: 16px;
+                    transition: all 0.3s;
+                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(34,197,94,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    ⏱️ Start Trivia
+                </button>
+            </div>
+        `;
+    }
+};
+
+app.handleTriviaTimeUp = function() {
+    this.triviaAnswered = true;
+    
+    var resultArea = document.getElementById('triviaResultArea');
+    if (resultArea && this.currentTrivia) {
+        var correctAnswer = this.currentTrivia.options[this.currentTrivia.correct];
+        resultArea.innerHTML = `
+            <div style="text-align: center;">
+                <div style="font-size: 18px; font-weight: 700; color: #ef4444; margin-bottom: 8px;">⏰ Time's Up!</div>
+                <div style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">The correct answer was: <strong>${correctAnswer}</strong></div>
+                <button onclick="app.loadNextTriviaQuestion();" style="
+                    width: 100%;
+                    padding: 12px;
+                    background: #3b82f6;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    font-size: 14px;
+                ">📝 Next Question</button>
+            </div>
+        `;
+        resultArea.style.display = 'block';
+        resultArea.style.background = '#fee2e2';
+    }
+    
+    document.querySelectorAll('.trivia-option').forEach(function(btn, index) {
+        btn.disabled = true;
+        btn.style.cursor = 'not-allowed';
+        if (this.currentTrivia && index === this.currentTrivia.correct) {
+            btn.style.borderColor = '#22c55e';
+            btn.style.background = '#dcfce7';
+        }
+    }.bind(this));
+};
+
+app.animateBalanceIncrease = function(oldBalance, earnedAmount) {
+    var newBalance = oldBalance + earnedAmount;
+    var currentBalance = oldBalance;
+    var increment = earnedAmount / 40; // 40 frames for smooth animation
+    var counter = 0;
+    
+    var counterInterval = setInterval(function() {
+        counter++;
+        currentBalance += increment;
+        
+        var balanceDisplay = document.getElementById('animatedBalance');
+        if (balanceDisplay) {
+            balanceDisplay.textContent = currentBalance.toFixed(2);
+            balanceDisplay.style.color = '#3b82f6';
+            balanceDisplay.style.fontSize = '28px';
+        }
+        
+        if (counter >= 40) {
+            clearInterval(counterInterval);
+            if (balanceDisplay) {
+                balanceDisplay.textContent = newBalance.toFixed(2);
+                balanceDisplay.style.fontSize = '24px';
+            }
+            
+            var nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.style.display = 'block';
+            }
+        }
+    }, 25);
 };
