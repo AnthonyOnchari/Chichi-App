@@ -151,6 +151,12 @@ var app = {
                         self.profile = s.val();
                         self.balance = self.profile.balance || 0;
                         self.trackLogin();
+                        
+                        // IMPORTANT: Always ensure email is saved (even for existing users)
+                        if (!self.profile.email && u.email) {
+                            db.ref('users/' + u.uid + '/email').set(u.email);
+                            self.profile.email = u.email;  // Update local copy too
+                        }
                     } else {
                         self.profile = {
                             name: u.displayName || 'User',
@@ -172,9 +178,11 @@ var app = {
                         db.ref('users/' + u.uid).set(self.profile);
                     }
                     
-                    // Ensure email is always saved (even for existing users)
-                    if (self.profile && !self.profile.email && u.email) {
-                        db.ref('users/' + u.uid + '/email').set(u.email);
+                    // ABSOLUTE SAFETY: Ensure email is ALWAYS saved when user logs in
+                    if (u.email && (!self.profile.email || self.profile.email.trim() === '')) {
+                        db.ref('users/' + u.uid).update({
+                            email: u.email
+                        });
                     }
                     self.loadProfile();
                     self.checkAndShowUsernameSetup();
@@ -1127,6 +1135,25 @@ var app = {
         return { ...userData, ...updateData };
     },
 
+    // Fix missing email for specific user
+    syncUserEmail: function(uid, userName) {
+        var self = this;
+        
+        // If this is the current user, we can get their email
+        if (self.user && self.user.uid === uid && self.user.email) {
+            db.ref('users/' + uid).update({
+                email: self.user.email
+            }).then(function() {
+                self.toast('✅ Email synced for ' + userName, 'success');
+                self.loadAdminUsers();  // Refresh the list
+            }).catch(function(err) {
+                self.toast('❌ Error syncing email: ' + err.message, 'error');
+            });
+        } else {
+            self.toast('ℹ️ User must login to sync their email (server limitation)', 'info');
+        }
+    },
+
     loadAdminUsers: function() {
         var self = this;
         var html = '';
@@ -1208,6 +1235,9 @@ var app = {
                                 </div>
                                 <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                                     <span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">👥 ${userFollowers}</span>
+                                    ${!fixedUser.email || fixedUser.email === '(email not set)' ? `
+                                        <button onclick="app.syncUserEmail('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">📧 Sync Email</button>
+                                    ` : ''}
                                     ${!fixedUser.username ? `
                                         <button onclick="app.fixUserUsername('${u.uid}', '${fixedUser.name || 'User'}', '${userEmail}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Fix Username</button>
                                     ` : ''}
