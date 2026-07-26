@@ -9199,3 +9199,133 @@ console.log('%c💰 Chichi Coins - Earn by answering trivia!', 'color: #FFC24B; 
 console.log('%c🎁 Gift Catalog - Redeem coins for awesome rewards!', 'color: #8b5cf6; font-size: 12px;');
 console.log('%c📊 User engagement & revenue tracking active!', 'color: #3b82f6; font-size: 12px;');
 console.log('%c👨‍💻 Built by Anthony Onchari - All Features Included!', 'color: #6b7280; font-size: 11px;');
+
+// Explore People - Search
+app.searchExplorePeople = function(query) {
+    query = (query || '').toLowerCase().trim();
+    var resultsContainer = document.getElementById('exploreSearchResultsContainer');
+    var resultsSection = document.getElementById('exploreSearchResults');
+    
+    if (!resultsContainer || !resultsSection) return;
+    
+    if (!query) {
+        resultsSection.style.display = 'none';
+        resultsContainer.innerHTML = '';
+        return;
+    }
+    
+    var html = '';
+    var self = this;
+    
+    db.ref('users').once('value').then(function(snapshot) {
+        var users = snapshot.val() || {};
+        var found = false;
+        
+        for (var uid in users) {
+            var user = users[uid];
+            var name = (user.name || '').toLowerCase();
+            var email = (user.email || '').toLowerCase();
+            var username = (user.username || '').toLowerCase();
+            
+            if (name.includes(query) || email.includes(query) || username.includes(query)) {
+                found = true;
+                var isFollowing = app.following[uid] || false;
+                var profilePhoto = user.profilePhoto || '';
+                var initials = user.name ? user.name.charAt(0).toUpperCase() : '?';
+                
+                html += '<div style="display: flex; align-items: center; padding: 12px; background: white; border-radius: 12px; border: 1px solid #e5e7eb; gap: 12px;">';
+                
+                if (profilePhoto) {
+                    html += '<img src="' + profilePhoto + '" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0;">';
+                } else {
+                    html += '<div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0;">' + initials + '</div>';
+                }
+                
+                html += '<div style="flex: 1; min-width: 0;">';
+                html += '<div style="font-weight: 600; font-size: 14px; color: #1a202c;">' + (user.name || 'Unknown') + '</div>';
+                if (user.username) {
+                    html += '<div style="font-size: 12px; color: #6b7280;">@' + user.username + '</div>';
+                }
+                html += '<div style="font-size: 11px; color: #9ca3af;">👥 ' + (user.followers || 0) + ' followers</div>';
+                html += '</div>';
+                
+                html += '<button onclick="app.viewUserProfile(\'' + uid + '\'); event.stopPropagation();" style="padding: 8px 14px; background: ' + (isFollowing ? '#ef4444' : '#0088cc') + '; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">' + (isFollowing ? '✓ Following' : '+ Follow') + '</button>';
+                html += '</div>';
+            }
+        }
+        
+        if (found) {
+            resultsContainer.innerHTML = html;
+            resultsSection.style.display = 'block';
+        } else {
+            resultsContainer.innerHTML = '<div style="text-align: center; padding: 24px; color: #9ca3af;"><div style="font-size: 28px; margin-bottom: 8px;">🔍</div><div style="font-size: 14px;">No people found</div></div>';
+            resultsSection.style.display = 'block';
+        }
+    }).catch(function(err) {
+        console.error('Search error:', err);
+    });
+};
+
+// Explore People - Load featured
+app.loadExplorePeople = function() {
+    var container = document.getElementById('explorePeopleContainer');
+    if (!container) return;
+    
+    var html = '';
+    
+    db.ref('users').orderByChild('followers').limitToLast(12).once('value').then(function(snapshot) {
+        var users = snapshot.val() || {};
+        var userArray = [];
+        
+        for (var uid in users) {
+            if (uid !== app.user.uid) {
+                var user = users[uid];
+                userArray.push({ uid: uid, name: user.name, followers: user.followers || 0, username: user.username, profilePhoto: user.profilePhoto });
+            }
+        }
+        
+        userArray.sort(function(a, b) { return (b.followers || 0) - (a.followers || 0); });
+        
+        userArray.slice(0, 12).forEach(function(user) {
+            var isFollowing = app.following[user.uid] || false;
+            var profilePhoto = user.profilePhoto || '';
+            var initials = user.name ? user.name.charAt(0).toUpperCase() : '?';
+            
+            html += '<div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 14px; text-align: center; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow=\'0 4px 12px rgba(0, 136, 204, 0.15)\'; this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.boxShadow=\'none\'; this.style.transform=\'translateY(0)\'" onclick="app.viewUserProfile(\'' + user.uid + '\')">';
+            
+            if (profilePhoto) {
+                html += '<img src="' + profilePhoto + '" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; margin: 0 auto 10px; display: block;">';
+            } else {
+                html += '<div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; margin: 0 auto 10px;">' + initials + '</div>';
+            }
+            
+            html += '<div style="font-weight: 600; font-size: 13px; color: #1a202c; margin-bottom: 4px;">' + (user.name || 'Unknown') + '</div>';
+            if (user.username) {
+                html += '<div style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">@' + user.username + '</div>';
+            }
+            html += '<div style="font-size: 11px; color: #9ca3af; margin-bottom: 10px;">👥 ' + (user.followers || 0) + '</div>';
+            html += '<button onclick="event.stopPropagation(); app.toggleFollow(\'' + user.uid + '\');" style="width: 100%; padding: 8px 12px; background: ' + (isFollowing ? '#ef4444' : '#0088cc') + '; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">' + (isFollowing ? '✓ Following' : '+ Follow') + '</button>';
+            html += '</div>';
+        });
+        
+        if (userArray.length === 0) {
+            html = '<div style="text-align: center; padding: 24px; color: #9ca3af; grid-column: 1 / -1;">No people yet</div>';
+        }
+        
+        container.innerHTML = html;
+    }).catch(function(err) {
+        console.error('Load explore people error:', err);
+    });
+};
+
+
+// Admin Modal Toggle
+app.toggleAdminModal = function() {
+    if (typeof this.openAdminPortal === 'function') {
+        this.openAdminPortal();
+    } else {
+        if (typeof this.toast === 'function') {
+            this.toast('Admin portal not ready', 'error');
+        }
+    }
+};
