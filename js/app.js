@@ -2917,25 +2917,30 @@ var app = {
         
         if (darkMode === 'enabled') {
             document.documentElement.classList.add('dark-mode');
-            if (toggle) toggle.checked = true;
+            if (toggle) toggle.textContent = '☀️';
         } else {
             document.documentElement.classList.remove('dark-mode');
-            if (toggle) toggle.checked = false;
+            if (toggle) toggle.textContent = '🌙';
         }
     },
 
     toggleDarkMode: function() {
         var root = document.documentElement;
+        var isDarkMode = root.classList.contains('dark-mode');
         var toggle = document.getElementById('darkModeToggle');
         
-        if (toggle && toggle.checked) {
-            root.classList.add('dark-mode');
-            localStorage.setItem('chichi-dark-mode', 'enabled');
-            this.toast('🌙 Dark mode enabled', 'success');
-        } else {
+        if (isDarkMode) {
+            // Switch to light mode
             root.classList.remove('dark-mode');
             localStorage.setItem('chichi-dark-mode', 'disabled');
+            if (toggle) toggle.textContent = '🌙';
             this.toast('☀️ Light mode enabled', 'success');
+        } else {
+            // Switch to dark mode
+            root.classList.add('dark-mode');
+            localStorage.setItem('chichi-dark-mode', 'enabled');
+            if (toggle) toggle.textContent = '☀️';
+            this.toast('🌙 Dark mode enabled', 'success');
         }
     },
 
@@ -9625,40 +9630,71 @@ app.showProfileSettings = function() {
     }
     
     // Populate fields with current data
-    document.getElementById('editProfileName').value = this.profile.name || '';
-    document.getElementById('editProfileUsername').value = this.profile.username || '';
-    document.getElementById('editProfileBio').value = this.profile.bio || '';
+    var nameField = document.getElementById('editProfileName');
+    var usernameField = document.getElementById('editProfileUsername');
+    var bioField = document.getElementById('editProfileBio');
+    
+    if (nameField) nameField.value = this.profile.name || '';
+    if (usernameField) usernameField.value = this.profile.username || '';
+    if (bioField) bioField.value = this.profile.bio || '';
     
     // Populate interests with editing capability
     var interestsContainer = document.getElementById('editProfileInterests');
-    var currentInterests = this.profile.interests || [];
-    
-    var allInterests = ['Music', 'Sports', 'Travel', 'Art', 'Tech', 'Food', 'Fitness', 'Books', 'Movies', 'Nature', 'Gaming', 'Photography', 'Writing', 'Cooking', 'Yoga'];
-    
-    var interestsHtml = allInterests.map(function(interest) {
-        var isSelected = currentInterests.includes(interest);
-        return `
-            <label style="display:flex;align-items:center;padding:6px 12px;background:${isSelected ? '#0088cc' : '#fff'};border:2px solid ${isSelected ? '#0088cc' : '#cbd5e1'};border-radius:20px;cursor:pointer;transition:0.2s;font-size:12px;color:${isSelected ? '#fff' : '#1a202c'};font-weight:${isSelected ? '600' : '500'};">
-                <input type="checkbox" class="edit-interest-checkbox" value="${interest}" ${isSelected ? 'checked' : ''} style="margin-right:6px;cursor:pointer;accent-color:#0088cc;" onchange="
-                    var label = this.parentElement;
-                    if(this.checked) {
-                        label.style.background='#0088cc';
-                        label.style.borderColor='#0088cc';
-                        label.style.color='#fff';
-                        label.style.fontWeight='600';
-                    } else {
-                        label.style.background='#fff';
-                        label.style.borderColor='#cbd5e1';
-                        label.style.color='#1a202c';
-                        label.style.fontWeight='500';
-                    }
-                ">
-                <span>${interest}</span>
-            </label>
-        `;
-    }).join('');
-    
-    interestsContainer.innerHTML = interestsHtml;
+    if (interestsContainer) {
+        var currentInterests = this.profile.interests || [];
+        var allInterests = ['Music', 'Sports', 'Travel', 'Art', 'Tech', 'Food', 'Fitness', 'Books', 'Movies', 'Nature', 'Gaming', 'Photography', 'Writing', 'Cooking', 'Yoga'];
+        
+        // Clear the container first
+        interestsContainer.textContent = '';
+        
+        // Create and append interest labels
+        allInterests.forEach(function(interest) {
+            var isSelected = currentInterests.includes(interest);
+            
+            var label = document.createElement('label');
+            label.style.display = 'flex';
+            label.style.alignItems = 'center';
+            label.style.padding = '6px 12px';
+            label.style.background = isSelected ? '#0088cc' : '#fff';
+            label.style.border = '2px solid ' + (isSelected ? '#0088cc' : '#cbd5e1');
+            label.style.borderRadius = '20px';
+            label.style.cursor = 'pointer';
+            label.style.transition = '0.2s';
+            label.style.fontSize = '12px';
+            label.style.color = isSelected ? '#fff' : '#1a202c';
+            label.style.fontWeight = isSelected ? '600' : '500';
+            
+            var checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'edit-interest-checkbox';
+            checkbox.value = interest;
+            checkbox.checked = isSelected;
+            checkbox.style.marginRight = '6px';
+            checkbox.style.cursor = 'pointer';
+            checkbox.style.accentColor = '#0088cc';
+            
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    label.style.background = '#0088cc';
+                    label.style.borderColor = '#0088cc';
+                    label.style.color = '#fff';
+                    label.style.fontWeight = '600';
+                } else {
+                    label.style.background = '#fff';
+                    label.style.borderColor = '#cbd5e1';
+                    label.style.color = '#1a202c';
+                    label.style.fontWeight = '500';
+                }
+            });
+            
+            var span = document.createElement('span');
+            span.textContent = interest;
+            
+            label.appendChild(checkbox);
+            label.appendChild(span);
+            interestsContainer.appendChild(label);
+        });
+    }
     
     // Show modal
     modal.style.display = 'flex';
