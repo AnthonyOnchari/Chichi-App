@@ -4746,3 +4746,449 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
         overflow-y: visible !important;
     }
 }
+
+
+/* ============================================
+   PHASE 1, 2, 3: NEW STYLES
+   ============================================ */
+
+/* PHASE 1: Delivery Status */
+.delivery-status {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-left: 4px;
+}
+
+.delivery-sent { color: #9ca3af; }
+.delivery-delivered { color: #0ea5e9; }
+.delivery-read { color: #10b981; }
+
+/* PHASE 1: Typing Indicator */
+.typing-indicator {
+    padding: 12px;
+    background: #f3f4f6;
+    border-radius: 10px;
+    margin: 8px 0;
+}
+
+.typing-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #6b7280;
+    margin: 0 2px;
+    animation: typing 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+    0%, 60%, 100% { opacity: 0.5; }
+    30% { opacity: 1; }
+}
+
+/* PHASE 1: Online Status */
+.online-status {
+    display: inline-block;
+    font-size: 12px;
+    color: #10b981;
+    margin-left: 8px;
+}
+
+.online-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #10b981;
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* PHASE 1: Message Bubble Max Width */
+.message-bubble {
+    max-width: 280px;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* PHASE 1: Edited Message */
+.message-edited-label {
+    font-size: 11px;
+    color: #9ca3af;
+    font-style: italic;
+    margin-top: 4px;
+}
+
+/* PHASE 1: Message Action Menu */
+.message-action-menu {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    min-width: 150px;
+}
+
+.message-action-menu div {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.message-action-menu div:hover {
+    background: #f3f4f6;
+}
+
+/* PHASE 2: Emoji Reactions */
+.emoji-reaction-container {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.emoji-reaction {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f3f4f6;
+    padding: 4px 8px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 12px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s;
+}
+
+.emoji-reaction:hover {
+    background: #e5e7eb;
+}
+
+.emoji-reaction.reacted {
+    background: #dbeafe;
+    border-color: #0ea5e9;
+    color: #0ea5e9;
+}
+
+/* PHASE 2: Emoji Picker */
+.emoji-picker {
+    position: fixed;
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    z-index: 9999;
+}
+
+.emoji-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+
+.emoji-picker-grid div {
+    font-size: 24px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    text-align: center;
+    transition: background 0.2s;
+}
+
+.emoji-picker-grid div:hover {
+    background: #f3f4f6;
+}
+
+/* PHASE 2: Voice Message */
+.voice-message {
+    background: #f3f4f6;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 8px 0;
+}
+
+.voice-player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.voice-player button {
+    background: #2e5bff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.voice-player button:hover {
+    background: #1e40af;
+}
+
+.voice-progress {
+    flex: 1;
+    background: #e5e7eb;
+    border-radius: 4px;
+    height: 3px;
+}
+
+.voice-duration {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* PHASE 2: Link Preview */
+.link-preview-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 8px 0;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+
+.link-preview-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.link-preview-card img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+}
+
+.link-preview-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.link-preview-description {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 4px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* PHASE 2: Scroll to Latest */
+.scroll-to-latest-btn {
+    position: absolute;
+    bottom: 60px;
+    right: 20px;
+    background: #2e5bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 100;
+    transition: all 0.2s;
+}
+
+.scroll-to-latest-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* PHASE 3: Call UI */
+.call-ui {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.call-duration {
+    font-size: 24px;
+    color: #10b981;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.call-button {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.call-button:hover {
+    transform: scale(1.1);
+}
+
+.call-button-accept {
+    background: #10b981;
+    color: white;
+}
+
+.call-button-decline {
+    background: #ef4444;
+    color: white;
+}
+
+/* PHASE 3: Pinned Messages */
+.pinned-section {
+    background: #f0fdf4;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 2px solid #10b981;
+}
+
+.pinned-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pinned-item {
+    background: #f0fdf4;
+    border-left: 3px solid #10b981;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.pinned-item:hover {
+    background: #dcfce7;
+}
+
+/* PHASE 3: Mute Indicator */
+.mute-indicator {
+    display: inline-block;
+    font-size: 12px;
+    color: #ef4444;
+    margin-left: 8px;
+}
+
+.muted-chat .message-item {
+    opacity: 0.7;
+}
+
+/* PHASE 3: Media Gallery */
+#mediaGalleryModal {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    padding: 20px;
+}
+
+#mediaGalleryModal img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+#mediaGalleryModal img:hover {
+    transform: scale(1.05);
+}
+
+/* UI RESTRUCTURE */
+.settings-theme {
+    padding: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.instagram-stories {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    overflow-x: auto;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.story-circle {
+    width: 96px;
+    height: 120px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    text-align: center;
+    padding: 8px;
+    flex-shrink: 0;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.story-circle:hover {
+    transform: scale(1.05);
+}
+
+.story-circle.unseen {
+    border-color: #10b981;
+}
+
+.story-circle.seen {
+    border-color: #d1d5db;
+    opacity: 0.6;
+}
+
+/* PHASE 1: Message Search */
+.message-search-bar {
+    padding: 12px;
+    background: #f3f4f6;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.message-search-bar input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.message-search-bar input:focus {
+    outline: none;
+    border-color: #2e5bff;
+    box-shadow: 0 0 0 3px rgba(46, 91, 255, 0.1);
+}
+
+.message-highlight {
+    background: #fbbf24 !important;
+}
