@@ -9702,47 +9702,33 @@ app.showTriviaReadyScreen = function() {
         return;
     }
     
-    var self = this;
-    var earnContainer = document.getElementById('earnContainer');
-    if (!earnContainer) return;
-    
-    var triviaCard = earnContainer.querySelector('[style*="background: white"][style*="Trivia"]');
-    if (triviaCard) {
-        var triviaContent = triviaCard.innerHTML;
-        
-        var readyHTML = `
-            <div style="background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e8ecf0;">
-                <div style="text-align: center; padding: 24px;">
-                    <div style="font-size: 60px; margin-bottom: 16px; animation: pulse 2s infinite;">🧠</div>
-                    <div style="font-size: 22px; font-weight: 700; color: #1a202c; margin-bottom: 8px;">Ready for Trivia?</div>
-                    <div style="font-size: 14px; color: #6b7280; margin-bottom: 24px;">You have <strong>${remainingQuestions}</strong> questions left today</div>
-                    <button onclick="app.startTriviaGame();" style="
-                        padding: 14px 32px;
-                        background: linear-gradient(135deg, #22c55e, #16a34a);
-                        color: white;
-                        border: none;
-                        border-radius: 10px;
-                        cursor: pointer;
-                        font-weight: 700;
-                        font-size: 16px;
-                        transition: all 0.3s;
-                        box-shadow: 0 4px 12px rgba(34,197,94,0.3);
-                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(34,197,94,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(34,197,94,0.3)'">
-                        ▶️ Start Trivia
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        // Replace just the trivia card
-        var allCards = earnContainer.querySelectorAll('[style*="background: white"]');
-        for (var i = 0; i < allCards.length; i++) {
-            if (allCards[i].textContent.includes('Trivia') && !allCards[i].textContent.includes('Gifts')) {
-                allCards[i].outerHTML = readyHTML;
-                break;
-            }
-        }
+    var triviaQuestionArea = document.getElementById('triviaQuestionArea');
+    if (!triviaQuestionArea) {
+        console.error('triviaQuestionArea not found');
+        return;
     }
+    
+    triviaQuestionArea.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 70px; margin-bottom: 20px; animation: pulse 2s infinite;">🧠</div>
+            <div style="font-size: 24px; font-weight: 700; color: #1a202c; margin-bottom: 12px;">Ready for Trivia?</div>
+            <div style="font-size: 15px; color: #6b7280; margin-bottom: 32px;">You have <strong>${remainingQuestions}</strong> questions left today</div>
+            <button onclick="app.startTriviaGame();" style="
+                padding: 16px 40px;
+                background: linear-gradient(135deg, #22c55e, #16a34a);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                cursor: pointer;
+                font-weight: 700;
+                font-size: 18px;
+                transition: all 0.3s;
+                box-shadow: 0 4px 12px rgba(34,197,94,0.3);
+            " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 24px rgba(34,197,94,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(34,197,94,0.3)'">
+                ▶️ Start Trivia
+            </button>
+        </div>
+    `;
 };
 
 app.startTriviaGame = function() {
