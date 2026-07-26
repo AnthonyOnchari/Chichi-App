@@ -3260,7 +3260,7 @@ var app = {
                         <div style="font-size: 10px; color: #94a3b8;">⏱️ ${tierData.timerSeconds}s</div>
                     </div>
                     
-                    <button onclick="app.generateTriviaQuestion()" style="
+                    <button onclick="app.showTriviaReadyScreen()" style="
                         width: 100%;
                         padding: 12px;
                         background: ${remaining > 0 ? 'linear-gradient(135deg, #22c55e, #16a34a)' : '#94a3b8'};
@@ -3273,7 +3273,7 @@ var app = {
                         transition: all 0.3s;
                         opacity: ${remaining <= 0 ? '0.6' : '1'};
                     " ${remaining <= 0 ? 'disabled' : ''} onmouseover="if(${remaining > 0}) { this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 15px rgba(34,197,94,0.3)'; }" onmouseout="if(${remaining > 0}) { this.style.transform='translateY(0)'; this.style.boxShadow='none'; }">
-                        ${remaining > 0 ? '🚀 Start' : '⏳ Done for today'}
+                        ${remaining > 0 ? '⏱️ Start Trivia' : '⏳ Done for today'}
                     </button>
                 </div>
                 
@@ -3599,8 +3599,9 @@ var app = {
                         resultArea.style.display = 'block';
                         var correctAnswer = (self.currentTrivia.options && self.currentTrivia.correct !== undefined) ? self.currentTrivia.options[self.currentTrivia.correct] : 'Unknown';
                         resultArea.innerHTML = `
-                            <div style="color: #ef4444; font-weight: 700; font-size: 16px;">⏰ Time's Up!</div>
-                            <div style="color: #6b7280; font-size: 13px;">Answer: ${correctAnswer}</div>
+                            <div style="color: #ef4444; font-weight: 700; font-size: 18px; margin-bottom: 8px;">⏰ Time's Up!</div>
+                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 12px;">The correct answer was: <strong>${correctAnswer}</strong></div>
+                            <button onclick="app.loadNextTriviaQuestion();" style="width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">📝 Next Question</button>
                         `;
                         resultArea.style.background = '#fee2e2';
                     }
@@ -3656,29 +3657,76 @@ var app = {
         var resultArea = document.getElementById('triviaResultArea');
         resultArea.style.display = 'block';
         
+        // Get user's first name for personalization
+        var userName = (this.profile.name || 'Friend').split(' ')[0];
+        
         if (correct) {
+            var earnedAmount = tierData.rewardPerQuestion;
+            var oldBalance = this.balance;
+            var newBalance = oldBalance + earnedAmount;
+            
             resultArea.innerHTML = `
-                <div style="color: #22c55e; font-weight: 700; font-size: 18px;">✅ Correct!</div>
-                <div style="color: #6b7280; font-size: 14px;">You earned ${tierData.rewardPerQuestion.toFixed(2)} Chichi Coins!</div>
+                <div style="color: #22c55e; font-weight: 700; font-size: 20px; margin-bottom: 8px;">✅ ${userName}, Good Job!</div>
+                <div style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">You've earned some Chichi Points</div>
+                
+                <!-- BALANCE ANIMATION -->
+                <div style="background: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+                    <div style="font-size: 12px; color: #64748b; margin-bottom: 6px;">Points earned:</div>
+                    <div style="font-size: 32px; font-weight: 700; color: #22c55e; text-align: center; margin-bottom: 12px;" id="earnedAmount">+${earnedAmount.toFixed(2)}</div>
+                    <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">New balance:</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #3b82f6; text-align: center;" id="animatedBalance">${oldBalance.toFixed(2)}</div>
+                </div>
+                
+                <button onclick="app.loadNextTriviaQuestion();" id="nextBtn" style="width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; display: none;">📝 Next Question</button>
             `;
             resultArea.style.background = '#dcfce7';
             
-            this.balance += tierData.rewardPerQuestion;
+            // Animate balance counter
+            setTimeout(function() {
+                var currentBalance = oldBalance;
+                var increment = earnedAmount / 40;
+                var counter = 0;
+                
+                var counterInterval = setInterval(function() {
+                    counter++;
+                    currentBalance += increment;
+                    
+                    var balanceDisplay = document.getElementById('animatedBalance');
+                    if (balanceDisplay) {
+                        balanceDisplay.textContent = currentBalance.toFixed(2);
+                    }
+                    
+                    if (counter >= 40) {
+                        clearInterval(counterInterval);
+                        if (balanceDisplay) {
+                            balanceDisplay.textContent = newBalance.toFixed(2);
+                        }
+                        
+                        var nextBtn = document.getElementById('nextBtn');
+                        if (nextBtn) {
+                            nextBtn.style.display = 'block';
+                        }
+                    }
+                }, 25);
+            }, 300);
+            
+            this.balance = newBalance;
             db.ref('users/' + userId + '/balance').set(this.balance);
             
-            this.trackRevenue('earned', tierData.rewardPerQuestion, 'trivia');
+            this.trackRevenue('earned', earnedAmount, 'trivia');
             
             var balanceDisplay = document.getElementById('earnBalanceDisplay');
             if (balanceDisplay) {
                 balanceDisplay.textContent = this.balance.toFixed(2) + ' Coins';
             }
             
-            this.toast('🎉 Correct! +' + tierData.rewardPerQuestion.toFixed(2) + ' Coins', 'success');
+            this.toast('🎉 Correct! +' + earnedAmount.toFixed(2) + ' Coins', 'success');
             this.incrementQuestionCount();
         } else {
             resultArea.innerHTML = `
                 <div style="color: #ef4444; font-weight: 700; font-size: 18px;">❌ Wrong answer</div>
-                <div style="color: #6b7280; font-size: 14px;">The correct answer was: ${this.currentTrivia.options[this.currentTrivia.correct]}</div>
+                <div style="color: #6b7280; font-size: 14px; margin-top: 8px;">The correct answer was: <strong>${this.currentTrivia.options[this.currentTrivia.correct]}</strong></div>
+                <button onclick="app.loadNextTriviaQuestion();" style="width: 100%; margin-top: 12px; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">📝 Next Question</button>
             `;
             resultArea.style.background = '#fee2e2';
             this.toast('❌ Wrong answer! Try again.', 'error');
@@ -9647,38 +9695,58 @@ app.closeProfileSettings = function() {
 
 
 // Enhanced Trivia Functions
-app.showTriviaStart = function() {
+app.showTriviaReadyScreen = function() {
     var remainingQuestions = this.getQuestionsRemaining();
     if (remainingQuestions <= 0) {
         this.toast('No trivia questions remaining today', 'info');
         return;
     }
     
-    var tierData = EARNING_SETTINGS['free'];
-    var triviaContainer = document.getElementById('triviaQuestionArea');
+    var self = this;
+    var earnContainer = document.getElementById('earnContainer');
+    if (!earnContainer) return;
     
-    if (triviaContainer) {
-        triviaContainer.innerHTML = `
-            <div style="text-align: center; padding: 24px;">
-                <div style="font-size: 40px; margin-bottom: 12px;">🧠</div>
-                <div style="font-size: 18px; font-weight: 700; color: #1a202c; margin-bottom: 8px;">Ready for Trivia?</div>
-                <div style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">You have ${remainingQuestions} questions left today</div>
-                <button onclick="app.generateTriviaQuestion();" style="
-                    padding: 14px 32px;
-                    background: linear-gradient(135deg, #22c55e, #16a34a);
-                    color: white;
-                    border: none;
-                    border-radius: 10px;
-                    cursor: pointer;
-                    font-weight: 700;
-                    font-size: 16px;
-                    transition: all 0.3s;
-                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(34,197,94,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                    ⏱️ Start Trivia
-                </button>
+    var triviaCard = earnContainer.querySelector('[style*="background: white"][style*="Trivia"]');
+    if (triviaCard) {
+        var triviaContent = triviaCard.innerHTML;
+        
+        var readyHTML = `
+            <div style="background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e8ecf0;">
+                <div style="text-align: center; padding: 24px;">
+                    <div style="font-size: 60px; margin-bottom: 16px; animation: pulse 2s infinite;">🧠</div>
+                    <div style="font-size: 22px; font-weight: 700; color: #1a202c; margin-bottom: 8px;">Ready for Trivia?</div>
+                    <div style="font-size: 14px; color: #6b7280; margin-bottom: 24px;">You have <strong>${remainingQuestions}</strong> questions left today</div>
+                    <button onclick="app.startTriviaGame();" style="
+                        padding: 14px 32px;
+                        background: linear-gradient(135deg, #22c55e, #16a34a);
+                        color: white;
+                        border: none;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        font-weight: 700;
+                        font-size: 16px;
+                        transition: all 0.3s;
+                        box-shadow: 0 4px 12px rgba(34,197,94,0.3);
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(34,197,94,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(34,197,94,0.3)'">
+                        ▶️ Start Trivia
+                    </button>
+                </div>
             </div>
         `;
+        
+        // Replace just the trivia card
+        var allCards = earnContainer.querySelectorAll('[style*="background: white"]');
+        for (var i = 0; i < allCards.length; i++) {
+            if (allCards[i].textContent.includes('Trivia') && !allCards[i].textContent.includes('Gifts')) {
+                allCards[i].outerHTML = readyHTML;
+                break;
+            }
+        }
     }
+};
+
+app.startTriviaGame = function() {
+    this.generateTriviaQuestion();
 };
 
 app.handleTriviaTimeUp = function() {
