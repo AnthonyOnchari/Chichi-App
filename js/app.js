@@ -10969,3 +10969,701 @@ app.displayVideoCallUI = function(state) {
     callUI.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;width:100%;"><video id="remoteVideo" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;bottom:100px;right:20px;width:100px;height:133px;background:#1f2937;border-radius:8px;overflow:hidden;"><video id="miniLocalVideo" style="width:100%;height:100%;object-fit:cover;"></video></div></div><div style="background:rgba(0,0,0,0.7);padding:16px;display:flex;gap:12px;justify-content:center;width:100%;"><button style="width:50px;height:50px;border-radius:50%;background:#475569;color:white;border:none;font-size:20px;cursor:pointer;">📹</button><button style="width:50px;height:50px;border-radius:50%;background:#475569;color:white;border:none;font-size:20px;cursor:pointer;">🎤</button><button onclick="app.endVoiceCall();" style="width:50px;height:50px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:20px;cursor:pointer;">✕</button></div>';
     document.body.appendChild(callUI);
 };
+// ==================== WHATSAPP-LIKE MESSAGING FUNCTIONS ====================
+
+// MESSAGE REPLY/QUOTE FEATURE
+app.replyToMessage = function(msgId) {
+    const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
+    if (!msgElement) return;
+    
+    const messageText = msgElement.querySelector('.message-text')?.innerText || 'Original message';
+    const senderName = msgElement.querySelector('.sender-name')?.innerText || 'User';
+    
+    // Store reply context
+    app.replyContext = {
+        msgId: msgId,
+        text: messageText,
+        sender: senderName,
+        timestamp: Date.now()
+    };
+    
+    // Show reply preview
+    const replyPreview = document.createElement('div');
+    replyPreview.id = 'replyPreview';
+    replyPreview.style.cssText = 'padding:12px;background:#f0f7ff;border-left:4px solid #0088cc;margin-bottom:8px;border-radius:4px;';
+    replyPreview.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <div style="color:#0088cc;font-weight:600;font-size:12px;">${senderName}</div>
+                <div style="color:#666;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${messageText.substring(0, 50)}</div>
+            </div>
+            <button onclick="app.cancelReply()" style="background:none;border:none;color:#0088cc;cursor:pointer;font-size:16px;">✕</button>
+        </div>
+    `;
+    
+    // Add above message input
+    const chatInput = document.getElementById('chatInput');
+    const existing = document.getElementById('replyPreview');
+    if (existing) existing.remove();
+    chatInput.parentNode.insertBefore(replyPreview, chatInput);
+};
+
+app.cancelReply = function() {
+    app.replyContext = null;
+    const preview = document.getElementById('replyPreview');
+    if (preview) preview.remove();
+};
+
+// STAR MESSAGE FEATURE
+app.starMessage = function(msgId) {
+    if (!app.user) return;
+    
+    const db = firebase.database();
+    const starredPath = `starredMessages/${app.user.uid}/${msgId}`;
+    
+    db.ref(starredPath).set({
+        messageId: msgId,
+        chatId: app.currentChatId,
+        starredAt: Date.now(),
+        preview: app.getMessagePreview(msgId)
+    }).then(() => {
+        app.showToast('⭐ Message starred!', 'success');
+    });
+};
+
+app.getMessagePreview = function(msgId) {
+    const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
+    return msgElement?.innerText.substring(0, 50) || 'Message';
+};
+
+// TRANSLATE MESSAGE
+app.translateMessage = function(msgId) {
+    const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
+    const text = msgElement?.innerText;
+    
+    if (!text) return;
+    
+    // Using simple translation (would use Google Translate API in production)
+    fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=en|sw')
+        .then(res => res.json())
+        .then(data => {
+            const translated = data.responseData.translatedText;
+            const overlay = document.getElementById('translationOverlay');
+            document.getElementById('translationContent').innerHTML = translated;
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.style.display = 'none', 5000);
+        })
+        .catch(() => app.showToast('Translation failed', 'error'));
+};
+
+app.closeTranslation = function() {
+    document.getElementById('translationOverlay').style.display = 'none';
+};
+
+// GROUP CHAT FEATURES
+app.showGroupCreation = function() {
+    const modal = document.getElementById('groupCreationModal');
+    modal.style.display = 'flex';
+    
+    // Load users for member selection
+    if (!app.user) return;
+    const db = firebase.database();
+    db.ref('users').once('value', snap => {
+        const users = snap.val() || {};
+        const container = document.getElementById('groupMembersCheckbox');
+        container.innerHTML = '';
+        
+        Object.keys(users).forEach(uid => {
+            if (uid === app.user.uid) return; // Exclude self
+            const user = users[uid];
+            const label = document.createElement('label');
+            label.style.cssText = 'display:flex;align-items:center;padding:8px;cursor:pointer;border-bottom:1px solid #f3f4f6;';
+            label.innerHTML = `
+                <input type="checkbox" data-uid="${uid}" style="width:18px;height:18px;margin-right:12px;cursor:pointer;">
+                <div style="flex:1;">
+                    <div style="font-weight:600;font-size:13px;">${user.name || 'User'}</div>
+                    <div style="font-size:11px;color:#999;">@${user.username || 'unknown'}</div>
+                </div>
+            `;
+            container.appendChild(label);
+        });
+    });
+};
+
+app.closeGroupCreation = function() {
+    document.getElementById('groupCreationModal').style.display = 'none';
+};
+
+app.createGroup = function() {
+    const name = document.getElementById('groupNameInput').value.trim();
+    const description = document.getElementById('groupDescInput').value.trim();
+    
+    if (!name) {
+        app.showToast('Group name required', 'error');
+        return;
+    }
+    
+    // Get selected members
+    const checkboxes = document.querySelectorAll('#groupMembersCheckbox input[type="checkbox"]:checked');
+    const members = [app.user.uid];
+    checkboxes.forEach(cb => members.push(cb.dataset.uid));
+    
+    if (members.length < 2) {
+        app.showToast('Select at least 1 member', 'error');
+        return;
+    }
+    
+    const db = firebase.database();
+    const groupId = db.ref('chats').push().key;
+    
+    const groupData = {
+        id: groupId,
+        type: 'group',
+        name: name,
+        description: description,
+        members: members,
+        admins: [app.user.uid],
+        createdAt: Date.now(),
+        createdBy: app.user.uid,
+        muted: false,
+        archived: false,
+        disappearingMessages: 0
+    };
+    
+    db.ref(`chats/${groupId}`).set(groupData).then(() => {
+        app.closeGroupCreation();
+        app.openChat(groupId);
+        app.showToast('✅ Group created!', 'success');
+    });
+};
+
+// CALL HISTORY
+app.showCallHistory = function() {
+    if (!app.user) return;
+    
+    const modal = document.getElementById('callHistoryModal');
+    modal.style.display = 'flex';
+    
+    const db = firebase.database();
+    db.ref('callHistory').orderByChild('startTime').limitToLast(50).once('value', snap => {
+        const calls = snap.val() || {};
+        const container = document.getElementById('callHistoryList');
+        container.innerHTML = '';
+        
+        Object.values(calls).reverse().forEach(call => {
+            if (call.initiator !== app.user.uid && call.recipient !== app.user.uid) return;
+            
+            const callElement = document.createElement('div');
+            const other = call.initiator === app.user.uid ? call.recipient : call.initiator;
+            const duration = call.duration ? `${Math.floor(call.duration / 60)}:${String(call.duration % 60).padStart(2, '0')}` : 'Missed';
+            const icon = call.type === 'voice' ? '📞' : '📹';
+            const status = call.status === 'missed' ? '❌' : (call.status === 'declined' ? '📵' : '✅');
+            
+            callElement.style.cssText = 'padding:12px;border:1px solid #e5e7eb;border-radius:8px;display:flex;justify-content:space-between;align-items:center;';
+            callElement.innerHTML = `
+                <div>
+                    <div style="font-weight:600;font-size:13px;">${icon} ${call.type === 'voice' ? 'Voice' : 'Video'} Call</div>
+                    <div style="font-size:11px;color:#999;">With ${other} • ${status}</div>
+                </div>
+                <div style="text-align:right;font-size:12px;color:#666;">
+                    <div>${duration}</div>
+                    <div style="font-size:10px;">${new Date(call.startTime).toLocaleString()}</div>
+                </div>
+            `;
+            container.appendChild(callElement);
+        });
+    });
+};
+
+app.closeCallHistory = function() {
+    document.getElementById('callHistoryModal').style.display = 'none';
+};
+
+// STARRED MESSAGES
+app.showStarredMessages = function() {
+    if (!app.user) return;
+    
+    const modal = document.getElementById('starredMessagesModal');
+    modal.style.display = 'flex';
+    
+    const db = firebase.database();
+    db.ref(`starredMessages/${app.user.uid}`).once('value', snap => {
+        const starred = snap.val() || {};
+        const container = document.getElementById('starredMessagesList');
+        container.innerHTML = '';
+        
+        Object.entries(starred).forEach(([msgId, data]) => {
+            const msgElement = document.createElement('div');
+            msgElement.style.cssText = 'padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;';
+            msgElement.innerHTML = `
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                    <span style="font-weight:600;font-size:12px;">⭐ ${data.preview}</span>
+                    <button onclick="app.unstarMessage('${msgId}')" style="background:none;border:none;color:#666;cursor:pointer;font-size:14px;">✕</button>
+                </div>
+                <div style="font-size:11px;color:#999;">${new Date(data.starredAt).toLocaleString()}</div>
+            `;
+            container.appendChild(msgElement);
+        });
+    });
+};
+
+app.unstarMessage = function(msgId) {
+    const db = firebase.database();
+    db.ref(`starredMessages/${app.user.uid}/${msgId}`).remove();
+};
+
+app.closeStarredMessages = function() {
+    document.getElementById('starredMessagesModal').style.display = 'none';
+};
+
+// USER PROFILE
+app.showUserProfile = function(uid) {
+    const modal = document.getElementById('userProfileModal');
+    modal.style.display = 'flex';
+    app.currentProfileUid = uid;
+    
+    const db = firebase.database();
+    db.ref(`users/${uid}`).once('value', snap => {
+        const user = snap.val();
+        if (user) {
+            document.getElementById('profileImage').src = user.profilePic || '👤';
+            document.getElementById('profileName').innerText = user.name || 'User';
+            document.getElementById('profileUsername').innerText = `@${user.username || 'unknown'}`;
+            document.getElementById('profileBio').innerText = user.bio || 'No bio';
+            document.getElementById('profilePhone').innerText = user.phone || 'Not shared';
+            document.getElementById('profileStatus').innerText = user.online ? '🟢 Online' : `⚪ Offline (Last seen: ${new Date(user.lastSeen).toLocaleString()})`;
+        }
+    });
+};
+
+app.closeUserProfile = function() {
+    document.getElementById('userProfileModal').style.display = 'none';
+};
+
+app.callUser = function() {
+    if (app.currentProfileUid) {
+        app.closeUserProfile();
+        app.initiateVoiceCall(app.currentProfileUid);
+    }
+};
+
+app.videoCallUser = function() {
+    if (app.currentProfileUid) {
+        app.closeUserProfile();
+        app.initiateVideoCall(app.currentProfileUid);
+    }
+};
+
+app.blockUser = function() {
+    if (!app.user || !app.currentProfileUid) return;
+    
+    const db = firebase.database();
+    db.ref(`blockedUsers/${app.user.uid}/${app.currentProfileUid}`).set({
+        blockedAt: Date.now(),
+        reason: 'Blocked by user'
+    }).then(() => {
+        app.closeUserProfile();
+        app.showToast('🚫 User blocked', 'success');
+    });
+};
+
+// ADVANCED SEARCH
+app.showAdvancedSearch = function() {
+    document.getElementById('advancedSearchModal').style.display = 'flex';
+};
+
+app.closeAdvancedSearch = function() {
+    document.getElementById('advancedSearchModal').style.display = 'none';
+};
+
+app.performAdvancedSearch = function() {
+    const text = document.getElementById('searchText').value.toLowerCase();
+    const from = document.getElementById('searchFrom').value.toLowerCase();
+    const type = document.getElementById('searchType').value;
+    const fromDate = document.getElementById('searchFromDate').value;
+    const toDate = document.getElementById('searchToDate').value;
+    
+    if (!app.currentChatId) return;
+    
+    const db = firebase.database();
+    db.ref(`messages/${app.currentChatId}`).once('value', snap => {
+        const messages = snap.val() || {};
+        const results = [];
+        
+        Object.entries(messages).forEach(([msgId, msg]) => {
+            // Filter by text
+            if (text && !msg.text.toLowerCase().includes(text)) return;
+            
+            // Filter by sender
+            if (from && !msg.sender.toLowerCase().includes(from)) return;
+            
+            // Filter by type
+            if (type) {
+                if (type === 'text' && msg.media) return;
+                if (type !== 'text' && (!msg.media || msg.media.type !== type)) return;
+            }
+            
+            // Filter by date
+            const msgDate = new Date(msg.timestamp).toISOString().split('T')[0];
+            if (fromDate && msgDate < fromDate) return;
+            if (toDate && msgDate > toDate) return;
+            
+            results.push(msg);
+        });
+        
+        // Display results
+        app.displaySearchResults(results);
+        app.closeAdvancedSearch();
+    });
+};
+
+app.displaySearchResults = function(results) {
+    const searchResults = document.createElement('div');
+    searchResults.style.cssText = 'padding:12px;background:#f0f7ff;border-radius:8px;margin-bottom:16px;';
+    searchResults.innerHTML = `
+        <div style="font-weight:600;margin-bottom:12px;">🔍 Found ${results.length} results</div>
+        <div style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;">
+            ${results.map(msg => `
+                <div onclick="app.scrollToMessage('${msg.id}')" style="padding:8px;background:white;border-radius:6px;cursor:pointer;border-left:3px solid #0088cc;font-size:12px;">
+                    <div style="font-weight:600;">${msg.sender}</div>
+                    <div style="color:#666;">${msg.text.substring(0, 60)}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.parentNode.insertBefore(searchResults, chatMessages);
+};
+
+// NOTIFICATION SETTINGS
+app.showNotificationSettings = function(chatId) {
+    const modal = document.getElementById('notificationSettingsModal');
+    modal.style.display = 'flex';
+    app.currentNotifChatId = chatId;
+    
+    if (!app.user) return;
+    
+    const db = firebase.database();
+    
+    // Load chat name
+    db.ref(`chats/${chatId}/name`).once('value', snap => {
+        document.getElementById('notifChatName').innerText = snap.val() || 'Chat';
+    });
+    
+    // Load existing settings
+    db.ref(`notificationSettings/${app.user.uid}/${chatId}`).once('value', snap => {
+        const settings = snap.val() || {};
+        document.getElementById('notifSound').checked = settings.sound !== false;
+        document.getElementById('notifVibration').checked = settings.vibration !== false;
+        document.getElementById('notifPreview').checked = settings.preview !== false;
+        document.getElementById('muteUntil').value = settings.muteUntil || '0';
+    });
+};
+
+app.closeNotificationSettings = function() {
+    document.getElementById('notificationSettingsModal').style.display = 'none';
+};
+
+app.saveNotificationSettings = function() {
+    if (!app.user || !app.currentNotifChatId) return;
+    
+    const db = firebase.database();
+    const settings = {
+        sound: document.getElementById('notifSound').checked,
+        vibration: document.getElementById('notifVibration').checked,
+        preview: document.getElementById('notifPreview').checked,
+        muteUntil: parseInt(document.getElementById('muteUntil').value)
+    };
+    
+    db.ref(`notificationSettings/${app.user.uid}/${app.currentNotifChatId}`).set(settings).then(() => {
+        app.closeNotificationSettings();
+        app.showToast('✅ Settings saved!', 'success');
+    });
+};
+
+// BLOCK LIST
+app.showBlockList = function() {
+    if (!app.user) return;
+    
+    const modal = document.getElementById('blockListModal');
+    modal.style.display = 'flex';
+    
+    const db = firebase.database();
+    db.ref(`blockedUsers/${app.user.uid}`).once('value', snap => {
+        const blocked = snap.val() || {};
+        const container = document.getElementById('blockListContainer');
+        container.innerHTML = '';
+        
+        Object.keys(blocked).forEach(uid => {
+            db.ref(`users/${uid}`).once('value', userSnap => {
+                const user = userSnap.val();
+                const item = document.createElement('div');
+                item.style.cssText = 'padding:12px;border:1px solid #e5e7eb;border-radius:8px;display:flex;justify-content:space-between;align-items:center;';
+                item.innerHTML = `
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:13px;">${user.name}</div>
+                        <div style="font-size:11px;color:#999;">@${user.username}</div>
+                    </div>
+                    <button onclick="app.unblockUser('${uid}')" style="padding:6px 12px;background:#0088cc;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">Unblock</button>
+                `;
+                container.appendChild(item);
+            });
+        });
+    });
+};
+
+app.unblockUser = function(uid) {
+    if (!app.user) return;
+    
+    const db = firebase.database();
+    db.ref(`blockedUsers/${app.user.uid}/${uid}`).remove().then(() => {
+        app.showToast('✅ User unblocked', 'success');
+        app.showBlockList(); // Refresh
+    });
+};
+
+app.closeBlockList = function() {
+    document.getElementById('blockListModal').style.display = 'none';
+};
+
+// STATUS/STORIES
+app.showStoriesViewer = function(uid) {
+    if (!uid) return;
+    
+    const modal = document.getElementById('storiesViewerModal');
+    modal.style.display = 'flex';
+    app.currentStoryUid = uid;
+    
+    const db = firebase.database();
+    db.ref(`stories/${uid}`).once('value', snap => {
+        const stories = snap.val() || {};
+        app.stories = Object.values(stories).filter(s => Date.now() - s.createdAt < 86400000); // 24 hours
+        app.currentStoryIndex = 0;
+        app.showStory(0);
+    });
+};
+
+app.showStory = function(index) {
+    if (index < 0 || index >= app.stories.length) {
+        app.closeStoriesViewer();
+        return;
+    }
+    
+    const story = app.stories[index];
+    document.getElementById('storyMedia').src = story.media;
+    document.getElementById('storyName').innerText = story.userName;
+    document.getElementById('storyTime').innerText = `${Math.floor((Date.now() - story.createdAt) / 60000)} minutes ago`;
+    
+    // Progress animation
+    const progress = document.getElementById('storyProgress');
+    progress.style.width = '0%';
+    setTimeout(() => progress.style.width = '100%', 100);
+    
+    // Auto next story
+    setTimeout(() => app.nextStory(), 5000);
+};
+
+app.nextStory = function() {
+    app.showStory(app.currentStoryIndex + 1);
+};
+
+app.prevStory = function() {
+    if (app.currentStoryIndex > 0) {
+        app.showStory(app.currentStoryIndex - 1);
+    }
+};
+
+app.replyToStory = function() {
+    // Open chat with story creator
+    const story = app.stories[app.currentStoryIndex];
+    app.closeStoriesViewer();
+    // Create DM chat
+};
+
+app.shareStory = function() {
+    const story = app.stories[app.currentStoryIndex];
+    alert('Share story link: ' + window.location.origin + '?story=' + story.id);
+};
+
+app.closeStoriesViewer = function() {
+    document.getElementById('storiesViewerModal').style.display = 'none';
+};
+
+// DOCUMENT SHARING
+app.shareDocument = function(file) {
+    if (!app.user || !app.currentChatId) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const db = firebase.database();
+        const msgId = db.ref(`messages/${app.currentChatId}`).push().key;
+        
+        const message = {
+            id: msgId,
+            sender: app.user.uid,
+            text: `📄 ${file.name}`,
+            media: {
+                type: 'document',
+                name: file.name,
+                size: file.size,
+                url: e.target.result // Base64
+            },
+            timestamp: Date.now(),
+            status: 'sent',
+            replyTo: app.replyContext?.msgId || null
+        };
+        
+        db.ref(`messages/${app.currentChatId}/${msgId}`).set(message);
+    };
+    reader.readAsDataURL(file);
+};
+
+app.viewDocument = function(url, name) {
+    document.getElementById('documentName').innerText = name;
+    document.getElementById('documentFrame').src = url;
+    document.getElementById('documentViewerModal').style.display = 'flex';
+};
+
+app.closeDocumentViewer = function() {
+    document.getElementById('documentViewerModal').style.display = 'none';
+};
+
+// LOCATION SHARING
+app.showLocationPicker = function() {
+    document.getElementById('locationPickerModal').style.display = 'flex';
+    
+    // Initialize map (using simple implementation)
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            document.getElementById('selectedLocation').innerText = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            app.selectedLocation = { lat, lng };
+        });
+    }
+};
+
+app.closeLocationPicker = function() {
+    document.getElementById('locationPickerModal').style.display = 'none';
+};
+
+app.sendLocation = function() {
+    if (!app.selectedLocation) {
+        app.showToast('Select location first', 'error');
+        return;
+    }
+    
+    if (!app.user || !app.currentChatId) return;
+    
+    const db = firebase.database();
+    const msgId = db.ref(`messages/${app.currentChatId}`).push().key;
+    
+    const message = {
+        id: msgId,
+        sender: app.user.uid,
+        text: '📍 Location',
+        media: {
+            type: 'location',
+            latitude: app.selectedLocation.lat,
+            longitude: app.selectedLocation.lng
+        },
+        timestamp: Date.now(),
+        status: 'sent'
+    };
+    
+    db.ref(`messages/${app.currentChatId}/${msgId}`).set(message);
+    app.closeLocationPicker();
+};
+
+// CONTACT SHARING
+app.showContactSharing = function() {
+    document.getElementById('contactSharingModal').style.display = 'flex';
+    
+    if (!app.user) return;
+    
+    const db = firebase.database();
+    db.ref('users').once('value', snap => {
+        const users = snap.val() || {};
+        const container = document.getElementById('contactsList');
+        container.innerHTML = '';
+        
+        Object.entries(users).forEach(([uid, user]) => {
+            if (uid === app.user.uid) return;
+            
+            const item = document.createElement('div');
+            item.style.cssText = 'padding:12px;border:1px solid #e5e7eb;border-radius:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;';
+            item.innerHTML = `
+                <div style="flex:1;">
+                    <div style="font-weight:600;font-size:13px;">${user.name}</div>
+                    <div style="font-size:11px;color:#999;">@${user.username}</div>
+                </div>
+                <button onclick="app.shareContact('${uid}', '${user.name}')" style="padding:6px 12px;background:#0088cc;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">Share</button>
+            `;
+            container.appendChild(item);
+        });
+    });
+};
+
+app.shareContact = function(uid, name) {
+    if (!app.user || !app.currentChatId) return;
+    
+    const db = firebase.database();
+    const msgId = db.ref(`messages/${app.currentChatId}`).push().key;
+    
+    const message = {
+        id: msgId,
+        sender: app.user.uid,
+        text: `📇 ${name}`,
+        media: {
+            type: 'contact',
+            contactUid: uid,
+            contactName: name
+        },
+        timestamp: Date.now(),
+        status: 'sent'
+    };
+    
+    db.ref(`messages/${app.currentChatId}/${msgId}`).set(message);
+    app.closeContactSharing();
+};
+
+app.closeContactSharing = function() {
+    document.getElementById('contactSharingModal').style.display = 'none';
+};
+
+// DISAPPEARING MESSAGES
+app.setDisappearingMessages = function(seconds) {
+    if (!app.user || !app.currentChatId) return;
+    
+    const db = firebase.database();
+    db.ref(`chats/${app.currentChatId}/disappearingMessages`).set(seconds).then(() => {
+        if (seconds === 0) {
+            app.showToast('Disappearing messages disabled', 'success');
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            app.showToast(`⏲️ Messages disappear in ${hours > 0 ? hours + 'h' : seconds + 's'}`, 'success');
+        }
+    });
+};
+
+app.startDisappearingTimer = function() {
+    if (!app.currentChatId) return;
+    
+    const db = firebase.database();
+    db.ref(`chats/${app.currentChatId}/disappearingMessages`).on('value', snap => {
+        const seconds = snap.val() || 0;
+        if (seconds === 0) {
+            document.getElementById('disappearingMessagesIndicator').style.display = 'none';
+        } else {
+            document.getElementById('disappearingMessagesIndicator').style.display = 'block';
+            let timeLeft = seconds;
+            setInterval(() => {
+                timeLeft--;
+                if (timeLeft >= 0) {
+                    document.getElementById('disappearingTimeLeft').innerText = timeLeft;
+                }
+            }, 1000);
+        }
+    });
+};

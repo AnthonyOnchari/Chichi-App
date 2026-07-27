@@ -202,21 +202,6 @@
     </div>
 </div>
 
-<!-- FORGOT PASSWORD MODAL -->
-<div class="modal-overlay" id="forgotPasswordModal" style="display:none;">
-    <div class="modal" style="max-width:400px;">
-        <div class="modal-close"><button onclick="app.closeForgotPasswordModal()">✕</button></div>
-        <h2 style="font-weight:700;margin-bottom:16px;">Reset Password</h2>
-        <p style="color:var(--text-light);margin-bottom:16px;">Enter your email to receive a password reset link.</p>
-        <div class="form-group">
-            <label class="form-label">Email</label>
-            <input type="email" class="form-input" id="forgotPasswordEmail" placeholder="your@email.com" required>
-        </div>
-        <button type="button" class="btn-submit" onclick="app.sendPasswordReset()">Send Reset Link</button>
-        <button type="button" class="btn-submit" onclick="app.closeForgotPasswordModal()" style="background:var(--light);color:var(--text);margin-top:8px;">Cancel</button>
-    </div>
-</div>
-
 <!-- MAIN APP -->
 <div class="main-app" id="mainApp">
     <!-- APP HEADER -->
@@ -381,7 +366,7 @@
     </div>
 </div>
 
-<!-- ==================== PHASE 1, 2, 3 FEATURE MODALS ==================== -->
+<!-- ==================== PHASE 1, 2, 3 + WHATSAPP FEATURE MODALS ==================== -->
 
 <!-- EMOJI PICKER MODAL (Phase 2) -->
 <div class="modal-overlay" id="emojiPickerModal" style="display:none;">
@@ -484,6 +469,7 @@
     <button onclick="app.pinMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">📌 Pin</button>
     <button onclick="app.forwardMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">↪️ Forward</button>
     <button onclick="app.reactToMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">😊 React</button>
+    <button onclick="app.starMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">⭐ Star</button>
     <button onclick="app.deleteMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;color:#ff4444;border-radius:0 0 12px 12px;">🗑️ Delete</button>
 </div>
 
@@ -554,7 +540,197 @@
     <span>⬇️ New Messages</span>
 </button>
 
-<!-- LINK PREVIEW CARD TEMPLATE (Phase 2) -->
+<!-- ==================== WHATSAPP FEATURE MODALS ==================== -->
+
+<!-- MESSAGE QUOTE REPLY CARD -->
+<template id="quoteReplyTemplate">
+    <div class="quote-reply-card" style="padding:8px 12px;background:#f0f7ff;border-left:4px solid #0088cc;margin:8px 0;border-radius:4px;font-size:12px;">
+        <div style="color:#0088cc;font-weight:600;margin-bottom:4px;"></div>
+        <div style="color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+    </div>
+</template>
+
+<!-- ADVANCED MESSAGE OPTIONS MENU (WhatsApp-like) -->
+<div id="advancedMessageMenu" class="advanced-message-menu" style="display:none;position:fixed;background:white;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.15);z-index:300;min-width:220px;overflow:hidden;">
+    <button class="menu-item" onclick="app.replyToMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">↩️ Reply</button>
+    <button class="menu-item" onclick="app.showEmojiPicker()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">😊 React</button>
+    <button class="menu-item" onclick="app.starMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">⭐ Star</button>
+    <button class="menu-item" onclick="app.copyMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">📋 Copy</button>
+    <button class="menu-item" onclick="app.editMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">✏️ Edit</button>
+    <button class="menu-item" onclick="app.forwardMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">↪️ Forward</button>
+    <button class="menu-item" onclick="app.pinMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">📌 Pin</button>
+    <button class="menu-item" onclick="app.translateMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">🌐 Translate</button>
+    <button class="menu-item" onclick="app.deleteMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;color:#ff4444;border-radius:0 0 12px 12px;">🗑️ Delete</button>
+</div>
+
+<!-- GROUP CREATION MODAL -->
+<div class="modal-overlay" id="groupCreationModal" style="display:none;">
+    <div class="modal" style="max-width:500px;max-height:80vh;overflow-y:auto;">
+        <div class="modal-close"><button onclick="app.closeGroupCreation()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:20px;">👥 Create Group</h2>
+        
+        <div style="margin-bottom:20px;">
+            <label style="display:block;font-weight:600;margin-bottom:8px;">Group Name *</label>
+            <input type="text" id="groupNameInput" placeholder="Enter group name" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        
+        <div style="margin-bottom:20px;">
+            <label style="display:block;font-weight:600;margin-bottom:8px;">Description</label>
+            <textarea id="groupDescInput" placeholder="Add group description..." style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;min-height:80px;resize:vertical;"></textarea>
+        </div>
+        
+        <div style="margin-bottom:20px;">
+            <label style="display:block;font-weight:600;margin-bottom:12px;">Select Members *</label>
+            <div style="border:1px solid #e5e7eb;border-radius:8px;max-height:300px;overflow-y:auto;">
+                <div id="groupMembersCheckbox" style="padding:8px;"></div>
+            </div>
+        </div>
+        
+        <div style="display:flex;gap:10px;">
+            <button onclick="app.closeGroupCreation()" style="flex:1;padding:12px;background:#f3f4f6;color:#1a202c;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Cancel</button>
+            <button onclick="app.createGroup()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">✅ Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- CALL HISTORY MODAL -->
+<div class="modal-overlay" id="callHistoryModal" style="display:none;">
+    <div class="modal" style="max-width:500px;max-height:80vh;">
+        <div class="modal-close"><button onclick="app.closeCallHistory()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;">📞 Call History</h2>
+        <div id="callHistoryList" style="display:flex;flex-direction:column;gap:8px;">
+            <!-- Calls will be listed here -->
+        </div>
+    </div>
+</div>
+
+<!-- STARRED MESSAGES MODAL -->
+<div class="modal-overlay" id="starredMessagesModal" style="display:none;">
+    <div class="modal" style="max-width:500px;max-height:80vh;">
+        <div class="modal-close"><button onclick="app.closeStarredMessages()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;">⭐ Starred Messages</h2>
+        <div id="starredMessagesList" style="display:flex;flex-direction:column;gap:12px;">
+            <!-- Starred messages will be listed here -->
+        </div>
+    </div>
+</div>
+
+<!-- USER PROFILE CARD -->
+<div class="modal-overlay" id="userProfileModal" style="display:none;">
+    <div class="modal user-profile-modal" style="max-width:400px;">
+        <div class="modal-close"><button onclick="app.closeUserProfile()">✕</button></div>
+        
+        <div style="text-align:center;margin-bottom:20px;">
+            <img id="profileImage" src="" alt="Profile" style="width:100px;height:100px;border-radius:50%;margin-bottom:12px;object-fit:cover;">
+            <h2 id="profileName" style="margin:0 0 4px 0;font-weight:700;">User Name</h2>
+            <p id="profileUsername" style="margin:0 0 8px 0;color:#999;font-size:13px;">@username</p>
+            <p id="profileStatus" style="margin:0;color:#666;font-size:12px;">🟢 Online</p>
+        </div>
+        
+        <div style="padding:12px;background:#f3f4f6;border-radius:8px;margin-bottom:16px;">
+            <p id="profileBio" style="margin:0;font-size:13px;line-height:1.5;"></p>
+        </div>
+        
+        <div style="display:flex;gap:8px;">
+            <button onclick="app.callUser()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📞 Call</button>
+            <button onclick="app.videoCallUser()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📹 Video</button>
+            <button onclick="app.blockUser()" style="flex:1;padding:12px;background:#fef2f2;color:#ff4444;border:none;border-radius:8px;cursor:pointer;font-weight:600;">🚫 Block</button>
+        </div>
+    </div>
+</div>
+
+<!-- ADVANCED SEARCH MODAL -->
+<div class="modal-overlay" id="advancedSearchModal" style="display:none;">
+    <div class="modal" style="max-width:600px;">
+        <div class="modal-close"><button onclick="app.closeAdvancedSearch()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:20px;">🔍 Advanced Search</h2>
+        
+        <div style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:8px;">Search Text</label>
+            <input type="text" id="searchText" placeholder="Enter text..." style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div>
+                <label style="display:block;font-weight:600;margin-bottom:8px;">From</label>
+                <input type="text" id="searchFrom" placeholder="Username..." style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="display:block;font-weight:600;margin-bottom:8px;">Type</label>
+                <select id="searchType" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;">
+                    <option value="">All Types</option>
+                    <option value="text">Text Only</option>
+                    <option value="image">Images</option>
+                    <option value="video">Videos</option>
+                    <option value="audio">Audio</option>
+                    <option value="document">Documents</option>
+                    <option value="link">Links</option>
+                </select>
+            </div>
+        </div>
+        
+        <div style="display:flex;gap:10px;">
+            <button onclick="app.closeAdvancedSearch()" style="flex:1;padding:12px;background:#f3f4f6;color:#1a202c;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Cancel</button>
+            <button onclick="app.performAdvancedSearch()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">🔍 Search</button>
+        </div>
+    </div>
+</div>
+
+<!-- NOTIFICATION SETTINGS MODAL -->
+<div class="modal-overlay" id="notificationSettingsModal" style="display:none;">
+    <div class="modal" style="max-width:500px;">
+        <div class="modal-close"><button onclick="app.closeNotificationSettings()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:20px;">🔔 Notification Settings</h2>
+        
+        <div style="padding:12px;background:#f3f4f6;border-radius:8px;margin-bottom:16px;">
+            <div style="font-weight:600;margin-bottom:12px;font-size:14px;">Chat: <span id="notifChatName">Loading...</span></div>
+        </div>
+        
+        <div style="margin-bottom:16px;">
+            <label style="display:flex;align-items:center;cursor:pointer;margin-bottom:12px;">
+                <input type="checkbox" id="notifSound" style="width:18px;height:18px;cursor:pointer;margin-right:12px;">
+                <span>Sound Notifications</span>
+            </label>
+            <label style="display:flex;align-items:center;cursor:pointer;margin-bottom:12px;">
+                <input type="checkbox" id="notifVibration" style="width:18px;height:18px;cursor:pointer;margin-right:12px;">
+                <span>Vibration</span>
+            </label>
+            <label style="display:flex;align-items:center;cursor:pointer;margin-bottom:12px;">
+                <input type="checkbox" id="notifPreview" style="width:18px;height:18px;cursor:pointer;margin-right:12px;">
+                <span>Show Preview</span>
+            </label>
+        </div>
+        
+        <div style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:8px;">Mute Until</label>
+            <select id="muteUntil" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;">
+                <option value="0">Unmuted</option>
+                <option value="3600">1 Hour</option>
+                <option value="28800">8 Hours</option>
+                <option value="86400">24 Hours</option>
+                <option value="-1">Always</option>
+            </select>
+        </div>
+        
+        <div style="display:flex;gap:10px;">
+            <button onclick="app.closeNotificationSettings()" style="flex:1;padding:12px;background:#f3f4f6;color:#1a202c;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Cancel</button>
+            <button onclick="app.saveNotificationSettings()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">✅ Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- BLOCK LIST MODAL -->
+<div class="modal-overlay" id="blockListModal" style="display:none;">
+    <div class="modal" style="max-width:500px;max-height:80vh;">
+        <div class="modal-close"><button onclick="app.closeBlockList()">✕</button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;">🚫 Blocked Contacts</h2>
+        <div id="blockListContainer" style="display:flex;flex-direction:column;gap:8px;">
+            <!-- Blocked users will be listed here -->
+        </div>
+    </div>
+</div>
+
+<!-- TEMPLATE: Link Preview -->
 <template id="linkPreviewTemplate">
     <div class="link-preview-card" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:8px 0;">
         <div class="link-preview-image" style="height:200px;overflow:hidden;">
@@ -568,7 +744,7 @@
     </div>
 </template>
 
-<!-- VOICE MESSAGE PLAYER TEMPLATE (Phase 2) -->
+<!-- TEMPLATE: Voice Message Player -->
 <template id="voiceMessageTemplate">
     <div class="voice-message" style="display:flex;gap:8px;align-items:center;padding:8px;background:#f3f4f6;border-radius:8px;">
         <button class="voice-play-btn" onclick="app.playVoiceMessage(event)" style="width:32px;height:32px;border-radius:50%;background:#0088cc;color:white;border:none;cursor:pointer;font-size:14px;flex-shrink:0;">▶</button>
@@ -579,7 +755,7 @@
     </div>
 </template>
 
-<!-- REACTION BADGE TEMPLATE (Phase 2) -->
+<!-- TEMPLATE: Reaction Badge -->
 <template id="reactionTemplate">
     <div class="reaction-badge" style="display:inline-flex;gap:4px;align-items:center;padding:4px 8px;background:#f3f4f6;border-radius:12px;font-size:12px;margin:2px;">
         <span class="reaction-emoji" style="font-size:14px;">👍</span>
@@ -587,22 +763,7 @@
     </div>
 </template>
 
-<!-- DELIVERY STATUS INDICATOR (Phase 1) -->
-<template id="deliveryStatusTemplate">
-    <span class="delivery-status" title="Delivered" style="font-size:12px;color:#0088cc;">✓</span>
-</template>
-
-<!-- ERROR TOAST -->
-<div id="errorToast" class="toast error-toast" style="display:none;position:fixed;bottom:20px;right:20px;background:#ff4444;color:white;padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(255,68,68,0.3);z-index:9999;font-size:13px;">
-    <span id="errorToastMessage">Error message</span>
-</div>
-
-<!-- SUCCESS TOAST -->
-<div id="successToast" class="toast success-toast" style="display:none;position:fixed;bottom:20px;right:20px;background:#44cc44;color:white;padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(68,204,68,0.3);z-index:9999;font-size:13px;">
-    <span id="successToastMessage">Success message</span>
-</div>
-
-<!-- RINGTONE AUDIO (Phase 3) -->
+<!-- RINGTONE AUDIO -->
 <audio id="ringtoneAudio" src="data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==" style="display:none;"></audio>
 
 <!-- CREATE POST MODAL -->
@@ -636,7 +797,7 @@
     </div>
 </div>
 
-<!-- ADMIN PORTAL -->
+<!-- ADMIN PORTAL (existing) -->
 <div class="admin-portal" id="adminPortal">
     <div class="admin-header">
         <h2>⚙️ Admin Portal</h2>
@@ -790,7 +951,7 @@
                 Hey there! 👋 I'm <strong style="color:#0088cc;">Anthony</strong>, a Developer and Digital Media Specialist who loves building things that bring people and community together. I created <strong style="color:#0088cc;">CHICHI</strong> because I believe social media should feel like home — warm, real, and human.
             </p>
             <p style="margin-top:10px;margin-bottom:0;font-size:12px;color:#4a5568;border-top:1px solid #e2e8f0;padding-top:10px;">
-                This is <strong>Version V02A.01</strong> — the beginning of something beautiful. More features, more love, and more connection coming soon!
+                This is <strong>Version V02A.01 + WhatsApp Features</strong> — the beginning of something beautiful. More features, more love, and more connection coming soon!
             </p>
         </div>
         
@@ -816,8 +977,8 @@
         </div>
         
         <div style="background:#f9fafb;padding:12px;border-radius:10px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280;text-align:center;margin-bottom:12px;">
-            <p style="margin:0 0 6px 0;"><strong>CHICHI App</strong></p>
-            <p style="margin:0;">© 2026 Onchari Group • Version V02A.01</p>
+            <p style="margin:0 0 6px 0;"><strong>CHICHI App + WhatsApp Features</strong></p>
+            <p style="margin:0;">© 2026 Onchari Group • Version V02A.01 + WhatsApp</p>
         </div>
     </div>
 </div>
