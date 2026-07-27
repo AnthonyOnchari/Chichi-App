@@ -11137,48 +11137,6 @@ app.createGroup = function() {
     });
 };
 
-// CALL HISTORY
-app.showCallHistory = function() {
-    if (!app.user) return;
-    
-    const modal = document.getElementById('callHistoryModal');
-    modal.style.display = 'flex';
-    
-    const db = firebase.database();
-    db.ref('callHistory').orderByChild('startTime').limitToLast(50).once('value', snap => {
-        const calls = snap.val() || {};
-        const container = document.getElementById('callHistoryList');
-        container.innerHTML = '';
-        
-        Object.values(calls).reverse().forEach(call => {
-            if (call.initiator !== app.user.uid && call.recipient !== app.user.uid) return;
-            
-            const callElement = document.createElement('div');
-            const other = call.initiator === app.user.uid ? call.recipient : call.initiator;
-            const duration = call.duration ? `${Math.floor(call.duration / 60)}:${String(call.duration % 60).padStart(2, '0')}` : 'Missed';
-            const icon = call.type === 'voice' ? '📞' : '📹';
-            const status = call.status === 'missed' ? '❌' : (call.status === 'declined' ? '📵' : '✅');
-            
-            callElement.style.cssText = 'padding:12px;border:1px solid #e5e7eb;border-radius:8px;display:flex;justify-content:space-between;align-items:center;';
-            callElement.innerHTML = `
-                <div>
-                    <div style="font-weight:600;font-size:13px;">${icon} ${call.type === 'voice' ? 'Voice' : 'Video'} Call</div>
-                    <div style="font-size:11px;color:#999;">With ${other} • ${status}</div>
-                </div>
-                <div style="text-align:right;font-size:12px;color:#666;">
-                    <div>${duration}</div>
-                    <div style="font-size:10px;">${new Date(call.startTime).toLocaleString()}</div>
-                </div>
-            `;
-            container.appendChild(callElement);
-        });
-    });
-};
-
-app.closeCallHistory = function() {
-    document.getElementById('callHistoryModal').style.display = 'none';
-};
-
 // STARRED MESSAGES
 app.showStarredMessages = function() {
     if (!app.user) return;
@@ -11238,20 +11196,6 @@ app.showUserProfile = function(uid) {
 
 app.closeUserProfile = function() {
     document.getElementById('userProfileModal').style.display = 'none';
-};
-
-app.callUser = function() {
-    if (app.currentProfileUid) {
-        app.closeUserProfile();
-        app.initiateVoiceCall(app.currentProfileUid);
-    }
-};
-
-app.videoCallUser = function() {
-    if (app.currentProfileUid) {
-        app.closeUserProfile();
-        app.initiateVideoCall(app.currentProfileUid);
-    }
 };
 
 app.blockUser = function() {
@@ -11425,69 +11369,6 @@ app.unblockUser = function(uid) {
 
 app.closeBlockList = function() {
     document.getElementById('blockListModal').style.display = 'none';
-};
-
-// STATUS/STORIES
-app.showStoriesViewer = function(uid) {
-    if (!uid) return;
-    
-    const modal = document.getElementById('storiesViewerModal');
-    modal.style.display = 'flex';
-    app.currentStoryUid = uid;
-    
-    const db = firebase.database();
-    db.ref(`stories/${uid}`).once('value', snap => {
-        const stories = snap.val() || {};
-        app.stories = Object.values(stories).filter(s => Date.now() - s.createdAt < 86400000); // 24 hours
-        app.currentStoryIndex = 0;
-        app.showStory(0);
-    });
-};
-
-app.showStory = function(index) {
-    if (index < 0 || index >= app.stories.length) {
-        app.closeStoriesViewer();
-        return;
-    }
-    
-    const story = app.stories[index];
-    document.getElementById('storyMedia').src = story.media;
-    document.getElementById('storyName').innerText = story.userName;
-    document.getElementById('storyTime').innerText = `${Math.floor((Date.now() - story.createdAt) / 60000)} minutes ago`;
-    
-    // Progress animation
-    const progress = document.getElementById('storyProgress');
-    progress.style.width = '0%';
-    setTimeout(() => progress.style.width = '100%', 100);
-    
-    // Auto next story
-    setTimeout(() => app.nextStory(), 5000);
-};
-
-app.nextStory = function() {
-    app.showStory(app.currentStoryIndex + 1);
-};
-
-app.prevStory = function() {
-    if (app.currentStoryIndex > 0) {
-        app.showStory(app.currentStoryIndex - 1);
-    }
-};
-
-app.replyToStory = function() {
-    // Open chat with story creator
-    const story = app.stories[app.currentStoryIndex];
-    app.closeStoriesViewer();
-    // Create DM chat
-};
-
-app.shareStory = function() {
-    const story = app.stories[app.currentStoryIndex];
-    alert('Share story link: ' + window.location.origin + '?story=' + story.id);
-};
-
-app.closeStoriesViewer = function() {
-    document.getElementById('storiesViewerModal').style.display = 'none';
 };
 
 // DOCUMENT SHARING
