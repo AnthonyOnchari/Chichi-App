@@ -227,7 +227,6 @@
         </div>
         
         <div class="header-actions">
-            <button class="btn-icon" id="darkModeToggle" onclick="app.toggleDarkMode()" title="Toggle Dark Mode" style="font-size:18px;margin-right:8px;">🌙</button>
             <button class="btn-icon" id="headerMenuBtn" onclick="app.showHeaderMenu()">☰</button>
             <div class="header-menu" id="headerMenu" style="display:none;position:absolute;top:100%;right:0;background:white;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.15);min-width:180px;z-index:1000;">
                 <button onclick="app.switchView('profile')" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;">👤 Profile</button>
@@ -382,6 +381,230 @@
     </div>
 </div>
 
+<!-- ==================== PHASE 1, 2, 3 FEATURE MODALS ==================== -->
+
+<!-- EMOJI PICKER MODAL (Phase 2) -->
+<div class="modal-overlay" id="emojiPickerModal" style="display:none;">
+    <div class="modal emoji-picker-modal">
+        <div class="modal-close"><button onclick="app.closeEmojiPicker()">✕</button></div>
+        <h3 style="margin:0 0 16px 0;font-weight:700;font-size:16px;">React with emoji</h3>
+        <div class="emoji-picker-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+            <button class="emoji-btn" onclick="app.addReaction('👍')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">👍</button>
+            <button class="emoji-btn" onclick="app.addReaction('❤️')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">❤️</button>
+            <button class="emoji-btn" onclick="app.addReaction('😂')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">😂</button>
+            <button class="emoji-btn" onclick="app.addReaction('😢')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">😢</button>
+            <button class="emoji-btn" onclick="app.addReaction('🔥')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">🔥</button>
+            <button class="emoji-btn" onclick="app.addReaction('🎉')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">🎉</button>
+            <button class="emoji-btn" onclick="app.addReaction('😡')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">😡</button>
+            <button class="emoji-btn" onclick="app.addReaction('👏')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">👏</button>
+        </div>
+    </div>
+</div>
+
+<!-- VOICE RECORDING MODAL (Phase 2) -->
+<div class="modal-overlay" id="voiceRecordingModal" style="display:none;">
+    <div class="modal voice-recording-modal" style="max-width:300px;">
+        <h3 style="margin:0 0 16px 0;font-weight:700;text-align:center;">🎤 Recording Audio</h3>
+        <div class="voice-recording-content" style="text-align:center;">
+            <div class="recording-timer" id="recordingTimer" style="font-size:32px;font-weight:700;margin-bottom:16px;font-family:monospace;">0:00</div>
+            <div class="recording-visualizer" style="display:flex;gap:4px;justify-content:center;margin-bottom:16px;height:40px;align-items:flex-end;">
+                <div class="visualizer-bar" style="width:4px;height:20px;background:#0088cc;border-radius:2px;animation:pulse 0.6s ease-in-out infinite;"></div>
+                <div class="visualizer-bar" style="width:4px;height:30px;background:#0088cc;border-radius:2px;animation:pulse 0.6s ease-in-out infinite 0.1s;"></div>
+                <div class="visualizer-bar" style="width:4px;height:25px;background:#0088cc;border-radius:2px;animation:pulse 0.6s ease-in-out infinite 0.2s;"></div>
+                <div class="visualizer-bar" style="width:4px;height:35px;background:#0088cc;border-radius:2px;animation:pulse 0.6s ease-in-out infinite 0.3s;"></div>
+                <div class="visualizer-bar" style="width:4px;height:28px;background:#0088cc;border-radius:2px;animation:pulse 0.6s ease-in-out infinite 0.4s;"></div>
+            </div>
+            <div class="recording-buttons" style="display:flex;gap:8px;">
+                <button onclick="app.cancelVoiceRecording()" style="flex:1;padding:10px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;">Cancel</button>
+                <button onclick="app.stopVoiceRecording()" style="flex:1;padding:10px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;">Send</button>
+            </div>
+        </div>
+        <style>@keyframes pulse{0%,100%{opacity:0.3}50%{opacity:1}}</style>
+    </div>
+</div>
+
+<!-- CALL UI MODAL (Phase 3) -->
+<div class="modal-overlay" id="callModal" style="display:none;background:black;">
+    <div class="call-container" style="width:100%;height:100%;display:flex;flex-direction:column;position:relative;">
+        <video id="remoteVideo" class="video-remote" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+        <video id="localVideo" class="video-local" autoplay muted playsinline style="position:absolute;bottom:80px;right:20px;width:120px;height:160px;border-radius:12px;background:black;border:2px solid white;object-fit:cover;"></video>
+        
+        <div class="call-header" style="position:absolute;top:20px;left:20px;color:white;z-index:10;">
+            <h3 id="callName" style="margin:0;font-size:18px;font-weight:700;">Caller</h3>
+            <div class="call-duration" id="callDuration" style="font-size:14px;opacity:0.9;">00:00</div>
+        </div>
+        
+        <div class="call-controls" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:12px;z-index:10;">
+            <button id="toggleMicBtn" onclick="app.toggleCallMic()" style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.2);color:white;border:none;font-size:24px;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">🎤</button>
+            <button id="toggleCameraBtn" onclick="app.toggleCallCamera()" style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.2);color:white;border:none;font-size:24px;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">📹</button>
+            <button onclick="app.endCall()" style="width:50px;height:50px;border-radius:50%;background:#ff4444;color:white;border:none;font-size:24px;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#ff5555'" onmouseout="this.style.background='#ff4444'">✕</button>
+        </div>
+    </div>
+</div>
+
+<!-- INCOMING CALL NOTIFICATION (Phase 3) -->
+<div id="incomingCallNotification" class="incoming-call-notification" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:500;flex-direction:column;justify-content:center;align-items:center;">
+    <div class="incoming-call-content" style="text-align:center;color:white;">
+        <div class="incoming-call-avatar" style="width:100px;height:100px;border-radius:50%;margin:0 auto 16px;overflow:hidden;border:3px solid white;">
+            <img id="incomingAvatar" src="" alt="Caller" style="width:100%;height:100%;object-fit:cover;">
+        </div>
+        <h3 id="incomingName" style="margin:0 0 8px 0;font-size:22px;font-weight:700;">Caller Name</h3>
+        <p id="incomingType" style="margin:0 0 24px 0;font-size:14px;opacity:0.9;">is calling...</p>
+        
+        <div class="incoming-call-actions" style="display:flex;gap:16px;justify-content:center;">
+            <button onclick="app.declineIncomingCall()" style="padding:12px 24px;background:#ff4444;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Decline</button>
+            <button onclick="app.acceptIncomingCall()" style="padding:12px 24px;background:#44cc44;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Accept</button>
+        </div>
+    </div>
+</div>
+
+<!-- MEDIA GALLERY MODAL (Phase 2) -->
+<div class="modal-overlay" id="mediaGalleryModal" style="display:none;">
+    <div class="modal media-gallery-modal" style="max-width:600px;max-height:80vh;">
+        <div class="modal-close"><button onclick="app.closeMediaGallery()">✕</button></div>
+        <h3 style="margin:0 0 16px 0;font-weight:700;">📸 Media Gallery</h3>
+        <div id="mediaGalleryGrid" class="media-gallery-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;overflow-y:auto;max-height:calc(80vh - 100px);">
+            <!-- Images will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<!-- IMAGE VIEWER MODAL (Phase 2) -->
+<div class="modal-overlay" id="imageViewerModal" style="display:none;background:rgba(0,0,0,0.95);">
+    <div class="image-viewer-container" style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+        <button onclick="app.closeImageViewer()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.2);color:white;border:none;width:40px;height:40px;border-radius:50%;font-size:24px;cursor:pointer;">✕</button>
+        <img id="imageViewerSrc" src="" alt="Image" style="max-width:90%;max-height:90%;border-radius:8px;">
+    </div>
+</div>
+
+<!-- MESSAGE ACTION MENU (Phase 1) -->
+<div id="messageActionMenu" class="message-action-menu" style="display:none;position:fixed;background:white;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.15);z-index:300;min-width:200px;">
+    <button onclick="app.copyMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">📋 Copy</button>
+    <button onclick="app.editMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">✏️ Edit</button>
+    <button onclick="app.pinMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">📌 Pin</button>
+    <button onclick="app.forwardMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">↪️ Forward</button>
+    <button onclick="app.reactToMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">😊 React</button>
+    <button onclick="app.deleteMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;color:#ff4444;border-radius:0 0 12px 12px;">🗑️ Delete</button>
+</div>
+
+<!-- FORWARD MESSAGE MODAL (Phase 3) -->
+<div class="modal-overlay" id="forwardModal" style="display:none;">
+    <div class="modal forward-modal" style="max-width:400px;">
+        <div class="modal-close"><button onclick="app.closeForwardModal()">✕</button></div>
+        <h3 style="margin:0 0 16px 0;font-weight:700;">↪️ Forward to...</h3>
+        <div style="margin-bottom:16px;">
+            <input type="text" placeholder="Search contacts..." id="forwardSearch" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;" onkeyup="if(typeof app !== 'undefined' && app.filterForwardContacts) app.filterForwardContacts(this.value)">
+        </div>
+        <div id="forwardContactsList" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;">
+            <!-- Contacts will be listed here -->
+        </div>
+    </div>
+</div>
+
+<!-- PINNED MESSAGES BANNER (Phase 3) -->
+<div id="pinnedBanner" class="pinned-banner" style="display:none;background:#f0f7ff;border-bottom:2px solid #0088cc;padding:12px 16px;border-radius:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-weight:700;color:#0088cc;">📌 Pinned Messages</span>
+        <button onclick="app.closePinnedBanner()" style="background:none;border:none;color:#0088cc;cursor:pointer;font-size:18px;padding:0;">✕</button>
+    </div>
+    <div id="pinnedContent" style="background:white;padding:10px 12px;border-radius:8px;font-size:13px;color:#4b5563;max-height:80px;overflow-y:auto;">
+        <!-- Pinned message content will be inserted here -->
+    </div>
+</div>
+
+<!-- CHAT INFO SIDEBAR (Phase 3) -->
+<div id="chatInfoSidebar" class="chat-info-sidebar" style="display:none;position:fixed;right:0;top:0;bottom:0;width:300px;background:white;border-left:1px solid #e5e7eb;z-index:150;overflow-y:auto;box-shadow:-2px 0 8px rgba(0,0,0,0.1);">
+    <div style="padding:16px;border-bottom:1px solid #f3f4f6;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;font-size:16px;font-weight:700;">Chat Info</h3>
+            <button onclick="app.closeChatInfo()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+        </div>
+    </div>
+    
+    <div style="padding:16px;text-align:center;border-bottom:1px solid #f3f4f6;">
+        <img id="infoAvatar" class="info-avatar" src="" alt="Avatar" style="width:80px;height:80px;border-radius:50%;margin-bottom:12px;object-fit:cover;">
+        <h4 id="infoName" style="margin:0 0 4px 0;font-weight:700;font-size:16px;">Chat Name</h4>
+        <p id="infoStatus" style="margin:0;font-size:12px;color:#9ca3af;">Online</p>
+    </div>
+    
+    <div style="padding:16px;">
+        <h5 style="margin:0 0 12px 0;font-weight:700;font-size:12px;color:#6b7280;text-transform:uppercase;">Media</h5>
+        <button onclick="app.showMediaGallery()" style="width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;margin-bottom:16px;">View Gallery</button>
+        
+        <h5 style="margin:0 0 12px 0;font-weight:700;font-size:12px;color:#6b7280;text-transform:uppercase;">Actions</h5>
+        <button onclick="app.clearChat()" style="width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;margin-bottom:8px;">Clear Chat</button>
+        <button onclick="app.muteChat()" style="width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;margin-bottom:8px;">🔕 Mute</button>
+        <button onclick="app.blockUser()" style="width:100%;padding:10px;background:#fef2f2;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;color:#ff4444;">🚫 Block</button>
+    </div>
+</div>
+
+<!-- TYPING INDICATOR (Phase 1) -->
+<div id="typingIndicator" class="typing-indicator" style="display:none;padding:8px 16px;font-size:12px;color:#9ca3af;font-style:italic;">
+    <span id="typingUserName">User</span> is typing<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+    <style>
+        @keyframes typing { 0%,60%,100%{opacity:0.3} 30%{opacity:1} }
+        .typing-indicator .dot { animation: typing 1.4s infinite; }
+        .typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+    </style>
+</div>
+
+<!-- SCROLL TO LATEST BUTTON (Phase 2) -->
+<button id="scrollToLatestBtn" class="scroll-to-latest-btn" onclick="app.scrollToLatest()" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:8px 16px;background:#0088cc;color:white;border:none;border-radius:20px;cursor:pointer;font-weight:600;font-size:12px;box-shadow:0 4px 12px rgba(0,136,204,0.3);z-index:99;">
+    <span>⬇️ New Messages</span>
+</button>
+
+<!-- LINK PREVIEW CARD TEMPLATE (Phase 2) -->
+<template id="linkPreviewTemplate">
+    <div class="link-preview-card" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:8px 0;">
+        <div class="link-preview-image" style="height:200px;overflow:hidden;">
+            <img class="link-preview-img" src="" alt="Preview" style="width:100%;height:100%;object-fit:cover;">
+        </div>
+        <div class="link-preview-content" style="padding:12px;">
+            <h4 class="link-preview-title" style="margin:0 0 4px 0;font-size:14px;font-weight:700;">Title</h4>
+            <p class="link-preview-desc" style="margin:0 0 8px 0;font-size:12px;color:#6b7280;">Description</p>
+            <a class="link-preview-url" href="" target="_blank" style="display:inline-block;padding:6px 12px;background:#0088cc;color:white;text-decoration:none;border-radius:6px;font-size:11px;font-weight:600;">Open Link</a>
+        </div>
+    </div>
+</template>
+
+<!-- VOICE MESSAGE PLAYER TEMPLATE (Phase 2) -->
+<template id="voiceMessageTemplate">
+    <div class="voice-message" style="display:flex;gap:8px;align-items:center;padding:8px;background:#f3f4f6;border-radius:8px;">
+        <button class="voice-play-btn" onclick="app.playVoiceMessage(event)" style="width:32px;height:32px;border-radius:50%;background:#0088cc;color:white;border:none;cursor:pointer;font-size:14px;flex-shrink:0;">▶</button>
+        <div class="voice-progress" style="flex:1;height:4px;background:#e5e7eb;border-radius:2px;position:relative;">
+            <div class="progress-bar" style="height:100%;background:#0088cc;border-radius:2px;width:0%;"></div>
+        </div>
+        <span class="voice-duration" style="font-size:11px;color:#6b7280;font-family:monospace;min-width:30px;">0:00</span>
+    </div>
+</template>
+
+<!-- REACTION BADGE TEMPLATE (Phase 2) -->
+<template id="reactionTemplate">
+    <div class="reaction-badge" style="display:inline-flex;gap:4px;align-items:center;padding:4px 8px;background:#f3f4f6;border-radius:12px;font-size:12px;margin:2px;">
+        <span class="reaction-emoji" style="font-size:14px;">👍</span>
+        <span class="reaction-count" style="color:#6b7280;font-weight:600;">1</span>
+    </div>
+</template>
+
+<!-- DELIVERY STATUS INDICATOR (Phase 1) -->
+<template id="deliveryStatusTemplate">
+    <span class="delivery-status" title="Delivered" style="font-size:12px;color:#0088cc;">✓</span>
+</template>
+
+<!-- ERROR TOAST -->
+<div id="errorToast" class="toast error-toast" style="display:none;position:fixed;bottom:20px;right:20px;background:#ff4444;color:white;padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(255,68,68,0.3);z-index:9999;font-size:13px;">
+    <span id="errorToastMessage">Error message</span>
+</div>
+
+<!-- SUCCESS TOAST -->
+<div id="successToast" class="toast success-toast" style="display:none;position:fixed;bottom:20px;right:20px;background:#44cc44;color:white;padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(68,204,68,0.3);z-index:9999;font-size:13px;">
+    <span id="successToastMessage">Success message</span>
+</div>
+
+<!-- RINGTONE AUDIO (Phase 3) -->
+<audio id="ringtoneAudio" src="data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==" style="display:none;"></audio>
+
 <!-- CREATE POST MODAL -->
 <div class="modal-overlay" id="createModal" style="display:none;">
     <div class="create-modal">
@@ -511,7 +734,7 @@
 
 <!-- EDIT PROFILE MODAL -->
 <div class="modal-overlay" id="editProfileModal" style="display: none;">
-    <div class="modal" style="max-width: 500px; max-height: 85vh; overflow-y: auto;">
+    <div class="modal" style="max-width: 500px;">
         <div class="modal-close"><button onclick="app.closeProfileSettings()">✕</button></div>
         <h2 style="font-weight: 700; margin-bottom: 20px;">✏️ Edit Profile</h2>
         
@@ -527,7 +750,7 @@
         
         <div style="margin-bottom: 20px;">
             <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Bio</label>
-            <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box; min-height: 80px; resize: vertical;"></textarea>
+            <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
         </div>
         
         <div style="display: flex; gap: 10px;">
@@ -551,230 +774,6 @@
         </div>
     </div>
 </div>
-
-
-<!-- ==================== NEW FEATURE MODALS ==================== -->
-
-<!-- EMOJI PICKER MODAL -->
-<div class="modal-overlay" id="emojiPickerModal" style="display:none;">
-    <div class="modal emoji-picker-modal">
-        <div class="modal-header">
-            <h3>React with emoji</h3>
-            <button onclick="app.closeEmojiPicker()" class="modal-close">✕</button>
-        </div>
-        <div class="emoji-picker-grid">
-            <button class="emoji-btn" onclick="app.addReaction('👍')">👍</button>
-            <button class="emoji-btn" onclick="app.addReaction('❤️')">❤️</button>
-            <button class="emoji-btn" onclick="app.addReaction('😂')">😂</button>
-            <button class="emoji-btn" onclick="app.addReaction('😢')">😢</button>
-            <button class="emoji-btn" onclick="app.addReaction('🔥')">🔥</button>
-            <button class="emoji-btn" onclick="app.addReaction('🎉')">🎉</button>
-            <button class="emoji-btn" onclick="app.addReaction('😡')">😡</button>
-            <button class="emoji-btn" onclick="app.addReaction('👏')">👏</button>
-            <button class="emoji-btn" onclick="app.addReaction('💯')">💯</button>
-            <button class="emoji-btn" onclick="app.addReaction('😍')">😍</button>
-            <button class="emoji-btn" onclick="app.addReaction('🤔')">🤔</button>
-            <button class="emoji-btn" onclick="app.addReaction('🙏')">🙏</button>
-        </div>
-    </div>
-</div>
-
-<!-- VOICE RECORDING MODAL -->
-<div class="modal-overlay" id="voiceRecordingModal" style="display:none;">
-    <div class="modal voice-recording-modal">
-        <div class="modal-header">
-            <h3>Recording Audio</h3>
-        </div>
-        <div class="voice-recording-content">
-            <div class="recording-timer" id="recordingTimer">0:00</div>
-            <div class="recording-visualizer">
-                <div class="visualizer-bar"></div>
-                <div class="visualizer-bar"></div>
-                <div class="visualizer-bar"></div>
-                <div class="visualizer-bar"></div>
-                <div class="visualizer-bar"></div>
-            </div>
-            <div class="recording-buttons">
-                <button onclick="app.cancelVoiceRecording()" class="btn-secondary">Cancel</button>
-                <button onclick="app.stopVoiceRecording()" class="btn-primary">Send</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- CALL UI MODAL -->
-<div class="modal-overlay" id="callModal" style="display:none;">
-    <div class="call-container">
-        <video id="remoteVideo" class="video-remote" autoplay playsinline></video>
-        <video id="localVideo" class="video-local" autoplay muted playsinline></video>
-        
-        <div class="call-header">
-            <h3 id="callName">Caller</h3>
-            <div class="call-duration" id="callDuration">00:00</div>
-        </div>
-        
-        <div class="call-controls">
-            <button id="toggleMicBtn" onclick="app.toggleCallMic()" class="call-control-btn">🎤</button>
-            <button id="toggleCameraBtn" onclick="app.toggleCallCamera()" class="call-control-btn">📹</button>
-            <button onclick="app.endCall()" class="call-control-btn call-end-btn">✕</button>
-        </div>
-    </div>
-</div>
-
-<!-- INCOMING CALL NOTIFICATION -->
-<div id="incomingCallNotification" class="incoming-call-notification" style="display:none;">
-    <div class="incoming-call-content">
-        <div class="incoming-call-avatar">
-            <img id="incomingAvatar" src="" alt="Caller">
-        </div>
-        <h3 id="incomingName">Caller Name</h3>
-        <p id="incomingType">is calling...</p>
-        
-        <div class="incoming-call-actions">
-            <button onclick="app.declineIncomingCall()" class="btn-decline">Decline</button>
-            <button onclick="app.acceptIncomingCall()" class="btn-accept">Accept</button>
-        </div>
-    </div>
-</div>
-
-<!-- MEDIA GALLERY MODAL -->
-<div class="modal-overlay" id="mediaGalleryModal" style="display:none;">
-    <div class="modal media-gallery-modal">
-        <div class="modal-header">
-            <h3>Media Gallery</h3>
-            <button onclick="app.closeMediaGallery()" class="modal-close">✕</button>
-        </div>
-        <div id="mediaGalleryGrid" class="media-gallery-grid">
-            <!-- Images will be inserted here -->
-        </div>
-    </div>
-</div>
-
-<!-- IMAGE VIEWER MODAL -->
-<div class="modal-overlay" id="imageViewerModal" style="display:none;">
-    <div class="image-viewer-container">
-        <button onclick="app.closeImageViewer()" class="close-btn">✕</button>
-        <img id="imageViewerSrc" src="" alt="Image">
-    </div>
-</div>
-
-<!-- MESSAGE ACTION MENU -->
-<div id="messageActionMenu" class="message-action-menu" style="display:none;">
-    <button onclick="app.copyMessage()" class="menu-item">📋 Copy</button>
-    <button onclick="app.editMessage()" class="menu-item">✏️ Edit</button>
-    <button onclick="app.pinMessage()" class="menu-item">📌 Pin</button>
-    <button onclick="app.forwardMessage()" class="menu-item">↪️ Forward</button>
-    <button onclick="app.deleteMessage()" class="menu-item delete">🗑️ Delete</button>
-</div>
-
-<!-- FORWARD MESSAGE MODAL -->
-<div class="modal-overlay" id="forwardModal" style="display:none;">
-    <div class="modal forward-modal">
-        <div class="modal-header">
-            <h3>Forward to...</h3>
-            <button onclick="app.closeForwardModal()" class="modal-close">✕</button>
-        </div>
-        <div id="forwardContactsList" class="forward-contacts-list">
-            <!-- Contacts will be listed here -->
-        </div>
-    </div>
-</div>
-
-<!-- PINNED MESSAGES BANNER -->
-<div id="pinnedBanner" class="pinned-banner" style="display:none;">
-    <div class="pinned-header">
-        <span>📌 Pinned Messages</span>
-        <button onclick="app.closePinnedBanner()">✕</button>
-    </div>
-    <div id="pinnedContent" class="pinned-content"></div>
-</div>
-
-<!-- CHAT INFO SIDEBAR -->
-<div id="chatInfoSidebar" class="chat-info-sidebar" style="display:none;">
-    <div class="sidebar-header">
-        <h3>Chat Info</h3>
-        <button onclick="app.closeChatInfo()" class="close-btn">✕</button>
-    </div>
-    
-    <div class="chat-info-content">
-        <img id="infoAvatar" class="info-avatar" src="" alt="Avatar">
-        <h4 id="infoName">Chat Name</h4>
-        <p id="infoStatus">Online</p>
-        
-        <div class="info-section">
-            <h5>Media</h5>
-            <button onclick="app.showMediaGallery()" class="btn-small">View All</button>
-        </div>
-        
-        <div class="info-section">
-            <h5>Actions</h5>
-            <button onclick="app.clearChat()" class="btn-small">Clear Chat</button>
-            <button onclick="app.muteChat()" class="btn-small">Mute</button>
-            <button onclick="app.blockUser()" class="btn-small btn-danger">Block</button>
-        </div>
-    </div>
-</div>
-
-<!-- TYPING INDICATOR -->
-<div id="typingIndicator" class="typing-indicator" style="display:none;">
-    <span id="typingUserName">User</span> is typing
-    <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
-</div>
-
-<!-- SCROLL TO LATEST BUTTON -->
-<button id="scrollToLatestBtn" class="scroll-to-latest-btn" onclick="app.scrollToLatest()" style="display:none;">
-    <span>⬇️ New Messages</span>
-</button>
-
-<!-- LINK PREVIEW CARD TEMPLATE -->
-<template id="linkPreviewTemplate">
-    <div class="link-preview-card">
-        <div class="link-preview-image">
-            <img class="link-preview-img" src="" alt="Preview">
-        </div>
-        <div class="link-preview-content">
-            <h4 class="link-preview-title">Title</h4>
-            <p class="link-preview-desc">Description</p>
-            <a class="link-preview-url" href="" target="_blank">Open Link</a>
-        </div>
-    </div>
-</template>
-
-<!-- VOICE MESSAGE PLAYER TEMPLATE -->
-<template id="voiceMessageTemplate">
-    <div class="voice-message">
-        <button class="voice-play-btn" onclick="app.playVoiceMessage(event)">▶</button>
-        <div class="voice-progress">
-            <div class="progress-bar"></div>
-        </div>
-        <span class="voice-duration">0:00</span>
-    </div>
-</template>
-
-<!-- REACTIONS DISPLAY TEMPLATE -->
-<template id="reactionTemplate">
-    <div class="reaction-badge">
-        <span class="reaction-emoji">👍</span>
-        <span class="reaction-count">1</span>
-    </div>
-</template>
-
-<!-- MESSAGE DELIVERY STATUS -->
-<template id="deliveryStatusTemplate">
-    <span class="delivery-status">✓</span>
-</template>
-
-<!-- ERROR/SUCCESS TOASTS -->
-<div id="errorToast" class="toast error-toast" style="display:none;">
-    <span id="errorToastMessage">Error message</span>
-</div>
-
-<div id="successToast" class="toast success-toast" style="display:none;">
-    <span id="successToastMessage">Success message</span>
-</div>
-
-<!-- AUDIO ELEMENT FOR RINGTONE -->
-<audio id="ringtoneAudio" src="data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==" style="display:none;"></audio>
 
 <!-- DEVELOPER INFO MODAL -->
 <div class="modal-overlay" id="developerModal" style="display:none;">
