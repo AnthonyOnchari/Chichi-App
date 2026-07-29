@@ -10983,6 +10983,7 @@ app.updateEmailRecipients = function() {
     }
 };
 
+
 app.searchUsersForEmail = function(query) {
     if (!query.trim()) {
         document.getElementById('emailUserResults').style.display = 'none';
@@ -10999,8 +11000,17 @@ app.searchUsersForEmail = function(query) {
         Object.entries(users).forEach(function(entry) {
             const uid = entry[0];
             const user = entry[1];
-            if (user.name.toLowerCase().includes(searchQuery) || user.email.toLowerCase().includes(searchQuery)) {
-                html += '<div style="padding:10px;border-bottom:1px solid #e5e7eb;cursor:pointer;background:white;" onclick="app.selectEmailUser(\'' + uid + '\', \'' + user.name.replace(/'/g, "\\'") + '\', \'' + user.email + '\')" onmouseover="this.style.background=\'#f3f4f6\'" onmouseout="this.style.background=\'white\'"><div style="font-weight:600;font-size:14px;color:#1a202c;">' + user.name + '</div><div style="font-size:12px;color:#6b7280;">' + user.email + '</div></div>';
+            
+            // Add null checks to prevent errors
+            if (!user || !user.name || !user.email) {
+                return; // Skip this user if missing data
+            }
+            
+            const userName = user.name || '';
+            const userEmail = user.email || '';
+            
+            if (userName.toLowerCase().includes(searchQuery) || userEmail.toLowerCase().includes(searchQuery)) {
+                html += '<div style="padding:10px;border-bottom:1px solid #e5e7eb;cursor:pointer;background:white;" onclick="app.selectEmailUser(\'' + uid + '\', \'' + userName.replace(/'/g, "\\'") + '\', \'' + userEmail + '\')" onmouseover="this.style.background=\'#f3f4f6\'" onmouseout="this.style.background=\'white\'"><div style="font-weight:600;font-size:14px;color:#1a202c;">' + userName + '</div><div style="font-size:12px;color:#6b7280;">' + userEmail + '</div></div>';
             }
         });
         
