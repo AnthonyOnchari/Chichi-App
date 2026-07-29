@@ -8718,7 +8718,7 @@ const messagesModule = (() => {
         <div class="favorites-list">
           ${favoriteChats.length > 0 ? favoriteChats.map(partnerId => `
             <div class="favorite-chat-item" data-chat-partner-id="${partnerId}">
-              <img class="chat-avatar" src="" alt="${partnerId}">
+              <img class="chat-avatar" src="path/to/avatar/${partnerId}.jpg" alt="${partnerId}">
               <div class="chat-info">
                 <p class="chat-name">${partnerId}</p>
                 <p class="last-message">Last message...</p>
@@ -10968,671 +10968,326 @@ app.displayVideoCallUI = function(state) {
     callUI.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;';
     callUI.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;width:100%;"><video id="remoteVideo" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;bottom:100px;right:20px;width:100px;height:133px;background:#1f2937;border-radius:8px;overflow:hidden;"><video id="miniLocalVideo" style="width:100%;height:100%;object-fit:cover;"></video></div></div><div style="background:rgba(0,0,0,0.7);padding:16px;display:flex;gap:12px;justify-content:center;width:100%;"><button style="width:50px;height:50px;border-radius:50%;background:#475569;color:white;border:none;font-size:20px;cursor:pointer;">📹</button><button style="width:50px;height:50px;border-radius:50%;background:#475569;color:white;border:none;font-size:20px;cursor:pointer;">🎤</button><button onclick="app.endVoiceCall();" style="width:50px;height:50px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:20px;cursor:pointer;">✕</button></div>';
     document.body.appendChild(callUI);
-};
-// ==================== WHATSAPP-LIKE MESSAGING FUNCTIONS ====================
+// ============ PASTE THIS AT THE END OF YOUR app.js (BEFORE CLOSING }) ============
 
-// MESSAGE REPLY/QUOTE FEATURE
-app.replyToMessage = function(msgId) {
-    const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
-    if (!msgElement) return;
-    
-    const messageText = msgElement.querySelector('.message-text')?.innerText || 'Original message';
-    const senderName = msgElement.querySelector('.sender-name')?.innerText || 'User';
-    
-    // Store reply context
-    app.replyContext = {
-        msgId: msgId,
-        text: messageText,
-        sender: senderName,
-        timestamp: Date.now()
-    };
-    
-    // Show reply preview
-    const replyPreview = document.createElement('div');
-    replyPreview.id = 'replyPreview';
-    replyPreview.style.cssText = 'padding:12px;background:#f0f7ff;border-left:4px solid #0088cc;margin-bottom:8px;border-radius:4px;';
-    replyPreview.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-                <div style="color:#0088cc;font-weight:600;font-size:12px;">${senderName}</div>
-                <div style="color:#666;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${messageText.substring(0, 50)}</div>
-            </div>
-            <button onclick="app.cancelReply()" style="background:none;border:none;color:#0088cc;cursor:pointer;font-size:16px;">✕</button>
-        </div>
-    `;
-    
-    // Add above message input
-    const chatInput = document.getElementById('chatInput');
-    const existing = document.getElementById('replyPreview');
-    if (existing) existing.remove();
-    chatInput.parentNode.insertBefore(replyPreview, chatInput);
+// ============ ADMIN EMAIL SYSTEM - BREVO VERSION ============
+// Uses BREVO API via Vercel function
+// NO Firebase Cloud Functions = NO CHARGES!
+
+app.openAdminEmailModal = function() {
+    document.getElementById('adminEmailModal').style.display = 'flex';
 };
 
-app.cancelReply = function() {
-    app.replyContext = null;
-    const preview = document.getElementById('replyPreview');
-    if (preview) preview.remove();
-};
-
-// STAR MESSAGE FEATURE
-app.starMessage = function(msgId) {
-    if (!app.user) return;
+app.updateEmailRecipients = function() {
+    const type = document.getElementById('emailRecipientType').value;
+    const specificDiv = document.getElementById('emailSpecificUserDiv');
     
-    const db = firebase.database();
-    const starredPath = `starredMessages/${app.user.uid}/${msgId}`;
-    
-    db.ref(starredPath).set({
-        messageId: msgId,
-        chatId: app.currentChatId,
-        starredAt: Date.now(),
-        preview: app.getMessagePreview(msgId)
-    }).then(() => {
-        app.showToast('⭐ Message starred!', 'success');
-    });
+    if (type === 'specific') {
+        specificDiv.style.display = 'block';
+    } else {
+        specificDiv.style.display = 'none';
+    }
 };
 
-app.getMessagePreview = function(msgId) {
-    const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
-    return msgElement?.innerText.substring(0, 50) || 'Message';
-};
-
-// TRANSLATE MESSAGE
-app.translateMessage = function(msgId) {
-    const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
-    const text = msgElement?.innerText;
-    
-    if (!text) return;
-    
-    // Using simple translation (would use Google Translate API in production)
-    fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=en|sw')
-        .then(res => res.json())
-        .then(data => {
-            const translated = data.responseData.translatedText;
-            const overlay = document.getElementById('translationOverlay');
-            document.getElementById('translationContent').innerHTML = translated;
-            overlay.style.display = 'flex';
-            setTimeout(() => overlay.style.display = 'none', 5000);
-        })
-        .catch(() => app.showToast('Translation failed', 'error'));
-};
-
-app.closeTranslation = function() {
-    document.getElementById('translationOverlay').style.display = 'none';
-};
-
-// GROUP CHAT FEATURES
-app.showGroupCreation = function() {
-    const modal = document.getElementById('groupCreationModal');
-    modal.style.display = 'flex';
-    
-    // Load users for member selection
-    if (!app.user) return;
-    const db = firebase.database();
-    db.ref('users').once('value', snap => {
-        const users = snap.val() || {};
-        const container = document.getElementById('groupMembersCheckbox');
-        container.innerHTML = '';
-        
-        Object.keys(users).forEach(uid => {
-            if (uid === app.user.uid) return; // Exclude self
-            const user = users[uid];
-            const label = document.createElement('label');
-            label.style.cssText = 'display:flex;align-items:center;padding:8px;cursor:pointer;border-bottom:1px solid #f3f4f6;';
-            label.innerHTML = `
-                <input type="checkbox" data-uid="${uid}" style="width:18px;height:18px;margin-right:12px;cursor:pointer;">
-                <div style="flex:1;">
-                    <div style="font-weight:600;font-size:13px;">${user.name || 'User'}</div>
-                    <div style="font-size:11px;color:#999;">@${user.username || 'unknown'}</div>
-                </div>
-            `;
-            container.appendChild(label);
-        });
-    });
-};
-
-app.closeGroupCreation = function() {
-    document.getElementById('groupCreationModal').style.display = 'none';
-};
-
-app.createGroup = function() {
-    const name = document.getElementById('groupNameInput').value.trim();
-    const description = document.getElementById('groupDescInput').value.trim();
-    
-    if (!name) {
-        app.showToast('Group name required', 'error');
+app.searchUsersForEmail = function(query) {
+    if (!query.trim()) {
+        document.getElementById('emailUserResults').style.display = 'none';
         return;
     }
-    
-    // Get selected members
-    const checkboxes = document.querySelectorAll('#groupMembersCheckbox input[type="checkbox"]:checked');
-    const members = [app.user.uid];
-    checkboxes.forEach(cb => members.push(cb.dataset.uid));
-    
-    if (members.length < 2) {
-        app.showToast('Select at least 1 member', 'error');
-        return;
-    }
-    
-    const db = firebase.database();
-    const groupId = db.ref('chats').push().key;
-    
-    const groupData = {
-        id: groupId,
-        type: 'group',
-        name: name,
-        description: description,
-        members: members,
-        admins: [app.user.uid],
-        createdAt: Date.now(),
-        createdBy: app.user.uid,
-        muted: false,
-        archived: false,
-        disappearingMessages: 0
-    };
-    
-    db.ref(`chats/${groupId}`).set(groupData).then(() => {
-        app.closeGroupCreation();
-        app.openChat(groupId);
-        app.showToast('✅ Group created!', 'success');
-    });
-};
-
-// STARRED MESSAGES
-app.showStarredMessages = function() {
-    if (!app.user) return;
-    
-    const modal = document.getElementById('starredMessagesModal');
-    modal.style.display = 'flex';
-    
-    const db = firebase.database();
-    db.ref(`starredMessages/${app.user.uid}`).once('value', snap => {
-        const starred = snap.val() || {};
-        const container = document.getElementById('starredMessagesList');
-        container.innerHTML = '';
-        
-        Object.entries(starred).forEach(([msgId, data]) => {
-            const msgElement = document.createElement('div');
-            msgElement.style.cssText = 'padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;';
-            msgElement.innerHTML = `
-                <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-                    <span style="font-weight:600;font-size:12px;">⭐ ${data.preview}</span>
-                    <button onclick="app.unstarMessage('${msgId}')" style="background:none;border:none;color:#666;cursor:pointer;font-size:14px;">✕</button>
-                </div>
-                <div style="font-size:11px;color:#999;">${new Date(data.starredAt).toLocaleString()}</div>
-            `;
-            container.appendChild(msgElement);
-        });
-    });
-};
-
-app.unstarMessage = function(msgId) {
-    const db = firebase.database();
-    db.ref(`starredMessages/${app.user.uid}/${msgId}`).remove();
-};
-
-app.closeStarredMessages = function() {
-    document.getElementById('starredMessagesModal').style.display = 'none';
-};
-
-// USER PROFILE
-app.showUserProfile = function(uid) {
-    const modal = document.getElementById('userProfileModal');
-    modal.style.display = 'flex';
-    app.currentProfileUid = uid;
-    
-    const db = firebase.database();
-    db.ref(`users/${uid}`).once('value', snap => {
-        const user = snap.val();
-        if (user) {
-            document.getElementById('profileImage').src = user.profilePic || '👤';
-            document.getElementById('profileName').innerText = user.name || 'User';
-            document.getElementById('profileUsername').innerText = `@${user.username || 'unknown'}`;
-            document.getElementById('profileBio').innerText = user.bio || 'No bio';
-            document.getElementById('profilePhone').innerText = user.phone || 'Not shared';
-            document.getElementById('profileStatus').innerText = user.online ? '🟢 Online' : `⚪ Offline (Last seen: ${new Date(user.lastSeen).toLocaleString()})`;
-        }
-    });
-};
-
-app.closeUserProfile = function() {
-    document.getElementById('userProfileModal').style.display = 'none';
-};
-
-app.blockUser = function() {
-    if (!app.user || !app.currentProfileUid) return;
-    
-    const db = firebase.database();
-    db.ref(`blockedUsers/${app.user.uid}/${app.currentProfileUid}`).set({
-        blockedAt: Date.now(),
-        reason: 'Blocked by user'
-    }).then(() => {
-        app.closeUserProfile();
-        app.showToast('🚫 User blocked', 'success');
-    });
-};
-
-// ADVANCED SEARCH
-app.showAdvancedSearch = function() {
-    document.getElementById('advancedSearchModal').style.display = 'flex';
-};
-
-app.closeAdvancedSearch = function() {
-    document.getElementById('advancedSearchModal').style.display = 'none';
-};
-
-app.performAdvancedSearch = function() {
-    const text = document.getElementById('searchText').value.toLowerCase();
-    const from = document.getElementById('searchFrom').value.toLowerCase();
-    const type = document.getElementById('searchType').value;
-    const fromDate = document.getElementById('searchFromDate').value;
-    const toDate = document.getElementById('searchToDate').value;
-    
-    if (!app.currentChatId) return;
-    
-    const db = firebase.database();
-    db.ref(`messages/${app.currentChatId}`).once('value', snap => {
-        const messages = snap.val() || {};
-        const results = [];
-        
-        Object.entries(messages).forEach(([msgId, msg]) => {
-            // Filter by text
-            if (text && !msg.text.toLowerCase().includes(text)) return;
-            
-            // Filter by sender
-            if (from && !msg.sender.toLowerCase().includes(from)) return;
-            
-            // Filter by type
-            if (type) {
-                if (type === 'text' && msg.media) return;
-                if (type !== 'text' && (!msg.media || msg.media.type !== type)) return;
-            }
-            
-            // Filter by date
-            const msgDate = new Date(msg.timestamp).toISOString().split('T')[0];
-            if (fromDate && msgDate < fromDate) return;
-            if (toDate && msgDate > toDate) return;
-            
-            results.push(msg);
-        });
-        
-        // Display results
-        app.displaySearchResults(results);
-        app.closeAdvancedSearch();
-    });
-};
-
-app.displaySearchResults = function(results) {
-    const searchResults = document.createElement('div');
-    searchResults.style.cssText = 'padding:12px;background:#f0f7ff;border-radius:8px;margin-bottom:16px;';
-    searchResults.innerHTML = `
-        <div style="font-weight:600;margin-bottom:12px;">🔍 Found ${results.length} results</div>
-        <div style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;">
-            ${results.map(msg => `
-                <div onclick="app.scrollToMessage('${msg.id}')" style="padding:8px;background:white;border-radius:6px;cursor:pointer;border-left:3px solid #0088cc;font-size:12px;">
-                    <div style="font-weight:600;">${msg.sender}</div>
-                    <div style="color:#666;">${msg.text.substring(0, 60)}</div>
-                </div>
-            `).join('')}
-        </div>
-    `;
-    
-    const chatMessages = document.getElementById('chatMessages');
-    chatMessages.parentNode.insertBefore(searchResults, chatMessages);
-};
-
-// NOTIFICATION SETTINGS
-app.showNotificationSettings = function(chatId) {
-    const modal = document.getElementById('notificationSettingsModal');
-    modal.style.display = 'flex';
-    app.currentNotifChatId = chatId;
-    
-    if (!app.user) return;
-    
-    const db = firebase.database();
-    
-    // Load chat name
-    db.ref(`chats/${chatId}/name`).once('value', snap => {
-        document.getElementById('notifChatName').innerText = snap.val() || 'Chat';
-    });
-    
-    // Load existing settings
-    db.ref(`notificationSettings/${app.user.uid}/${chatId}`).once('value', snap => {
-        const settings = snap.val() || {};
-        document.getElementById('notifSound').checked = settings.sound !== false;
-        document.getElementById('notifVibration').checked = settings.vibration !== false;
-        document.getElementById('notifPreview').checked = settings.preview !== false;
-        document.getElementById('muteUntil').value = settings.muteUntil || '0';
-    });
-};
-
-app.closeNotificationSettings = function() {
-    document.getElementById('notificationSettingsModal').style.display = 'none';
-};
-
-app.saveNotificationSettings = function() {
-    if (!app.user || !app.currentNotifChatId) return;
-    
-    const db = firebase.database();
-    const settings = {
-        sound: document.getElementById('notifSound').checked,
-        vibration: document.getElementById('notifVibration').checked,
-        preview: document.getElementById('notifPreview').checked,
-        muteUntil: parseInt(document.getElementById('muteUntil').value)
-    };
-    
-    db.ref(`notificationSettings/${app.user.uid}/${app.currentNotifChatId}`).set(settings).then(() => {
-        app.closeNotificationSettings();
-        app.showToast('✅ Settings saved!', 'success');
-    });
-};
-
-// BLOCK LIST
-app.showBlockList = function() {
-    if (!app.user) return;
-    
-    const modal = document.getElementById('blockListModal');
-    modal.style.display = 'flex';
-    
-    const db = firebase.database();
-    db.ref(`blockedUsers/${app.user.uid}`).once('value', snap => {
-        const blocked = snap.val() || {};
-        const container = document.getElementById('blockListContainer');
-        container.innerHTML = '';
-        
-        Object.keys(blocked).forEach(uid => {
-            db.ref(`users/${uid}`).once('value', userSnap => {
-                const user = userSnap.val();
-                const item = document.createElement('div');
-                item.style.cssText = 'padding:12px;border:1px solid #e5e7eb;border-radius:8px;display:flex;justify-content:space-between;align-items:center;';
-                item.innerHTML = `
-                    <div style="flex:1;">
-                        <div style="font-weight:600;font-size:13px;">${user.name}</div>
-                        <div style="font-size:11px;color:#999;">@${user.username}</div>
-                    </div>
-                    <button onclick="app.unblockUser('${uid}')" style="padding:6px 12px;background:#0088cc;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">Unblock</button>
-                `;
-                container.appendChild(item);
-            });
-        });
-    });
-};
-
-app.unblockUser = function(uid) {
-    if (!app.user) return;
-    
-    const db = firebase.database();
-    db.ref(`blockedUsers/${app.user.uid}/${uid}`).remove().then(() => {
-        app.showToast('✅ User unblocked', 'success');
-        app.showBlockList(); // Refresh
-    });
-};
-
-app.closeBlockList = function() {
-    document.getElementById('blockListModal').style.display = 'none';
-};
-
-// DOCUMENT SHARING
-app.shareDocument = function(file) {
-    if (!app.user || !app.currentChatId) return;
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const db = firebase.database();
-        const msgId = db.ref(`messages/${app.currentChatId}`).push().key;
-        
-        const message = {
-            id: msgId,
-            sender: app.user.uid,
-            text: `📄 ${file.name}`,
-            media: {
-                type: 'document',
-                name: file.name,
-                size: file.size,
-                url: e.target.result // Base64
-            },
-            timestamp: Date.now(),
-            status: 'sent',
-            replyTo: app.replyContext?.msgId || null
-        };
-        
-        db.ref(`messages/${app.currentChatId}/${msgId}`).set(message);
-    };
-    reader.readAsDataURL(file);
-};
-
-app.viewDocument = function(url, name) {
-    document.getElementById('documentName').innerText = name;
-    document.getElementById('documentFrame').src = url;
-    document.getElementById('documentViewerModal').style.display = 'flex';
-};
-
-app.closeDocumentViewer = function() {
-    document.getElementById('documentViewerModal').style.display = 'none';
-};
-
-// LOCATION SHARING
-app.showLocationPicker = function() {
-    document.getElementById('locationPickerModal').style.display = 'flex';
-    
-    // Initialize map (using simple implementation)
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            document.getElementById('selectedLocation').innerText = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-            app.selectedLocation = { lat, lng };
-        });
-    }
-};
-
-app.closeLocationPicker = function() {
-    document.getElementById('locationPickerModal').style.display = 'none';
-};
-
-app.sendLocation = function() {
-    if (!app.selectedLocation) {
-        app.showToast('Select location first', 'error');
-        return;
-    }
-    
-    if (!app.user || !app.currentChatId) return;
-    
-    const db = firebase.database();
-    const msgId = db.ref(`messages/${app.currentChatId}`).push().key;
-    
-    const message = {
-        id: msgId,
-        sender: app.user.uid,
-        text: '📍 Location',
-        media: {
-            type: 'location',
-            latitude: app.selectedLocation.lat,
-            longitude: app.selectedLocation.lng
-        },
-        timestamp: Date.now(),
-        status: 'sent'
-    };
-    
-    db.ref(`messages/${app.currentChatId}/${msgId}`).set(message);
-    app.closeLocationPicker();
-};
-
-// CONTACT SHARING
-app.showContactSharing = function() {
-    document.getElementById('contactSharingModal').style.display = 'flex';
-    
-    if (!app.user) return;
     
     const db = firebase.database();
     db.ref('users').once('value', snap => {
         const users = snap.val() || {};
-        const container = document.getElementById('contactsList');
-        container.innerHTML = '';
+        const results = document.getElementById('emailUserResults');
+        const searchQuery = query.toLowerCase();
         
+        let html = '';
         Object.entries(users).forEach(([uid, user]) => {
-            if (uid === app.user.uid) return;
-            
-            const item = document.createElement('div');
-            item.style.cssText = 'padding:12px;border:1px solid #e5e7eb;border-radius:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;';
-            item.innerHTML = `
-                <div style="flex:1;">
-                    <div style="font-weight:600;font-size:13px;">${user.name}</div>
-                    <div style="font-size:11px;color:#999;">@${user.username}</div>
-                </div>
-                <button onclick="app.shareContact('${uid}', '${user.name}')" style="padding:6px 12px;background:#0088cc;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;">Share</button>
-            `;
-            container.appendChild(item);
+            if (user.name.toLowerCase().includes(searchQuery) || 
+                user.email.toLowerCase().includes(searchQuery)) {
+                html += `<div style="padding:10px;border-bottom:1px solid #e5e7eb;cursor:pointer;" 
+                    onclick="app.selectEmailUser('${uid}', '${user.name}', '${user.email}')">
+                    <div style="font-weight:600;font-size:14px;">${user.name}</div>
+                    <div style="font-size:12px;color:#6b7280;">${user.email}</div>
+                </div>`;
+            }
         });
-    });
-};
-
-app.shareContact = function(uid, name) {
-    if (!app.user || !app.currentChatId) return;
-    
-    const db = firebase.database();
-    const msgId = db.ref(`messages/${app.currentChatId}`).push().key;
-    
-    const message = {
-        id: msgId,
-        sender: app.user.uid,
-        text: `📇 ${name}`,
-        media: {
-            type: 'contact',
-            contactUid: uid,
-            contactName: name
-        },
-        timestamp: Date.now(),
-        status: 'sent'
-    };
-    
-    db.ref(`messages/${app.currentChatId}/${msgId}`).set(message);
-    app.closeContactSharing();
-};
-
-app.closeContactSharing = function() {
-    document.getElementById('contactSharingModal').style.display = 'none';
-};
-
-// DISAPPEARING MESSAGES
-app.setDisappearingMessages = function(seconds) {
-    if (!app.user || !app.currentChatId) return;
-    
-    const db = firebase.database();
-    db.ref(`chats/${app.currentChatId}/disappearingMessages`).set(seconds).then(() => {
-        if (seconds === 0) {
-            app.showToast('Disappearing messages disabled', 'success');
+        
+        if (html) {
+            results.innerHTML = html;
+            results.style.display = 'block';
         } else {
-            const hours = Math.floor(seconds / 3600);
-            app.showToast(`⏲️ Messages disappear in ${hours > 0 ? hours + 'h' : seconds + 's'}`, 'success');
+            results.style.display = 'none';
         }
     });
 };
 
-app.startDisappearingTimer = function() {
-    if (!app.currentChatId) return;
-    
-    const db = firebase.database();
-    db.ref(`chats/${app.currentChatId}/disappearingMessages`).on('value', snap => {
-        const seconds = snap.val() || 0;
-        if (seconds === 0) {
-            document.getElementById('disappearingMessagesIndicator').style.display = 'none';
-        } else {
-            document.getElementById('disappearingMessagesIndicator').style.display = 'block';
-            let timeLeft = seconds;
-            setInterval(() => {
-                timeLeft--;
-                if (timeLeft >= 0) {
-                    document.getElementById('disappearingTimeLeft').innerText = timeLeft;
-                }
-            }, 1000);
-        }
-    });
+app.selectEmailUser = function(uid, name, email) {
+    document.getElementById('selectedEmailUserId').value = uid;
+    document.getElementById('emailUserSearch').value = `${name} (${email})`;
+    document.getElementById('emailUserResults').style.display = 'none';
 };
-// ============= FIX FORGOT PASSWORD =============
 
-// Make sure this is at the end of app.js
-app.sendForgotPasswordEmail = function() {
-    const email = document.getElementById('forgotPasswordEmail').value.trim();
+app.previewEmail = function() {
+    const recipient = document.getElementById('emailRecipientType').value;
+    const subject = document.getElementById('emailSubject').value || 'CHICHI Message';
+    const content = document.getElementById('emailContent').value || 'Hello from CHICHI!';
+    const hasCTA = document.getElementById('emailAddCTA').checked;
+    const ctaText = document.getElementById('emailCTAText').value;
+    const ctaURL = document.getElementById('emailCTAURL').value;
     
-    if (!email) {
-        alert('Please enter your email address');
+    const userName = 'Friend';
+    let processedContent = content.replace('{{USER_NAME}}', userName);
+    
+    let ctaHTML = '';
+    if (hasCTA && ctaText && ctaURL) {
+        ctaHTML = `<a href="${ctaURL}" class="email-button">${ctaText}</a>`;
+    }
+    
+    const emailHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+                .email-wrapper { background: #f5f5f5; padding: 20px; }
+                .email-container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                .email-header { background: linear-gradient(135deg, #0A0E1F, #2E5BFF); color: white; padding: 40px 20px; text-align: center; }
+                .email-logo { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 10px; }
+                .email-tagline { font-size: 12px; opacity: 0.9; letter-spacing: 1px; text-transform: uppercase; }
+                .email-body { padding: 40px 30px; }
+                .email-greeting { font-size: 18px; font-weight: 600; color: #1a202c; margin-bottom: 16px; }
+                .email-content { font-size: 14px; line-height: 1.6; color: #4b5563; margin-bottom: 24px; white-space: pre-wrap; word-break: break-word; }
+                .email-button { display: inline-block; background: #2E5BFF; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; margin: 24px 0; }
+                .email-button:hover { background: #1e40af; }
+                .email-footer { background: #f9fafb; padding: 24px 30px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; }
+                .email-footer-logo { font-weight: 700; color: #2E5BFF; margin-bottom: 8px; }
+                .email-divider { height: 1px; background: #e5e7eb; margin: 24px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="email-wrapper">
+                <div class="email-container">
+                    <div class="email-header">
+                        <div class="email-logo">CHICHI</div>
+                        <div class="email-tagline">Social Community</div>
+                    </div>
+                    <div class="email-body">
+                        <div class="email-greeting">Hey ${userName},</div>
+                        <div class="email-content">${processedContent}</div>
+                        ${ctaHTML}
+                        <div class="email-divider"></div>
+                        <div class="email-content" style="font-size: 13px; margin-bottom: 16px;">
+                            Questions? Reply to this email or visit us at <strong>chichi.buzz</strong>
+                        </div>
+                    </div>
+                    <div class="email-footer">
+                        <div class="email-footer-logo">© 2026 Onchari Group • CHICHI</div>
+                        <div style="margin-top: 12px; line-height: 1.5;">
+                            📱 Mobile: +254 701 807 001<br>
+                            📧 Email: info.onchari@gmail.com<br>
+                            🌐 Website: chichi.buzz
+                        </div>
+                        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                            You're receiving this because you're part of the CHICHI community.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    document.getElementById('emailPreviewModal').style.display = 'flex';
+    const frame = document.getElementById('emailPreviewFrame');
+    frame.contentDocument.open();
+    frame.contentDocument.write(emailHTML);
+    frame.contentDocument.close();
+};
+
+app.sendBulkEmail = function() {
+    const recipientType = document.getElementById('emailRecipientType').value;
+    const subject = document.getElementById('emailSubject').value.trim();
+    const content = document.getElementById('emailContent').value.trim();
+    const hasCTA = document.getElementById('emailAddCTA').checked;
+    const ctaText = document.getElementById('emailCTAText').value;
+    const ctaURL = document.getElementById('emailCTAURL').value;
+    
+    if (!subject || !content) {
+        app.toast('Please fill in subject and message', 'error');
         return;
     }
     
-    const btn = document.querySelector('#forgotPasswordModal button[type="submit"]');
+    if (hasCTA && (!ctaText || !ctaURL)) {
+        app.toast('Please fill in CTA button text and URL', 'error');
+        return;
+    }
+    
+    if (recipientType === 'specific') {
+        const userId = document.getElementById('selectedEmailUserId').value;
+        if (!userId) {
+            app.toast('Please select a user', 'error');
+            return;
+        }
+    }
+    
+    const btn = event.target;
     const originalText = btn.innerText;
     btn.innerText = '⏳ Sending...';
     btn.disabled = true;
     
-    // Use Firebase auth to send password reset email
-    firebase.auth().sendPasswordResetEmail(email)
-        .then(() => {
-            alert('✅ Password reset email sent! Check your email.');
-            document.getElementById('forgotPasswordEmail').value = '';
-            app.closeForgotPasswordModal();
+    // Get recipients from Firebase
+    const db = firebase.database();
+    db.ref('users').once('value', async snap => {
+        try {
+            const users = snap.val() || {};
+            let recipients = [];
+            
+            if (recipientType === 'all') {
+                recipients = Object.values(users).map(u => ({
+                    email: u.email,
+                    name: u.name
+                }));
+            } else if (recipientType === 'specific') {
+                const userId = document.getElementById('selectedEmailUserId').value;
+                const user = users[userId];
+                if (user) {
+                    recipients = [{
+                        email: user.email,
+                        name: user.name
+                    }];
+                }
+            }
+            
+            if (recipients.length === 0) {
+                app.toast('No recipients found', 'error');
+                btn.innerText = originalText;
+                btn.disabled = false;
+                return;
+            }
+            
+            // Send emails in batches (50 at a time)
+            const batchSize = 50;
+            let successCount = 0;
+            let failureCount = 0;
+            
+            for (let i = 0; i < recipients.length; i += batchSize) {
+                const batch = recipients.slice(i, i + batchSize);
+                
+                for (const recipient of batch) {
+                    const processedContent = content.replace(/{{USER_NAME}}/g, recipient.name);
+                    
+                    let ctaButton = '';
+                    if (hasCTA) {
+                        ctaButton = `<a href="${ctaURL}" style="display:inline-block;background:#2E5BFF;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin:24px 0;">${ctaText}</a>`;
+                    }
+                    
+                    const htmlContent = `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <style>
+                                body { font-family: 'Inter', sans-serif; background: #f5f5f5; margin: 0; }
+                                .email-container { max-width: 600px; margin: 20px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                                .email-header { background: linear-gradient(135deg, #0A0E1F, #2E5BFF); color: white; padding: 40px 20px; text-align: center; }
+                                .email-logo { font-size: 32px; font-weight: 800; margin-bottom: 10px; }
+                                .email-body { padding: 40px 30px; }
+                                .email-content { font-size: 14px; line-height: 1.6; color: #4b5563; }
+                                .email-footer { background: #f9fafb; padding: 24px 30px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="email-container">
+                                <div class="email-header">
+                                    <div class="email-logo">CHICHI</div>
+                                    <div style="font-size:12px;opacity:0.9;">Social Community</div>
+                                </div>
+                                <div class="email-body">
+                                    <div style="font-size:18px;font-weight:600;color:#1a202c;margin-bottom:16px;">Hey ${recipient.name},</div>
+                                    <div class="email-content">${processedContent}</div>
+                                    ${ctaButton}
+                                </div>
+                                <div class="email-footer">
+                                    <div style="font-weight:700;color:#2E5BFF;margin-bottom:8px;">© 2026 Onchari Group • CHICHI</div>
+                                    <div>📧 info.onchari@gmail.com<br>🌐 chichi.buzz</div>
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                    `;
+                    
+                    // Call Vercel function
+                    try {
+                        const response = await fetch('/api/sendEmail', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                to: recipient.email,
+                                subject: subject,
+                                htmlContent: htmlContent,
+                                senderName: 'CHICHI',
+                                senderEmail: 'noreply@brevomail.com'
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            successCount++;
+                        } else {
+                            failureCount++;
+                            console.error('Email failed for', recipient.email, result.error);
+                        }
+                    } catch (err) {
+                        failureCount++;
+                        console.error('Error sending email:', err);
+                    }
+                }
+            }
+            
+            // Show results
+            let message = `✅ Email sent to ${successCount} user(s)`;
+            if (failureCount > 0) {
+                message += ` (${failureCount} failed)`;
+            }
+            app.toast(message, 'success');
+            
+            // Clear form
+            document.getElementById('emailSubject').value = '';
+            document.getElementById('emailContent').value = '';
+            document.getElementById('emailAddCTA').checked = false;
+            document.getElementById('emailCTAText').value = '';
+            document.getElementById('emailCTAURL').value = '';
+            document.getElementById('emailCTADiv').style.display = 'none';
+            document.getElementById('emailRecipientType').value = 'all';
+            document.getElementById('emailSpecificUserDiv').style.display = 'none';
+            document.getElementById('adminEmailModal').style.display = 'none';
+            
+            // Log email activity
+            db.ref('admin/emailLogs').push({
+                subject: subject,
+                recipientType: recipientType,
+                recipientCount: successCount,
+                failureCount: failureCount,
+                sentBy: app.user.email,
+                sentAt: new Date().toISOString()
+            });
+            
             btn.innerText = originalText;
             btn.disabled = false;
-        })
-        .catch((error) => {
-            console.error('Forgot password error:', error);
-            alert('❌ Error: ' + (error.message || 'Could not send reset email'));
+            
+        } catch (err) {
+            console.error('Email send error:', err);
+            app.toast('Error sending emails: ' + err.message, 'error');
             btn.innerText = originalText;
             btn.disabled = false;
-        });
+        }
+    });
 };
 
-// ============= ADD PASSWORD INPUT ANIMATION =============
+// ============ END EMAIL SYSTEM ============
 
-// Add this to track password input
-document.addEventListener('DOMContentLoaded', function() {
-    const loginPassword = document.getElementById('loginPassword');
-    const signupPassword = document.getElementById('signupPassword');
-    
-    if (loginPassword) {
-        loginPassword.addEventListener('input', function() {
-            if (this.value.length > 0) {
-                this.style.background = 'linear-gradient(135deg, #f8f9ff, #f0f7ff)';
-                this.style.borderColor = '#0088cc';
-                this.style.boxShadow = '0 0 8px rgba(0, 136, 204, 0.2)';
-            } else {
-                this.style.background = '';
-                this.style.borderColor = '';
-                this.style.boxShadow = '';
-            }
-        });
-        
-        loginPassword.addEventListener('focus', function() {
-            this.style.boxShadow = '0 0 12px rgba(0, 136, 204, 0.3)';
-        });
-        
-        loginPassword.addEventListener('blur', function() {
-            if (this.value.length === 0) {
-                this.style.boxShadow = '';
-            }
-        });
-    }
-    
-    if (signupPassword) {
-        signupPassword.addEventListener('input', function() {
-            if (this.value.length > 0) {
-                this.style.background = 'linear-gradient(135deg, #f8f9ff, #f0f7ff)';
-                this.style.borderColor = '#0088cc';
-                this.style.boxShadow = '0 0 8px rgba(0, 136, 204, 0.2)';
-            } else {
-                this.style.background = '';
-                this.style.borderColor = '';
-                this.style.boxShadow = '';
-            }
-        });
-        
-        signupPassword.addEventListener('focus', function() {
-            this.style.boxShadow = '0 0 12px rgba(0, 136, 204, 0.3)';
-        });
-        
-        signupPassword.addEventListener('blur', function() {
-            if (this.value.length === 0) {
-                this.style.boxShadow = '';
-            }
-        });
-    }
-});
+
+};
