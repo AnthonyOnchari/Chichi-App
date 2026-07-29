@@ -11052,6 +11052,8 @@ app.closeEmailPreview = function() {
     document.getElementById('emailPreviewModal').style.display = 'none';
 };
 
+// FIXED sendBulkEmail - Copy this into your app.js to replace the broken function
+
 app.sendBulkEmail = function() {
     const recipientType = document.getElementById('emailRecipientType').value;
     const subject = document.getElementById('emailSubject').value;
@@ -11060,6 +11062,7 @@ app.sendBulkEmail = function() {
     const ctaText = document.getElementById('emailCTAText').value;
     const ctaURL = document.getElementById('emailCTAURL').value;
     
+    // Validation
     if (!subject.trim() || !content.trim()) {
         app.toast('Please fill in subject and message', 'error');
         return;
@@ -11070,12 +11073,23 @@ app.sendBulkEmail = function() {
         return;
     }
     
-    const btn = event.target;
+    // FIX: Don't use event.target - it might be undefined!
+    // Instead, find the button directly
+    const btn = document.querySelector('button[onclick*="sendBulkEmail"]');
+    if (!btn) {
+        console.error('Send button not found');
+        return;
+    }
+    
     const originalText = btn.innerText;
     btn.disabled = true;
     btn.innerText = '⏳ Sending...';
     
     const db = firebase.database();
+    
+    // FIX: Use configurable sender email
+    const SENDER_EMAIL = 'support-chichi@gmail.com'; // CHANGE THIS TO YOUR DOMAIN!
+    const SENDER_NAME = 'CHICHI Admin';
     
     (function() {
         var recipients = [];
@@ -11090,6 +11104,7 @@ app.sendBulkEmail = function() {
             
             function sendBatch(startIdx) {
                 if (startIdx >= recipients.length) {
+                    // Log to Firebase
                     db.ref('admin/emailLogs').push({
                         subject: subject,
                         recipientType: recipientType,
@@ -11099,7 +11114,10 @@ app.sendBulkEmail = function() {
                         sentAt: new Date().toISOString()
                     });
                     
+                    // Show success message
                     app.toast('✅ Email sent to ' + successCount + '/' + recipients.length + ' users!', 'success');
+                    
+                    // Clear form
                     document.getElementById('emailSubject').value = '';
                     document.getElementById('emailContent').value = '';
                     document.getElementById('emailRecipientType').value = 'all';
@@ -11109,6 +11127,7 @@ app.sendBulkEmail = function() {
                     document.getElementById('selectedEmailUserId').value = '';
                     document.getElementById('emailUserSearch').value = '';
                     
+                    // Reset button
                     btn.innerText = originalText;
                     btn.disabled = false;
                     return;
@@ -11118,8 +11137,10 @@ app.sendBulkEmail = function() {
                 let batchComplete = 0;
                 
                 batch.forEach(function(user) {
+                    // Build email body
                     const emailBody = '<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;"><div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:30px;text-align:center;border-radius:12px 12px 0 0;"><img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png" style="max-width:100px;height:auto;display:block;margin:0 auto;border-radius:8px;"></div><div style="background:white;padding:30px;border-radius:0 0 12px 12px;color:#1a202c;"><div style="font-size:16px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;">' + content.replace(/{{USER_NAME}}/g, user.name) + '</div>' + (ctaText && ctaURL ? '<div style="text-align:center;margin-top:30px;"><a href="' + ctaURL + '" style="background:#2E5BFF;color:white;padding:12px 30px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">' + ctaText + '</a></div>' : '') + '<div style="margin-top:30px;border-top:1px solid #e5e7eb;padding-top:20px;font-size:12px;color:#6b7280;text-align:center;">© 2026 Onchari Group • CHICHI</div></div></div>';
                     
+                    // Send via API
                     fetch('/api/sendEmail', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -11127,20 +11148,26 @@ app.sendBulkEmail = function() {
                             to: user.email,
                             subject: subject,
                             htmlContent: emailBody,
-                            senderEmail: 'support@chichi.buzz',
-                            senderName: 'CHICHI Admin'
+                            senderEmail: SENDER_EMAIL,  // FIX: Use variable instead of hardcoded
+                            senderName: SENDER_NAME
                         })
                     })
-                    .then(function(r) { return r.json(); })
+                    .then(function(r) { 
+                        return r.json(); 
+                    })
                     .then(function(data) {
-                        if (data.success) successCount++;
+                        if (data.success) {
+                            successCount++;
+                        } else {
+                            console.error('Failed to send to ' + user.email + ': ' + data.error);
+                        }
                         batchComplete++;
                         if (batchComplete === batch.length) {
                             sendBatch(startIdx + batchSize);
                         }
                     })
                     .catch(function(err) {
-                        console.error('Email error:', err);
+                        console.error('Email error for ' + user.email + ':', err);
                         batchComplete++;
                         if (batchComplete === batch.length) {
                             sendBatch(startIdx + batchSize);
@@ -11195,5 +11222,4 @@ app.sendBulkEmail = function() {
         }
     })();
 };
-
 // ============ END EMAIL SYSTEM ============
