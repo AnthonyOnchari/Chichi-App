@@ -8718,7 +8718,7 @@ const messagesModule = (() => {
         <div class="favorites-list">
           ${favoriteChats.length > 0 ? favoriteChats.map(partnerId => `
             <div class="favorite-chat-item" data-chat-partner-id="${partnerId}">
-              <img class="chat-avatar" src="path/to/avatar/${partnerId}.jpg" alt="${partnerId}">
+              <img class="chat-avatar" src="" alt="${partnerId}">
               <div class="chat-info">
                 <p class="chat-name">${partnerId}</p>
                 <p class="last-message">Last message...</p>
