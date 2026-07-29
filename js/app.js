@@ -11127,7 +11127,7 @@ app.sendBulkEmail = function() {
                             to: user.email,
                             subject: subject,
                             htmlContent: emailBody,
-                            senderEmail: 'support-chichi@gmail.com',
+                            senderEmail: 'support@chichi.buzz',
                             senderName: 'CHICHI Admin'
                         })
                     })
