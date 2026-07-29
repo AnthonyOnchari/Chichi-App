@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CHICHI - Social Media</title>
-    <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png">
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- CSS -->
@@ -19,6 +19,21 @@
     <script src="config.js"></script>
 </head>
 <body>
+
+    <!-- BRANDED LOADING SPLASH SCREEN -->
+    <div id="splashScreen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;transition:opacity 0.5s ease;">
+        <img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png" style="width:120px;height:120px;border-radius:12px;margin-bottom:30px;animation:pulse 2s infinite;box-shadow:0 10px 40px rgba(46,91,255,0.3);">
+        <div style="color:white;font-size:28px;font-weight:700;margin-bottom:10px;">CHICHI</div>
+        <div style="color:rgba(255,255,255,0.8);font-size:14px;">Loading your social world...</div>
+    </div>
+
+    <style>
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+    </style>
+
 
 <!-- LOADING SCREEN -->
 <div id="loadingScreen" class="active">
@@ -1057,11 +1072,12 @@
 
 <script>
     // Auto-init when Firebase is ready
+    var hideSplash = function() { var splash = document.getElementById("splashScreen"); if (splash) { splash.style.opacity = "0"; setTimeout(function() { splash.style.display = "none"; }, 500); } };
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
             console.log('✅ Firebase ready, starting app...');
             if (typeof app !== 'undefined' && app.init) {
-                app.init();
+                app.init(); hideSplash();
             }
         } else {
             console.log('⏳ Waiting for Firebase...');
@@ -1070,7 +1086,7 @@
                     clearInterval(checkFirebase);
                     console.log('✅ Firebase loaded, starting app...');
                     if (typeof app !== 'undefined' && app.init) {
-                        app.init();
+                        app.init(); hideSplash();
                     }
                 }
             }, 500);
@@ -1079,7 +1095,7 @@
                 clearInterval(checkFirebase);
                 console.warn('⚠️ Firebase timeout, trying anyway...');
                 if (typeof app !== 'undefined' && app.init) {
-                    app.init();
+                    app.init(); hideSplash();
                 }
             }, 10000);
         }
