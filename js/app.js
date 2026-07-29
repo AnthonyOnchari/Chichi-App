@@ -3555,10 +3555,141 @@ var app = {
                     </div>
                 </div>
                 
+                <!-- NATIONAL GIRLFRIEND DAY CAMPAIGN SECTION -->
+                <div style="background: linear-gradient(135deg, rgba(255, 20, 147, 0.05) 0%, rgba(255, 105, 180, 0.05) 100%); border-radius: 14px; padding: 14px; margin-top: 14px; box-shadow: 0 2px 8px rgba(255, 20, 147, 0.1); border: 1px solid rgba(255, 20, 147, 0.2);">
+                    
+                    <!-- CAMPAIGN HEADER (COLLAPSIBLE) -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; cursor: pointer;" onclick="app.toggleGFDayCampaign()">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="font-size: 24px;">💑</div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #FF1493;">National Girlfriend Day</h3>
+                                <p style="margin: 2px 0 0 0; font-size: 11px; color: #999;">Earn up to 15,000 KES together 💰</p>
+                            </div>
+                        </div>
+                        <div style="font-size: 20px; transition: transform 0.3s;" id="gfdayToggleIcon">▼</div>
+                    </div>
+
+                    <!-- CAMPAIGN CONTENT (COLLAPSIBLE) -->
+                    <div id="gfdayCampaignContent" style="display: none; animation: slideDown 0.3s ease-out;">
+                        
+                        <!-- COUNTDOWN -->
+                        <div style="background: linear-gradient(135deg, #FF1493 0%, #FF69B4 100%); color: white; padding: 12px; border-radius: 10px; margin-bottom: 12px; text-align: center;">
+                            <div style="font-size: 11px; font-weight: 600; margin-bottom: 8px; opacity: 0.9;">AUGUST 1-31 CHALLENGE</div>
+                            <div style="display: flex; justify-content: center; gap: 8px; font-size: 12px;">
+                                <div style="background: rgba(255,255,255,0.2); padding: 6px 8px; border-radius: 6px;">
+                                    <span style="font-weight: 700; font-size: 14px;" id="gfdayDays">00</span>d
+                                </div>
+                                <div style="background: rgba(255,255,255,0.2); padding: 6px 8px; border-radius: 6px;">
+                                    <span style="font-weight: 700; font-size: 14px;" id="gfdayHours">00</span>h
+                                </div>
+                                <div style="background: rgba(255,255,255,0.2); padding: 6px 8px; border-radius: 6px;">
+                                    <span style="font-weight: 700; font-size: 14px;" id="gfdayMins">00</span>m
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- QUICK STATS -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                            <div style="background: white; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #FFE0EB;">
+                                <div style="font-size: 16px; font-weight: 700; color: #FF1493;">+300</div>
+                                <div style="font-size: 10px; color: #999;">Post Photo</div>
+                            </div>
+                            <div style="background: white; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #FFE0EB;">
+                                <div style="font-size: 16px; font-weight: 700; color: #FF1493;">+50</div>
+                                <div style="font-size: 10px; color: #999;">Per Vote</div>
+                            </div>
+                            <div style="background: white; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #FFE0EB;">
+                                <div style="font-size: 16px; font-weight: 700; color: #FF1493;">+100</div>
+                                <div style="font-size: 10px; color: #999;">Per Share</div>
+                            </div>
+                        </div>
+
+                        <!-- QUICK ACTION BUTTONS -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <button onclick="app.showGFDayUploadModal()" style="
+                                background: linear-gradient(135deg, #FF1493 0%, #FF69B4 100%);
+                                color: white;
+                                border: none;
+                                padding: 12px;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                font-size: 12px;
+                                cursor: pointer;
+                                transition: all 0.3s;
+                            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(255,20,147,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                📸 Post Photo
+                            </button>
+                            <button onclick="app.showGFDayGallery()" style="
+                                background: white;
+                                color: #FF1493;
+                                border: 2px solid #FF1493;
+                                padding: 12px;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                font-size: 12px;
+                                cursor: pointer;
+                                transition: all 0.3s;
+                            " onmouseover="this.style.background='#FFF5F7'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='white'; this.style.transform='translateY(0)'">
+                                👥 View Gallery
+                            </button>
+                        </div>
+
+                        <!-- REFERRAL CODE -->
+                        <div style="background: white; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; border: 1px solid #FFE0EB;">
+                            <div style="font-size: 10px; color: #999; margin-bottom: 6px;">Share & Earn 500 KES per friend</div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <input type="text" id="gfdayRefCode" readonly value="CHICHI-GF-ABC123" style="
+                                    flex: 1;
+                                    padding: 8px;
+                                    border: 1px solid #E2E8F0;
+                                    border-radius: 6px;
+                                    font-family: monospace;
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    text-align: center;
+                                    background: #f8fafc;
+                                " />
+                                <button onclick="app.copyGFDayRefCode()" style="
+                                    background: #FF1493;
+                                    color: white;
+                                    border: none;
+                                    padding: 8px 12px;
+                                    border-radius: 6px;
+                                    font-size: 11px;
+                                    cursor: pointer;
+                                    font-weight: 600;
+                                    transition: all 0.2s;
+                                " onmouseover="this.style.background='#FF69B4'" onmouseout="this.style.background='#FF1493'">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <style>
+                    @keyframes slideDown {
+                        from {
+                            opacity: 0;
+                            transform: translateY(-10px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+                </style>
+                
             </div>
         `;
         
         earnContainer.innerHTML = html;
+        
+        // Start campaign
+        this.startGFDayCountdown();
         
         // Start timer
         var timeLeft = tierData.timerSeconds;
@@ -8511,6 +8642,95 @@ var app = {
                 btn.style.opacity = '1';
             }
         }, 1000);
+    },
+
+    // ============================================
+    // NATIONAL GIRLFRIEND DAY CAMPAIGN FUNCTIONS
+    // ============================================
+    
+    gfdayState: {
+        isExpanded: false,
+        referralCode: 'CHICHI-GF-ABC123'
+    },
+
+    toggleGFDayCampaign: function() {
+        var content = document.getElementById('gfdayCampaignContent');
+        var icon = document.getElementById('gfdayToggleIcon');
+        
+        if (content && icon) {
+            this.gfdayState.isExpanded = !this.gfdayState.isExpanded;
+            content.style.display = this.gfdayState.isExpanded ? 'block' : 'none';
+            icon.style.transform = this.gfdayState.isExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+            console.log('Campaign section toggled:', this.gfdayState.isExpanded ? 'OPEN' : 'CLOSED');
+        }
+    },
+
+    startGFDayCountdown: function() {
+        var self = this;
+        var countdownInterval = setInterval(function() {
+            var now = new Date();
+            var eventStart = new Date('2024-08-01T00:00:00Z');
+            var timeLeft = eventStart - now;
+
+            if (timeLeft > 0) {
+                var days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                var hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                var mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+                var daysEl = document.getElementById('gfdayDays');
+                var hoursEl = document.getElementById('gfdayHours');
+                var minsEl = document.getElementById('gfdayMins');
+
+                if (daysEl) daysEl.textContent = String(days).padStart(2, '0');
+                if (hoursEl) hoursEl.textContent = String(hours).padStart(2, '0');
+                if (minsEl) minsEl.textContent = String(mins).padStart(2, '0');
+            } else {
+                clearInterval(countdownInterval);
+                var daysEl = document.getElementById('gfdayDays');
+                if (daysEl) daysEl.textContent = '00';
+            }
+        }, 1000);
+    },
+
+    showGFDayUploadModal: function() {
+        this.toast('📸 Photo upload feature coming August 1st!', 'info');
+        console.log('Campaign: Upload modal requested');
+    },
+
+    showGFDayGallery: function() {
+        this.toast('👥 Gallery view coming August 1st!', 'info');
+        console.log('Campaign: Gallery view requested');
+    },
+
+    copyGFDayRefCode: function() {
+        var refCode = document.getElementById('gfdayRefCode');
+        if (refCode) {
+            refCode.select();
+            document.execCommand('copy');
+            this.toast('✅ Referral code copied! Share to earn!', 'success');
+            console.log('Campaign: Referral code copied');
+        }
+    },
+
+    awardGFDayCoins: function(amount, reason) {
+        this.balance += amount;
+        
+        var balanceEl = document.getElementById('coinBalance');
+        if (balanceEl) {
+            balanceEl.textContent = this.balance.toFixed(2);
+        }
+
+        if (this.user && !this.isGuest) {
+            firebase.database().ref('users/' + this.user.uid + '/balance').set(this.balance);
+            firebase.database().ref('users/' + this.user.uid + '/transactions').push({
+                type: reason,
+                amount: amount,
+                timestamp: new Date().toISOString(),
+                campaign: 'national_girlfriend_day'
+            });
+        }
+
+        console.log(`✅ Campaign: Awarded ${amount} coins for ${reason}`);
     }
 };
 
