@@ -1003,7 +1003,7 @@ var app = {
         document.querySelectorAll('.admin-tab-content').forEach(function(c) { if (c && c.classList) c.classList.remove('active'); });
        
         var buttons = document.querySelectorAll('.admin-tab');
-        var tabMap = ['dashboard', 'users', 'incomplete', 'posts', 'analytics', 'gifts', 'admins', 'notifications', 'logs'];
+        var tabMap = ['dashboard', 'users', 'incomplete', 'posts', 'analytics', 'gifts', 'admins', 'notifications', 'suspicious', 'logs', 'email'];
         var tabIndex = tabMap.indexOf(tab);
         if (tabIndex >= 0) {
             buttons[tabIndex].classList.add('active');
@@ -1018,7 +1018,8 @@ var app = {
             'gifts': 'adminGifts',
             'admins': 'adminAdmins',
             'notifications': 'adminNotificationsTab',
-            'logs': 'adminLogs'
+            'logs': 'adminLogs',
+            'email': 'adminEmail'
         };
        
         var contentId = contentMap[tab];
