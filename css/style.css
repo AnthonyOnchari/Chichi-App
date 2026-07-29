@@ -5192,3 +5192,265 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 .message-highlight {
     background: #fbbf24 !important;
 }
+
+
+/* ============================================
+   NATIONAL GIRLFRIEND DAY CAMPAIGN STYLES
+   ============================================ */
+
+/* Gallery Tab Styling */
+.gfday-gallery-tab {
+    padding: 8px 16px !important;
+    border: 2px solid #E2E8F0 !important;
+    background: white !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    transition: all 0.2s ease !important;
+}
+
+.gfday-gallery-tab:hover {
+    border-color: #FF1493 !important;
+    background: #FFF5F7 !important;
+}
+
+.gfday-gallery-tab.active {
+    background: linear-gradient(135deg, #FF1493 0%, #FF69B4 100%) !important;
+    color: white !important;
+    border-color: #FF1493 !important;
+}
+
+/* Campaign Section */
+.gfday-section {
+    background: linear-gradient(135deg, rgba(255, 20, 147, 0.05) 0%, rgba(255, 105, 180, 0.05) 100%);
+    border-radius: 14px;
+    padding: 14px;
+    margin-top: 14px;
+    box-shadow: 0 2px 8px rgba(255, 20, 147, 0.1);
+    border: 1px solid rgba(255, 20, 147, 0.2);
+}
+
+/* Campaign Header */
+.gfday-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.gfday-header:hover {
+    opacity: 0.8;
+}
+
+/* Campaign Content */
+.gfday-content {
+    animation: slideDown 0.3s ease-out;
+}
+
+/* Countdown Box */
+.gfday-countdown {
+    background: linear-gradient(135deg, #FF1493 0%, #FF69B4 100%);
+    color: white;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+/* Stats Grid */
+.gfday-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.gfday-stat-item {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #FFE0EB;
+}
+
+.gfday-stat-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #FF1493;
+}
+
+.gfday-stat-label {
+    font-size: 10px;
+    color: #999;
+}
+
+/* Action Buttons */
+.gfday-button {
+    transition: all 0.3s ease;
+}
+
+.gfday-button-primary {
+    background: linear-gradient(135deg, #FF1493 0%, #FF69B4 100%);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.gfday-button-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
+}
+
+.gfday-button-secondary {
+    background: white;
+    color: #FF1493;
+    border: 2px solid #FF1493;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.gfday-button-secondary:hover {
+    background: #FFF5F7;
+    transform: translateY(-2px);
+}
+
+/* Referral Code */
+.gfday-referral {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 10px;
+    text-align: center;
+    border: 1px solid #FFE0EB;
+}
+
+.gfday-referral-code {
+    padding: 8px;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    background: #f8fafc;
+    flex: 1;
+}
+
+.gfday-copy-button {
+    background: #FF1493;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.gfday-copy-button:hover {
+    background: #FF69B4;
+}
+
+/* Animations */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+/* Gallery Item */
+.gfday-gallery-item {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+}
+
+.gfday-gallery-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(255, 20, 147, 0.15);
+}
+
+/* Toast Notifications */
+.gfday-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: white;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1000;
+    animation: slideUp 0.3s ease-out;
+}
+
+.gfday-toast.success {
+    border-left: 4px solid #22c55e;
+}
+
+.gfday-toast.error {
+    border-left: 4px solid #dc2626;
+}
+
+.gfday-toast.info {
+    border-left: 4px solid #2E5BFF;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .gfday-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .gfday-stat-item {
+        padding: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .gfday-section {
+        padding: 10px;
+        margin-top: 10px;
+    }
+    
+    .gfday-header {
+        margin-bottom: 10px;
+    }
+    
+    .gfday-button-primary,
+    .gfday-button-secondary {
+        padding: 10px;
+        font-size: 11px;
+    }
+}
