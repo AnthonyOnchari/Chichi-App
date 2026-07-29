@@ -10968,17 +10968,9 @@ app.displayVideoCallUI = function(state) {
     callUI.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;';
     callUI.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;width:100%;"><video id="remoteVideo" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;bottom:100px;right:20px;width:100px;height:133px;background:#1f2937;border-radius:8px;overflow:hidden;"><video id="miniLocalVideo" style="width:100%;height:100%;object-fit:cover;"></video></div></div><div style="background:rgba(0,0,0,0.7);padding:16px;display:flex;gap:12px;justify-content:center;width:100%;"><button style="width:50px;height:50px;border-radius:50%;background:#475569;color:white;border:none;font-size:20px;cursor:pointer;">📹</button><button style="width:50px;height:50px;border-radius:50%;background:#475569;color:white;border:none;font-size:20px;cursor:pointer;">🎤</button><button onclick="app.endVoiceCall();" style="width:50px;height:50px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:20px;cursor:pointer;">✕</button></div>';
     document.body.appendChild(callUI);
-
-    // ============ EMAIL SYSTEM ============
-
-    openAdminEmailModal: function() {
-        document.getElementById('adminEmailModal').style.display = 'flex';
-    },
-
-    closeAdminEmailModal: function() {
-        document.getElementById('adminEmailModal').style.display = 'none';
-    }
 };
+
+// ============ ADMIN EMAIL SYSTEM ============
 
 app.updateEmailRecipients = function() {
     const type = document.getElementById('emailRecipientType').value;
@@ -10998,22 +10990,17 @@ app.searchUsersForEmail = function(query) {
     }
     
     const db = firebase.database();
-    db.ref('users').once('value', snap => {
+    db.ref('users').once('value', function(snap) {
         const users = snap.val() || {};
         const results = document.getElementById('emailUserResults');
         const searchQuery = query.toLowerCase();
         
         let html = '';
-        Object.entries(users).forEach(([uid, user]) => {
-            if (user.name.toLowerCase().includes(searchQuery) || 
-                user.email.toLowerCase().includes(searchQuery)) {
-                html += `<div style="padding:10px;border-bottom:1px solid #e5e7eb;cursor:pointer;background:white;" 
-                    onclick="app.selectEmailUser('${uid}', '${user.name}', '${user.email}')"
-                    onmouseover="this.style.background='#f3f4f6'"
-                    onmouseout="this.style.background='white'">
-                    <div style="font-weight:600;font-size:14px;color:#1a202c;">${user.name}</div>
-                    <div style="font-size:12px;color:#6b7280;">${user.email}</div>
-                </div>`;
+        Object.entries(users).forEach(function(entry) {
+            const uid = entry[0];
+            const user = entry[1];
+            if (user.name.toLowerCase().includes(searchQuery) || user.email.toLowerCase().includes(searchQuery)) {
+                html += '<div style="padding:10px;border-bottom:1px solid #e5e7eb;cursor:pointer;background:white;" onclick="app.selectEmailUser(\'' + uid + '\', \'' + user.name.replace(/'/g, "\\'") + '\', \'' + user.email + '\')" onmouseover="this.style.background=\'#f3f4f6\'" onmouseout="this.style.background=\'white\'"><div style="font-weight:600;font-size:14px;color:#1a202c;">' + user.name + '</div><div style="font-size:12px;color:#6b7280;">' + user.email + '</div></div>';
             }
         });
         
@@ -11044,22 +11031,7 @@ app.previewEmail = function() {
         return;
     }
     
-    let emailHTML = `
-    <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">
-        <div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:30px;text-align:center;border-radius:12px 12px 0 0;">
-            <div style="color:white;font-size:28px;font-weight:700;">📧 CHICHI</div>
-        </div>
-        <div style="background:white;padding:30px;border-radius:0 0 12px 12px;color:#1a202c;">
-            <div style="font-size:16px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;">${content}</div>
-            ${ctaText && ctaURL ? `<div style="text-align:center;margin-top:30px;">
-                <a href="${ctaURL}" style="background:#2E5BFF;color:white;padding:12px 30px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">${ctaText}</a>
-            </div>` : ''}
-            <div style="margin-top:30px;border-top:1px solid #e5e7eb;padding-top:20px;font-size:12px;color:#6b7280;text-align:center;">
-                © 2026 Onchari Group • CHICHI
-            </div>
-        </div>
-    </div>
-    `;
+    let emailHTML = '<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;"><div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:30px;text-align:center;border-radius:12px 12px 0 0;"><div style="color:white;font-size:28px;font-weight:700;">📧 CHICHI</div></div><div style="background:white;padding:30px;border-radius:0 0 12px 12px;color:#1a202c;"><div style="font-size:16px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;">' + content + '</div>' + (ctaText && ctaURL ? '<div style="text-align:center;margin-top:30px;"><a href="' + ctaURL + '" style="background:#2E5BFF;color:white;padding:12px 30px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">' + ctaText + '</a></div>' : '') + '<div style="margin-top:30px;border-top:1px solid #e5e7eb;padding-top:20px;font-size:12px;color:#6b7280;text-align:center;">© 2026 Onchari Group • CHICHI</div></div></div>';
     
     const modal = document.getElementById('emailPreviewModal');
     const frame = document.getElementById('emailPreviewFrame');
@@ -11096,93 +11068,123 @@ app.sendBulkEmail = function() {
     
     const db = firebase.database();
     
-    (async () => {
-        try {
-            let recipients = [];
-            
-            if (recipientType === 'all') {
-                const snap = await db.ref('users').once('value');
-                const users = snap.val() || {};
-                recipients = Object.entries(users).map(([uid, user]) => ({ uid, ...user }));
-            } else if (recipientType === 'followers') {
-                const uid = app.user.uid;
-                const snap = await db.ref(`followers/${uid}`).once('value');
-                const followers = snap.val() || {};
-                for (const followerUid of Object.keys(followers)) {
-                    const userSnap = await db.ref(`users/${followerUid}`).once('value');
-                    recipients.push({ uid: followerUid, ...userSnap.val() });
-                }
-            } else if (recipientType === 'specific') {
-                const snap = await db.ref(`users/${selectedUserId}`).once('value');
-                recipients = [{ uid: selectedUserId, ...snap.val() }];
-            }
+    (function() {
+        var recipients = [];
+        var processed = false;
+        
+        function sendEmails() {
+            if (processed) return;
+            processed = true;
             
             const batchSize = 50;
             let successCount = 0;
             
-            for (let i = 0; i < recipients.length; i += batchSize) {
-                const batch = recipients.slice(i, i + batchSize);
+            function sendBatch(startIdx) {
+                if (startIdx >= recipients.length) {
+                    db.ref('admin/emailLogs').push({
+                        subject: subject,
+                        recipientType: recipientType,
+                        recipientCount: recipients.length,
+                        successCount: successCount,
+                        sentBy: app.user.email,
+                        sentAt: new Date().toISOString()
+                    });
+                    
+                    app.toast('✅ Email sent to ' + successCount + '/' + recipients.length + ' users!', 'success');
+                    document.getElementById('emailSubject').value = '';
+                    document.getElementById('emailContent').value = '';
+                    document.getElementById('emailRecipientType').value = 'all';
+                    document.getElementById('emailAddCTA').checked = false;
+                    document.getElementById('emailCTADiv').style.display = 'none';
+                    document.getElementById('emailSpecificUserDiv').style.display = 'none';
+                    document.getElementById('selectedEmailUserId').value = '';
+                    document.getElementById('emailUserSearch').value = '';
+                    
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    return;
+                }
                 
-                const promises = batch.map(user => 
+                const batch = recipients.slice(startIdx, startIdx + batchSize);
+                let batchComplete = 0;
+                
+                batch.forEach(function(user) {
+                    const emailBody = '<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;"><div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:30px;text-align:center;border-radius:12px 12px 0 0;"><div style="color:white;font-size:28px;font-weight:700;">📧 CHICHI</div></div><div style="background:white;padding:30px;border-radius:0 0 12px 12px;color:#1a202c;"><div style="font-size:16px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;">' + content.replace(/{{USER_NAME}}/g, user.name) + '</div>' + (ctaText && ctaURL ? '<div style="text-align:center;margin-top:30px;"><a href="' + ctaURL + '" style="background:#2E5BFF;color:white;padding:12px 30px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">' + ctaText + '</a></div>' : '') + '<div style="margin-top:30px;border-top:1px solid #e5e7eb;padding-top:20px;font-size:12px;color:#6b7280;text-align:center;">© 2026 Onchari Group • CHICHI</div></div></div>';
+                    
                     fetch('/api/sendEmail', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             to: user.email,
                             subject: subject,
-                            htmlContent: `
-                                <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">
-                                    <div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:30px;text-align:center;border-radius:12px 12px 0 0;">
-                                        <div style="color:white;font-size:28px;font-weight:700;">📧 CHICHI</div>
-                                    </div>
-                                    <div style="background:white;padding:30px;border-radius:0 0 12px 12px;color:#1a202c;">
-                                        <div style="font-size:16px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;">${content.replace(/{{USER_NAME}}/g, user.name)}</div>
-                                        ${ctaText && ctaURL ? `<div style="text-align:center;margin-top:30px;">
-                                            <a href="${ctaURL}" style="background:#2E5BFF;color:white;padding:12px 30px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">${ctaText}</a>
-                                        </div>` : ''}
-                                        <div style="margin-top:30px;border-top:1px solid #e5e7eb;padding-top:20px;font-size:12px;color:#6b7280;text-align:center;">
-                                            © 2026 Onchari Group • CHICHI
-                                        </div>
-                                    </div>
-                                </div>
-                            `,
+                            htmlContent: emailBody,
                             senderEmail: 'support-chichi@gmail.com',
                             senderName: 'CHICHI Admin'
                         })
                     })
-                    .then(r => r.json())
-                    .then(data => {
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
                         if (data.success) successCount++;
-                        return data;
+                        batchComplete++;
+                        if (batchComplete === batch.length) {
+                            sendBatch(startIdx + batchSize);
+                        }
                     })
-                );
-                
-                await Promise.all(promises);
+                    .catch(function(err) {
+                        console.error('Email error:', err);
+                        batchComplete++;
+                        if (batchComplete === batch.length) {
+                            sendBatch(startIdx + batchSize);
+                        }
+                    });
+                });
             }
             
-            await db.ref('admin/emailLogs').push({
-                subject: subject,
-                recipientType: recipientType,
-                recipientCount: recipients.length,
-                successCount: successCount,
-                sentBy: app.user.email,
-                sentAt: new Date().toISOString()
-            });
-            
-            app.toast(`✅ Email sent to ${successCount}/${recipients.length} users!`, 'success');
-            document.getElementById('emailSubject').value = '';
-            document.getElementById('emailContent').value = '';
-            document.getElementById('emailRecipientType').value = 'all';
-            document.getElementById('emailAddCTA').checked = false;
-            document.getElementById('emailCTADiv').style.display = 'none';
-            document.getElementById('emailSpecificUserDiv').style.display = 'none';
-            
-        } catch (err) {
-            console.error('Email send error:', err);
-            app.toast('Error sending emails: ' + err.message, 'error');
+            sendBatch(0);
         }
         
-        btn.innerText = originalText;
-        btn.disabled = false;
+        if (recipientType === 'all') {
+            db.ref('users').once('value', function(snap) {
+                const users = snap.val() || {};
+                recipients = Object.entries(users).map(function(entry) {
+                    return { uid: entry[0], name: entry[1].name, email: entry[1].email };
+                });
+                sendEmails();
+            });
+        } else if (recipientType === 'followers') {
+            const uid = app.user.uid;
+            db.ref('followers/' + uid).once('value', function(snap) {
+                const followers = snap.val() || {};
+                let followerCount = Object.keys(followers).length;
+                let processed = 0;
+                
+                Object.keys(followers).forEach(function(followerUid) {
+                    db.ref('users/' + followerUid).once('value', function(userSnap) {
+                        const user = userSnap.val();
+                        if (user) {
+                            recipients.push({ uid: followerUid, name: user.name, email: user.email });
+                        }
+                        processed++;
+                        if (processed === followerCount) {
+                            sendEmails();
+                        }
+                    });
+                });
+                
+                if (followerCount === 0) {
+                    sendEmails();
+                }
+            });
+        } else if (recipientType === 'specific') {
+            db.ref('users/' + selectedUserId).once('value', function(snap) {
+                const user = snap.val();
+                if (user) {
+                    recipients = [{ uid: selectedUserId, name: user.name, email: user.email }];
+                }
+                sendEmails();
+            });
+        }
     })();
 };
+
+// ============ END EMAIL SYSTEM ============
