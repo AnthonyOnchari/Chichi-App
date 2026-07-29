@@ -11548,3 +11548,91 @@ app.startDisappearingTimer = function() {
         }
     });
 };
+// ============= FIX FORGOT PASSWORD =============
+
+// Make sure this is at the end of app.js
+app.sendForgotPasswordEmail = function() {
+    const email = document.getElementById('forgotPasswordEmail').value.trim();
+    
+    if (!email) {
+        alert('Please enter your email address');
+        return;
+    }
+    
+    const btn = document.querySelector('#forgotPasswordModal button[type="submit"]');
+    const originalText = btn.innerText;
+    btn.innerText = '⏳ Sending...';
+    btn.disabled = true;
+    
+    // Use Firebase auth to send password reset email
+    firebase.auth().sendPasswordResetEmail(email)
+        .then(() => {
+            alert('✅ Password reset email sent! Check your email.');
+            document.getElementById('forgotPasswordEmail').value = '';
+            app.closeForgotPasswordModal();
+            btn.innerText = originalText;
+            btn.disabled = false;
+        })
+        .catch((error) => {
+            console.error('Forgot password error:', error);
+            alert('❌ Error: ' + (error.message || 'Could not send reset email'));
+            btn.innerText = originalText;
+            btn.disabled = false;
+        });
+};
+
+// ============= ADD PASSWORD INPUT ANIMATION =============
+
+// Add this to track password input
+document.addEventListener('DOMContentLoaded', function() {
+    const loginPassword = document.getElementById('loginPassword');
+    const signupPassword = document.getElementById('signupPassword');
+    
+    if (loginPassword) {
+        loginPassword.addEventListener('input', function() {
+            if (this.value.length > 0) {
+                this.style.background = 'linear-gradient(135deg, #f8f9ff, #f0f7ff)';
+                this.style.borderColor = '#0088cc';
+                this.style.boxShadow = '0 0 8px rgba(0, 136, 204, 0.2)';
+            } else {
+                this.style.background = '';
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+            }
+        });
+        
+        loginPassword.addEventListener('focus', function() {
+            this.style.boxShadow = '0 0 12px rgba(0, 136, 204, 0.3)';
+        });
+        
+        loginPassword.addEventListener('blur', function() {
+            if (this.value.length === 0) {
+                this.style.boxShadow = '';
+            }
+        });
+    }
+    
+    if (signupPassword) {
+        signupPassword.addEventListener('input', function() {
+            if (this.value.length > 0) {
+                this.style.background = 'linear-gradient(135deg, #f8f9ff, #f0f7ff)';
+                this.style.borderColor = '#0088cc';
+                this.style.boxShadow = '0 0 8px rgba(0, 136, 204, 0.2)';
+            } else {
+                this.style.background = '';
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+            }
+        });
+        
+        signupPassword.addEventListener('focus', function() {
+            this.style.boxShadow = '0 0 12px rgba(0, 136, 204, 0.3)';
+        });
+        
+        signupPassword.addEventListener('blur', function() {
+            if (this.value.length === 0) {
+                this.style.boxShadow = '';
+            }
+        });
+    }
+});
