@@ -11289,6 +11289,3 @@ app.sendBulkEmail = function() {
 };
 
 // ============ END EMAIL SYSTEM ============
-
-
-};
