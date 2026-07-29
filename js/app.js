@@ -11223,3 +11223,376 @@ app.sendBulkEmail = function() {
     })();
 };
 // ============ END EMAIL SYSTEM ============
+
+// ============ EMAIL TEMPLATE SYSTEM ============
+
+const EMAIL_TEMPLATES = {
+    // Template 1: Generic Newsletter
+    generic: {
+        name: 'Generic Newsletter',
+        description: 'General message or announcement',
+        subject: 'Update from CHICHI',
+        template: function(userName, message, ctaText, ctaURL) {
+            return `
+<div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f8fafc;">
+    <div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:40px 30px;text-align:center;border-radius:12px 12px 0 0;">
+        <img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png" style="width:80px;height:80px;border-radius:12px;margin-bottom:15px;">
+        <div style="color:white;font-size:24px;font-weight:700;letter-spacing:0.5px;">CHICHI</div>
+    </div>
+    <div style="background:white;padding:40px 30px;border-radius:0 0 12px 12px;color:#1a202c;">
+        <div style="font-size:16px;line-height:1.8;color:#374151;margin-bottom:30px;">
+            <p style="margin:0 0 15px 0;"><strong>Hi ${userName},</strong></p>
+            <div style="white-space:pre-wrap;color:#4b5563;font-size:15px;">${message}</div>
+        </div>
+        ${ctaText && ctaURL ? `<div style="text-align:center;margin:30px 0;"><a href="${ctaURL}" style="background:linear-gradient(135deg,#2E5BFF 0%,#1e40af 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;box-shadow:0 4px 15px rgba(46,91,255,0.3);">${ctaText}</a></div>` : ''}
+        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0 0 10px 0;">© 2026 Onchari Group • CHICHI</p></div>
+    </div>
+</div>
+            `;
+        }
+    },
+    incomplete_profile: {
+        name: 'Incomplete Profile',
+        description: 'Remind users to complete their profile',
+        subject: '⚠️ Complete Your CHICHI Profile',
+        template: function(userName, message) {
+            return `
+<div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f8fafc;">
+    <div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:40px 30px;text-align:center;border-radius:12px 12px 0 0;">
+        <img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png" style="width:80px;height:80px;border-radius:12px;margin-bottom:15px;">
+        <div style="color:white;font-size:24px;font-weight:700;">CHICHI</div>
+    </div>
+    <div style="background:white;padding:40px 30px;border-radius:0 0 12px 12px;color:#1a202c;">
+        <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:15px;border-radius:6px;margin-bottom:30px;">
+            <div style="font-weight:600;color:#d97706;margin-bottom:8px;">⚠️ Action Required</div>
+            <div style="font-size:14px;color:#92400e;">Your profile is incomplete. Please complete your information to unlock all features.</div>
+        </div>
+        <p style="font-size:16px;line-height:1.8;color:#374151;margin-bottom:20px;"><strong>Hi ${userName},</strong></p>
+        <div style="background:#f0f7ff;padding:20px;border-radius:8px;margin-bottom:30px;border-left:4px solid #2E5BFF;">
+            <div style="color:#1e40af;font-weight:600;margin-bottom:10px;">📝 What's Missing?</div>
+            <ul style="margin:0;padding-left:20px;color:#374151;font-size:14px;"><li style="margin-bottom:8px;">Username</li><li style="margin-bottom:8px;">Profile Photo</li><li>Bio & Interests</li></ul>
+        </div>
+        <p style="font-size:14px;color:#4b5563;line-height:1.8;margin-bottom:30px;white-space:pre-wrap;">${message}</p>
+        <div style="text-align:center;margin:30px 0;"><a href="https://chichi.buzz/settings" style="background:linear-gradient(135deg,#2E5BFF 0%,#1e40af 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;box-shadow:0 4px 15px rgba(46,91,255,0.3);">Complete Profile Now</a></div>
+        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;">© 2026 Onchari Group • CHICHI</p></div>
+    </div>
+</div>
+            `;
+        }
+    },
+    award: {
+        name: 'Award Notification',
+        description: 'Congratulate users on achievements',
+        subject: '🎉 Congratulations, {{USER_NAME}}!',
+        template: function(userName, message) {
+            return `
+<div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f8fafc;">
+    <div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:40px 30px;text-align:center;border-radius:12px 12px 0 0;">
+        <div style="font-size:50px;margin-bottom:15px;">🏆</div>
+        <img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png" style="width:80px;height:80px;border-radius:12px;margin-bottom:15px;">
+        <div style="color:white;font-size:24px;font-weight:700;">Achievement Unlocked!</div>
+    </div>
+    <div style="background:white;padding:40px 30px;border-radius:0 0 12px 12px;color:#1a202c;">
+        <div style="background:linear-gradient(135deg,#fef3c7 0%,#fcd34d 100%);padding:20px;border-radius:8px;margin-bottom:30px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:#92400e;margin-bottom:10px;">Congratulations!</div>
+            <div style="color:#78350f;font-size:16px;font-weight:600;">${userName}</div>
+        </div>
+        <div style="font-size:16px;line-height:1.8;color:#374151;margin-bottom:30px;white-space:pre-wrap;">${message}</div>
+        <div style="background:#f0fdf4;padding:20px;border-radius:8px;margin-bottom:30px;border-left:4px solid #22c55e;">
+            <div style="color:#166534;font-weight:600;margin-bottom:10px;">✨ Your Achievement</div>
+            <div style="color:#374151;font-size:14px;">You've shown exceptional engagement and contribution to the CHICHI community!</div>
+        </div>
+        <div style="text-align:center;margin:30px 0;"><a href="https://chichi.buzz/profile" style="background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;box-shadow:0 4px 15px rgba(34,197,94,0.3);">View Your Achievement</a></div>
+        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;">© 2026 Onchari Group • CHICHI</p></div>
+    </div>
+</div>
+            `;
+        }
+    },
+    account_issue: {
+        name: 'Account Issue Notice',
+        description: 'Notify user of account issues that need fixing',
+        subject: '⚠️ Action Needed: Account Issue',
+        template: function(userName, message) {
+            return `
+<div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f8fafc;">
+    <div style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%);padding:40px 30px;text-align:center;border-radius:12px 12px 0 0;">
+        <div style="font-size:50px;margin-bottom:15px;">⚠️</div>
+        <div style="color:white;font-size:24px;font-weight:700;">Action Required</div>
+    </div>
+    <div style="background:white;padding:40px 30px;border-radius:0 0 12px 12px;color:#1a202c;">
+        <div style="background:#fee2e2;border-left:4px solid #dc2626;padding:15px;border-radius:6px;margin-bottom:30px;">
+            <div style="font-weight:600;color:#991b1b;margin-bottom:8px;">⚠️ Important Notice</div>
+            <div style="font-size:14px;color:#7f1d1d;">We've detected an issue with your account that needs your attention.</div>
+        </div>
+        <p style="font-size:16px;line-height:1.8;color:#374151;margin-bottom:20px;"><strong>Hi ${userName},</strong></p>
+        <div style="background:#f8f8f8;padding:20px;border-radius:8px;margin-bottom:30px;border-left:4px solid #dc2626;">
+            <div style="color:#991b1b;font-weight:600;margin-bottom:10px;">Issue Details:</div>
+            <div style="color:#374151;font-size:14px;line-height:1.8;white-space:pre-wrap;">${message}</div>
+        </div>
+        <p style="font-size:14px;color:#4b5563;margin-bottom:30px;">Please fix this issue within <strong>48 hours</strong> to avoid account restrictions.</p>
+        <div style="text-align:center;margin:30px 0;"><a href="https://chichi.buzz/settings" style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;box-shadow:0 4px 15px rgba(220,38,38,0.3);">Fix Issue Now</a></div>
+        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;">© 2026 Onchari Group • CHICHI</p></div>
+    </div>
+</div>
+            `;
+        }
+    },
+    policy_violation: {
+        name: 'Policy Violation Notice',
+        description: 'Notify about content violations',
+        subject: '🚫 Content Violation Notice',
+        template: function(userName, message) {
+            return `
+<div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f8fafc;">
+    <div style="background:linear-gradient(135deg,#ea580c 0%,#c2410c 100%);padding:40px 30px;text-align:center;border-radius:12px 12px 0 0;">
+        <div style="font-size:50px;margin-bottom:15px;">🚫</div>
+        <div style="color:white;font-size:24px;font-weight:700;">Content Violation</div>
+    </div>
+    <div style="background:white;padding:40px 30px;border-radius:0 0 12px 12px;color:#1a202c;">
+        <div style="background:#fed7aa;border-left:4px solid #ea580c;padding:15px;border-radius:6px;margin-bottom:30px;">
+            <div style="font-weight:600;color:#9a3412;margin-bottom:8px;">🚫 Policy Violation</div>
+            <div style="font-size:14px;color:#78350f;">One or more of your posts violate our community guidelines.</div>
+        </div>
+        <p style="font-size:16px;line-height:1.8;color:#374151;margin-bottom:20px;"><strong>Hi ${userName},</strong></p>
+        <div style="background:#f8f8f8;padding:20px;border-radius:8px;margin-bottom:30px;border-left:4px solid #ea580c;">
+            <div style="color:#9a3412;font-weight:600;margin-bottom:10px;">📋 Reason for Removal:</div>
+            <div style="color:#374151;font-size:14px;line-height:1.8;white-space:pre-wrap;">${message}</div>
+        </div>
+        <div style="background:#fef3c7;padding:15px;border-radius:8px;margin-bottom:30px;">
+            <div style="font-weight:600;color:#92400e;margin-bottom:10px;">What You Should Do:</div>
+            <ul style="margin:0;padding-left:20px;color:#374151;font-size:14px;line-height:1.8;"><li>Review our Community Guidelines</li><li>Remove or edit the offending content</li><li>Resubmit your post if it complies</li></ul>
+        </div>
+        <div style="text-align:center;margin:30px 0;"><a href="https://chichi.buzz/guidelines" style="background:linear-gradient(135deg,#ea580c 0%,#c2410c 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;box-shadow:0 4px 15px rgba(234,88,12,0.3);">View Guidelines</a></div>
+        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;">© 2026 Onchari Group • CHICHI</p></div>
+    </div>
+</div>
+            `;
+        }
+    }
+};
+
+window.EMAIL_TEMPLATES = EMAIL_TEMPLATES;
+
+// Initialize template system
+app.initTemplateSystem = function() {
+    const templateSelect = document.getElementById('emailTemplate');
+    if (!templateSelect) return;
+    
+    templateSelect.addEventListener('change', function() {
+        const selectedTemplate = EMAIL_TEMPLATES[this.value];
+        if (selectedTemplate) {
+            document.getElementById('emailSubject').value = selectedTemplate.subject;
+            document.getElementById('emailContent').value = '';
+            const templateHint = {
+                'generic': '✍️ Write your announcement or message here...',
+                'incomplete_profile': '✍️ Users with incomplete profiles will receive this.',
+                'award': '✍️ Congratulate the user on their achievement!',
+                'account_issue': '✍️ Describe the account issue that needs fixing.',
+                'policy_violation': '✍️ Explain why the content violates guidelines.'
+            };
+            const textarea = document.getElementById('emailContent');
+            textarea.placeholder = templateHint[this.value] || 'Write your message...';
+            textarea.focus();
+        }
+    });
+};
+
+// Updated previewEmail with template support
+app.previewEmail = function() {
+    const templateKey = document.getElementById('emailTemplate').value;
+    const selectedTemplate = EMAIL_TEMPLATES[templateKey];
+    
+    if (!selectedTemplate) {
+        app.toast('Template not found', 'error');
+        return;
+    }
+    
+    const subject = document.getElementById('emailSubject').value;
+    const message = document.getElementById('emailContent').value;
+    const ctaText = document.getElementById('emailCTAText').value;
+    const ctaURL = document.getElementById('emailCTAURL').value;
+    
+    if (!message.trim()) {
+        app.toast('Please write a message', 'error');
+        return;
+    }
+    
+    const emailHTML = selectedTemplate.template('Anthony Onchari', message, ctaText, ctaURL);
+    
+    const iframe = document.getElementById('emailPreviewFrame');
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(emailHTML);
+    iframeDoc.close();
+    
+    document.getElementById('emailPreviewModal').style.display = 'block';
+};
+
+// Updated sendBulkEmail with template support
+app.sendBulkEmail = function() {
+    const templateKey = document.getElementById('emailTemplate').value;
+    const selectedTemplate = EMAIL_TEMPLATES[templateKey];
+    
+    if (!selectedTemplate) {
+        app.toast('Template not found', 'error');
+        return;
+    }
+    
+    const recipientType = document.querySelector('input[name="emailRecipientType"]:checked').value;
+    const subject = document.getElementById('emailSubject').value;
+    const content = document.getElementById('emailContent').value;
+    const selectedUserId = document.getElementById('selectedEmailUserId').value;
+    const ctaText = document.getElementById('emailCTAText').value;
+    const ctaURL = document.getElementById('emailCTAURL').value;
+    
+    if (!subject.trim() || !content.trim()) {
+        app.toast('Please fill in subject and message', 'error');
+        return;
+    }
+    
+    if (recipientType === 'specific' && !selectedUserId) {
+        app.toast('Please select a user', 'error');
+        return;
+    }
+    
+    const btn = document.querySelector('button[onclick*="sendBulkEmail"]');
+    if (!btn) {
+        console.error('Send button not found');
+        return;
+    }
+    
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = '⏳ Sending...';
+    
+    const db = firebase.database();
+    const SENDER_EMAIL = 'support@chichi.buzz';
+    const SENDER_NAME = 'CHICHI Admin';
+    
+    (function() {
+        var recipients = [];
+        var processed = false;
+        
+        function sendEmails() {
+            if (processed) return;
+            processed = true;
+            
+            const batchSize = 50;
+            let successCount = 0;
+            
+            function sendBatch(startIdx) {
+                if (startIdx >= recipients.length) {
+                    db.ref('admin/emailLogs').push({
+                        subject: subject,
+                        templateUsed: templateKey,
+                        recipientType: recipientType,
+                        recipientCount: recipients.length,
+                        successCount: successCount,
+                        sentBy: app.user.email,
+                        sentAt: new Date().toISOString()
+                    });
+                    
+                    app.toast('✅ Email sent to ' + successCount + '/' + recipients.length + ' users!', 'success');
+                    
+                    document.getElementById('emailSubject').value = '';
+                    document.getElementById('emailContent').value = '';
+                    document.getElementById('emailTemplate').value = 'generic';
+                    document.querySelector('input[name="emailRecipientType"][value="all"]').checked = true;
+                    document.getElementById('emailAddCTA').checked = false;
+                    document.getElementById('emailCTADiv').style.display = 'none';
+                    document.getElementById('emailSpecificUserDiv').style.display = 'none';
+                    document.getElementById('selectedEmailUserId').value = '';
+                    document.getElementById('emailUserSearch').value = '';
+                    document.getElementById('selectedUserDisplay').style.display = 'none';
+                    
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    return;
+                }
+                
+                const batch = recipients.slice(startIdx, startIdx + batchSize);
+                let batchComplete = 0;
+                
+                batch.forEach(function(user) {
+                    const emailBody = selectedTemplate.template(user.name, content, ctaText, ctaURL);
+                    
+                    fetch('/api/sendEmail', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            to: user.email,
+                            subject: subject,
+                            htmlContent: emailBody,
+                            senderEmail: SENDER_EMAIL,
+                            senderName: SENDER_NAME
+                        })
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.success) { successCount++; }
+                        batchComplete++;
+                        if (batchComplete === batch.length) { sendBatch(startIdx + batchSize); }
+                    })
+                    .catch(function(err) {
+                        console.error('Email error:', err);
+                        batchComplete++;
+                        if (batchComplete === batch.length) { sendBatch(startIdx + batchSize); }
+                    });
+                });
+            }
+            
+            sendBatch(0);
+        }
+        
+        if (recipientType === 'all') {
+            db.ref('users').once('value', function(snap) {
+                const users = snap.val() || {};
+                recipients = Object.entries(users).map(function(entry) {
+                    return { uid: entry[0], name: entry[1].name, email: entry[1].email };
+                });
+                sendEmails();
+            });
+        } else if (recipientType === 'followers') {
+            const uid = app.user.uid;
+            db.ref('followers/' + uid).once('value', function(snap) {
+                const followers = snap.val() || {};
+                let followerCount = Object.keys(followers).length;
+                let processed = 0;
+                Object.keys(followers).forEach(function(followerUid) {
+                    db.ref('users/' + followerUid).once('value', function(userSnap) {
+                        const user = userSnap.val();
+                        if (user) {
+                            recipients.push({ uid: followerUid, name: user.name, email: user.email });
+                        }
+                        processed++;
+                        if (processed === followerCount) { sendEmails(); }
+                    });
+                });
+                if (followerCount === 0) { sendEmails(); }
+            });
+        } else if (recipientType === 'specific') {
+            db.ref('users/' + selectedUserId).once('value', function(snap) {
+                const user = snap.val();
+                if (user) {
+                    recipients = [{ uid: selectedUserId, name: user.name, email: user.email }];
+                }
+                sendEmails();
+            });
+        }
+    })();
+};
+
+// Handle CTA toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const ctaCheckbox = document.getElementById('emailAddCTA');
+    const ctaDiv = document.getElementById('emailCTADiv');
+    if (ctaCheckbox && ctaDiv) {
+        ctaCheckbox.addEventListener('change', function() {
+            ctaDiv.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+    app.initTemplateSystem();
+});
+
+console.log("✅ Email template system loaded with 5 professional templates");
