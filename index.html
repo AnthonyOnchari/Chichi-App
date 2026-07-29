@@ -236,14 +236,14 @@
                 <!-- Search People Section -->
                 <div style="margin-bottom: 24px;">
                     <div style="position: relative;">
-                        <input type="text" id="exploreSearchInput" placeholder="🔍 Search people..." style="width: 100%; padding: 12px 16px 12px 40px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 14px; font-family: inherit; transition: 0.2s;" onfocus="this.style.borderColor='#0088cc'; this.style.boxShadow='0 0 0 3px rgba(0, 136, 204, 0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'" onkeyup="if(typeof app !== 'undefined' && app.searchExplorePeople) app.searchExplorePeople(this.value)">
+                        <input type="text" id="exploreSearchInput" placeholder="Looking for someone? ..." style="width: 100%; padding: 12px 16px 12px 40px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 14px; font-family: inherit; transition: 0.2s;" onfocus="this.style.borderColor='#0088cc'; this.style.boxShadow='0 0 0 3px rgba(0, 136, 204, 0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'" onkeyup="if(typeof app !== 'undefined' && app.searchExplorePeople) app.searchExplorePeople(this.value)">
                         <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #9ca3af; pointer-events: none;">🔍</div>
                     </div>
                 </div>
 
                 <!-- Search Results Container (Hidden by default) -->
                 <div id="exploreSearchResults" style="display: none; margin-bottom: 32px;">
-                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">👥 Search Results</h2>
+                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">Search Results</h2>
                     <div id="exploreSearchResultsContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
                 </div>
 
