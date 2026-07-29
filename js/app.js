@@ -128,7 +128,7 @@ var app = {
             if (u) {
                 self.user = u;
                 self.isGuest = false;
-                self.isAdmin = u.email === 'support-chichi@gmail.com';
+                self.isAdmin = u.email === 'support@chichi.buzz';
                
                 db.ref('bannedUsers/' + u.uid).once('value', function(snapshot) {
                     if (snapshot.exists()) {
@@ -11088,7 +11088,7 @@ app.sendBulkEmail = function() {
     const db = firebase.database();
     
     // FIX: Use configurable sender email
-    const SENDER_EMAIL = 'support-chichi@gmail.com'; // CHANGE THIS TO YOUR DOMAIN!
+    const SENDER_EMAIL = 'support@chichi.buzz'; // CHANGE THIS TO YOUR DOMAIN!
     const SENDER_NAME = 'CHICHI Admin';
     
     (function() {
