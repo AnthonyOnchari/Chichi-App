@@ -998,12 +998,13 @@ var app = {
         document.querySelector('.bottom-nav').style.display = 'flex';
     },
 
+
     switchAdminTab: function(tab) {
         document.querySelectorAll('.admin-tab').forEach(function(t) { if (t && t.classList) t.classList.remove('active'); });
         document.querySelectorAll('.admin-tab-content').forEach(function(c) { if (c && c.classList) c.classList.remove('active'); });
        
         var buttons = document.querySelectorAll('.admin-tab');
-        var tabMap = ['dashboard', 'users', 'incomplete', 'posts', 'analytics', 'gifts', 'admins', 'notifications', 'logs'];
+        var tabMap = ['dashboard', 'users', 'incomplete', 'posts', 'analytics', 'gifts', 'admins', 'notifications', 'logs', 'email'];
         var tabIndex = tabMap.indexOf(tab);
         if (tabIndex >= 0) {
             buttons[tabIndex].classList.add('active');
@@ -1018,7 +1019,8 @@ var app = {
             'gifts': 'adminGifts',
             'admins': 'adminAdmins',
             'notifications': 'adminNotificationsTab',
-            'logs': 'adminLogs'
+            'logs': 'adminLogs',
+            'email': 'adminEmail'
         };
        
         var contentId = contentMap[tab];
@@ -1035,9 +1037,6 @@ var app = {
         if (tab === 'logs') this.loadActivityLog();
         if (tab === 'notifications') this.loadAdminNotifications();
     },
-
-    // ============================================
-    // ADMIN - DASHBOARD
     // ============================================
 
     loadAdminDashboard: function() {
