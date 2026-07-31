@@ -2,7 +2,7 @@
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
-    "package_name": "com.onchari.chichi",
+    "package_name": "com.onchari.chichi2",
     "sha256_cert_fingerprints": ["0044434C680B19A7C0AF1F1ECCE83801BDA705D133DB59E9ACA6875896A0BE68"]
   }
 }]

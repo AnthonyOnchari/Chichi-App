@@ -23,8 +23,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.onchari.chichi"
-    android:versionCode="3"
-    android:versionName="2.0.0" >
+    android:versionCode="1"
+    android:versionName="1" >
 
     <uses-sdk
         android:minSdkVersion="21"
