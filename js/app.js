@@ -5915,9 +5915,9 @@ var app = {
                     </div>
                     
                     <h2 style="margin-bottom:2px;font-weight:800;font-size:22px;color:#1a202c;">Anthony Onchari</h2>
-                    <p style="color:#0088cc;font-size:13px;font-weight:600;margin-bottom:4px;">👨‍💻 Developer & Digital Media Specialist</p>
+                    <p style="color:#0088cc;font-size:13px;font-weight:600;margin-bottom:4px;">Developer & Digital Media Specialist</p>
                     <p style="color:#6b7280;font-size:11px;background:#f0f0f0;display:inline-block;padding:2px 12px;border-radius:12px;margin-bottom:16px;">
-                        📱 Version V02A.01
+                        📱 Version V1.0
                     </p>
                     
                     <div style="background:#f7fafc;padding:16px 18px;border-radius:16px;text-align:left;border:1px solid #e2e8f0;margin-bottom:16px;">
@@ -5961,7 +5961,7 @@ var app = {
                     </div>
                     
                     <div style="margin-top:14px;font-size:11px;color:#a0aec0;border-top:1px solid #e2e8f0;padding-top:12px;">
-                        <span>© 2026 Onchari Group • CHICHI V02A.01</span>
+                        <span>© 2026 Onchari Group • CHICHI V1.0</span>
                     </div>
                 </div>
             </div>
