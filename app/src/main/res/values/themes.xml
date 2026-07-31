@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Hide the status bar -->
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        
+        <!-- Hide navigation bar -->
+        <item name="android:windowDrawsSystemBarBackgrounds">false</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        
+        <!-- Remove all window decorations -->
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowBackground">@color/colorPrimary</item>
+        
+        <!-- Status and navigation bar colors -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    
+    <style name="SplashTheme" parent="AppTheme">
+        <item name="android:windowBackground">@color/colorPrimary</item>
+    </style>
+</resources>
