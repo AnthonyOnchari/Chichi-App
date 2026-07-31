@@ -3,6 +3,6 @@
   "target": {
     "namespace": "android_app",
     "package_name": "com.onchari.chichi2",
-    "sha256_cert_fingerprints": ["0044434C680B19A7C0AF1F1ECCE83801BDA705D133DB59E9ACA6875896A0BE68"]
+    "sha256_cert_fingerprints": ["6102EB28F38FC3712DD4BE3961FBF68CE8EF853C7EC5279F7553ED043A9649E3"]
   }
 }]
