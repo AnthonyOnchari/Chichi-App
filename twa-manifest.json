@@ -3,29 +3,29 @@
   "host": "www.chichi.buzz",
   "name": "ChiChi",
   "launcherName": "ChiChi",
-  "display": "standalone",
+  "display": "fullscreen",
   "themeColor": "#0088CC",
-  "themeColorDark": "#000000",
-  "navigationColor": "#000000",
-  "navigationColorDark": "#000000",
-  "navigationDividerColor": "#000000",
-  "navigationDividerColorDark": "#000000",
-  "backgroundColor": "#FFFFFF",
+  "themeColorDark": "#0088CC",
+  "navigationColor": "#0088CC",
+  "navigationColorDark": "#0088CC",
+  "navigationDividerColor": "#0088CC",
+  "navigationDividerColorDark": "#0088CC",
+  "backgroundColor": "#0088CC",
   "enableNotifications": true,
   "startUrl": "/",
   "iconUrl": "https://www.chichi.buzz/icon-512.png",
   "maskableIconUrl": "https://www.chichi.buzz/icon-512.png",
-  "splashScreenFadeOutDuration": 300,
+  "splashScreenFadeOutDuration": 1,
   "signingKey": {
     "path": "/Users/siddharthkhimasia/Chichi-App/android.keystore",
     "alias": "android"
   },
-  "appVersionName": "1",
-  "appVersionCode": 1,
+  "appVersionName": "1.5.0",
+  "appVersionCode": 5,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://www.chichi.buzz/manifest.json",
-  "fallbackType": "customtabs",
+  "fallbackType": "none",
   "features": {},
   "alphaDependencies": {
     "enabled": false
@@ -43,5 +43,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "1"
+  "appVersion": "1.5.0"
 }
