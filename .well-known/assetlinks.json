@@ -1,12 +1,8 @@
-[
-  {
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "com.onchari.chichi",
-      "sha256_cert_fingerprints": [
-        "39:C7:0B:FA:39:5A:E4:EA:75:C1:13:0E:B1:A0:23:6E:F7:DC:EF:A6:D2:4A:74:98:D9:18:99:F0:5F:A5:59:67"
-      ]
-    }
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.onchari.chichi",
+    "sha256_cert_fingerprints": ["0044434C680B19A7C0AF1F1ECCE83801BDA705D133DB59E9ACA6875896A0BE68"]
   }
-]
+}]
