@@ -4,15 +4,15 @@
     "type": "LINKED_RESOURCES_BINARY_FORMAT",
     "kind": "Directory"
   },
-  "applicationId": "com.onchari.chichi",
+  "applicationId": "com.onchari.chichi2",
   "variantName": "release",
   "elements": [
     {
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 1,
-      "versionName": "1",
+      "versionCode": 8,
+      "versionName": "1.5.0",
       "outputFile": "linked-resources-binary-format-release.ap_"
     }
   ],

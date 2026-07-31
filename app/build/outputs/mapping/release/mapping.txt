@@ -3,8 +3,8 @@
 # min_api: 21
 # common_typos_disable
 # {"id":"com.android.tools.r8.mapping","version":"2.2"}
-# pg_map_id: 5305d89
-# pg_map_hash: SHA-256 5305d89b3241303e600d1d9042d4054b17b3eba04466107c1c4214c974f4bab3
+# pg_map_id: e5133ed
+# pg_map_hash: SHA-256 e5133edce5f36be07e5e113bdb26a624d7101451665210fb540a2108f9d77cee
 android.support.customtabs.ICustomTabsCallback -> a.a:
 # {"id":"sourceFile","fileName":"ICustomTabsCallback.java"}
     java.lang.String DESCRIPTOR -> a
@@ -24606,15 +24606,15 @@ com.google.common.collect.UnmodifiableListIterator -> M.s:
     1:4:void <init>():34:34 -> <init>
     1:6:void add(java.lang.Object):46:46 -> add
     1:6:void set(java.lang.Object):59:59 -> set
-com.onchari.chichi.Application -> com.onchari.chichi.Application:
+com.onchari.chichi2.Application -> com.onchari.chichi2.Application:
 # {"id":"sourceFile","fileName":"Application.java"}
     1:4:void <init>():20:20 -> <init>
     1:4:void onCreate():26:26 -> onCreate
-com.onchari.chichi.DelegationService -> com.onchari.chichi.DelegationService:
+com.onchari.chichi2.DelegationService -> com.onchari.chichi2.DelegationService:
 # {"id":"sourceFile","fileName":"DelegationService.java"}
     1:4:void <init>():5:5 -> <init>
     1:4:void onCreate():9:9 -> onCreate
-com.onchari.chichi.LauncherActivity -> com.onchari.chichi.LauncherActivity:
+com.onchari.chichi2.LauncherActivity -> com.onchari.chichi2.LauncherActivity:
 # {"id":"sourceFile","fileName":"LauncherActivity.java"}
     1:4:void <init>():25:25 -> <init>
     1:5:android.net.Uri getLaunchingUrl():48:48 -> i

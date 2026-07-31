@@ -1,4 +1,4 @@
-#Fri Jul 31 11:44:55 EAT 2026
+#Fri Jul 31 13:30:41 EAT 2026
 base.0=/Users/siddharthkhimasia/Chichi-App/app/build/intermediates/dex/release/minifyReleaseWithR8/classes.dex
 renamed.0=classes.dex
 path.0=classes.dex

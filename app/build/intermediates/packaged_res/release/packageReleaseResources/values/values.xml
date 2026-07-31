@@ -10,7 +10,7 @@
     <color name="navigationDividerColor">#000000</color>
     <color name="navigationDividerColorDark">#000000</color>
     <color name="shortcut_background">#F5F5F5</color>
-    <integer name="splashScreenFadeOutDuration">300</integer>
+    <integer name="splashScreenFadeOutDuration">100</integer>
     <string name="appName" translatable="false">ChiChi</string>
     <string name="assetStatements">
     [{
@@ -22,13 +22,13 @@
     }]
     
   </string>
-    <string name="fallbackType" translatable="false">customtabs</string>
+    <string name="fallbackType" translatable="false">none</string>
     <string name="fullScopeUrl" translatable="false">https://www.chichi.buzz/</string>
     <string name="generatorApp" translatable="false">bubblewrap-cli</string>
     <string name="hostName" translatable="false">www.chichi.buzz</string>
     <string name="launchUrl" translatable="false">https://www.chichi.buzz/</string>
     <string name="launcherName" translatable="false">ChiChi</string>
     <string name="orientation" translatable="false">portrait</string>
-    <string name="providerAuthority" translatable="false">com.onchari.chichi.fileprovider</string>
+    <string name="providerAuthority" translatable="false">com.onchari.chichi2.fileprovider</string>
     <string name="webManifestUrl" translatable="false">https://www.chichi.buzz/manifest.json</string>
 </resources>

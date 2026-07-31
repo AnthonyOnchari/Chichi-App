@@ -22,9 +22,9 @@
      the abbreviated format.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.onchari.chichi"
-    android:versionCode="1"
-    android:versionName="1" >
+    package="com.onchari.chichi2"
+    android:versionCode="8"
+    android:versionName="1.5.0" >
 
     <uses-sdk
         android:minSdkVersion="21"
@@ -43,13 +43,13 @@
     </queries>
 
     <permission
-        android:name="com.onchari.chichi.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:name="com.onchari.chichi2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
         android:protectionLevel="signature" />
 
-    <uses-permission android:name="com.onchari.chichi.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+    <uses-permission android:name="com.onchari.chichi2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
 
     <application
-        android:name="com.onchari.chichi.Application"
+        android:name="com.onchari.chichi2.Application"
         android:allowBackup="true"
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:extractNativeLibs="true"
@@ -84,7 +84,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.onchari.chichi.LauncherActivity"
+            android:name="com.onchari.chichi2.LauncherActivity"
             android:alwaysRetainTaskState="true"
             android:exported="true"
             android:label="@string/launcherName" >
@@ -128,6 +128,9 @@
                 android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY"
                 android:value="@string/fallbackType" />
             <meta-data
+                android:name="android.support.customtabs.trusted.DISPLAY_MODE"
+                android:value="immersive" />
+            <meta-data
                 android:name="android.support.customtabs.trusted.SCREEN_ORIENTATION"
                 android:value="@string/orientation" />
 
@@ -163,7 +166,7 @@
         </provider>
 
         <service
-            android:name="com.onchari.chichi.DelegationService"
+            android:name="com.onchari.chichi2.DelegationService"
             android:enabled="@bool/enableNotification"
             android:exported="@bool/enableNotification" >
             <meta-data
@@ -181,7 +184,7 @@
 
         <provider
             android:name="androidx.startup.InitializationProvider"
-            android:authorities="com.onchari.chichi.androidx-startup"
+            android:authorities="com.onchari.chichi2.androidx-startup"
             android:exported="false" >
             <meta-data
                 android:name="androidx.emoji2.text.EmojiCompatInitializer"
