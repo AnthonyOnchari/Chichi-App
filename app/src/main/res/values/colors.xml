@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="blue">#2196F3</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- This is required for the launcher shortcut background -->
+    <color name="shortcut_background">#FFFFFF</color>
+
+    <!-- Add any other colours here if you have any -->
+</resources>

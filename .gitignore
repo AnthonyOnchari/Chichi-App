@@ -1,0 +1,35 @@
+# Android builds (HUGE files!)
+*.aab
+*.apk
+*.idsig
+*.keystore
+*.jks
+
+# Node
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build folders
+build/
+dist/
+.gradle/
+
+# Gradle wrapper (optional - can be regenerated)
+gradlew
+gradlew.bat
+gradle/wrapper/
+

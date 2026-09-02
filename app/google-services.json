@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "219736252899",
+    "firebase_url": "https://chichi-001-default-rtdb.firebaseio.com",
+    "project_id": "chichi-001",
+    "storage_bucket": "chichi-001.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:219736252899:android:c79b4e85cb0537fd7500d6",
+        "android_client_info": {
+          "package_name": "com.onchari.chichi"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "219736252899-s89sfgdj8tmmofeejv4fe8pp7btreh0u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.onchari.chichi",
+            "certificate_hash": "92746957e1be824fe197cbbf8111c38ef10bbe44"
+          }
+        },
+        {
+          "client_id": "219736252899-o0392olrvfnelp9t8kub6t7a6k6oh8i0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjkapTlJ1JVb1ajSWYb3uww2IMZHub65A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "219736252899-o0392olrvfnelp9t8kub6t7a6k6oh8i0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
