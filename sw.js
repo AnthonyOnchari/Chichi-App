@@ -21,8 +21,6 @@ const messaging = firebase.messaging();
 
 // Handle background messages
 messaging.onBackgroundMessage(payload => {
-    console.log('📬 Background message received:', payload);
-
   if (payload.data?.type === 'coin_received' || payload.notification?.title === 'Coins received') {
     return;
   }
@@ -44,7 +42,6 @@ messaging.onBackgroundMessage(payload => {
 
 // Handle notification click
 self.addEventListener('notificationclick', event => {
-    console.log('🔔 Notification clicked');
     event.notification.close();
     
     const urlToOpen = event.notification.data?.url || '/';
@@ -74,20 +71,15 @@ self.addEventListener('activate', (event) => {
       .then((keyList) => {
         return Promise.all(
           keyList.map((key) => {
-            console.log('Deleting old cache:', key);
             return caches.delete(key);
           })
         );
       })
       .then(() => {
-        console.log('✅ Service Worker activated');
         return self.clients.claim();
       })
       .catch((error) => {
-        console.error('Service Worker activation failed:', error);
         return self.clients.claim();
       })
   );
 });
-
-console.log('✅ Service Worker script loaded');

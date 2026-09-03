@@ -11,6 +11,11 @@ node_modules/
 # Environment
 .env
 .env.local
+local.properties
+
+# Generated Android output
+app/release/
+app/build/
 
 # Logs
 *.log
@@ -28,8 +33,5 @@ build/
 dist/
 .gradle/
 
-# Gradle wrapper (optional - can be regenerated)
-gradlew
-gradlew.bat
-gradle/wrapper/
+# Keep the Gradle wrapper and its version file tracked for reproducible builds.
 

@@ -13,6 +13,8 @@ import android.webkit.WebViewClient;
 import android.webkit.WebSettings;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+import android.Manifest;
+import android.content.pm.PackageManager;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
@@ -29,6 +31,7 @@ import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import org.json.JSONObject;
 
@@ -63,6 +66,10 @@ public class LauncherActivity extends AppCompatActivity {
 
         // --- Firebase Auth setup ---
         mAuth = FirebaseAuth.getInstance();
+        mAuth.addAuthStateListener(firebaseAuth -> registerPushToken());
+        if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 7001);
+        }
 
         // Configure Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -81,8 +88,9 @@ public class LauncherActivity extends AppCompatActivity {
         webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
 
-        // Enable debugging
-        WebView.setWebContentsDebuggingEnabled(true);
+        // Keep DevTools-only warnings out of release builds.
+        boolean isDebuggable = (getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        WebView.setWebContentsDebuggingEnabled(isDebuggable);
 
         // Add JavaScript interface (name = "Android")
         webView.addJavascriptInterface(new ChichiJSInterface(), "Android");
@@ -174,6 +182,16 @@ public class LauncherActivity extends AppCompatActivity {
         startActivityForResult(signInIntent, RC_SIGN_IN);
     }
 
+    private void registerPushToken() {
+        FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
+            FirebaseUser user = mAuth.getCurrentUser();
+            if (user != null) {
+                com.google.firebase.database.FirebaseDatabase.getInstance()
+                        .getReference("users").child(user.getUid()).child("fcmTokens").child(token).setValue(true);
+            }
+        });
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -184,9 +202,12 @@ public class LauncherActivity extends AppCompatActivity {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 firebaseAuthWithGoogle(account.getIdToken());
             } catch (ApiException e) {
-                Toast.makeText(this, "Google sign-in failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                String message = e.getStatusCode() == 10
+                        ? "Google sign-in is not configured for this app. Please update the app or contact support."
+                        : "Google sign-in failed: " + e.getMessage();
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
                 // Inform WebView about failure
-                webView.evaluateJavascript("app.googleSignInFailed('" + e.getMessage() + "')", null);
+                webView.evaluateJavascript("app.googleSignInFailed('Google sign-in configuration error')", null);
             }
         }
     }
@@ -197,6 +218,7 @@ public class LauncherActivity extends AppCompatActivity {
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         FirebaseUser user = mAuth.getCurrentUser();
+                        registerPushToken();
                         sendUserToWebView(user);
                         Toast.makeText(this, "Signed in successfully", Toast.LENGTH_SHORT).show();
                     } else {

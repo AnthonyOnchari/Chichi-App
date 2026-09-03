@@ -23,26 +23,20 @@
     <meta name="theme-color" content="#0088CC">
     <meta name="apple-mobile-web-app-capable" content="yes">
     
+    <!-- Keep production diagnostics out of the browser console. -->
+    <script>
+        if (!window.CHICHI_DEBUG) {
+            ['log', 'info', 'warn', 'error', 'debug'].forEach(function(method) {
+                console[method] = function() {};
+            });
+        }
+    </script>
+
     <!-- CONFIG -->
     <script src="config.js"></script>
     
 </head>
 <body>
-
-    <!-- BRANDED LOADING SPLASH SCREEN -->
-    <div id="splashScreen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;transition:opacity 0.5s ease;">
-        <img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png" style="width:120px;height:120px;border-radius:12px;margin-bottom:30px;animation:pulse 2s infinite;box-shadow:0 10px 40px rgba(46,91,255,0.3);">
-        <div style="color:white;font-size:28px;font-weight:700;margin-bottom:10px;">CHICHI</div>
-        <div style="color:rgba(255,255,255,0.8);font-size:14px;">Loading your social world...</div>
-    </div>
-
-    <style>
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.9; }
-        }
-    </style>
-
 
 <!-- LOADING SCREEN -->
 <script>
@@ -291,21 +285,15 @@
                     <div id="exploreSearchResultsContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
                 </div>
 
-                <!-- Trending Hashtags Section -->
-                <div style="margin-bottom: 32px;">
-                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">🔥 Trending Now</h2>
-                    <div id="trendingHashtagsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;"></div>
-                </div>
-
                 <!-- Explore People Section -->
                 <div style="margin-bottom: 32px;">
-                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">👥 People to Follow</h2>
+                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">People to Follow</h2>
                     <div id="explorePeopleContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;"></div>
                 </div>
 
                 <!-- Trending Posts Section -->
                 <div>
-                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">📱 Most Liked</h2>
+                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">Most Liked</h2>
                     <div id="trendingPostsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
                 </div>
             </div>
@@ -355,30 +343,30 @@
     <div class="bottom-nav">
         <div class="nav-wrapper">
             <button class="nav-item active" onclick="app.switchView('feed')">
-                <span class="nav-icon">📰</span>
+                <span class="nav-icon">⌂</span>
                 <span class="nav-label">Feed</span>
             </button>
             <button class="nav-item" onclick="app.switchView('explore')">
-                <span class="nav-icon">🌍</span>
+                <span class="nav-icon">⌕</span>
                 <span class="nav-label">Explore</span>
             </button>
             <button class="nav-item" onclick="app.switchView('messages')" id="messagesNavBtn">
-                <span class="nav-icon">✉️</span>
+                <span class="nav-icon">✉</span>
                 <span class="nav-label">Messages</span>
                 <span class="nav-badge" id="messagesBadge" style="display:none;">0</span>
             </button>
             <!-- FAB BUTTON IN CENTER -->
-            <button class="fab-button-nav" onclick="app.openCreateModal()" title="Create Post">+</button>
+            <button type="button" class="fab-button-nav" onclick="app.showCreateModal(); return false;" title="Create Post">+</button>
             <button class="nav-item" onclick="app.switchView('earn')">
-                <span class="nav-icon">📊</span>
+                <span class="nav-icon">◫</span>
                 <span class="nav-label">Earn</span>
             </button>
             <button class="nav-item" onclick="app.switchView('profile')">
-                <span class="nav-icon">👥</span>
+                <span class="nav-icon">◉</span>
                 <span class="nav-label">Profile</span>
             </button>
             <button class="nav-item" onclick="app.showDeveloperInfo()">
-                <span class="nav-icon">⚙️</span>
+                <span class="nav-icon">⚙</span>
                 <span class="nav-label">Developer</span>
             </button>
         </div>
@@ -411,6 +399,7 @@
     </div>
 
     <!-- Messages Container -->
+    <div id="chatWallpaperLayer" aria-hidden="true"></div>
     <div id="chatMessages"></div>
 
     <!-- Enhanced Chat Input -->
@@ -827,15 +816,27 @@
 <div class="modal-overlay" id="createModal" style="display:none;">
     <div class="create-modal">
         <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
-        <h2 style="font-weight:700;margin-bottom:16px;">Create Post</h2>
+        <p class="eyebrow">Share something real</p>
+        <h2 style="font-weight:700;margin-bottom:6px;">Create a daily post</h2>
+        <p class="post-creator-intro">Use the daily hashtag to qualify for today’s 10-coin participation reward.</p>
         <div id="photoPreview"></div>
         <input type="file" id="photoInput" accept="image/*" style="display:none;">
         <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">
             📷 Choose Photo
         </button>
-        <textarea id="captionInput" placeholder="Write a caption..." rows="3"></textarea>
+        <label class="post-field-label" for="dailyPostHashtag">Participation hashtag</label>
+        <select id="dailyPostHashtag" class="post-field-select">
+            <option value="dailypost">#dailypost · Daily participation</option>
+        </select>
+        <label class="post-field-label" for="captionInput">Caption</label>
+        <textarea id="captionInput" placeholder="What are you sharing today?" rows="4"></textarea>
+        <label class="post-consent-row" for="postSharingConsent">
+            <input type="checkbox" id="postSharingConsent">
+            <span>I consent once to CHICHI storing and sharing this post according to the community policy.</span>
+        </label>
+        <p id="postConsentStatus" class="post-consent-status"></p>
         <button type="button" class="btn-submit" id="sharePostBtn" onclick="app.createPost()">
-            <span class="share-btn-text">Share Post</span>
+            <span class="share-btn-text">Publish daily post</span>
             <span class="share-spinner" style="display:none;">⏳</span>
         </button>
     </div>
@@ -884,6 +885,7 @@
                 <div class="admin-stat"><div class="admin-stat-value" id="adminTotalEarned">0</div><div class="admin-stat-label">💰 Coins Earned</div></div>
                 <div class="admin-stat"><div class="admin-stat-value" id="adminTotalSpent">0</div><div class="admin-stat-label">🎁 Coins Spent</div></div>
             </div>
+            <div id="adminPostConsents" style="margin-top:20px;background:white;border-radius:12px;padding:16px;"></div>
         </div>
         
         <!-- Users -->
@@ -1015,6 +1017,11 @@
         <div style="margin-bottom: 20px;">
             <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Username</label>
             <input type="text" id="editProfileUsername" placeholder="Your username (no spaces)" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Phone number</label>
+            <input type="tel" id="editProfilePhone" placeholder="07XXXXXXXX" maxlength="15" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
         </div>
         
         <div style="margin-bottom: 20px;">

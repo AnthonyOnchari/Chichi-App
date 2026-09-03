@@ -29,6 +29,7 @@ const UPLOAD_PRESET = 'chichi_photos';
 
 const ADMIN_PASSWORD = 'CHICHI26303@Admin';
 const MPESA_TILL = '8941840';
+const AIRTIME_REWARD_AMOUNT = 10;
 
 // ============================================
 // MUSIC PLAYLIST
@@ -208,22 +209,10 @@ const POST_TEMPLATES = [
 
 if (!firebase.apps.length) {
     firebase.initializeApp(FIREBASE_CONFIG);
-    console.log('✅ Firebase initialized');
-} else {
-    console.log('⚠️ Firebase already initialized');
 }
 
 var auth = firebase.auth();
 var db = firebase.database();
-
-// Check Firebase connection
-db.ref('.info/connected').on('value', function(snapshot) {
-    if (snapshot.val() === true) {
-        console.log('🌐 Connected to Firebase');
-    } else {
-        console.log('📡 Disconnected from Firebase');
-    }
-});
 
 // ============================================
 // EXPOSE ALL CONFIG VARIABLES GLOBALLY
@@ -235,29 +224,10 @@ window.CLOUD_NAME = CLOUD_NAME;
 window.UPLOAD_PRESET = UPLOAD_PRESET;
 window.ADMIN_PASSWORD = ADMIN_PASSWORD;
 window.MPESA_TILL = MPESA_TILL;
+window.AIRTIME_REWARD_AMOUNT = AIRTIME_REWARD_AMOUNT;
 window.MUSIC_PLAYLIST = MUSIC_PLAYLIST;
 window.SPINNER_CONFIG = SPINNER_CONFIG;
 window.EARNING_SETTINGS = EARNING_SETTINGS;
 window.TRIVIA_QUESTIONS = TRIVIA_QUESTIONS;
 window.GIFT_CATALOG = GIFT_CATALOG;
 window.POST_TEMPLATES = POST_TEMPLATES;
-
-console.log('✅ All config variables exported globally');
-console.log('🎁 GIFT_CATALOG:', GIFT_CATALOG ? GIFT_CATALOG.length : 'NOT SET');
-console.log('🧠 TRIVIA_QUESTIONS:', TRIVIA_QUESTIONS ? TRIVIA_QUESTIONS.length : 'NOT SET');
-console.log('💰 EARNING_SETTINGS:', EARNING_SETTINGS ? Object.keys(EARNING_SETTINGS) : 'NOT SET');
-
-// Loading screen timeout
-var loadingTimeout = setTimeout(() => {
-    var loading = document.getElementById('loadingScreen');
-    if (loading) {
-        loading.classList.remove('active');
-        loading.style.display = 'none';
-    }
-    var authPage = document.getElementById('authPage');
-    if (authPage) {
-        authPage.style.display = 'flex';
-    }
-}, 3000);
-
-console.log('✅ Configuration loaded successfully');

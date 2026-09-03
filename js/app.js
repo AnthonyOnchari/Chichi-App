@@ -1210,6 +1210,10 @@ var app = {
     },
 
     openAdminPortal: function() {
+        if (!this.user || !this.isAdmin) {
+            this.toast('Admin access required', 'error');
+            return;
+        }
         this.adminOpen = true;
         document.getElementById('mainApp').classList.remove('active');
         document.getElementById('adminPortal').classList.add('active');
@@ -1222,6 +1226,8 @@ var app = {
         this.loadAdminNotifications();
         this.loadAdminAnalytics();
         this.loadAdminGifts();
+        if (typeof this.loadAdminAirtimeRequests === 'function') this.loadAdminAirtimeRequests();
+        if (typeof this.loadAdminPostConsents === 'function') this.loadAdminPostConsents();
     },
 
     closeAdminPortal: function() {
@@ -1237,7 +1243,7 @@ var app = {
         document.querySelectorAll('.admin-tab-content').forEach(function(c) { if (c && c.classList) c.classList.remove('active'); });
 
         var buttons = document.querySelectorAll('.admin-tab');
-        var tabMap = ['dashboard', 'users', 'incomplete', 'posts', 'analytics', 'gifts', 'admins', 'notifications', 'logs', 'email'];
+        var tabMap = ['dashboard', 'users', 'incomplete', 'posts', 'analytics', 'gifts', 'admins', 'notifications', 'suspicious', 'logs', 'email'];
         var tabIndex = tabMap.indexOf(tab);
         if (tabIndex >= 0) {
             buttons[tabIndex].classList.add('active');
@@ -1252,6 +1258,7 @@ var app = {
             'gifts': 'adminGifts',
             'admins': 'adminAdmins',
             'notifications': 'adminNotificationsTab',
+            'suspicious': 'adminSuspicious',
             'logs': 'adminLogs',
             'email': 'adminEmail'
         };
@@ -1269,6 +1276,7 @@ var app = {
         if (tab === 'admins') this.loadAdminList();
         if (tab === 'logs') this.loadActivityLog();
         if (tab === 'notifications') this.loadAdminNotifications();
+        if (tab === 'suspicious') this.loadSuspiciousActivity();
     },
     // ============================================
 
@@ -1964,6 +1972,7 @@ var app = {
                     }).join('') : '<div style="color: #6b7280; text-align: center; padding: 20px;">Gift catalog not loaded</div>'}
                 </div>
 
+                <div id="adminAirtimeRequests" style="margin-top:20px;"></div>
                 <button onclick="app.addGift()" style="width: 100%; margin-top: 12px; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">+ Add New Gift</button>
             </div>
         `;
@@ -2821,8 +2830,10 @@ var app = {
 
         var self = this;
         db.ref('users/' + this.user.uid + '/following').once('value', function(s) {
-            self.following = s.val() || {};
+            var savedFollowing = s.val();
+            self.following = savedFollowing && typeof savedFollowing === 'object' ? savedFollowing : {};
             self.loadStories();
+            if (self.currentView === 'profile') self.renderProfile();
         });
     },
 
@@ -5122,22 +5133,13 @@ var app = {
         // ========== 2. GUEST / NOT LOGGED IN ==========
         if (!this.user || this.isGuest) {
             profileContent.innerHTML = `
-                <div style="padding: 60px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 50%, #c7d2fe 100%); position: relative; overflow: hidden;">
-                    <!-- Animated profile shapes in background -->
-                    <div style="position: absolute; top: 12%; left: 10%; font-size: 45px; opacity: 0.12; animation: float 3.5s ease-in-out infinite;">✨</div>
-                    <div style="position: absolute; bottom: 20%; right: 8%; font-size: 55px; opacity: 0.1; animation: float 4.5s ease-in-out infinite 0.7s;">🌟</div>
-                    <div style="position: absolute; top: 35%; right: 8%; font-size: 38px; opacity: 0.11; animation: float 3.2s ease-in-out infinite 1.2s;">💫</div>
-                    
-                    <div style="position: relative; z-index: 10;">
-                        <div style="font-size: 90px; margin-bottom: 20px; animation: bounce 2s infinite; filter: drop-shadow(0 4px 12px rgba(139, 92, 246, 0.3));">🦸</div>
-                        <h2 style="font-size: 28px; font-weight: 900; margin-bottom: 12px; color: #7c3aed; text-shadow: 0 2px 4px rgba(0,0,0,0.08);">Create Your Profile</h2>
-                        <p style="font-size: 15px; color: #6d28d9; margin-bottom: 28px; line-height: 1.6; max-width: 320px; font-weight: 500;">Build your unique identity, showcase your content, connect with friends, and unlock your potential on Chichi!</p>
-                        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-                            <button onclick="app.showLoginPage('login')" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none; padding: 14px 28px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(124, 58, 237, 0.6)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(124, 58, 237, 0.4)'">🔐 Sign In</button>
-                            <button onclick="app.showLoginPage('signup')" style="background: white; color: #7c3aed; border: 2px solid #8b5cf6; padding: 12px 28px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; transition: all 0.3s;" onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='white'">🎨 Join Now</button>
-                        </div>
-                        <button onclick="app.switchView('feed')" style="background: none; color: #6d28d9; border: none; padding: 8px 18px; cursor: pointer; font-size: 14px; margin-top: 20px; font-weight: 600; text-decoration: underline;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">← Back to Feed</button>
-                    </div>
+                <div class="guest-profile">
+                    <div class="guest-profile-mark"><img src="icon-192.png" alt="CHICHI"></div>
+                    <p class="guest-earn-kicker">YOUR SPACE</p>
+                    <h2>Create your profile</h2>
+                    <p>Sign in to add your photo, follow people, and make CHICHI yours.</p>
+                    <button onclick="app.showLoginPage('login')">Sign in to continue</button>
+                    <button class="guest-profile-secondary" onclick="app.showLoginPage('signup')">Create an account</button>
                 </div>
             `;
             return;
@@ -5185,6 +5187,10 @@ var app = {
         var userPosts = (this.posts || []).filter(function(p) { return p.userId === this.user.uid; }.bind(this));
         var followers = this.profile.followers || 0;
         var following = Object.keys(this.following || {}).length;
+        var hasFollowedAdmin = Object.keys(this.following || {}).some(function(uid) {
+            return typeof this.isAirtimeRewardAdmin === 'function' && this.isAirtimeRewardAdmin(uid);
+        }.bind(this));
+        var isVerified = !!this.profile.phone && hasFollowedAdmin;
 
         // Generate posts grid HTML
         var postsHtml = '';
@@ -5214,7 +5220,7 @@ var app = {
         }
 
         var html = `
-            <div style="padding: 0; background: #f5f5f5; min-height: 100vh;">
+            <div class="profile-redesign" style="padding: 0; background: #f5f5f5; min-height: 100vh;">
 
                 <!-- BENTO HEADER -->
                 <div style="display: grid; grid-template-columns: 90px 1fr; gap: 0; background: white; padding: 16px 16px 12px 16px; align-items: center; border-bottom: 1px solid #f0f0f0;">
@@ -5249,7 +5255,7 @@ var app = {
                     <div style="padding-left: 14px; display: flex; flex-direction: column; justify-content: center;">
                         <div style="font-size: 18px; font-weight: 700; color: #1a1a1a; display: flex; align-items: center; gap: 6px;">
                             ${this.profile.name || 'User'}
-                            <span style="color: #3b82f6; font-size: 16px;">✓</span>
+                            ${isVerified ? '<span class="verified-badge" title="Phone added and admin followed">✓</span>' : ''}
                         </div>
                         <div style="font-size: 13px; color: #9ca3af; margin-bottom: 6px;">@${username}</div>
 
@@ -5527,6 +5533,7 @@ var app = {
                 .then(function(data) {
                     self.profile.profilePhoto = data.secure_url;
                     db.ref('users/' + self.user.uid + '/profilePhoto').set(data.secure_url);
+                    self.claimAirtimeReward('profilePhoto');
                     self.toast('✅ Photo updated!', 'success');
                     self.renderProfile();
                     self.loadMessages();
@@ -5848,6 +5855,10 @@ var app = {
             var isFollowing = self.following && self.following[uid];
             var newCount = isFollowing ? count + 1 : Math.max(0, count - 1);
             db.ref('users/' + uid + '/followers').set(newCount);
+            if (self.users[uid]) self.users[uid].followers = newCount;
+            if (self.profile && uid === self.user.uid) self.profile.followers = newCount;
+            if (self.currentView === 'profile') self.renderProfile();
+            if (self.currentView === 'explore') self.loadExplorePeople();
         });
 
         setTimeout(function() { self.renderFeaturedUsers(); self.renderTopCreators(); }, 300);
@@ -6374,6 +6385,25 @@ var app = {
         modal.classList.add('active');
         modal.style.display = 'flex';
         modal.style.zIndex = '9999';
+        var consent = document.getElementById('postSharingConsent');
+        var consentStatus = document.getElementById('postConsentStatus');
+        if (consent) {
+            consent.checked = false;
+            consent.disabled = false;
+        }
+        if (consentStatus) consentStatus.textContent = 'Checking your sharing permission...';
+        if (this.user && db) {
+            db.ref('consents/' + this.user.uid + '/postSharing').once('value').then(function(snapshot) {
+                if (!consent || !document.getElementById('createModal').classList.contains('active')) return;
+                if (snapshot.exists()) {
+                    consent.checked = true;
+                    consent.disabled = true;
+                    if (consentStatus) consentStatus.textContent = 'Permission already saved for this account.';
+                } else if (consentStatus) {
+                    consentStatus.textContent = 'This permission is requested once.';
+                }
+            });
+        }
         setTimeout(function() {
             var captionInput = document.getElementById('captionInput');
             if (captionInput) captionInput.focus();
@@ -6396,17 +6426,40 @@ var app = {
 
         var photoFile = document.getElementById('photoInput').files[0];
         var caption = document.getElementById('captionInput').value.trim();
+        var selectedHashtag = document.getElementById('dailyPostHashtag').value;
+        var consent = document.getElementById('postSharingConsent');
         var sharePostBtn = document.getElementById('sharePostBtn');
         var shareSpinner = document.querySelector('.share-spinner');
         var shareText = document.querySelector('.share-btn-text');
 
         if (!photoFile || !caption) {
-            this.toast('Add photo and caption', 'error');
+            this.toast('Add a photo and caption', 'error');
+            return;
+        }
+
+        if (selectedHashtag !== 'dailypost') {
+            this.toast('Choose #dailypost to participate', 'error');
+            return;
+        }
+
+        if (!consent || (!consent.checked && !consent.disabled)) {
+            this.toast('Please accept the sharing permission once', 'error');
             return;
         }
 
         var hashtagRegex = /#[\w]+/g;
-        var hashtags = (caption.match(hashtagRegex) || []).slice(0, 5);
+        var hashtags = ['#dailypost'].concat(caption.match(hashtagRegex) || []).filter(function(tag, index, list) {
+            return list.indexOf(tag) === index;
+        }).slice(0, 5);
+
+        var consentRef = db.ref('consents/' + this.user.uid + '/postSharing');
+        var consentPromise = consent.disabled ? Promise.resolve() : consentRef.set({
+            userId: this.user.uid,
+            username: this.profile.username || '',
+            userName: this.profile.name || 'User',
+            permission: 'post_storage_and_sharing',
+            acceptedAt: firebase.database.ServerValue.TIMESTAMP
+        });
 
         if (shareSpinner) shareSpinner.style.display = 'inline';
         if (shareText) shareText.style.display = 'none';
@@ -6416,8 +6469,10 @@ var app = {
         formData.append('file', photoFile);
         formData.append('upload_preset', UPLOAD_PRESET);
 
-        fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', {
+        consentPromise.then(function() {
+            return fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', {
             method: 'POST', body: formData
+            });
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -6433,11 +6488,9 @@ var app = {
                 createdAt: new Date().toLocaleString('en-KE'),
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             }).then(function() {
-                self.balance += 1;
-                db.ref('users/' + self.user.uid + '/balance').set(self.balance);
-                self.trackRevenue('earned', 1, 'post_creation');
                 self.engagementStats.postsCount = (self.engagementStats.postsCount || 0) + 1;
                 self.saveEngagementStats();
+                self.claimDailyPostReward();
                 self.toast('Post published', 'success');
                 self.logUserActivity('create_post', 'Created a new post');
                 if (shareSpinner) shareSpinner.style.display = 'none';
@@ -6528,12 +6581,12 @@ loadMessages: function() {
     // Guest View
     if (isGuestView) {
         container.innerHTML = `
-            <div class="msg-empty-state" style="padding: 60px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
-                <div style="font-size: 80px; margin-bottom: 20px; animation: bounce 2s infinite;">💬</div>
-                <h3 style="font-size: 24px; font-weight: 800; color: #1a202c; margin-bottom: 12px;">Sign in to see your messages</h3>
-                <p style="font-size: 15px; color: #4b5563; margin-bottom: 28px; line-height: 1.6; max-width: 300px;">Chat with friends, share moments, and build real connections. Your conversations await!</p>
-                <button class="empty-btn" onclick="app.showLoginPage('login')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 14px 32px; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 15px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.6)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)'">🔐 Sign In / Sign Up</button>
-                <p style="font-size: 12px; color: #9ca3af; margin-top: 20px;">New to Chichi? Create an account in seconds!</p>
+            <div class="guest-messages">
+                <div class="guest-messages-mark"><img src="icon-192.png" alt="CHICHI"></div>
+                <p class="guest-earn-kicker">PRIVATE CONVERSATIONS</p>
+                <h3>Sign in to see your messages</h3>
+                <p>Connect with friends and keep every conversation in one place.</p>
+                <button onclick="app.showLoginPage('login')">Sign in to continue</button>
             </div>
         `;
         return;
@@ -6627,7 +6680,7 @@ loadMessages: function() {
                 var presence = self.presenceStatus && self.presenceStatus[conv.uid];
                 var lastSeenValue = (presence && presence.lastSeen) || conv.user.lastSeen;
                 var isOnline = !!(presence && presence.online);
-                var presenceLabel = isOnline ? 'Online' : (lastSeenValue ? 'Not online right now 🙂 I was ' + self.formatPresenceTime(new Date(lastSeenValue)) : 'Not online right now 🙂');
+                var presenceLabel = isOnline ? 'Online' : (lastSeenValue ? 'Not online right now 🙂 I was at ' + self.formatPresenceTime(new Date(lastSeenValue)) : 'Not online right now 🙂');
                 
                 // Online status (optional – you can set this dynamically)
                 var onlineDot = '<div class="online-dot' + (isOnline ? ' active' : '') + '"></div>';
@@ -6985,6 +7038,7 @@ loadMessages: function() {
             timestamp: firebase.database.ServerValue.TIMESTAMP,
             read: false
         }).then(function() {
+            self.sendPushNotification(self.currentChat.uid, 'New message from ' + (self.profile.name || 'CHICHI user'), text);
             db.ref('chats/' + key + '/messages/' + messageRef.key).set({
                 text: text,
                 sender: self.user.uid,
@@ -7328,6 +7382,7 @@ loadMessages: function() {
     saveProfileChanges: function() {
         var name = document.getElementById('editProfileName').value.trim();
         var username = document.getElementById('editProfileUsername').value.trim();
+        var phone = document.getElementById('editProfilePhone').value.trim();
         var bio = document.getElementById('editProfileBio').value.trim();
         var self = this;
 
@@ -7365,18 +7420,19 @@ loadMessages: function() {
                         return;
                     }
                 }
-                self._saveProfileData(name, username, bio, interests);
+                self._saveProfileData(name, username, phone, bio, interests);
             });
         } else {
-            this._saveProfileData(name, username, bio, interests);
+            this._saveProfileData(name, username, phone, bio, interests);
         }
     },
 
-    _saveProfileData: function(name, username, bio, interests) {
+    _saveProfileData: function(name, username, phone, bio, interests) {
         var self = this;
         var updateData = {
             name: name,
             username: username,
+            phone: phone,
             bio: bio,
             interests: interests
         };
@@ -7411,6 +7467,7 @@ loadMessages: function() {
                 self.toast('❌ Error updating profile', 'error');
             } else {
                 self.profile = { ...self.profile, ...updateData };
+                if (updateData.profilePhoto) self.claimAirtimeReward('profilePhoto');
                 self.toast('✅ Profile updated successfully!', 'success');
                 self.editProfilePhoto = null;
 
@@ -7721,6 +7778,21 @@ loadMessages: function() {
         else if (view === 'messages' && navItems[2]) navItems[2].classList.add('active');
         else if (view === 'earn' && navItems[3]) navItems[3].classList.add('active');
         else if (view === 'profile' && navItems[4]) navItems[4].classList.add('active');
+    },
+    showDeveloperInfo: function() {
+        var modal = document.getElementById('developerModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        document.body.classList.add('modal-open');
+    },
+
+    closeDeveloperInfo: function() {
+        var modal = document.getElementById('developerModal');
+        if (!modal) return;
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
     },
 
     // ============================================
@@ -8119,10 +8191,15 @@ loadMessages: function() {
                 if (s.exists()) {
                     var user = s.val();
                     var isFollowing = this.following[uid] || false;
+                    var userFollowsAdmin = Object.keys(user.following || {}).some(function(adminUid) {
+                        var admin = this.users && this.users[adminUid];
+                        return admin && admin.email && ['support-chichi@gmail.com', 'onchari.dev@gmail.com', 'support@chichi.buzz'].indexOf(admin.email.toLowerCase()) !== -1;
+                    }.bind(this));
+                    var isVerified = !!user.phone && userFollowsAdmin;
                     var unreadCount = this.getUnreadCountForUser(uid);
                     var msgBadge = unreadCount > 0 ? '<span style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;background:#ef4444;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;border:2px solid white;box-shadow:0 2px 6px rgba(239,68,68,0.4);">' + unreadCount + '</span>' : '';
 
-                    var html = '<div class="profile-header"><div class="profile-top"><div class="profile-avatar-large" style="background-image:url(' + (user.profilePhoto || '') + ');">' + (!user.profilePhoto ? user.name.charAt(0).toUpperCase() : '') + '</div><div class="profile-info"><div class="profile-name">' + (user.name || 'User') + '</div><div class="profile-email">' + user.email + '</div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-value">-</div><div class="profile-stat-label">Posts</div></div><div class="profile-stat"><div class="profile-stat-value">' + (user.followers || 0) + '</div><div class="profile-stat-label">Followers</div></div></div></div></div><div style="display:flex;gap:8px;margin-top:12px;"><button class="follow-btn" onclick="app.toggleFollow(\'' + uid + '\', \'' + user.name + '\')" style="background:' + (isFollowing ? '#ff4444' : 'var(--primary)') + ';color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;">' + (isFollowing ? '✕ Unfollow' : '✓ Follow') + '</button><button class="follow-btn" onclick="app.openChatFromSearch(\'' + uid + '\', \'' + user.name + '\')" style="background:#2E5BFF;color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;position:relative;">💬 Message ' + msgBadge + '</button></div></div>';
+                    var html = '<div class="profile-header"><div class="profile-top"><div class="profile-avatar-large" style="background-image:url(' + (user.profilePhoto || '') + ');">' + (!user.profilePhoto ? user.name.charAt(0).toUpperCase() : '') + '</div><div class="profile-info"><div class="profile-name">' + (user.name || 'User') + (isVerified ? ' <span class="verified-badge" title="Phone added and admin followed">✓</span>' : '') + '</div><div class="profile-email">' + user.email + '</div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-value">-</div><div class="profile-stat-label">Posts</div></div><div class="profile-stat"><div class="profile-stat-value">' + (user.followers || 0) + '</div><div class="profile-stat-label">Followers</div></div></div></div></div><div style="display:flex;gap:8px;margin-top:12px;"><button class="follow-btn" onclick="app.toggleFollow(\'' + uid + '\', \'' + user.name + '\')" style="background:' + (isFollowing ? '#ff4444' : 'var(--primary)') + ';color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;">' + (isFollowing ? '✕ Unfollow' : '✓ Follow') + '</button><button class="follow-btn" onclick="app.openChatFromSearch(\'' + uid + '\', \'' + user.name + '\')" style="background:#2E5BFF;color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;position:relative;">💬 Message ' + msgBadge + '</button></div></div>';
 
                     var modal = document.createElement('div');
                     modal.className = 'modal-overlay active';
@@ -8159,10 +8236,15 @@ loadMessages: function() {
             this.logUserActivity('follow', 'Followed user: ' + name);
         }
 
-        db.ref('users/' + this.user.uid + '/following').set(Object.keys(this.following).length);
+        db.ref('users/' + this.user.uid + '/following').set(this.following);
         db.ref('users/' + uid + '/followers').once('value', function(s) {
-            var followers = (s.val() || 0) + (isFollowing ? -1 : 1);
+            var followers = Math.max(0, (s.val() || 0) + (isFollowing ? -1 : 1));
             db.ref('users/' + uid + '/followers').set(followers);
+            if (self.users[uid]) self.users[uid].followers = followers;
+            if (!isFollowing) self.sendPushNotification(uid, (self.profile.name || 'Someone') + ' followed you', 'You have a new follower on CHICHI.');
+            if (!isFollowing && self.isAirtimeRewardAdmin(uid)) self.claimAirtimeReward('followAdmin');
+            if (self.currentView === 'profile') self.renderProfile();
+            if (self.currentView === 'explore') self.loadExplorePeople();
         });
 
         var modal = document.querySelector('.modal-overlay.active');
@@ -8469,6 +8551,11 @@ loadMessages: function() {
             var isFollowing = self.following && self.following[uid];
             var newCount = isFollowing ? count + 1 : Math.max(0, count - 1);
             db.ref('users/' + uid + '/followers').set(newCount);
+            if (isFollowing) self.sendPushNotification(uid, (self.profile.name || 'Someone') + ' followed you', 'You have a new follower on CHICHI.');
+            if (isFollowing && self.isAirtimeRewardAdmin(uid)) self.claimAirtimeReward('followAdmin');
+            if (self.users[uid]) self.users[uid].followers = newCount;
+            if (self.currentView === 'profile') self.renderProfile();
+            if (self.currentView === 'explore') self.loadExplorePeople();
         });
 
         setTimeout(function() { self.renderFeaturedUsers(); self.renderTopCreators(); }, 300);
@@ -10856,7 +10943,7 @@ app.updatePresenceDots = function() {
         if (dot) dot.classList.toggle('active', !!(presence && presence.online));
         if (presenceLabel) {
             presenceLabel.textContent = presence && presence.online ? 'Online' :
-                (lastSeenValue ? 'Not online right now 🙂 I was ' + this.formatPresenceTime(new Date(lastSeenValue)) : 'Not online right now 🙂');
+                (lastSeenValue ? 'Not online right now 🙂 I was at ' + this.formatPresenceTime(new Date(lastSeenValue)) : 'Not online right now 🙂');
         }
     }.bind(this));
 },
@@ -11431,10 +11518,11 @@ app.loadExplorePeople = function() {
 
         userArray.sort(function(a, b) { return (b.followers || 0) - (a.followers || 0); });
 
-        userArray.slice(0, 12).forEach(function(user) {
+        userArray.slice(0, app.isGuest ? 6 : 12).forEach(function(user, index) {
             var isFollowing = app.following[user.uid] || false;
             var profilePhoto = user.profilePhoto || '';
             var initials = user.name ? user.name.charAt(0).toUpperCase() : '?';
+            var displayName = app.isGuest ? 'Member ' + String(index + 1).padStart(2, '0') : (user.name || 'Unknown');
 
             html += '<div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 14px; text-align: center; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow=\'0 4px 12px rgba(0, 136, 204, 0.15)\'; this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.boxShadow=\'none\'; this.style.transform=\'translateY(0)\'" onclick="app.viewUserProfile(\'' + user.uid + '\')">';
 
@@ -11444,8 +11532,10 @@ app.loadExplorePeople = function() {
                 html += '<div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; margin: 0 auto 10px;">' + initials + '</div>';
             }
 
-            html += '<div style="font-weight: 600; font-size: 13px; color: #1a202c; margin-bottom: 4px;">' + (user.name || 'Unknown') + '</div>';
-            if (user.username) {
+            html += '<div class="' + (app.isGuest ? 'guest-explore-name' : '') + '" style="font-weight: 600; font-size: 13px; color: #1a202c; margin-bottom: 4px;">' + displayName + '</div>';
+            if (app.isGuest) {
+                html += '<div class="guest-explore-meta">Private member</div>';
+            } else if (user.username) {
                 html += '<div style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">@' + user.username + '</div>';
             }
             html += '<div style="font-size: 11px; color: #9ca3af; margin-bottom: 10px;">👥 ' + (user.followers || 0) + '</div>';
@@ -11467,12 +11557,88 @@ app.loadExplorePeople = function() {
     });
 };
 
+app.searchExplorePeople = function(query) {
+    var results = document.getElementById('exploreSearchResults');
+    var container = document.getElementById('exploreSearchResultsContainer');
+    if (!results || !container) return;
+
+    var term = (query || '').trim().toLowerCase();
+    if (!term) {
+        results.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    var renderResults = function(users) {
+        var matches = Object.keys(users || {}).filter(function(uid) {
+            if (app.user && uid === app.user.uid) return false;
+            var user = users[uid] || {};
+            return [user.name, user.username, user.email].some(function(value) {
+                return String(value || '').toLowerCase().indexOf(term) !== -1;
+            });
+        }).slice(0, 20);
+
+        results.style.display = 'block';
+        if (matches.length === 0) {
+            container.innerHTML = '<div class="explore-search-empty"><div class="explore-search-empty-icon">🔎</div><div class="explore-search-empty-text">No people found</div></div>';
+            return;
+        }
+
+        container.innerHTML = matches.map(function(uid) {
+            var user = users[uid] || {};
+            var name = user.name || 'User';
+            var avatar = user.profilePhoto ? '<img src="' + user.profilePhoto + '" alt="">' : '<span>' + name.charAt(0).toUpperCase() + '</span>';
+            return '<button type="button" class="explore-search-user" onclick="app.viewUserProfile(\'' + uid + '\')">' +
+                '<div class="explore-search-avatar">' + avatar + '</div>' +
+                '<div class="explore-search-user-copy"><strong>' + name + '</strong><span>@' + (user.username || 'user') + '</span></div>' +
+                '<span class="explore-search-arrow">View</span></button>';
+        }).join('');
+    };
+
+    if (app.users && Object.keys(app.users).length > 0) {
+        renderResults(app.users);
+        return;
+    }
+
+    if (!db) return;
+    db.ref('users').once('value').then(function(snapshot) {
+        app.users = snapshot.val() || {};
+        renderResults(app.users);
+    }).catch(function() {
+        results.style.display = 'block';
+        container.innerHTML = '<div class="explore-search-empty"><div class="explore-search-empty-icon">⚠️</div><div class="explore-search-empty-text">Search is unavailable right now</div></div>';
+    });
+};
+
+app.sendPushNotification = function(recipientUid, title, message) {
+    if (!recipientUid || !this.user || !this.user.uid) return;
+    this.user.getIdToken().then(function(idToken) {
+        return fetch('/api/sendPush', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+            body: JSON.stringify({
+                recipientUid: recipientUid,
+                senderUid: this.user.uid,
+                title: title,
+                message: message,
+                url: '/'
+            })
+        });
+    }.bind(this)).catch(function(error) {
+        console.error('Push notification request failed:', error);
+    });
+};
+
 // ============================================
 // ADDITIONAL FUNCTIONS (added to app after definition)
 // ============================================
 
 // Admin Modal Toggle
 app.toggleAdminModal = function() {
+    if (!this.user || !this.isAdmin) {
+        if (typeof this.toast === 'function') this.toast('Admin access required', 'error');
+        return;
+    }
     if (typeof this.openAdminPortal === 'function') {
         this.openAdminPortal();
     } else {
@@ -11503,7 +11669,6 @@ app.checkAdminStatus = function() {
 
     var self = this;
 
-    // Check if in custom admin list
     db.ref('adminUsers').once('value').then(function(snapshot) {
         var admins = snapshot.val() || {};
         var isCustomAdmin = admins[encodedEmail] || false;
@@ -11661,10 +11826,12 @@ app.showProfileSettings = function() {
     // Populate fields with current data
     var nameField = document.getElementById('editProfileName');
     var usernameField = document.getElementById('editProfileUsername');
+    var phoneField = document.getElementById('editProfilePhone');
     var bioField = document.getElementById('editProfileBio');
 
     if (nameField) nameField.value = this.profile.name || '';
     if (usernameField) usernameField.value = this.profile.username || '';
+    if (phoneField) phoneField.value = this.profile.phone || '';
     if (bioField) bioField.value = this.profile.bio || '';
 
     // Show modal
@@ -13230,15 +13397,15 @@ app.changeChatWallpaper = function() {
     var wallpapers = [
         { genre: 'Bubbles', name: 'Bubbles', url: '' },
         { genre: 'Bubbles', name: 'Small bubbles', url: 'small-bubbles' },
-        { genre: 'Nature', name: 'Ocean', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&q=85&fit=crop' },
-        { genre: 'Nature', name: 'Forest', url: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=900&q=85&fit=crop' },
-        { genre: 'Nature', name: 'Sunset', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=900&q=85&fit=crop' },
-        { genre: 'Classic', name: 'Abstract', url: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=900&q=85&fit=crop' },
-        { genre: 'Anime', name: 'Neon city', url: 'https://images.unsplash.com/photo-1519608487953-e999c86e7450?w=900&q=85&fit=crop' },
-        { genre: 'Anime', name: 'Dreamscape', url: 'https://images.unsplash.com/photo-1519608487953-e999c86e7450?w=900&q=85&fit=crop&sat=80' },
-        { genre: 'Bold', name: 'Ink', url: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=900&q=85&fit=crop' },
-        { genre: 'Bold', name: 'Electric', url: 'https://images.unsplash.com/photo-1519608487953-e999c86e7450?w=900&q=85&fit=crop&hue=200' },
-        { genre: 'Glamour', name: 'Rose glow', url: 'https://images.unsplash.com/photo-1519608487953-e999c86e7450?w=900&q=85&fit=crop&hue=330' }
+        { genre: 'Nature', name: 'Ocean', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=90' },
+        { genre: 'Nature', name: 'Forest', url: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1600&q=90' },
+        { genre: 'Nature', name: 'Sunset', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1600&q=90' },
+        { genre: 'Classic', name: 'Abstract', url: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=1600&q=90' },
+        { genre: 'Anime', name: 'Neon city', url: 'https://images.unsplash.com/photo-1519608487953-e999c86e7450?auto=format&fit=crop&w=1600&q=90' },
+        { genre: 'Anime', name: 'Dreamscape', url: 'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=1600&q=90' },
+        { genre: 'Bold', name: 'Ink', url: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1600&q=90' },
+        { genre: 'Bold', name: 'Electric', url: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=90' },
+        { genre: 'Glamour', name: 'Rose glow', url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1600&q=90' }
     ];
     var wallpaperKey = this.getChatWallpaperKey(chatKey);
     var savedWallpaper = localStorage.getItem(wallpaperKey) || '';
@@ -13321,21 +13488,17 @@ app.updateWallpaperPickerPreview = function(modal) {
 
 app.applyChatWallpaper = function(url, blurAmount, dimAmount) {
     var chatMessagesDiv = document.getElementById('chatMessages');
-    if (!chatMessagesDiv) return;
+    var wallpaperLayer = document.getElementById('chatWallpaperLayer');
+    if (!chatMessagesDiv || !wallpaperLayer) return;
 
     var isSmallBubbles = url === 'small-bubbles';
     var blurValue = parseInt(blurAmount, 10) || 0;
     var dimValue = parseInt(dimAmount, 10) || 0;
-    var imageValue = url && !isSmallBubbles ? 'url("' + url + '")' : 'none';
-    chatMessagesDiv.style.setProperty('background-image', 'none', 'important');
-    chatMessagesDiv.style.removeProperty('background-size');
-    chatMessagesDiv.style.removeProperty('background-position');
-    chatMessagesDiv.style.removeProperty('background-repeat');
-    chatMessagesDiv.style.setProperty('--chat-wallpaper', url && !isSmallBubbles ? 'url("' + url + '")' : 'none');
-    chatMessagesDiv.style.setProperty('--chat-wallpaper-blur', blurValue + 'px');
-    chatMessagesDiv.style.setProperty('--chat-wallpaper-dim', (dimValue / 100).toFixed(2));
-    chatMessagesDiv.classList.toggle('has-chat-wallpaper', !!url && !isSmallBubbles);
-    chatMessagesDiv.classList.toggle('has-small-bubbles', isSmallBubbles);
+    wallpaperLayer.style.setProperty('--chat-wallpaper', url && !isSmallBubbles ? 'url("' + url + '")' : 'none');
+    wallpaperLayer.style.setProperty('--chat-wallpaper-blur', blurValue + 'px');
+    wallpaperLayer.style.setProperty('--chat-wallpaper-dim', (dimValue / 100).toFixed(2));
+    wallpaperLayer.classList.toggle('has-chat-wallpaper', !!url && !isSmallBubbles);
+    wallpaperLayer.classList.toggle('has-small-bubbles', isSmallBubbles);
 };
 
 app.setChatWallpaper = function(chatKey, url, blurAmount, dimAmount) {
@@ -13549,9 +13712,82 @@ app.deleteConversation = function(uid) {
 
 app.formatPresenceTime = function(date) {
     if (!(date instanceof Date) || isNaN(date.getTime())) return 'recently';
-    return date.toLocaleDateString('en-GB') + ' at ' + date.toLocaleTimeString([], {
+    return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        hour12: true
+    }) + ' on ' + date.toLocaleDateString('en-GB');
+};
+
+app.loadAdminAirtimeRequests = function() {
+    var container = document.getElementById('adminAirtimeRequests');
+    if (!container || !db) return;
+    db.ref('airtimeRequests').orderByChild('createdAt').limitToLast(50).once('value').then(function(snapshot) {
+        var requests = [];
+        snapshot.forEach(function(child) {
+            var request = child.val() || {};
+            request.id = child.key;
+            requests.unshift(request);
+        });
+        container.innerHTML = '<div style="border-top:1px solid #e2e8f0;padding-top:16px;"><h3 style="margin:0 0 10px;font-size:15px;">Airtime requests</h3>' +
+            (requests.length ? requests.map(function(request) {
+                return '<div style="padding:12px 0;border-bottom:1px solid #edf2f7;font-size:12px;"><strong>' + (request.userName || 'User') + '</strong> @' + (request.username || 'user') + '<br>' +
+                    '<span style="color:#64748b;">KSh ' + (request.amount || 10) + ' to ' + request.phone + ' (' + request.network + ') • ' + (request.recipientName || '') + '</span>' +
+                    (request.status === 'fulfilled' ? '<span style="float:right;color:#15803d;font-weight:700;">Fulfilled</span>' : '<button onclick="app.fulfillAirtimeRequest(\'' + request.id + '\', \'' + request.userId + '\', \'' + request.rewardKey + '\')" style="float:right;border:0;border-radius:7px;padding:6px 9px;background:#0f766e;color:white;font-size:11px;font-weight:700;cursor:pointer;">Mark fulfilled</button>') +
+                    '</div>';
+            }).join('') : '<p style="color:#64748b;font-size:13px;">No airtime requests yet.</p>') + '</div>';
+    });
+};
+
+app.fulfillAirtimeRequest = function(requestId, userId, rewardKey) {
+    if (!this.isAdmin) return;
+    var updates = {};
+    updates['airtimeRequests/' + requestId + '/status'] = 'fulfilled';
+    updates['airtimeRequests/' + requestId + '/fulfilledAt'] = firebase.database.ServerValue.TIMESTAMP;
+    updates['airtimeRewards/' + userId + '/' + rewardKey + '/status'] = 'fulfilled';
+    db.ref().update(updates).then(function() {
+        app.toast('Airtime request marked fulfilled', 'success');
+        app.loadAdminAirtimeRequests();
+    });
+};
+
+app.claimDailyPostReward = function() {
+    if (!this.user || !db) return;
+    var now = new Date();
+    var dayKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    var rewardRef = db.ref('dailyPostRewards/' + this.user.uid + '/' + dayKey);
+    var self = this;
+    rewardRef.transaction(function(current) {
+        return current || {
+            amount: 10,
+            hashtag: '#dailypost',
+            userId: self.user.uid,
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        };
+    }, function(error, committed) {
+        if (error || !committed) return;
+        self.balance += 10;
+        db.ref('users/' + self.user.uid + '/balance').set(self.balance);
+        self.trackRevenue('earned', 10, 'daily_post');
+        self.updateBalanceDisplays();
+        self.toast('Daily post reward: +10 Coins', 'success');
+    });
+};
+
+app.loadAdminPostConsents = function() {
+    var container = document.getElementById('adminPostConsents');
+    if (!container || !db) return;
+    db.ref('consents').once('value').then(function(snapshot) {
+        var rows = [];
+        snapshot.forEach(function(child) {
+            var consent = child.child('postSharing').val();
+            if (consent) rows.push(consent);
+        });
+        rows.reverse();
+        container.innerHTML = '<h3 style="margin:0 0 10px;font-size:15px;">Post sharing permissions</h3>' +
+            (rows.length ? rows.map(function(consent) {
+                return '<div style="padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:12px;"><strong>' + (consent.userName || 'User') + '</strong> @' + (consent.username || 'user') + '<br><span style="color:#64748b;">Permission saved: ' + new Date(consent.acceptedAt || 0).toLocaleString() + '</span></div>';
+            }).join('') : '<p style="color:#64748b;font-size:13px;">No permissions saved yet.</p>');
     });
 };
 
@@ -13579,10 +13815,112 @@ app.trackPresence = function() {
         var user = self.users && self.users[otherUserId];
         var lastSeenValue = (presence && presence.lastSeen) || (user && user.lastSeen);
         statusText.textContent = lastSeenValue ?
-            'Not online right now 🙂 I was ' + self.formatPresenceTime(new Date(lastSeenValue)) :
+            'Not online right now 🙂 I was at ' + self.formatPresenceTime(new Date(lastSeenValue)) :
             'Not online right now 🙂';
         statusText.style.color = 'rgba(255,255,255,0.78)';
         if (statusDot) statusDot.style.background = '#94a3b8';
+    });
+};
+
+app.isAirtimeRewardAdmin = function(uid) {
+    var user = this.users && this.users[uid];
+    var email = user && user.email ? user.email.toLowerCase() : '';
+    return ['support-chichi@gmail.com', 'onchari.dev@gmail.com', 'support@chichi.buzz'].indexOf(email) !== -1;
+};
+
+app.claimAirtimeReward = function(reason) {
+    if (!this.user || !this.user.uid || !db) return;
+    var rewardRef = db.ref('airtimeRewards/' + this.user.uid + '/' + reason);
+    var self = this;
+    rewardRef.transaction(function(current) {
+        return current || {
+            amount: Number(window.AIRTIME_REWARD_AMOUNT || 10),
+            reason: reason,
+            status: 'available',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        };
+    }, function(error, committed) {
+        if (error) {
+            console.error('Airtime reward error:', error);
+            return;
+        }
+        if (committed) {
+            self.toast('You earned KSh ' + Number(window.AIRTIME_REWARD_AMOUNT || 10) + ' airtime', 'success');
+            if (self.currentView === 'earn') self.renderEarn();
+        }
+    });
+};
+
+app.showAirtimeRedemptionModal = function() {
+    if (!this.user || this.isGuest) {
+        this.showLoginPage('login');
+        return;
+    }
+
+    var self = this;
+    db.ref('airtimeRewards/' + this.user.uid).once('value').then(function(snapshot) {
+        var rewards = snapshot.val() || {};
+        var available = Object.keys(rewards).filter(function(key) { return rewards[key] && rewards[key].status === 'available'; });
+        if (available.length === 0) {
+            self.toast('No airtime rewards are ready to redeem yet', 'info');
+            return;
+        }
+
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = '<div class="modal airtime-modal"><button class="airtime-modal-close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button>' +
+            '<p class="eyebrow">Airtime reward</p><h2>Redeem KSh ' + (available.length * Number(window.AIRTIME_REWARD_AMOUNT || 10)) + '</h2>' +
+            '<p class="airtime-help">Redeem this reward for someone who has not uploaded a profile photo yet. Tell us where to send it and an administrator will fulfil the request.</p>' +
+            '<label class="form-label">Phone number</label><input class="form-input" id="airtimePhone" type="tel" placeholder="07XXXXXXXX" maxlength="15">' +
+            '<label class="form-label">Network</label><select class="form-input" id="airtimeNetwork"><option value="Safaricom">Safaricom</option><option value="Airtel">Airtel</option><option value="Telkom">Telkom</option></select>' +
+            '<label class="form-label">Recipient name</label><input class="form-input" id="airtimeRecipient" type="text" placeholder="Full name">' +
+            '<label class="form-label">Extra information</label><textarea class="form-input" id="airtimeNotes" placeholder="Optional notes"></textarea>' +
+            '<button class="airtime-submit" onclick="app.submitAirtimeRedemption(\'' + available[0] + '\')">Submit redemption request</button></div>';
+        document.body.appendChild(modal);
+    });
+};
+
+app.submitAirtimeRedemption = function(rewardKey) {
+    var phone = (document.getElementById('airtimePhone').value || '').trim();
+    var network = document.getElementById('airtimeNetwork').value;
+    var recipient = (document.getElementById('airtimeRecipient').value || '').trim();
+    var notes = (document.getElementById('airtimeNotes').value || '').trim();
+    if (!/^\+?[0-9]{9,15}$/.test(phone) || !recipient) {
+        this.toast('Enter a valid phone number and recipient name', 'error');
+        return;
+    }
+    var self = this;
+    var rewardRef = db.ref('airtimeRewards/' + this.user.uid + '/' + rewardKey);
+    rewardRef.transaction(function(reward) {
+        if (!reward || reward.status !== 'available') return;
+        reward.status = 'pending';
+        reward.phone = phone;
+        reward.network = network;
+        reward.recipientName = recipient;
+        reward.notes = notes;
+        reward.requestedAt = firebase.database.ServerValue.TIMESTAMP;
+        return reward;
+    }, function(error, committed, snapshot) {
+        if (error || !committed) {
+            self.toast('This reward is no longer available', 'error');
+            return;
+        }
+        db.ref('airtimeRequests').push({
+            userId: self.user.uid,
+            username: self.profile.username || '',
+            userName: self.profile.name || 'User',
+            rewardKey: rewardKey,
+            amount: snapshot.val().amount,
+            phone: phone,
+            network: network,
+            recipientName: recipient,
+            notes: notes,
+            status: 'pending',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        var modal = document.querySelector('.airtime-modal');
+        if (modal) modal.closest('.modal-overlay').remove();
+        self.toast('Airtime request submitted', 'success');
     });
 };
 
@@ -13591,7 +13929,7 @@ app.renderEarnDefault = function() {
     if (!earnContainer) return;
 
     if (this.isGuest || !this.user) {
-        earnContainer.innerHTML = '<div style="min-height:100%;padding:64px 24px;text-align:center;background:#f8fafc;"><div style="font-size:46px;margin-bottom:14px;">✦</div><h2 style="margin:0 0 8px;color:#0f172a;font-size:24px;">Earn with CHICHI</h2><p style="margin:0 0 22px;color:#64748b;font-size:14px;line-height:1.55;">Sign in to play trivia and collect coins.</p><button onclick="app.showLoginPage(\'login\')" style="padding:12px 20px;border:0;border-radius:10px;background:#0f766e;color:#fff;font:inherit;font-weight:700;cursor:pointer;">Sign in to start</button></div>';
+        earnContainer.innerHTML = '<main class="guest-earn"><div class="guest-earn-mark"><img src="icon-192.png" alt="CHICHI"></div><p class="guest-earn-kicker">CHICHI EARN</p><h1>Earn with CHICHI</h1><p class="guest-earn-copy">Sign in to play trivia, complete daily activities, and collect coins.</p><button class="guest-earn-button" onclick="app.showLoginPage(\'login\')">Sign in to continue</button><p class="guest-earn-note">Your rewards and progress are saved to your account.</p></main>';
         return;
     }
 
@@ -13624,6 +13962,8 @@ app.renderEarnDefault = function() {
                 </section>
 
                 <section style="margin-top:20px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><h2 style="margin:0;font-size:15px;">Reward shelf</h2><button onclick="app.showGiftCatalog()" style="padding:0;border:0;background:none;color:#0f766e;font:inherit;font-size:12px;font-weight:800;cursor:pointer;">See all</button></div><div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;">${rewards || '<p style="color:#64748b;font-size:13px;">Rewards are being prepared.</p>'}</div></section>
+
+                <section class="airtime-reward-card"><div><span class="eyebrow">Airtime rewards</span><h2>Earn KSh 10 airtime</h2><p>Upload a profile photo and follow an admin to unlock one reward for each action. Redeem it for someone without a profile photo.</p></div><button onclick="app.showAirtimeRedemptionModal()">Redeem airtime</button></section>
             </section>
         </main>
     `;
