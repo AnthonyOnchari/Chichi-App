@@ -223,6 +223,11 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes viewEnter {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-10px); }
@@ -729,6 +734,20 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     pointer-events: auto !important;
 }
 
+.view.view-enter {
+    animation: viewEnter 0.22s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .view.view-enter {
+        animation: none;
+    }
+}
+
+#feedView {
+    padding-top: 48px;
+}
+
 /* ===== BOTTOM NAV ===== */
 .bottom-nav {
     position: fixed;
@@ -739,8 +758,9 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 12px 12px 20px;
-    background: transparent;
+    padding: 0 env(safe-area-inset-right, 0) env(safe-area-inset-left, 0);
+    background: white;
+    border-top: 1px solid #e5e7eb;
     flex-shrink: 0;
     height: auto;
     border-radius: 0;
@@ -752,29 +772,28 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     align-items: center;
     gap: 0;
     width: 100%;
-    max-width: 520px;
+    max-width: none;
     position: relative;
-    background: white;
-    border-radius: 30px;
-    padding: 12px 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-    backdrop-filter: blur(10px);
+    background: transparent;
+    border-radius: 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    box-shadow: none;
 }
 
 .nav-item {
     flex: 1;
     text-align: center;
-    padding: 8px 12px;
+    padding: 6px 4px;
     cursor: pointer;
     color: #9ca3af;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 0;
     font-size: 0.65rem;
     transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 18px;
+    border-radius: 0;
     position: relative;
     min-width: auto;
     background: transparent;
@@ -788,22 +807,22 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 .nav-item.active {
-    color: var(--primary);
-    background: rgba(0, 136, 204, 0.12);
-    box-shadow: 0 2px 8px rgba(0, 136, 204, 0.15);
-    animation: navItemActive 0.4s cubic-bezier(0.4, 0, 0.2, 1) 1;
+    color: #111827;
+    background: transparent;
+    box-shadow: none;
+    animation: none;
 }
 
 .nav-icon {
-    font-size: 1.4rem;
+    font-size: 1.8rem;
     line-height: 1;
     transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.05));
 }
 
 .nav-item.active .nav-icon {
-    transform: scale(1.15);
-    filter: drop-shadow(0 2px 4px rgba(0, 136, 204, 0.25));
+    transform: none;
+    filter: none;
 }
 
 .nav-badge {
@@ -824,10 +843,7 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 .nav-label {
-    font-size: 0.55rem;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    display: none;
 }
 
 .nav-item.active .nav-label {
@@ -836,19 +852,19 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 
 /* ===== FAB BUTTON IN NAV ===== */
 .fab-button-nav {
-    width: 44px;
-    height: 44px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: white;
-    border: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: white;
+    color: #111827;
+    border: 3px solid #111827;
     cursor: pointer;
-    font-size: 1.6rem;
+    font-size: 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 3px 12px rgba(0, 136, 204, 0.35);
+    box-shadow: none;
     flex-shrink: 0;
     margin: 0 8px;
     font-weight: 600;
@@ -856,7 +872,7 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 
 .fab-button-nav:hover {
     transform: scale(1.1) translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 136, 204, 0.45);
+    box-shadow: none;
 }
 
 .fab-button-nav:active {
@@ -1068,11 +1084,13 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 .post-image {
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     height: auto;
-    max-height: 450px;
-    object-fit: cover;
+    max-height: 480px;
+    object-fit: contain;
     display: block;
+    margin: 0 auto;
     background: var(--light);
     min-height: 220px;
     background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
@@ -1104,48 +1122,67 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 .post-actions {
-    padding: 8px;
+    padding: 6px 12px 10px;
     display: flex;
-    gap: 4px;
+    gap: 18px;
     background: white;
-    border-top: 1px solid var(--border);
-    justify-content: space-around;
+    border-top: 0;
+    justify-content: flex-start;
 }
 
 .post-action {
-    flex: 1;
     text-align: center;
     cursor: pointer;
-    padding: 10px 8px;
+    width: 30px;
+    height: 30px;
+    padding: 0;
     border: none;
     background: transparent;
-    color: var(--text-light);
-    font-size: 0.75rem;
-    font-weight: 600;
-    transition: all 0.2s;
+    color: #111827;
+    font-size: 0;
+    font-weight: 400;
+    transition: color 0.15s ease, transform 0.15s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    border-radius: 10px;
+    gap: 0;
+    border-radius: 0;
     touch-action: manipulation;
     font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
 }
 
+.post-action svg {
+    width: 25px;
+    height: 25px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
 .post-action:hover {
-    background: rgba(0, 136, 204, 0.1);
-    color: var(--primary);
-    transform: scale(1.05);
+    background: transparent;
+    color: #111827;
+    transform: scale(1.08);
 }
 
 .post-action:active {
-    transform: scale(0.95);
+    transform: scale(0.92);
 }
 
 .post-action.liked {
-    color: #ff4444;
+    color: #ed4956;
     font-weight: 700;
+}
+
+.post-action.liked svg {
+    fill: currentColor;
+}
+
+.post-action-save {
+    margin-left: auto;
 }
 
 /* ============================================
@@ -3858,13 +3895,13 @@ html.chichi-returning-session #loadingScreen .loading-progress {
    ============================================ */
 @media (max-width: 768px) {
     .nav-item {
-        padding: 8px 10px;
+        padding: 6px 4px;
         font-size: 0.6rem;
         min-width: auto;
     }
     
     .nav-icon {
-        font-size: 1.3rem;
+        font-size: 1.8rem;
     }
     
     .fab-button {
@@ -3874,22 +3911,22 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     }
     
     .bottom-nav {
-        padding: 12px 12px 18px;
+        padding: 0 env(safe-area-inset-right, 0) env(safe-area-inset-left, 0);
         height: auto;
         border-radius: 0;
     }
     
     .nav-wrapper {
-        max-width: 420px;
-        padding: 10px 12px;
-        border-radius: 28px;
+        max-width: none;
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+        border-radius: 0;
     }
     
     .fab-button-nav {
-        width: 40px;
-        height: 40px;
-        font-size: 1.4rem;
-        margin: 0 6px;
+        width: 34px;
+        height: 34px;
+        font-size: 2rem;
+        margin: 0 8px;
     }
     
     .messages-header h2 {
@@ -3909,6 +3946,10 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     .app-header {
         padding: 4px 10px;
         min-height: 42px;
+    }
+
+    #feedView {
+        padding-top: 42px;
     }
     
     .consent-content {
@@ -3932,13 +3973,13 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     }
     
     .nav-item {
-        padding: 6px 8px;
+        padding: 6px 4px;
         font-size: 0.55rem;
         min-width: auto;
     }
     
     .nav-icon {
-        font-size: 1.2rem;
+        font-size: 1.8rem;
     }
     
     .fab-button {
@@ -3948,23 +3989,23 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     }
     
     .bottom-nav {
-        padding: 10px 10px 16px;
+        padding: 0 env(safe-area-inset-right, 0) env(safe-area-inset-left, 0);
         height: auto;
         border-radius: 0;
     }
     
     .nav-wrapper {
-        max-width: 360px;
-        padding: 8px 10px;
-        border-radius: 26px;
+        max-width: none;
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+        border-radius: 0;
         gap: 0;
     }
     
     .fab-button-nav {
-        width: 38px;
-        height: 38px;
-        font-size: 1.3rem;
-        margin: 0 4px;
+        width: 34px;
+        height: 34px;
+        font-size: 2rem;
+        margin: 0 8px;
     }
     
     .message-item-avatar {
@@ -3996,6 +4037,10 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     .app-header {
         padding: 3px 8px;
         min-height: 38px;
+    }
+
+    #feedView {
+        padding-top: 38px;
     }
     
     .message-wrapper {
@@ -6561,11 +6606,28 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 .nav-icon {
     display: grid;
     place-items: center;
-    min-height: 22px;
+    min-height: 28px;
     color: currentColor;
     font-family: Georgia, serif;
-    font-size: 21px;
+    font-size: 26px;
     line-height: 1;
+}
+
+.nav-profile-avatar {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    border: 1px solid #111827;
+    border-radius: 50%;
+    background-color: #f3f4f6;
+    background-position: center;
+    background-size: cover;
+    overflow: hidden;
+    font-size: 0;
+}
+
+.nav-profile-avatar:not(.has-photo) {
+    font-size: 20px;
 }
 
 .nav-label {

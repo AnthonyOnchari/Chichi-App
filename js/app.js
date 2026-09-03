@@ -94,6 +94,20 @@ var app = {
             return;
         }
 
+        if (!this.modalBackdropHandlerAttached) {
+            document.addEventListener('click', function(event) {
+                if (event.target.classList.contains('modal-overlay')) {
+                    if (event.target.id) {
+                        event.target.classList.remove('active');
+                        event.target.style.display = 'none';
+                    } else {
+                        event.target.remove();
+                    }
+                }
+            });
+            this.modalBackdropHandlerAttached = true;
+        }
+
         if (!auth || !db) {
             console.log('⏳ Waiting for Firebase...');
             // Show app skeleton to let guests browse the Feed while Firebase initializes
@@ -195,7 +209,8 @@ var app = {
                             bio: '',
                             profilePhoto: u.photoURL || '',
                             coverImage: '',
-                            balance: 0,
+                            balance: 10,
+                            signupRewardGranted: true,
                             followers: 0,
                             following: 0,
                             triviaAnswered: [],
@@ -220,6 +235,7 @@ var app = {
                     // CRITICAL: Always show feed as default view on login
                     setTimeout(function() {
                         self.switchView('feed');
+                        self.showDailyPostPrompt();
                     }, 100);
                     self.setOnlineStatus();
                     self.startTriviaTimer();
@@ -2429,34 +2445,92 @@ var app = {
             return;
         }
 
-        if (!confirm(`Redeem "${gift.name}" for ${gift.cost} Chichi Coins?`)) {
-            return;
-        }
+        this.showGiftRedemptionModal(gift);
+    },
+
+    showGiftRedemptionModal: function(gift) {
+        var self = this;
+        Promise.all([db.ref('users').once('value'), db.ref('adminUsers').once('value')]).then(function(results) {
+            var users = results[0].val() || {};
+            var customAdmins = results[1].val() || {};
+            var adminEmails = (self.DEFAULT_ADMINS || []).concat(Object.keys(customAdmins).map(function(email) {
+                return email.replace(/_/g, '.');
+            }));
+            var admins = Object.keys(users).map(function(uid) {
+                return { uid: uid, user: users[uid] };
+            }).filter(function(entry) {
+                return entry.user.email && adminEmails.indexOf(entry.user.email.toLowerCase()) !== -1;
+            });
+
+            if (admins.length === 0) {
+                self.toast('No administrator is available for withdrawals', 'error');
+                return;
+            }
+
+            var options = admins.map(function(entry) {
+                var label = entry.user.name || entry.user.email;
+                return '<option value="' + entry.uid + '">' + label + '</option>';
+            }).join('');
+            var modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = '<div class="modal" style="max-width:380px;"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2 style="margin-bottom:8px;">Redeem ' + gift.name + '</h2><p style="margin-bottom:18px;color:#6b7280;font-size:14px;">Send a withdrawal request for ' + gift.cost + ' Chichi Coins to an administrator.</p><label class="form-label" for="withdrawalAdmin">Administrator</label><select class="form-input" id="withdrawalAdmin">' + options + '</select><button class="btn-submit" style="margin-top:16px;" onclick="app.confirmGiftRedemption(\'' + gift.id + '\', document.getElementById(\'withdrawalAdmin\').value)">Submit withdrawal</button></div>';
+            document.body.appendChild(modal);
+        }).catch(function() {
+            self.toast('Unable to load administrators', 'error');
+        });
+    },
+
+    confirmGiftRedemption: function(giftId, adminUid) {
+        var catalog = window.GIFT_CATALOG || [];
+        var gift = catalog.find(function(entry) { return entry.id === giftId; });
+        if (!gift || !adminUid || !this.user) return;
 
         var self = this;
-        this.balance -= gift.cost;
-        db.ref('users/' + this.user.uid + '/balance').set(this.balance);
+        db.ref('users/' + this.user.uid + '/balance').transaction(function(balance) {
+            balance = Number(balance || 0);
+            return balance >= gift.cost ? balance - gift.cost : undefined;
+        }, function(error, committed, snapshot) {
+            if (error || !committed) {
+                self.toast('Insufficient coins or unable to submit withdrawal', 'error');
+                return;
+            }
 
-        db.ref('giftRedemptions').push({
-            userId: this.user.uid,
-            userName: this.profile.name || 'User',
-            userEmail: this.user.email,
-            giftId: gift.id,
-            giftName: gift.name,
-            giftDescription: gift.description,
-            giftCost: gift.cost,
-            createdAt: new Date().toLocaleString('en-KE'),
-            timestamp: firebase.database.ServerValue.TIMESTAMP
+            self.balance = Number(snapshot.val() || 0);
+            var request = db.ref('giftRedemptions').push();
+            request.set({
+                userId: self.user.uid,
+                userName: self.profile.name || 'User',
+                userEmail: self.user.email,
+                adminUid: adminUid,
+                giftId: gift.id,
+                giftName: gift.name,
+                giftDescription: gift.description,
+                giftCost: gift.cost,
+                status: 'pending',
+                createdAt: new Date().toLocaleString('en-KE'),
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            var chatKey = [self.user.uid, adminUid].sort().join('_');
+            db.ref('chats/' + chatKey + '/messages').push({
+                senderId: self.user.uid,
+                senderName: self.profile.name || 'User',
+                senderEmail: self.user.email,
+                message: 'Withdrawal request: ' + gift.name + ' for ' + gift.cost + ' Chichi Coins.',
+                withdrawalId: request.key,
+                isWithdrawal: true,
+                timestamp: Date.now(),
+                read: false
+            });
+
+            self.trackRevenue('spent', gift.cost, 'gift_' + gift.name);
+            self.updateBalanceDisplays();
+            self.toast('Withdrawal request sent to the selected administrator', 'success');
+            self.logUserActivity('redeem_gift', 'Requested ' + gift.name + ' for ' + gift.cost + ' coins');
+
+            var modal = document.querySelector('.modal-overlay.active');
+            if (modal) modal.remove();
         });
-
-        this.trackRevenue('spent', gift.cost, 'gift_' + gift.name);
-
-        this.updateBalanceDisplays();
-        this.toast('🎉 Redeemed: ' + gift.name + '!', 'success');
-        this.logUserActivity('redeem_gift', 'Redeemed ' + gift.name + ' for ' + gift.cost + ' coins');
-
-        document.querySelector('.modal-overlay').remove();
-        this.showGiftCatalog();
     },
 
     // ============================================
@@ -3219,6 +3293,21 @@ var app = {
         }
     },
 
+    showDailyPostPrompt: function() {
+        if (!this.user || this.isGuest || !this.profile) return;
+
+        var now = new Date();
+        var dayKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        var self = this;
+        db.ref('dailyPostRewards/' + this.user.uid + '/' + dayKey).once('value').then(function(snapshot) {
+            if (snapshot.exists() || document.querySelector('.modal-overlay.active')) return;
+            var modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = '<div class="modal" style="max-width:360px;text-align:center;"><div style="font-size:34px;margin-bottom:10px;">✦</div><h2 style="margin-bottom:8px;">Today\'s post reward</h2><p style="margin:0;color:#6b7280;font-size:14px;line-height:1.5;">Post a photo with a caption to win 10 redeemable CHICHI Coins today. You can redeem them instantly.</p><button class="btn-submit" style="margin-top:18px;" onclick="this.closest(\'.modal-overlay\').remove();app.showCreateModal();">Create today\'s post</button><button style="margin-top:10px;border:0;background:none;color:#6b7280;font:inherit;font-size:13px;cursor:pointer;" onclick="this.closest(\'.modal-overlay\').remove()">Not now</button></div>';
+            document.body.appendChild(modal);
+        });
+    },
+
     // ============================================
     // LOAD DARK MODE PREFERENCE
     // ============================================
@@ -3352,37 +3441,17 @@ var app = {
     // ============================================
 
     renderEarn: function() {
-        var self = this;
-
-        if (this.pendingTrivia) {
-            this.currentTrivia = this.pendingTrivia;
-            this.triviaAnswered = false;
-            this.renderEarnWithTrivia(this.pendingTrivia);
-            this.pendingTrivia = null;
-            return;
-        }
-
-        if (this.user && this.user.uid) {
-            db.ref('users/' + this.user.uid + '/pendingTrivia').once('value', function(snap) {
-                var pending = snap.val();
-                if (pending && pending.question) {
-                    self.currentTrivia = pending;
-                    self.triviaAnswered = false;
-                    self.renderEarnWithTrivia(pending);
-                } else {
-                    self.renderEarnDefault();
-                }
-            });
-        } else {
-            this.renderEarnDefault();
-        }
+        this.pendingTrivia = null;
+        this.currentTrivia = null;
+        this.triviaAnswered = false;
+        this.renderEarnDefault();
     },
 
     // ============================================
     // RENDER EARN DEFAULT - COMPACT CREDIT CARD
     // ============================================
 
-    renderEarnDefault: function() {
+    renderEarnDefaultLegacy: function() {
         var earnContainer = document.getElementById('earnContainer');
         if (!earnContainer) {
             // Create container if missing (fix for error #6)
@@ -4328,9 +4397,6 @@ var app = {
                 }
             }
 
-            if (!answeredToday) {
-                self.generateTriviaQuestion();
-            }
         });
     },
 
@@ -4465,7 +4531,17 @@ var app = {
         }
 
         this.pendingTrivia = null;
-        this.renderEarnWithTrivia(questionData);
+        this.showTriviaQuestionModal(questionData);
+    },
+
+    showTriviaQuestionModal: function(questionData) {
+        var options = questionData.options.map(function(option, index) {
+            return '<button class="trivia-option" onclick="app.answerTriviaFromEarn(' + index + ')" style="width:100%;margin-top:8px;padding:12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;color:#172033;text-align:left;font:inherit;cursor:pointer;">' + option + '</button>';
+        }).join('');
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = '<div class="modal" style="max-width:420px;"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><p class="eyebrow">Daily quiz</p><h2 style="margin:0 0 12px;">' + questionData.question + '</h2><div id="triviaResultArea"></div>' + options + '</div>';
+        document.body.appendChild(modal);
     },
 
     chooseTriviaGenre: function() {
@@ -4845,6 +4921,11 @@ var app = {
     // ============================================
 
     updateHeaderMenu: function() {
+        var headerMenu = document.getElementById('headerMenu');
+        if (headerMenu) {
+            headerMenu.style.display = 'none';
+        }
+
         // Control Profile button
         var menuProfile = document.getElementById('menuProfile');
         if (menuProfile) {
@@ -5080,6 +5161,14 @@ var app = {
                     } else {
                         avatar.textContent = self.user.email.charAt(0).toUpperCase();
                     }
+                }
+
+                var navProfileAvatar = document.getElementById('navProfileAvatar');
+                if (navProfileAvatar) {
+                    var profilePhoto = self.profile.profilePhoto || '';
+                    navProfileAvatar.style.backgroundImage = profilePhoto ? 'url(' + profilePhoto + ')' : 'none';
+                    navProfileAvatar.classList.toggle('has-photo', Boolean(profilePhoto));
+                    navProfileAvatar.textContent = profilePhoto ? '' : (self.profile.name || self.user.email || 'U').charAt(0).toUpperCase();
                 }
 
                 self.checkAndShowHashtagPopup();
@@ -5546,6 +5635,7 @@ var app = {
                     self.profile.profilePhoto = data.secure_url;
                     db.ref('users/' + self.user.uid + '/profilePhoto').set(data.secure_url);
                     self.claimAirtimeReward('profilePhoto');
+                    self.claimProfilePhotoReward();
                     self.toast('✅ Photo updated!', 'success');
                     self.renderProfile();
                     self.loadMessages();
@@ -6284,6 +6374,8 @@ var app = {
     // ============================================
 
     openChatFromSearch: function(uid, name) {
+        var modal = document.querySelector('.modal-overlay.active');
+        if (modal) modal.remove();
         this.openChat(uid, name);
     },
 
@@ -6378,8 +6470,65 @@ var app = {
     previewPhoto: function(e) {
         var file = e.target.files[0];
         if (file) {
+            this.postPhotoFile = file;
+            this.openPostCropper(file);
+        }
+    },
+
+    openPostCropper: function(file) {
+        var self = this;
+        var image = new Image();
+        var imageUrl = URL.createObjectURL(file);
+        image.onload = function() {
+            URL.revokeObjectURL(imageUrl);
+            self.postCropState = { image: image, zoom: 1, offsetX: 0, offsetY: 0 };
+            var modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.id = 'postCropModal';
+            modal.innerHTML = '<div class="modal" style="max-width:420px;"><div class="modal-close"><button onclick="app.cancelPostCrop()">✕</button></div><h2 style="margin:0 0 6px;">Fit your photo</h2><p style="margin:0 0 14px;color:#6b7280;font-size:13px;">Adjust the image for the feed frame.</p><canvas id="postCropCanvas" width="1080" height="1350" style="display:block;width:100%;aspect-ratio:4/5;background:#111827;border-radius:8px;"></canvas><label class="form-label" for="postCropZoom" style="margin-top:14px;">Zoom</label><input id="postCropZoom" type="range" min="1" max="2.5" value="1" step="0.01" style="width:100%;" oninput="app.updatePostCropPreview()"><label class="form-label" for="postCropX" style="margin-top:10px;">Horizontal position</label><input id="postCropX" type="range" min="-100" max="100" value="0" style="width:100%;" oninput="app.updatePostCropPreview()"><label class="form-label" for="postCropY" style="margin-top:10px;">Vertical position</label><input id="postCropY" type="range" min="-100" max="100" value="0" style="width:100%;" oninput="app.updatePostCropPreview()"><button class="btn-submit" style="margin-top:16px;" onclick="app.applyPostCrop()">Use this photo</button><button style="width:100%;margin-top:10px;padding:10px;border:0;background:none;color:#6b7280;font:inherit;cursor:pointer;" onclick="app.cancelPostCrop()">Use original photo</button></div>';
+            document.body.appendChild(modal);
+            self.updatePostCropPreview();
+        };
+        image.src = imageUrl;
+    },
+
+    updatePostCropPreview: function() {
+        var state = this.postCropState;
+        var canvas = document.getElementById('postCropCanvas');
+        if (!state || !canvas) return;
+        state.zoom = Number(document.getElementById('postCropZoom').value);
+        state.offsetX = Number(document.getElementById('postCropX').value) / 100;
+        state.offsetY = Number(document.getElementById('postCropY').value) / 100;
+        var context = canvas.getContext('2d');
+        var scale = Math.max(canvas.width / state.image.width, canvas.height / state.image.height) * state.zoom;
+        var width = state.image.width * scale;
+        var height = state.image.height * scale;
+        var rangeX = Math.max(0, (width - canvas.width) / 2);
+        var rangeY = Math.max(0, (height - canvas.height) / 2);
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(state.image, (canvas.width - width) / 2 + rangeX * state.offsetX, (canvas.height - height) / 2 + rangeY * state.offsetY, width, height);
+    },
+
+    applyPostCrop: function() {
+        var self = this;
+        var canvas = document.getElementById('postCropCanvas');
+        if (!canvas) return;
+        canvas.toBlob(function(blob) {
+            if (!blob) return;
+            self.postPhotoFile = new File([blob], 'chichi-post.jpg', { type: 'image/jpeg' });
             var preview = document.getElementById('photoPreview');
-            preview.textContent = '✓ ' + file.name + ' selected';
+            preview.innerHTML = '<img src="' + canvas.toDataURL('image/jpeg', 0.9) + '" alt="Post photo preview" style="display:block;width:100%;max-height:220px;object-fit:contain;border-radius:8px;"><span style="display:block;margin-top:8px;">Photo fitted for the feed</span>';
+            preview.style.display = 'block';
+            document.getElementById('postCropModal').remove();
+        }, 'image/jpeg', 0.9);
+    },
+
+    cancelPostCrop: function() {
+        var modal = document.getElementById('postCropModal');
+        if (modal) modal.remove();
+        var preview = document.getElementById('photoPreview');
+        if (preview && this.postPhotoFile) {
+            preview.textContent = 'Original photo selected';
             preview.style.display = 'block';
         }
     },
@@ -6436,7 +6585,7 @@ var app = {
     createPost: function() {
         if (!this.requireAuth('post')) return;
 
-        var photoFile = document.getElementById('photoInput').files[0];
+        var photoFile = this.postPhotoFile || document.getElementById('photoInput').files[0];
         var caption = document.getElementById('captionInput').value.trim();
         var selectedHashtag = document.getElementById('dailyPostHashtag').value;
         var consent = document.getElementById('postSharingConsent');
@@ -7480,7 +7629,10 @@ loadMessages: function() {
                 self.toast('❌ Error updating profile', 'error');
             } else {
                 self.profile = { ...self.profile, ...updateData };
-                if (updateData.profilePhoto) self.claimAirtimeReward('profilePhoto');
+                if (updateData.profilePhoto) {
+                    self.claimAirtimeReward('profilePhoto');
+                    self.claimProfilePhotoReward();
+                }
                 self.toast('✅ Profile updated successfully!', 'success');
                 self.editProfilePhoto = null;
 
@@ -7699,6 +7851,7 @@ loadMessages: function() {
     // ============================================
 
     switchView: function(view) {
+        var app = this;
         if (this.isGuest && ['messages', 'earn', 'profile'].includes(view)) {
             var guestAuthPage = document.getElementById('authPage');
             var guestMainApp = document.getElementById('mainApp');
@@ -7751,6 +7904,9 @@ loadMessages: function() {
         var viewElement = document.getElementById(view + 'View');
         if (viewElement) {
             viewElement.classList.add('active');
+            viewElement.classList.remove('view-enter');
+            void viewElement.offsetWidth;
+            viewElement.classList.add('view-enter');
         }
 
         if (view === 'profile') {
@@ -7775,14 +7931,6 @@ loadMessages: function() {
             this.loadExplore();
         } else if (view === 'earn') {
             this.renderEarn();
-            var self = this;
-            setTimeout(function() {
-                if (self.pendingTrivia && self.pendingTrivia.question) {
-                    self.currentTrivia = self.pendingTrivia;
-                    self.triviaAnswered = false;
-                    self.renderEarnWithTrivia(self.pendingTrivia);
-                }
-            }, 100);
         }
 
         var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
@@ -7791,6 +7939,7 @@ loadMessages: function() {
         else if (view === 'messages' && navItems[2]) navItems[2].classList.add('active');
         else if (view === 'earn' && navItems[3]) navItems[3].classList.add('active');
         else if (view === 'profile' && navItems[4]) navItems[4].classList.add('active');
+
     },
     showDeveloperInfo: function() {
         var modal = document.getElementById('developerModal');
@@ -7905,7 +8054,11 @@ loadMessages: function() {
         this.loadStories();
         console.log('📥 loadPosts() - attaching listener to /posts');
 
-        db.ref('posts').orderByChild('timestamp').limitToLast(50).on('value', function(s) {
+        if (this.postsListenerRef) {
+            this.postsListenerRef.off('value');
+        }
+        this.postsListenerRef = db.ref('posts').orderByChild('timestamp').limitToLast(50);
+        this.postsListenerRef.on('value', function(s) {
             var p = [];
             s.forEach(function(c) {
                 var post = c.val();
@@ -7917,6 +8070,13 @@ loadMessages: function() {
             self.posts = p;
             console.log('✅ posts loaded:', self.posts.length);
             self.postsLoading = false;
+            if (self.pendingLikePostId) {
+                clearTimeout(self.pendingLikeRenderTimeout);
+                self.pendingLikeRenderTimeout = setTimeout(function() {
+                    self.pendingLikePostId = null;
+                }, 500);
+                return;
+            }
             self.renderFeed();
         }, function(err) {
             console.error('❌ Error loading posts:', err.message);
@@ -7996,12 +8156,16 @@ loadMessages: function() {
 
                     // --- CHANGED: Show only Share button for guests ---
                     var actionsHtml = '';
+                    var heartIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.9-8.6a5.5 5.5 0 0 0-.1-7.8Z"/></svg>';
+                    var commentIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-3.9-.9L3 20l1.2-3.5A8 8 0 0 1 3 12a8.5 8.5 0 0 1 9-8.5 8.5 8.5 0 0 1 9 8Z"/></svg>';
+                    var shareIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 3-7.7 18-3.5-7.8L3 9.7 21 3Z"/><path d="m9.8 13.2 4.1-4.1"/></svg>';
+                    var saveIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4V3Z"/></svg>';
                     if (this.isGuest) {
                         // Guest: only Share button
-                        actionsHtml = '<div class="post-actions"><button class="post-action" onclick="app.sharePost(\'' + p.id + '\', \'' + p.caption.replace(/'/g, "\\'") + '\')">📤 Share</button></div>';
+                        actionsHtml = '<div class="post-actions"><button class="post-action" aria-label="Share post" title="Share" onclick="app.sharePost(\'' + p.id + '\', \'' + p.caption.replace(/'/g, "\\'") + '\')">' + shareIcon + '</button></div>';
                     } else {
                         // Logged in: all actions
-                        actionsHtml = '<div class="post-actions"><button class="post-action ' + (userLiked ? 'liked' : '') + '" onclick="app.likePost(\'' + p.id + '\')">' + (userLiked ? '❤️ Liked' : '🤍 Like') + '</button><button class="post-action" onclick="app.downloadPost(\'' + p.photoUrl + '\', \'' + p.id + '\')">💾 Save</button><button class="post-action" onclick="app.viewComments(\'' + p.id + '\')">💬 Comment</button><button class="post-action" onclick="app.sharePost(\'' + p.id + '\', \'' + p.caption.replace(/'/g, "\\'") + '\')">📤 Share</button></div>';
+                        actionsHtml = '<div class="post-actions"><button class="post-action ' + (userLiked ? 'liked' : '') + '" aria-label="Like post" title="Like" onclick="app.likePost(\'' + p.id + '\', this)">' + heartIcon + '</button><button class="post-action" aria-label="Comment on post" title="Comment" onclick="app.viewComments(\'' + p.id + '\')">' + commentIcon + '</button><button class="post-action" aria-label="Share post" title="Share" onclick="app.sharePost(\'' + p.id + '\', \'' + p.caption.replace(/'/g, "\\'") + '\')">' + shareIcon + '</button><button class="post-action post-action-save" aria-label="Save post" title="Save" onclick="app.downloadPost(\'' + p.photoUrl + '\', \'' + p.id + '\')">' + saveIcon + '</button></div>';
                     }
                     postHtml += actionsHtml;
 
@@ -8025,7 +8189,7 @@ loadMessages: function() {
     // LIKE POST
     // ============================================
 
-    likePost: function(id) {
+    likePost: function(id, button) {
         if (!this.requireAuth('like posts')) return;
 
         var self = this;
@@ -8044,8 +8208,24 @@ loadMessages: function() {
                 self.saveEngagementStats();
             }
 
-            db.ref('posts/' + id + '/likes').set(likes);
-            self.renderFeed();
+            self.pendingLikePostId = id;
+            db.ref('posts/' + id + '/likes').set(likes).catch(function() {
+                self.pendingLikePostId = null;
+                self.loadPosts();
+            });
+            var liked = Boolean(likes[self.user.uid]);
+            var postElement = document.getElementById('post-' + id);
+            if (button) {
+                button.classList.toggle('liked', liked);
+            }
+            if (postElement) {
+                var stats = postElement.querySelector('.post-stats');
+                if (stats) {
+                    var downloads = post && post.downloads || 0;
+                    var comments = post && post.comments && post.comments.length || 0;
+                    stats.textContent = Object.keys(likes).length + ' likes · ' + downloads + ' saves · ' + comments + ' comments';
+                }
+            }
             if (self.currentView === 'profile') {
                 self.renderProfile();
             }
@@ -8059,15 +8239,27 @@ loadMessages: function() {
 
     downloadPost: function(url, id) {
         if (!this.requireAuth('save posts')) return;
-        try {
+        var self = this;
+        fetch(url)
+        .then(function(response) {
+            if (!response.ok) throw new Error('Unable to download image');
+            return response.blob();
+        })
+        .then(function(blob) {
+            var objectUrl = URL.createObjectURL(blob);
             var link = document.createElement('a');
-            link.href = url;
-            link.download = 'photo.jpg';
+            link.href = objectUrl;
+            link.download = 'chichi-post-' + id + '.jpg';
+            document.body.appendChild(link);
             link.click();
-            this.logUserActivity('download_post', 'Downloaded post: ' + id);
-        } catch (err) {
-            this.toast('Download failed', 'error');
-        }
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+            self.logUserActivity('download_post', 'Downloaded post: ' + id);
+            self.toast('Photo saved to your device', 'success');
+        })
+        .catch(function() {
+            self.toast('Unable to download this photo', 'error');
+        });
     },
 
     // ============================================
@@ -8984,6 +9176,8 @@ loadMessages: function() {
     // ============================================
 
     openChatFromSearch: function(uid, name) {
+        var modal = document.querySelector('.modal-overlay.active');
+        if (modal) modal.remove();
         this.openChat(uid, name);
     },
 
@@ -9078,9 +9272,8 @@ loadMessages: function() {
     previewPhoto: function(e) {
         var file = e.target.files[0];
         if (file) {
-            var preview = document.getElementById('photoPreview');
-            preview.textContent = '✓ ' + file.name + ' selected';
-            preview.style.display = 'block';
+            this.postPhotoFile = file;
+            this.openPostCropper(file);
         }
     },
 
@@ -9109,6 +9302,7 @@ loadMessages: function() {
         modal.classList.remove('active');
         modal.style.display = 'none';
         document.getElementById('photoInput').value = '';
+        this.postPhotoFile = null;
         document.getElementById('captionInput').value = '';
         var preview = document.getElementById('photoPreview');
         if (preview) { preview.style.display = 'none'; preview.textContent = ''; }
@@ -9117,7 +9311,7 @@ loadMessages: function() {
     createPost: function() {
         if (!this.requireAuth('post')) return;
 
-        var photoFile = document.getElementById('photoInput').files[0];
+        var photoFile = this.postPhotoFile || document.getElementById('photoInput').files[0];
         var caption = document.getElementById('captionInput').value.trim();
         var sharePostBtn = document.getElementById('sharePostBtn');
         var shareSpinner = document.querySelector('.share-spinner');
@@ -9161,6 +9355,7 @@ loadMessages: function() {
                 self.trackRevenue('earned', 1, 'post_creation');
                 self.engagementStats.postsCount = (self.engagementStats.postsCount || 0) + 1;
                 self.saveEngagementStats();
+                self.claimDailyPostReward();
                 self.toast('Post published', 'success');
                 self.logUserActivity('create_post', 'Created a new post');
                 if (shareSpinner) shareSpinner.style.display = 'none';
@@ -9595,7 +9790,8 @@ loadMessages: function() {
                     email: email,
                     bio: '',
                     profilePhoto: '',
-                    balance: 0,
+                    balance: 10,
+                    signupRewardGranted: true,
                     followers: 0,
                     following: 0,
                     hashtags: [],
@@ -9608,7 +9804,7 @@ loadMessages: function() {
                 return db.ref('users/' + r.user.uid).set(userData);
             })
             .then(function() {
-                self.toast('Account created! Please select your interests', 'success');
+                self.toast('Account created! Your 10 redeemable CHICHI Coins are ready.', 'success');
                 self.logUserActivity('signup', 'New user signed up: ' + email);
                 setTimeout(function() {
                     if (self.showMandatoryHashtagSelection) {
@@ -13842,21 +14038,57 @@ app.claimDailyPostReward = function() {
     var dayKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     var rewardRef = db.ref('dailyPostRewards/' + this.user.uid + '/' + dayKey);
     var self = this;
+    var awarded = false;
     rewardRef.transaction(function(current) {
-        return current || {
-            amount: 10,
-            hashtag: '#dailypost',
-            userId: self.user.uid,
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-        };
+        awarded = !current;
+        return current || { amount: 10, hashtag: '#dailypost', userId: self.user.uid, createdAt: firebase.database.ServerValue.TIMESTAMP };
     }, function(error, committed) {
-        if (error || !committed) return;
+        if (error || !committed || !awarded) return;
         self.balance += 10;
         db.ref('users/' + self.user.uid + '/balance').set(self.balance);
         self.trackRevenue('earned', 10, 'daily_post');
         self.updateBalanceDisplays();
-        self.toast('Daily post reward: +10 Coins', 'success');
+        self.toast('Daily post reward: +10 redeemable CHICHI Coins', 'success');
     });
+};
+
+app.claimProfilePhotoReward = function() {
+    if (!this.user || !db) return;
+
+    var self = this;
+    var awarded = false;
+    var rewardRef = db.ref('profilePhotoRewards/' + this.user.uid);
+    rewardRef.transaction(function(current) {
+        awarded = !current;
+        return current || { amount: 5, createdAt: firebase.database.ServerValue.TIMESTAMP };
+    }, function(error, committed) {
+        if (error || !committed || !awarded) return;
+
+        self.balance += 5;
+        db.ref('users/' + self.user.uid + '/balance').set(self.balance);
+        self.trackRevenue('earned', 5, 'profile_photo_reward');
+        self.updateBalanceDisplays();
+        self.showWalletRewardNotification('Profile photo reward', 5);
+    });
+};
+
+app.showWalletRewardNotification = function(title, amount) {
+    var existing = document.querySelector('.wallet-reward-notification');
+    if (existing) existing.remove();
+
+    var notification = document.createElement('button');
+    notification.type = 'button';
+    notification.className = 'wallet-reward-notification';
+    notification.style.cssText = 'position:fixed;top:18px;right:16px;z-index:100000;max-width:330px;width:calc(100% - 32px);padding:14px 16px;border:0;border-radius:12px;background:#0f766e;color:#fff;text-align:left;box-shadow:0 12px 28px rgba(15,118,110,.28);font:inherit;cursor:pointer;';
+    notification.innerHTML = '<strong style="display:block;font-size:14px;">' + title + '</strong><span style="display:block;margin-top:3px;font-size:13px;">+' + Number(amount).toFixed(2) + ' redeemable CHICHI Coins. Tap to view wallet.</span>';
+    notification.addEventListener('click', function() {
+        notification.remove();
+        app.switchView('earn');
+    });
+    document.body.appendChild(notification);
+    setTimeout(function() {
+        if (notification.parentNode) notification.remove();
+    }, 6000);
 };
 
 app.loadAdminPostConsents = function() {
@@ -14021,11 +14253,6 @@ app.renderEarnDefault = function() {
     var profileName = (this.profile.name || 'Friend').split(' ')[0];
     var username = this.profile.username || 'member';
     var balance = Number(this.balance || 0).toFixed(2);
-    var catalog = (window.GIFT_CATALOG || []).slice(0, 3);
-    var rewards = catalog.map(function(gift) {
-        return '<button onclick="app.showGiftCatalog()" style="flex:0 0 116px;padding:12px 10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;text-align:left;cursor:pointer;font:inherit;"><span style="display:block;font-size:24px;margin-bottom:8px;">' + gift.image + '</span><strong style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1e293b;font-size:12px;">' + gift.name + '</strong><small style="display:block;color:#64748b;margin-top:3px;font-size:11px;">' + gift.cost + ' coins</small></button>';
-    }).join('');
-
     earnContainer.innerHTML = `
         <main style="min-height:100vh;padding:20px 16px 132px;background:#f8fafc;color:#0f172a;">
             <section style="max-width:680px;margin:0 auto;">
@@ -14044,15 +14271,151 @@ app.renderEarnDefault = function() {
                 </section>
 
                 <section style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;">
+                    <button onclick="app.showSendMoneyModal()" style="padding:14px;border:1px solid #99f6e4;border-radius:10px;background:#f0fdfa;color:#115e59;font:inherit;font-size:14px;font-weight:800;cursor:pointer;">Send Coins</button>
+                    <button onclick="app.showRedeemRequestModal()" style="padding:14px;border:0;border-radius:10px;background:#0f766e;color:#fff;font:inherit;font-size:14px;font-weight:800;cursor:pointer;">Redeem</button>
+                </section>
+
+                <section style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;">
                     <div style="padding:14px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;"><span style="display:block;color:#64748b;font-size:12px;">Questions answered</span><strong id="triviaCount" style="display:block;margin-top:4px;font-size:24px;">0</strong></div>
                     <div style="padding:14px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;"><span style="display:block;color:#64748b;font-size:12px;">Current streak</span><strong style="display:block;margin-top:4px;font-size:24px;"><span id="streakCount">0</span> days</strong></div>
                 </section>
-
-                <section style="margin-top:20px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><h2 style="margin:0;font-size:15px;">Reward shelf</h2><button onclick="app.showGiftCatalog()" style="padding:0;border:0;background:none;color:#0f766e;font:inherit;font-size:12px;font-weight:800;cursor:pointer;">See all</button></div><div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;">${rewards || '<p style="color:#64748b;font-size:13px;">Rewards are being prepared.</p>'}</div></section>
 
                 <section class="airtime-reward-card"><div><span class="eyebrow">Airtime rewards</span><h2>Earn KSh 10 airtime</h2><p>Upload a profile photo and follow an admin to unlock one reward for each action. Redeem it for someone without a profile photo.</p></div><button onclick="app.showAirtimeRedemptionModal()">Redeem airtime</button></section>
             </section>
         </main>
     `;
     this.updateEarnStats();
+    this.animateEarnBalance();
+};
+
+app.animateEarnBalance = function() {
+    var balanceDisplay = document.getElementById('earnBalanceDisplay');
+    if (!balanceDisplay) return;
+
+    var targetBalance = Number(this.balance || 0);
+    var startTime = null;
+    var duration = 650;
+
+    function updateBalance(timestamp) {
+        if (!startTime) startTime = timestamp;
+        var progress = Math.min((timestamp - startTime) / duration, 1);
+        balanceDisplay.textContent = (targetBalance * progress).toFixed(2) + ' Coins';
+        if (progress < 1) requestAnimationFrame(updateBalance);
+    }
+
+    requestAnimationFrame(updateBalance);
+};
+
+app.showRedeemRequestModal = function() {
+    if (!this.user || this.isGuest) {
+        this.showLoginPage('login');
+        return;
+    }
+
+    var modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.innerHTML = '<div class="modal" style="max-width:390px;"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2 style="margin-bottom:8px;">Redeem coins</h2><p style="margin:0 0 16px;color:#6b7280;font-size:13px;">Requests are reviewed by the CHICHI administrators.</p><label class="form-label" for="redeemType">Redeem as</label><select class="form-input" id="redeemType" onchange="app.updateRedeemRequestFields()"><option value="coins">Coins</option><option value="airtime">Airtime</option><option value="donate">Donate</option></select><label class="form-label" for="redeemAmount" style="margin-top:12px;">Coins to redeem</label><input class="form-input" id="redeemAmount" type="number" min="1" max="' + Number(this.balance || 0) + '" placeholder="Available: ' + Number(this.balance || 0).toFixed(2) + '"><div id="redeemContactFields"><label class="form-label" for="redeemProvider" style="margin-top:12px;">Provider</label><select class="form-input" id="redeemProvider"><option value="Safaricom">Safaricom</option><option value="Airtel">Airtel</option><option value="Telkom">Telkom</option></select><label class="form-label" for="redeemPhone" style="margin-top:12px;">Phone number</label><input class="form-input" id="redeemPhone" type="tel" placeholder="07XXXXXXXX"></div><div id="redeemRecipientField"><label class="form-label" for="redeemRecipient" style="margin-top:12px;">Recipient</label><input class="form-input" id="redeemRecipient" type="text" placeholder="Full name"></div><button class="btn-submit" style="margin-top:16px;" onclick="app.submitRedeemRequest()">Submit for review</button></div>';
+    document.body.appendChild(modal);
+};
+
+app.updateRedeemRequestFields = function() {
+    var type = document.getElementById('redeemType').value;
+    var contactFields = document.getElementById('redeemContactFields');
+    if (contactFields) contactFields.style.display = type === 'donate' ? 'none' : 'block';
+    var recipientField = document.getElementById('redeemRecipientField');
+    if (recipientField) recipientField.style.display = type === 'donate' ? 'none' : 'block';
+};
+
+app.submitRedeemRequest = function() {
+    var type = document.getElementById('redeemType').value;
+    var amount = Number(document.getElementById('redeemAmount').value);
+    var provider = document.getElementById('redeemProvider').value;
+    var phone = document.getElementById('redeemPhone').value.trim();
+    var recipient = document.getElementById('redeemRecipient').value.trim();
+
+    if (!Number.isFinite(amount) || amount < 1 || amount > this.balance || (type !== 'donate' && !recipient)) {
+        this.toast('Enter a valid amount and recipient', 'error');
+        return;
+    }
+    if (type !== 'donate' && !/^\+?[0-9]{9,15}$/.test(phone)) {
+        this.toast('Enter a valid phone number', 'error');
+        return;
+    }
+
+    var self = this;
+    var followersPromise = type === 'donate' ? db.ref('users').once('value').then(function(snapshot) {
+        var users = snapshot.val() || {};
+        return Object.keys(users).filter(function(uid) {
+            return uid !== self.user.uid && users[uid].following && users[uid].following[self.user.uid];
+        });
+    }) : Promise.resolve([]);
+
+    followersPromise.then(function(followerUids) {
+        if (type === 'donate' && followerUids.length === 0) {
+            self.toast('You need at least one follower before donating to CHICHI ORG', 'error');
+            return;
+        }
+
+        db.ref('users/' + self.user.uid + '/balance').transaction(function(balance) {
+        balance = Number(balance || 0);
+        return balance >= amount ? balance - amount : undefined;
+        }, function(error, committed, snapshot) {
+        if (error || !committed) {
+            self.toast('Insufficient coins or unable to submit request', 'error');
+            return;
+        }
+
+        self.balance = Number(snapshot.val() || 0);
+        var request = db.ref('redemptionRequests').push();
+        var requestData = { userId: self.user.uid, userName: self.profile.name || 'User', userEmail: self.user.email || '', type: type, amount: amount, provider: type === 'donate' ? '' : provider, phone: type === 'donate' ? '' : phone, recipient: type === 'donate' ? 'CHICHI ORG' : recipient, followerCount: followerUids.length, status: type === 'donate' ? 'distributed_pending_review' : 'pending', createdAt: firebase.database.ServerValue.TIMESTAMP };
+        request.set(requestData);
+        self.sendRedemptionReviewToAdmins(request.key, requestData);
+        self.trackRevenue('spent', amount, 'redeem_' + type);
+        self.updateBalanceDisplays();
+        var distribution = type === 'donate' ? self.distributeChichiOrgDonation(amount, followerUids, request.key) : Promise.resolve();
+        distribution.then(function() {
+            self.toast(type === 'donate' ? 'Donation shared equally with your followers' : 'Redemption request sent for review', 'success');
+            var modal = document.querySelector('.modal-overlay.active');
+            if (modal) modal.remove();
+        }).catch(function() {
+            self.toast('Request submitted, but follower distribution needs review', 'error');
+        });
+        });
+    }).catch(function() {
+        self.toast('Unable to prepare redemption request', 'error');
+    });
+};
+
+app.distributeChichiOrgDonation = function(amount, followerUids, requestId) {
+    var totalCents = Math.round(amount * 100);
+    var baseCents = Math.floor(totalCents / followerUids.length);
+    var remainderCents = totalCents % followerUids.length;
+    var donorName = this.profile.name || 'CHICHI member';
+    var transfers = followerUids.map(function(uid, index) {
+        var share = (baseCents + (index < remainderCents ? 1 : 0)) / 100;
+        return db.ref('users/' + uid + '/balance').transaction(function(balance) {
+            return Number(balance || 0) + share;
+        }).then(function() {
+            return Promise.all([
+                db.ref('analytics/revenue').push({ userId: uid, userName: '', type: 'earned', amount: share, item: 'chichi_org_donation', date: new Date().toDateString(), timestamp: firebase.database.ServerValue.TIMESTAMP }),
+                db.ref('notifications/' + uid).push({ type: 'coin_received', from: donorName, amount: share, message: 'You received ' + share.toFixed(2) + ' CHICHI Coins from a CHICHI ORG donation.', donationRequestId: requestId, read: false, createdAt: new Date().toLocaleString('en-KE'), timestamp: firebase.database.ServerValue.TIMESTAMP })
+            ]);
+        });
+    });
+    return Promise.all(transfers);
+};
+
+app.sendRedemptionReviewToAdmins = function(requestId, request) {
+    var self = this;
+    Promise.all([db.ref('users').once('value'), db.ref('adminUsers').once('value')]).then(function(results) {
+        var users = results[0].val() || {};
+        var customAdmins = results[1].val() || {};
+        var adminEmails = (self.DEFAULT_ADMINS || []).concat(Object.keys(customAdmins).map(function(email) { return email.replace(/_/g, '.'); }));
+        Object.keys(users).filter(function(uid) {
+            return users[uid].email && adminEmails.indexOf(users[uid].email.toLowerCase()) !== -1;
+        }).forEach(function(adminUid) {
+            var chatKey = [self.user.uid, adminUid].sort().join('_');
+            db.ref('chats/' + chatKey + '/messages').push({ senderId: self.user.uid, senderName: self.profile.name || 'User', senderEmail: self.user.email || '', message: 'Review redemption request: ' + request.type + ' for ' + request.amount + ' coins' + (request.phone ? ' to ' + request.provider + ' ' + request.phone : '') + '.', redemptionRequestId: requestId, isRedemptionRequest: true, timestamp: Date.now(), read: false });
+        });
+    });
 };
