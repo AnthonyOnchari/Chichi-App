@@ -5191,6 +5191,8 @@ var app = {
             return typeof this.isAirtimeRewardAdmin === 'function' && this.isAirtimeRewardAdmin(uid);
         }.bind(this));
         var isVerified = !!this.profile.phone && hasFollowedAdmin;
+        var profileIdentityClass = username.toLowerCase() === 'chichi_support' ? 'support-profile-identity' : '';
+        var profileDisplayName = profileIdentityClass ? 'Chichi Support' : (this.profile.name || 'User');
 
         // Generate posts grid HTML
         var postsHtml = '';
@@ -5223,7 +5225,7 @@ var app = {
             <div class="profile-redesign" style="padding: 0; background: #f5f5f5; min-height: 100vh;">
 
                 <!-- BENTO HEADER -->
-                <div style="display: grid; grid-template-columns: 90px 1fr; gap: 0; background: white; padding: 16px 16px 12px 16px; align-items: center; border-bottom: 1px solid #f0f0f0;">
+                <div class="profile-hero" style="display: grid; grid-template-columns: 90px 1fr; gap: 0; background-image: linear-gradient(90deg, rgba(16,42,67,.9), rgba(16,42,67,.64)), url('${this.profile.coverImage || ''}'); background-size: cover; background-position: center; padding: 24px 16px 18px 16px; align-items: center; border-bottom: 1px solid #f0f0f0;">
 
                     <!-- Left: Profile Photo -->
                     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
@@ -5253,15 +5255,15 @@ var app = {
 
                     <!-- Right: Name, Username, Edit Button -->
                     <div style="padding-left: 14px; display: flex; flex-direction: column; justify-content: center;">
-                        <div style="font-size: 18px; font-weight: 700; color: #1a1a1a; display: flex; align-items: center; gap: 6px;">
-                            ${this.profile.name || 'User'}
+                        <div class="${profileIdentityClass}" style="font-size: 18px; font-weight: 700; color: #ffffff !important; display: flex; align-items: center; gap: 6px;">
+                            ${profileDisplayName}
                             ${isVerified ? '<span class="verified-badge" title="Phone added and admin followed">✓</span>' : ''}
                         </div>
-                        <div style="font-size: 13px; color: #9ca3af; margin-bottom: 6px;">@${username}</div>
+                        <div style="font-size: 13px; color: #ffffff !important; margin-bottom: 6px;">@${username}</div>
 
                         <!-- Edit Profile Button -->
                         <button onclick="app.showProfileSettings()" style="background: #f1f5f9; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #1a1a1a; font-size: 12px; transition: all 0.3s; width: fit-content;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f1f5f9'">
-                            ✏️ Edit Profile
+                            Edit Profile
                         </button>
                     </div>
                 </div>
@@ -5314,6 +5316,16 @@ var app = {
                         </div>
                     ` : ''}
                 </div>
+
+                <section class="profile-action-dock">
+                    <div class="profile-dock-heading"><span>QUICK ACCESS</span><small>Make CHICHI yours</small></div>
+                    <div class="profile-action-grid">
+                        <button onclick="app.showProfileSettings()"><span class="profile-action-icon">Edit</span><strong>Profile details</strong><small>Update your identity</small></button>
+                        <button onclick="app.showGiftCatalog()"><span class="profile-action-icon">Gifts</span><strong>Rewards</strong><small>Open your shelf</small></button>
+                        <button onclick="app.showFollowing()"><span class="profile-action-icon">Follow</span><strong>Following</strong><small>${following} connections</small></button>
+                        <button onclick="app.showTransactionHistory()"><span class="profile-action-icon">Coins</span><strong>Activity</strong><small>View your wallet</small></button>
+                    </div>
+                </section>
 
                 <!-- POSTS GRID (3 columns) -->
                 <div style="padding: 12px 12px 80px 12px;">
@@ -5795,7 +5807,7 @@ var app = {
                 var bLikes = (b.likes && Object.keys(b.likes).length) || 0;
                 return bLikes - aLikes;
             })
-            .slice(0, 9);
+            .slice(0, 6);
 
         if (trendingPosts.length === 0) {
             if (this.isGuest) {
@@ -6664,10 +6676,11 @@ loadMessages: function() {
         if (conversations.length === 0) {
             html = `
                 <div class="msg-empty-state">
-                    <div class="empty-icon">📭</div>
-                    <h3>No messages yet</h3>
-                    <p>Start a new conversation and connect with someone!</p>
-                    <button class="empty-btn" onclick="app.openNewChat()">✏️ New Message</button>
+                    <div class="message-empty-mark"><img src="icon-192.png" alt="CHICHI"></div>
+                    <p class="message-empty-kicker">YOUR INBOX</p>
+                    <h3>No conversations yet</h3>
+                    <p>Find someone from the community and start a private conversation.</p>
+                    <button class="empty-btn" onclick="app.openNewChat()">Start a conversation</button>
                 </div>
             `;
         } else {
@@ -8191,6 +8204,8 @@ loadMessages: function() {
                 if (s.exists()) {
                     var user = s.val();
                     var isFollowing = this.following[uid] || false;
+                    var supportClass = user.username && user.username.toLowerCase() === 'chichi_support' ? 'support-profile-identity' : '';
+                    var displayName = supportClass ? 'Chichi Support' : (user.name || 'User');
                     var userFollowsAdmin = Object.keys(user.following || {}).some(function(adminUid) {
                         var admin = this.users && this.users[adminUid];
                         return admin && admin.email && ['support-chichi@gmail.com', 'onchari.dev@gmail.com', 'support@chichi.buzz'].indexOf(admin.email.toLowerCase()) !== -1;
@@ -8199,7 +8214,7 @@ loadMessages: function() {
                     var unreadCount = this.getUnreadCountForUser(uid);
                     var msgBadge = unreadCount > 0 ? '<span style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;background:#ef4444;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;border:2px solid white;box-shadow:0 2px 6px rgba(239,68,68,0.4);">' + unreadCount + '</span>' : '';
 
-                    var html = '<div class="profile-header"><div class="profile-top"><div class="profile-avatar-large" style="background-image:url(' + (user.profilePhoto || '') + ');">' + (!user.profilePhoto ? user.name.charAt(0).toUpperCase() : '') + '</div><div class="profile-info"><div class="profile-name">' + (user.name || 'User') + (isVerified ? ' <span class="verified-badge" title="Phone added and admin followed">✓</span>' : '') + '</div><div class="profile-email">' + user.email + '</div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-value">-</div><div class="profile-stat-label">Posts</div></div><div class="profile-stat"><div class="profile-stat-value">' + (user.followers || 0) + '</div><div class="profile-stat-label">Followers</div></div></div></div></div><div style="display:flex;gap:8px;margin-top:12px;"><button class="follow-btn" onclick="app.toggleFollow(\'' + uid + '\', \'' + user.name + '\')" style="background:' + (isFollowing ? '#ff4444' : 'var(--primary)') + ';color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;">' + (isFollowing ? '✕ Unfollow' : '✓ Follow') + '</button><button class="follow-btn" onclick="app.openChatFromSearch(\'' + uid + '\', \'' + user.name + '\')" style="background:#2E5BFF;color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;position:relative;">💬 Message ' + msgBadge + '</button></div></div>';
+                    var html = '<div class="profile-header"><div class="profile-top"><div class="profile-avatar-large" style="background-image:url(' + (user.profilePhoto || '') + ');">' + (!user.profilePhoto ? user.name.charAt(0).toUpperCase() : '') + '</div><div class="profile-info"><div class="profile-name ' + supportClass + '" style="color:#ffffff !important;">' + displayName + (isVerified ? ' <span class="verified-badge" title="Phone added and admin followed">✓</span>' : '') + '</div><div class="profile-email" style="color:rgba(255,255,255,.8) !important;">@' + (user.username || 'user') + '<br>' + user.email + '</div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-value">-</div><div class="profile-stat-label">Posts</div></div><div class="profile-stat"><div class="profile-stat-value">' + (user.followers || 0) + '</div><div class="profile-stat-label">Followers</div></div></div></div></div><div style="display:flex;gap:8px;margin-top:12px;"><button class="follow-btn" onclick="app.toggleFollow(\'' + uid + '\', \'' + user.name + '\')" style="background:' + (isFollowing ? '#ff4444' : 'var(--primary)') + ';color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;">' + (isFollowing ? '✕ Unfollow' : '✓ Follow') + '</button><button class="follow-btn" onclick="app.openChatFromSearch(\'' + uid + '\', \'' + user.name + '\')" style="background:#2E5BFF;color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;position:relative;">💬 Message ' + msgBadge + '</button></div></div>';
 
                     var modal = document.createElement('div');
                     modal.className = 'modal-overlay active';
@@ -10418,6 +10433,10 @@ const voiceCallModule = (() => {
   let localStream;
   let peerConnection;
   let inCall = false;
+    let signalingListener;
+    let currentPeerId;
+    let callTimerInterval;
+    let callStartedAt;
 
   const ICE_SERVERS = {
     iceServers: [
@@ -10431,7 +10450,62 @@ const voiceCallModule = (() => {
     currentUserId = userId;
     currentUsername = username;
     initializeCallUI();
+        listenForCalls();
   };
+
+    const listenForCalls = () => {
+        if (signalingListener) db.ref(`callSignaling/${currentUserId}`).off('child_added', signalingListener);
+        signalingListener = (snapshot) => handleSignalingMessage(snapshot.key, snapshot.val());
+        db.ref(`callSignaling/${currentUserId}`).on('child_added', signalingListener);
+    };
+
+    const handleSignalingMessage = async (messageId, message) => {
+        if (!message || message.from === currentUserId) return;
+        try {
+            if (message.type === 'offer') {
+                if (inCall) return;
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+                peerConnection = createPeerConnection(message.from);
+                currentPeerId = message.from;
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                sendSignalingMessage(message.from, { type: 'answer', answer: answer });
+                inCall = true;
+                showCallInProgress(message.from);
+            } else if (message.type === 'answer' && peerConnection) {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
+            } else if (message.type === 'ice-candidate' && peerConnection) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+            } else if (message.type === 'ended') {
+                hangUp(false);
+                return;
+            }
+            db.ref(`callSignaling/${currentUserId}/${messageId}`).remove();
+        } catch (error) {
+            console.error('Call connection error:', error);
+            hangUp();
+        }
+    };
+
+    const createPeerConnection = (recipientId) => {
+        const connection = new RTCPeerConnection(ICE_SERVERS);
+        localStream.getTracks().forEach(track => connection.addTrack(track, localStream));
+        connection.ontrack = (event) => {
+            let audio = document.querySelector('[data-remote-audio]');
+            if (!audio) {
+                audio = document.createElement('audio');
+                audio.setAttribute('data-remote-audio', '');
+                audio.autoplay = true;
+                document.body.appendChild(audio);
+            }
+            audio.srcObject = event.streams[0];
+        };
+        connection.onicecandidate = (event) => {
+            if (event.candidate) sendSignalingMessage(recipientId, { type: 'ice-candidate', candidate: event.candidate });
+        };
+        return connection;
+    };
 
   const initializeCallUI = () => {
     document.addEventListener('click', (e) => {
@@ -10442,8 +10516,20 @@ const voiceCallModule = (() => {
       if (e.target.closest('[data-hang-up-call]')) {
         hangUp();
       }
+            if (e.target.closest('[data-toggle-mic-call]')) {
+                toggleMute();
+            }
     });
   };
+
+    const toggleMute = () => {
+        if (!localStream) return;
+        const track = localStream.getAudioTracks()[0];
+        if (!track) return;
+        track.enabled = !track.enabled;
+        const button = document.querySelector('[data-toggle-mic-call]');
+        if (button) button.textContent = track.enabled ? 'Mute' : 'Unmute';
+    };
 
   const initiateCall = async (recipientId) => {
     if (inCall) return;
@@ -10453,24 +10539,8 @@ const voiceCallModule = (() => {
         video: false
       });
 
-      peerConnection = new RTCPeerConnection(ICE_SERVERS);
-      localStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, localStream);
-      });
-
-      peerConnection.ontrack = (event) => {
-        const audio = document.querySelector('[data-remote-audio]') || document.createElement('audio');
-        audio.setAttribute('data-remote-audio', '');
-        audio.autoplay = true;
-        audio.srcObject = event.streams[0];
-        if (!audio.parentElement) document.body.appendChild(audio);
-      };
-
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          sendSignalingMessage(recipientId, { type: 'ice-candidate', candidate: event.candidate });
-        }
-      };
+            peerConnection = createPeerConnection(recipientId);
+            currentPeerId = recipientId;
 
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
@@ -10491,8 +10561,9 @@ const voiceCallModule = (() => {
     });
   };
 
-  const hangUp = () => {
+    const hangUp = (notifyPeer = true) => {
     if (!inCall) return;
+        if (notifyPeer && currentPeerId) sendSignalingMessage(currentPeerId, { type: 'ended' });
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
     }
@@ -10500,6 +10571,10 @@ const voiceCallModule = (() => {
       peerConnection.close();
     }
     inCall = false;
+    currentPeerId = null;
+    if (callTimerInterval) clearInterval(callTimerInterval);
+    const audio = document.querySelector('[data-remote-audio]');
+    if (audio) audio.remove();
     const callUI = document.querySelector('[data-call-ui]');
     if (callUI) callUI.remove();
   };
@@ -10513,36 +10588,43 @@ const voiceCallModule = (() => {
       document.body.appendChild(callUI);
     }
 
-    callUI.innerHTML = `
-      <div class="call-window">
-        <div class="call-info">
-          <p class="call-status">In call with ${peerId}</p>
-          <div class="call-timer">00:00</div>
-        </div>
-        <div class="call-controls">
-          <button class="hang-up-btn" data-hang-up-call>📵</button>
-        </div>
-      </div>
-    `;
+        callUI.innerHTML = `<div class="call-window"><div class="call-topline"><span>CHICHI CALL</span><span class="call-live-dot"></span></div><div class="call-avatar">${(peerId || 'U').charAt(0).toUpperCase()}</div><p class="call-status">Connecting securely</p><h2>${peerId}</h2><div class="call-timer">00:00</div><p class="call-helper">Keep this screen open while you talk.</p><div class="call-controls"><button class="call-mute-btn" data-toggle-mic-call>Mute</button><button class="hang-up-btn" data-hang-up-call>End call</button></div></div>`;
 
-    let seconds = 0;
-    setInterval(() => {
-      seconds++;
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      const timerDisplay = document.querySelector('[data-call-ui] .call-timer');
-      if (timerDisplay) {
-        timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-      }
-    }, 1000);
+        if (callTimerInterval) clearInterval(callTimerInterval);
+        callStartedAt = Date.now();
+        callTimerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - callStartedAt) / 1000);
+            const timerDisplay = document.querySelector('[data-call-ui] .call-timer');
+            if (timerDisplay) timerDisplay.textContent = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
+        }, 1000);
   };
 
   return {
     init,
     initiateCall,
-    hangUp
+        hangUp,
+        toggleMute
   };
 })();
+
+app.initiateCall = function() {
+    if (!this.currentChat || !this.user) {
+        this.toast('No active chat', 'info');
+        return;
+    }
+    if (typeof voiceCallModule !== 'undefined') {
+        voiceCallModule.initiateCall(this.currentChat.uid);
+    }
+};
+
+app.endCall = function() {
+    if (typeof voiceCallModule !== 'undefined') voiceCallModule.hangUp();
+    this.closeCallUI();
+};
+
+app.toggleCallMic = function() {
+    if (typeof voiceCallModule !== 'undefined') voiceCallModule.toggleMute();
+};
 
 // ===== EARN/TRIVIA MODULE =====
 const earnModule = (() => {
@@ -11518,13 +11600,14 @@ app.loadExplorePeople = function() {
 
         userArray.sort(function(a, b) { return (b.followers || 0) - (a.followers || 0); });
 
-        userArray.slice(0, app.isGuest ? 6 : 12).forEach(function(user, index) {
+        userArray.slice(0, 6).forEach(function(user, index) {
             var isFollowing = app.following[user.uid] || false;
             var profilePhoto = user.profilePhoto || '';
             var initials = user.name ? user.name.charAt(0).toUpperCase() : '?';
             var displayName = app.isGuest ? 'Member ' + String(index + 1).padStart(2, '0') : (user.name || 'Unknown');
+            var identityClass = user.username && user.username.toLowerCase() === 'chichi_support' ? 'support-identity' : '';
 
-            html += '<div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 14px; text-align: center; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow=\'0 4px 12px rgba(0, 136, 204, 0.15)\'; this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.boxShadow=\'none\'; this.style.transform=\'translateY(0)\'" onclick="app.viewUserProfile(\'' + user.uid + '\')">';
+            html += '<div class="' + identityClass + '" style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 14px; text-align: center; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow=\'0 4px 12px rgba(0, 136, 204, 0.15)\'; this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.boxShadow=\'none\'; this.style.transform=\'translateY(0)\'" onclick="app.viewUserProfile(\'' + user.uid + '\')">';
 
             if (profilePhoto) {
                 html += '<img src="' + profilePhoto + '" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; margin: 0 auto 10px; display: block;">';
@@ -11833,6 +11916,8 @@ app.showProfileSettings = function() {
     if (usernameField) usernameField.value = this.profile.username || '';
     if (phoneField) phoneField.value = this.profile.phone || '';
     if (bioField) bioField.value = this.profile.bio || '';
+    var photoPreview = document.getElementById('editProfilePhotoPreview');
+    if (photoPreview) photoPreview.style.backgroundImage = this.profile.profilePhoto ? 'url("' + this.profile.profilePhoto + '")' : 'none';
 
     // Show modal
     modal.style.display = 'flex';
@@ -13934,6 +14019,7 @@ app.renderEarnDefault = function() {
     }
 
     var profileName = (this.profile.name || 'Friend').split(' ')[0];
+    var username = this.profile.username || 'member';
     var balance = Number(this.balance || 0).toFixed(2);
     var catalog = (window.GIFT_CATALOG || []).slice(0, 3);
     var rewards = catalog.map(function(gift) {
@@ -13943,12 +14029,13 @@ app.renderEarnDefault = function() {
     earnContainer.innerHTML = `
         <main style="min-height:100vh;padding:20px 16px 132px;background:#f8fafc;color:#0f172a;">
             <section style="max-width:680px;margin:0 auto;">
-                <header style="background:#102a43;border-radius:14px;padding:22px;color:#fff;box-shadow:0 12px 28px rgba(15,23,42,.16);">
-                    <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;">
-                        <div><p style="margin:0 0 5px;color:#b8d9d6;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;">CHICHI wallet</p><h1 style="margin:0;font-size:24px;letter-spacing:0;">Good to see you, ${profileName}</h1></div>
-                        <span style="padding:5px 9px;border:1px solid #3a596f;border-radius:999px;color:#d9efea;font-size:11px;font-weight:700;white-space:nowrap;">Unlimited trivia</span>
-                    </div>
-                    <div style="margin-top:28px;"><span style="display:block;color:#b8d9d6;font-size:12px;">Coin balance</span><strong id="earnBalanceDisplay" style="display:block;margin-top:3px;font-size:34px;line-height:1;color:#fff;">${balance} Coins</strong></div>
+                <header class="wallet-credit-card" style="--wallet-user-image: url('${this.profile.profilePhoto || 'icon-192.png'}');">
+                    <div class="wallet-card-top"><span class="wallet-card-brand">CHICHI</span><span class="wallet-card-type">REWARDS CARD</span></div>
+                    <div class="wallet-card-avatar" style="background-image: ${this.profile.profilePhoto ? 'url("' + this.profile.profilePhoto + '")' : 'none'};">${this.profile.profilePhoto ? '' : (this.profile.name || 'U').charAt(0).toUpperCase()}</div>
+                    <div class="wallet-card-chip" aria-hidden="true"><span></span><span></span><span></span></div>
+                    <div class="wallet-card-balance-label">Coin balance</div>
+                    <strong id="earnBalanceDisplay" class="wallet-card-balance">${balance} Coins</strong>
+                    <div class="wallet-card-footer"><div><span>Card holder</span><strong>${profileName}</strong></div><div><span>Member</span><strong>@${username}</strong></div><div class="wallet-card-mark">✦</div></div>
                 </header>
 
                 <section style="margin-top:16px;padding:18px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;">

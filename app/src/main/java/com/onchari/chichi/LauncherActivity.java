@@ -11,6 +11,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebSettings;
+import android.webkit.PermissionRequest;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 import android.Manifest;
@@ -45,6 +46,7 @@ public class LauncherActivity extends AppCompatActivity {
     // Firebase Auth
     private FirebaseAuth mAuth;
     private GoogleSignInClient mGoogleSignInClient;
+    private PermissionRequest pendingWebPermissionRequest;
 
     // JavaScript interface for communicating with WebView
     private class ChichiJSInterface {
@@ -146,7 +148,26 @@ public class LauncherActivity extends AppCompatActivity {
             }
         });
 
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(PermissionRequest request) {
+                runOnUiThread(() -> {
+                    pendingWebPermissionRequest = request;
+                    boolean needsAudio = false;
+                    boolean needsCamera = false;
+                    for (String resource : request.getResources()) {
+                        needsAudio |= PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource);
+                        needsCamera |= PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource);
+                    }
+                    if ((needsAudio && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+                            || (needsCamera && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)) {
+                        requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA}, 7002);
+                    } else {
+                        request.grant(request.getResources());
+                    }
+                });
+            }
+        });
         webView.loadUrl("https://www.chichi.buzz");
 
         // Hide action bar
@@ -190,6 +211,18 @@ public class LauncherActivity extends AppCompatActivity {
                         .getReference("users").child(user.getUid()).child("fcmTokens").child(token).setValue(true);
             }
         });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 7002 && pendingWebPermissionRequest != null) {
+            boolean granted = grantResults.length > 0;
+            for (int result : grantResults) granted &= result == PackageManager.PERMISSION_GRANTED;
+            if (granted) pendingWebPermissionRequest.grant(pendingWebPermissionRequest.getResources());
+            else pendingWebPermissionRequest.deny();
+            pendingWebPermissionRequest = null;
+        }
     }
 
     @Override
