@@ -80,6 +80,12 @@ var app = {
     postsLoading: false,
     presenceStatus: {},
     currentFeedTab: 'forYou',
+    phoneAuthMode: 'login',
+    phoneSignupDraft: null,
+    phoneConfirmationResult: null,
+    phoneRecaptchaVerifier: null,
+    phoneRecaptchaRenderPromise: null,
+    phoneUsingNativeBridge: false,
 
     // ============================================
     // INIT
@@ -9691,6 +9697,325 @@ loadMessages: function() {
     // HANDLE LOGIN
     // ============================================
 
+    startPhoneAuth: function(mode) {
+        if (!auth) {
+            this.toast('Authentication is still loading. Please try again.', 'error');
+            return;
+        }
+
+        var normalizedMode = mode === 'signup' ? 'signup' : 'login';
+        this.phoneAuthMode = normalizedMode;
+        this.phoneConfirmationResult = null;
+        this.phoneUsingNativeBridge = !!(window.Android
+            && typeof window.Android.sendPhoneOtp === 'function'
+            && typeof window.Android.verifyPhoneOtp === 'function');
+
+        if (normalizedMode === 'signup') {
+            var draft = this._collectSignupDraftForPhone();
+            if (!draft) {
+                return;
+            }
+            this.phoneSignupDraft = draft;
+        } else {
+            this.phoneSignupDraft = null;
+        }
+
+        var modal = document.getElementById('phoneAuthModal');
+        var hint = document.getElementById('phoneAuthHint');
+        var path = document.getElementById('phoneAuthPath');
+        var otpInput = document.getElementById('phoneOtpInput');
+        if (otpInput) otpInput.value = '';
+
+        if (hint) {
+            hint.textContent = normalizedMode === 'signup'
+                ? 'Use your phone number to create an account in seconds.'
+                : 'Enter your phone number and we will send you a login code.';
+        }
+
+        if (path) {
+            path.textContent = this.phoneUsingNativeBridge
+                ? 'Auth path: Native Android phone auth'
+                : 'Auth path: Android app required';
+        }
+
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+
+    },
+
+    closePhoneAuthModal: function() {
+        var modal = document.getElementById('phoneAuthModal');
+        if (modal) modal.style.display = 'none';
+        var otpInput = document.getElementById('phoneOtpInput');
+        if (otpInput) otpInput.value = '';
+    },
+
+    _collectSignupDraftForPhone: function() {
+        var nameInput = document.getElementById('signupName');
+        var usernameInput = document.getElementById('signupUsername');
+        var name = nameInput ? nameInput.value.trim() : '';
+        var username = usernameInput ? usernameInput.value.trim() : '';
+
+        if (!name) {
+            this.toast('Please enter your full name before phone sign up', 'error');
+            return null;
+        }
+        if (!username || username.length < 3) {
+            this.toast('Username must be at least 3 characters', 'error');
+            return null;
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            this.toast('Username can only contain letters, numbers, and underscores', 'error');
+            return null;
+        }
+
+        return {
+            name: name,
+            username: username.toLowerCase()
+        };
+    },
+
+    normalizePhoneNumber: function(rawPhone) {
+        if (!rawPhone) return '';
+        var phone = rawPhone.replace(/[\s\-()]/g, '');
+
+        if (phone.indexOf('00') === 0) {
+            phone = '+' + phone.substring(2);
+        }
+
+        if (phone.indexOf('+') !== 0) {
+            if (phone.indexOf('0') === 0 && phone.length === 10) {
+                phone = '+254' + phone.substring(1);
+            } else if (phone.indexOf('254') === 0) {
+                phone = '+' + phone;
+            } else if (phone.length === 9 && phone.charAt(0) === '7') {
+                phone = '+254' + phone;
+            }
+        }
+
+        if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+            return '';
+        }
+
+        return phone;
+    },
+
+    isPhoneAuthTestNumber: function(phone) {
+        return !!(window.PHONE_AUTH_TEST_NUMBERS && window.PHONE_AUTH_TEST_NUMBERS[phone]);
+    },
+
+    getPhoneAuthTestCode: function(phone) {
+        return window.PHONE_AUTH_TEST_NUMBERS && window.PHONE_AUTH_TEST_NUMBERS[phone]
+            ? window.PHONE_AUTH_TEST_NUMBERS[phone]
+            : '';
+    },
+
+    ensurePhoneRecaptcha: function() {
+        if (this.phoneRecaptchaVerifier) {
+            return this.phoneRecaptchaVerifier;
+        }
+
+        var container = document.getElementById('recaptcha-container');
+        if (!container) {
+            return null;
+        }
+
+        auth.useDeviceLanguage();
+        this.phoneRecaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+            size: 'invisible'
+        });
+        var self = this;
+        this.phoneRecaptchaRenderPromise = this.phoneRecaptchaVerifier.render().catch(function(err) {
+            console.error('Recaptcha render error:', err);
+            self.phoneRecaptchaRenderPromise = null;
+            throw err;
+        });
+
+        return this.phoneRecaptchaVerifier;
+    },
+
+    resetPhoneRecaptcha: function() {
+        if (this.phoneRecaptchaVerifier) {
+            try {
+                this.phoneRecaptchaVerifier.clear();
+            } catch (e) {
+                console.warn('Recaptcha clear warning:', e);
+            }
+            this.phoneRecaptchaVerifier = null;
+        }
+    },
+
+    sendPhoneOtp: function() {
+        var self = this;
+        var sendBtn = document.getElementById('sendPhoneOtpBtn');
+        var otpInput = document.getElementById('phoneOtpInput');
+        var phoneInput = document.getElementById('phoneNumberInput');
+        var rawPhone = phoneInput ? phoneInput.value.trim() : '';
+        var phone = this.normalizePhoneNumber(rawPhone);
+        if (!phone) {
+            this.toast('Enter a valid phone number in international format', 'error');
+            return;
+        }
+
+        if (!this.phoneUsingNativeBridge) {
+            this.toast('Phone sign-in is only available inside the Android app. Open the CHICHI app on Android to continue.', 'error');
+            return;
+        }
+
+        if (sendBtn) {
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+        }
+
+        try {
+            window.Android.sendPhoneOtp(phone);
+            if (phoneInput) phoneInput.value = phone;
+            if (otpInput) otpInput.focus();
+            this.toast('Sending verification code...', 'success');
+        } catch (err) {
+            console.error('Native phone OTP send error:', err);
+            this.toast('Could not send code: ' + ((err && err.message) || 'Native bridge error'), 'error');
+        } finally {
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send Code';
+            }
+        }
+    },
+
+    verifyPhoneOtp: function() {
+        var self = this;
+        var verifyBtn = document.getElementById('verifyPhoneOtpBtn');
+        var otpInput = document.getElementById('phoneOtpInput');
+        var code = otpInput ? otpInput.value.trim() : '';
+
+        if (!this.phoneConfirmationResult) {
+            this.toast('Please request a verification code first', 'error');
+            return;
+        }
+        if (!/^\d{6}$/.test(code)) {
+            this.toast('Enter the 6-digit code sent to your phone', 'error');
+            return;
+        }
+
+        if (!this.phoneUsingNativeBridge) {
+            this.toast('Phone verification is only available inside the Android app.', 'error');
+            return;
+        }
+
+        if (verifyBtn) {
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Verifying...';
+        }
+
+        try {
+            window.Android.verifyPhoneOtp(code);
+        } catch (err) {
+            console.error('Native phone OTP verify error:', err);
+            this.toast('Verification failed: ' + ((err && err.message) || 'Native bridge error'), 'error');
+            if (verifyBtn) {
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Verify & Continue';
+            }
+            return;
+        }
+    },
+
+    isUsernameAvailable: function(username, currentUid) {
+        return db.ref('users').orderByChild('username').equalTo(username).once('value')
+            .then(function(snapshot) {
+                if (!snapshot.exists()) return true;
+                var users = snapshot.val();
+                var firstUid = Object.keys(users)[0];
+                return firstUid === currentUid;
+            });
+    },
+
+    ensurePhoneUserProfile: function(user) {
+        var self = this;
+        if (!user) return Promise.resolve();
+
+        var desiredName = this.phoneSignupDraft && this.phoneSignupDraft.name
+            ? this.phoneSignupDraft.name
+            : (user.displayName || 'User');
+        var desiredUsername = this.phoneSignupDraft && this.phoneSignupDraft.username
+            ? this.phoneSignupDraft.username
+            : ('user' + user.uid.substring(0, 6)).toLowerCase();
+
+        return this.isUsernameAvailable(desiredUsername, user.uid)
+            .then(function(isAvailable) {
+                if (!isAvailable) {
+                    desiredUsername = ('user' + user.uid.substring(0, 8)).toLowerCase();
+                }
+
+                return db.ref('users/' + user.uid).once('value');
+            })
+            .then(function(snapshot) {
+                if (snapshot.exists()) {
+                    var updates = {};
+                    var existing = snapshot.val() || {};
+                    if (!existing.phone && user.phoneNumber) {
+                        updates.phone = user.phoneNumber;
+                    }
+                    if (self.phoneAuthMode === 'signup') {
+                        updates.name = desiredName;
+                        updates.username = desiredUsername;
+                    }
+                    if (Object.keys(updates).length > 0) {
+                        return db.ref('users/' + user.uid).update(updates);
+                    }
+                    return Promise.resolve();
+                }
+
+                var profile = {
+                    name: desiredName,
+                    username: desiredUsername,
+                    email: user.email || '',
+                    phone: user.phoneNumber || '',
+                    bio: '',
+                    profilePhoto: user.photoURL || '',
+                    coverImage: '',
+                    balance: 10,
+                    signupRewardGranted: true,
+                    followers: 0,
+                    following: 0,
+                    hashtags: [],
+                    interests: [],
+                    triviaAnswered: [],
+                    tier: 'free',
+                    createdAt: new Date().toLocaleString('en-KE'),
+                    lastSeen: firebase.database.ServerValue.TIMESTAMP
+                };
+                return db.ref('users/' + user.uid).set(profile);
+            });
+    },
+
+    onNativePhoneCodeSent: function() {
+        var sendBtn = document.getElementById('sendPhoneOtpBtn');
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Resend Code';
+        }
+        this.toast('Verification code sent. Check your SMS.', 'success');
+        var otpInput = document.getElementById('phoneOtpInput');
+        if (otpInput) otpInput.focus();
+    },
+
+    phoneAuthFailed: function(message) {
+        var sendBtn = document.getElementById('sendPhoneOtpBtn');
+        var verifyBtn = document.getElementById('verifyPhoneOtpBtn');
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send Code';
+        }
+        if (verifyBtn) {
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = 'Verify & Continue';
+        }
+        this.toast('Phone auth failed: ' + (message || 'Unknown error'), 'error');
+    },
+
     handleLogin: function(e) {
         e.preventDefault();
         var loginInput = document.getElementById('loginEmail').value;
@@ -9825,15 +10150,15 @@ loadMessages: function() {
     },
 
     // ============== EDITED: Google Sign-In (Native bridge + fallback) ==============
-    signInWithGoogle: function() {
+    signInWithGoogle: function(forceWebFallback) {
     // First, try to call the native Android bridge (if available)
-    if (window.Android && typeof window.Android.signInWithGoogle === 'function') {
+    if (!forceWebFallback && window.Android && typeof window.Android.signInWithGoogle === 'function') {
         console.log('📱 Using native Google Sign-In');
         window.Android.signInWithGoogle();
         return;
     }
-    // Fallback: use redirect (works in browsers, sometimes in WebView)
-    console.log('⚠️ Native bridge not available, using redirect fallback');
+    // Fallback: use redirect (works in browsers, and as backup when native OAuth is misconfigured)
+    console.log('⚠️ Using Google redirect fallback');
     var self = this;
     var provider = new firebase.auth.GoogleAuthProvider();
     
@@ -9862,6 +10187,11 @@ loadMessages: function() {
             // The onAuthStateChanged will catch this, but we can also manually trigger the profile load.
             this.user = userData;
             this.isGuest = false;
+            if (auth && auth.currentUser && auth.currentUser.phoneNumber) {
+                this.ensurePhoneUserProfile(auth.currentUser).catch(function(err) {
+                    console.error('Native phone profile sync error:', err);
+                });
+            }
             // Optionally reload profile
             this.loadProfile();
         }

@@ -32,9 +32,16 @@ import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.auth.PhoneAuthCredential;
+import com.google.firebase.auth.FirebaseAuthSettings;
+import com.google.firebase.auth.PhoneAuthOptions;
+import com.google.firebase.auth.PhoneAuthProvider;
+import com.google.firebase.FirebaseException;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 import org.json.JSONObject;
+
+import java.util.concurrent.TimeUnit;
 
 public class LauncherActivity extends AppCompatActivity {
 
@@ -47,6 +54,11 @@ public class LauncherActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private GoogleSignInClient mGoogleSignInClient;
     private PermissionRequest pendingWebPermissionRequest;
+    private String mVerificationId;
+    private PhoneAuthProvider.ForceResendingToken mResendToken;
+    private PhoneAuthProvider.OnVerificationStateChangedCallbacks mPhoneAuthCallbacks;
+    private String mPendingPhoneNumber;
+    private boolean mUsingTestPhoneAuth;
 
     // JavaScript interface for communicating with WebView
     private class ChichiJSInterface {
@@ -54,6 +66,16 @@ public class LauncherActivity extends AppCompatActivity {
         public void signInWithGoogle() {
             // Called from JavaScript when user clicks "Sign in with Google"
             startGoogleSignIn();
+        }
+
+        @android.webkit.JavascriptInterface
+        public void sendPhoneOtp(String phoneNumber) {
+            runOnUiThread(() -> startPhoneVerification(phoneNumber));
+        }
+
+        @android.webkit.JavascriptInterface
+        public void verifyPhoneOtp(String code) {
+            runOnUiThread(() -> verifyPhoneCode(code));
         }
     }
 
@@ -69,6 +91,32 @@ public class LauncherActivity extends AppCompatActivity {
         // --- Firebase Auth setup ---
         mAuth = FirebaseAuth.getInstance();
         mAuth.addAuthStateListener(firebaseAuth -> registerPushToken());
+        mPhoneAuthCallbacks = new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+            @Override
+            public void onVerificationCompleted(@NonNull PhoneAuthCredential credential) {
+                signInWithPhoneCredential(credential);
+            }
+
+            @Override
+            public void onVerificationFailed(@NonNull FirebaseException e) {
+                String reason = e.getMessage() != null ? e.getMessage() : "Phone verification failed";
+                Toast.makeText(LauncherActivity.this, reason, Toast.LENGTH_LONG).show();
+                notifyWebPhoneAuthFailed(reason);
+            }
+
+            @Override
+            public void onCodeSent(@NonNull String verificationId,
+                                   @NonNull PhoneAuthProvider.ForceResendingToken token) {
+                mVerificationId = verificationId;
+                mResendToken = token;
+                webView.evaluateJavascript("if(window.app && app.onNativePhoneCodeSent){app.onNativePhoneCodeSent();}", null);
+            }
+
+            @Override
+            public void onCodeAutoRetrievalTimeOut(@NonNull String verificationId) {
+                mVerificationId = verificationId;
+            }
+        };
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 7001);
         }
@@ -203,6 +251,44 @@ public class LauncherActivity extends AppCompatActivity {
         startActivityForResult(signInIntent, RC_SIGN_IN);
     }
 
+    private void startPhoneVerification(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+            notifyWebPhoneAuthFailed("Phone number is required");
+            return;
+        }
+
+        mPendingPhoneNumber = phoneNumber.trim();
+        mUsingTestPhoneAuth = "+254701807001".equals(mPendingPhoneNumber);
+
+        FirebaseAuthSettings authSettings = mAuth.getFirebaseAuthSettings();
+        if (mUsingTestPhoneAuth) {
+            authSettings.setAppVerificationDisabledForTesting();
+            authSettings.setAutoRetrievedSmsCodeForPhoneNumber(mPendingPhoneNumber, "661122");
+        }
+
+        PhoneAuthOptions options = PhoneAuthOptions.newBuilder(mAuth)
+                .setPhoneNumber(mPendingPhoneNumber)
+                .setTimeout(60L, TimeUnit.SECONDS)
+                .setActivity(this)
+                .setCallbacks(mPhoneAuthCallbacks)
+                .build();
+        PhoneAuthProvider.verifyPhoneNumber(options);
+    }
+
+    private void verifyPhoneCode(String code) {
+        if (mVerificationId == null || mVerificationId.isEmpty()) {
+            notifyWebPhoneAuthFailed("Please request a verification code first");
+            return;
+        }
+        if (code == null || code.trim().isEmpty()) {
+            notifyWebPhoneAuthFailed("Enter the verification code");
+            return;
+        }
+
+        PhoneAuthCredential credential = PhoneAuthProvider.getCredential(mVerificationId, code.trim());
+        signInWithPhoneCredential(credential);
+    }
+
     private void registerPushToken() {
         FirebaseMessaging.getInstance().getToken().addOnSuccessListener(token -> {
             FirebaseUser user = mAuth.getCurrentUser();
@@ -239,8 +325,15 @@ public class LauncherActivity extends AppCompatActivity {
                         ? "Google sign-in is not configured for this app. Please update the app or contact support."
                         : "Google sign-in failed: " + e.getMessage();
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-                // Inform WebView about failure
-                webView.evaluateJavascript("app.googleSignInFailed('Google sign-in configuration error')", null);
+                // Inform WebView about failure and force web fallback for this session.
+                if (e.getStatusCode() == 10) {
+                    webView.evaluateJavascript(
+                            "if (window.app) { app.googleSignInFailed('Google sign-in configuration error (code 10)'); if (typeof app.signInWithGoogle === 'function') { app.signInWithGoogle(true); } }",
+                            null
+                    );
+                } else {
+                    webView.evaluateJavascript("app.googleSignInFailed('Google sign-in failed: " + e.getStatusCode() + "')", null);
+                }
             }
         }
     }
@@ -275,6 +368,32 @@ public class LauncherActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void signInWithPhoneCredential(PhoneAuthCredential credential) {
+        mAuth.signInWithCredential(credential)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        FirebaseUser user = mAuth.getCurrentUser();
+                        registerPushToken();
+                        if (user != null) {
+                            sendUserToWebView(user);
+                        }
+                        Toast.makeText(this, "Phone sign-in successful", Toast.LENGTH_SHORT).show();
+                        mUsingTestPhoneAuth = false;
+                    } else {
+                        String reason = task.getException() != null && task.getException().getMessage() != null
+                                ? task.getException().getMessage()
+                                : "Phone sign-in failed";
+                        Toast.makeText(this, reason, Toast.LENGTH_LONG).show();
+                        notifyWebPhoneAuthFailed(reason);
+                    }
+                });
+    }
+
+    private void notifyWebPhoneAuthFailed(String message) {
+        String safeMessage = JSONObject.quote(message == null ? "Phone verification failed" : message);
+        webView.evaluateJavascript("if(window.app && app.phoneAuthFailed){app.phoneAuthFailed(" + safeMessage + ");}", null);
     }
 
     private final Handler timeoutHandler = new Handler();

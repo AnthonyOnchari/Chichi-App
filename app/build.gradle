@@ -24,6 +24,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Use the same keystore as release so OAuth SHA fingerprints match Firebase config.
+            signingConfig signingConfigs.release
+        }
+
         release {
             signingConfig signingConfigs.release
             minifyEnabled true

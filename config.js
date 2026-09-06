@@ -31,6 +31,12 @@ const ADMIN_PASSWORD = 'CHICHI26303@Admin';
 const MPESA_TILL = '8941840';
 const AIRTIME_REWARD_AMOUNT = 10;
 
+// Phone auth test numbers for Firebase Phone Authentication testing.
+// These are safe to keep in the client because they are only used for test sign-in flows.
+const PHONE_AUTH_TEST_NUMBERS = {
+    '+254701807001': '661122'
+};
+
 // ============================================
 // MUSIC PLAYLIST
 // ============================================
@@ -225,6 +231,7 @@ window.UPLOAD_PRESET = UPLOAD_PRESET;
 window.ADMIN_PASSWORD = ADMIN_PASSWORD;
 window.MPESA_TILL = MPESA_TILL;
 window.AIRTIME_REWARD_AMOUNT = AIRTIME_REWARD_AMOUNT;
+window.PHONE_AUTH_TEST_NUMBERS = PHONE_AUTH_TEST_NUMBERS;
 window.MUSIC_PLAYLIST = MUSIC_PLAYLIST;
 window.SPINNER_CONFIG = SPINNER_CONFIG;
 window.EARNING_SETTINGS = EARNING_SETTINGS;
