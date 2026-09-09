@@ -1305,6 +1305,7 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 #coverChooseBtn.is-loading {
     opacity: 0.78;
     cursor: wait;
+    pointer-events: none;
 }
 
 .cover-upload-spinner {

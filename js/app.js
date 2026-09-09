@@ -668,13 +668,13 @@ var app = {
     notification.className = 'chichi-notification';
     notification.style.cssText = `
         position: fixed;
-        top: 20px;
-        right: 20px;
+        top: calc(16px + env(safe-area-inset-top, 0px));
+        right: 16px;
+        width: min(380px, calc(100vw - 32px));
         max-width: 380px;
-        width: 100%;
         background: white;
         border-radius: 16px;
-        padding: 16px 18px;
+        padding: 12px 14px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0, 0, 0, 0.08);
         z-index: 99999;
         transform: translateX(120%);
@@ -682,7 +682,7 @@ var app = {
         border-left: 5px solid #0088cc;
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 10px;
         cursor: pointer;
         backdrop-filter: blur(10px);
         background: rgba(255, 255, 255, 0.96);
@@ -696,8 +696,8 @@ var app = {
     notification.innerHTML = `
         <div style="flex-shrink: 0; position: relative;">
             <div style="
-                width: 48px;
-                height: 48px;
+                width: 42px;
+                height: 42px;
                 border-radius: 50%;
                 background: linear-gradient(135deg, #0088cc, #006fa3);
                 display: flex;
@@ -705,7 +705,7 @@ var app = {
                 justify-content: center;
                 color: white;
                 font-weight: 700;
-                font-size: 18px;
+                font-size: 16px;
                 background-image: url('${avatarUrl}');
                 background-size: cover;
                 background-position: center;
@@ -747,10 +747,13 @@ var app = {
             <div style="
                 font-size: 13px;
                 color: #4a5568;
-                white-space: nowrap;
+                white-space: normal;
                 overflow: hidden;
                 text-overflow: ellipsis;
-                max-width: 220px;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                line-height: 1.35;
             ">
                 ${message}
             </div>
@@ -5522,8 +5525,8 @@ var app = {
             </div>
 
             <div style="margin-bottom: 20px;">
-                <input type="file" id="coverImageInput" accept="image/*" style="display: none;">
-                <button id="coverChooseBtn" type="button" onclick="document.getElementById('coverImageInput').click()" style="width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-bottom: 8px;"><span class="cover-upload-label">📤 Choose Image</span><span class="cover-upload-spinner" aria-hidden="true"></span></button>
+                <input type="file" id="coverImageInput" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
+                <label id="coverChooseBtn" for="coverImageInput" role="button" tabindex="0" style="display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;background:#3b82f6;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;font-weight:600;margin-bottom:8px;"><span class="cover-upload-label">📤 Choose Image</span><span class="cover-upload-spinner" aria-hidden="true"></span></label>
                 <p style="color: #9ca3af; font-size: 12px; margin: 0;">JPG, PNG, or WebP • Recommended: 1200x400px</p>
             </div>
 
