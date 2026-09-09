@@ -101,14 +101,18 @@ var app = {
         }
 
         if (!this.modalBackdropHandlerAttached) {
-            document.addEventListener('click', function(event) {
-                if (event.target.classList.contains('modal-overlay')) {
-                    if (event.target.id) {
-                        event.target.classList.remove('active');
-                        event.target.style.display = 'none';
-                    } else {
-                        event.target.remove();
-                    }
+            document.addEventListener('pointerdown', function(event) {
+                var backdrop = event.target && event.target.classList && event.target.classList.contains('modal-overlay')
+                    ? event.target
+                    : null;
+                if (!backdrop) return;
+
+                if (backdrop.id) {
+                    backdrop.classList.remove('active');
+                    backdrop.style.display = 'none';
+                    backdrop.setAttribute('aria-hidden', 'true');
+                } else {
+                    backdrop.remove();
                 }
             });
             this.modalBackdropHandlerAttached = true;
@@ -3025,7 +3029,7 @@ var app = {
         }
 
         var resultsContainer = document.getElementById('exploreSearchResults');
-        var resultsList = document.getElementById('exploreSearchResultsList');
+        var resultsList = document.getElementById('exploreSearchResultsList') || document.getElementById('exploreSearchResultsContainer');
         var quickDiscoverySection = document.getElementById('quickDiscoverySection');
         var trendingSection = document.getElementById('trendingSection');
         var postsSection = document.getElementById('postsSection');
@@ -3087,14 +3091,16 @@ var app = {
         } else {
             html += '<div style="padding:12px 16px;background:linear-gradient(135deg,#f0f7ff,#f5f0ff);border-radius:8px;margin-bottom:12px;font-size:13px;color:#0088cc;font-weight:600;">Found ' + results.length + ' user' + (results.length === 1 ? '' : 's') + '</div>';
 
-            results.forEach(function(r) {
+            results.forEach(function(r, resultIndex) {
                 var isFollowing = self.following[r.uid] || false;
+                var displayName = self.isGuest ? 'Member ' + String(resultIndex + 1).padStart(2, '0') : r.user.name;
+                var displayMeta = self.isGuest ? 'Private member' : '📧 ' + r.user.email;
 
                 html += '<div style="display:flex;align-items:center;padding:12px;border-bottom:1px solid #e5e7eb;gap:12px;border-radius:8px;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'">';
                 html += '<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;flex-shrink:0;background-image:url(' + (r.user.profilePhoto || '') + ');background-size:cover;background-position:center;border:2px solid white;">' + (!r.user.profilePhoto ? r.user.name.charAt(0).toUpperCase() : '') + '</div>';
                 html += '<div style="flex:1;cursor:pointer;" onclick="app.viewUserProfile(\'' + r.uid + '\')">';
-                html += '<div style="font-weight:600;font-size:14px;">' + r.user.name + '</div>';
-                html += '<div style="font-size:11px;color:#6b7280;">📧 ' + r.user.email + ' • 👥 ' + (r.user.followers || 0) + '</div></div>';
+                html += '<div class="' + (self.isGuest ? 'guest-explore-name' : '') + '" style="font-weight:600;font-size:14px;">' + displayName + '</div>';
+                html += '<div class="' + (self.isGuest ? 'guest-explore-meta' : '') + '" style="font-size:11px;color:#6b7280;">' + displayMeta + ' • 👥 ' + (r.user.followers || 0) + '</div></div>';
                 html += '<button onclick="app.openChatFromSearch(\'' + r.uid + '\', \'' + r.user.name + '\')" style="padding:6px 12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;">💬 Msg</button>';
                 html += '<button onclick="app.viewUserProfile(\'' + r.uid + '\')" style="padding:6px 12px;background:' + (isFollowing ? '#ef4444' : 'var(--primary)') + ';color:white;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;">' + (isFollowing ? '✓ Follow' : '+ Follow') + '</button>';
                 html += '</div>';
@@ -3393,7 +3399,15 @@ var app = {
         var el = document.createElement('div');
         el.className = 'toast ' + type;
         el.setAttribute('role', type === 'error' ? 'alert' : 'status');
-        el.textContent = msg;
+        var icon = type === 'success' ? '✓' : (type === 'error' ? '!' : 'i');
+        var iconEl = document.createElement('span');
+        iconEl.className = 'toast-icon';
+        iconEl.textContent = icon;
+        var messageEl = document.createElement('span');
+        messageEl.className = 'toast-message';
+        messageEl.textContent = msg;
+        el.appendChild(iconEl);
+        el.appendChild(messageEl);
         stack.appendChild(el);
         setTimeout(function() {
             el.classList.add('toast-leaving');
@@ -5509,7 +5523,7 @@ var app = {
 
             <div style="margin-bottom: 20px;">
                 <input type="file" id="coverImageInput" accept="image/*" style="display: none;">
-                <button onclick="document.getElementById('coverImageInput').click()" style="width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-bottom: 8px;">📤 Choose Image</button>
+                <button id="coverChooseBtn" type="button" onclick="document.getElementById('coverImageInput').click()" style="width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-bottom: 8px;"><span class="cover-upload-label">📤 Choose Image</span><span class="cover-upload-spinner" aria-hidden="true"></span></button>
                 <p style="color: #9ca3af; font-size: 12px; margin: 0;">JPG, PNG, or WebP • Recommended: 1200x400px</p>
             </div>
 
@@ -5523,8 +5537,16 @@ var app = {
         document.body.appendChild(modal);
 
         var coverInput = modal.querySelector('#coverImageInput');
+        var coverChooseBtn = modal.querySelector('#coverChooseBtn');
+        var coverUploadLabel = modal.querySelector('.cover-upload-label');
         coverInput.onchange = function(e) {
             var file = e.target.files[0];
+            if (file && coverChooseBtn) {
+                coverChooseBtn.disabled = true;
+                coverChooseBtn.classList.add('is-loading');
+                coverChooseBtn.setAttribute('aria-busy', 'true');
+                if (coverUploadLabel) coverUploadLabel.textContent = 'Uploading...';
+            }
             if (file) {
                 var formData = new FormData();
                 formData.append('file', file);
@@ -5545,6 +5567,10 @@ var app = {
                                 modal.remove();
                             } else {
                                 self.toast('❌ Error saving cover image', 'error');
+                                if (coverChooseBtn) coverChooseBtn.classList.remove('is-loading');
+                                if (coverChooseBtn) coverChooseBtn.disabled = false;
+                                if (coverChooseBtn) coverChooseBtn.removeAttribute('aria-busy');
+                                if (coverUploadLabel) coverUploadLabel.textContent = '📤 Choose Image';
                             }
                         });
                     }
@@ -5552,6 +5578,10 @@ var app = {
                 .catch(err => {
                     console.error('Upload error:', err);
                     self.toast('❌ Upload failed', 'error');
+                    if (coverChooseBtn) coverChooseBtn.classList.remove('is-loading');
+                    if (coverChooseBtn) coverChooseBtn.disabled = false;
+                    if (coverChooseBtn) coverChooseBtn.removeAttribute('aria-busy');
+                    if (coverUploadLabel) coverUploadLabel.textContent = '📤 Choose Image';
                 });
             }
         };
@@ -6588,6 +6618,10 @@ var app = {
     // ============================================
 
     showCreateModal: function() {
+        if (!this.user || this.isGuest) {
+            this.showGuestModal('create a post');
+            return;
+        }
         var modal = document.getElementById('createModal');
         if (!modal) {
             this.toast('Error opening post creator', 'error');
@@ -6934,7 +6968,7 @@ loadMessages: function() {
                 var onlineDot = '<div class="online-dot' + (isOnline ? ' active' : '') + '"></div>';
                 
                 html += `
-                    <div class="msg-item-wrapper" data-uid="${conv.uid}">
+                    <div class="msg-item-wrapper${conv.unreadCount > 0 ? ' has-unread' : ''}" data-uid="${conv.uid}">
                         <div class="msg-item-actions">
                             ${favoriteBtn}
                             <button class="action-btn archive" onclick="app.archiveConversation('${conv.uid}')">📦</button>
@@ -8801,6 +8835,8 @@ loadMessages: function() {
 
     loadExplore: function() {
         var self = this;
+        var storiesSection = document.querySelector('.explore-stories-section');
+        if (storiesSection) storiesSection.style.display = this.isGuest ? 'none' : 'block';
 
         if (!this.users || Object.keys(this.users).length === 0) {
             db.ref('users').once('value', function(snapshot) {
@@ -9449,6 +9485,10 @@ loadMessages: function() {
     // ============================================
 
     showCreateModal: function() {
+        if (!this.user || this.isGuest) {
+            this.showGuestModal('create a post');
+            return;
+        }
         var modal = document.getElementById('createModal');
         if (!modal) {
             this.toast('Error opening post creator', 'error');
@@ -10215,9 +10255,12 @@ loadMessages: function() {
             return;
         }
 
-        if (loginSpinner) loginSpinner.style.display = 'inline';
+        if (loginSpinner) loginSpinner.style.display = 'inline-block';
         if (loginText) loginText.style.display = 'none';
-        if (loginBtn) loginBtn.disabled = true;
+        if (loginBtn) {
+            loginBtn.disabled = true;
+            loginBtn.classList.add('is-loading');
+        }
 
         var self = this;
 
@@ -10235,6 +10278,7 @@ loadMessages: function() {
                         if (loginSpinner) loginSpinner.style.display = 'none';
                         if (loginText) loginText.style.display = 'inline';
                         if (loginBtn) loginBtn.disabled = false;
+                        if (loginBtn) loginBtn.classList.remove('is-loading');
                         self.toast('User not found', 'error');
                     }
                 })
@@ -10242,6 +10286,7 @@ loadMessages: function() {
                     if (loginSpinner) loginSpinner.style.display = 'none';
                     if (loginText) loginText.style.display = 'inline';
                     if (loginBtn) loginBtn.disabled = false;
+                    if (loginBtn) loginBtn.classList.remove('is-loading');
                     console.error('Username lookup error:', err);
                     self.toast('Error finding user', 'error');
                 });
@@ -10259,6 +10304,7 @@ loadMessages: function() {
                 if (loginSpinner) loginSpinner.style.display = 'none';
                 if (loginText) loginText.style.display = 'inline';
                 if (loginBtn) loginBtn.disabled = false;
+                if (loginBtn) loginBtn.classList.remove('is-loading');
                 self.toast('❌ ' + err.message, 'error');
                 self.logUserActivity('login_failed', 'Failed login attempt: ' + email + ' - ' + err.message);
             });
@@ -10288,9 +10334,12 @@ loadMessages: function() {
             return;
         }
 
-        if (signupSpinner) signupSpinner.style.display = 'inline';
+        if (signupSpinner) signupSpinner.style.display = 'inline-block';
         if (signupText) signupText.style.display = 'none';
-        if (signupBtn) signupBtn.disabled = true;
+        if (signupBtn) {
+            signupBtn.disabled = true;
+            signupBtn.classList.add('is-loading');
+        }
 
         var self = this;
         auth.createUserWithEmailAndPassword(email, pass)
@@ -10325,11 +10374,13 @@ loadMessages: function() {
                 if (signupSpinner) signupSpinner.style.display = 'none';
                 if (signupText) signupText.style.display = 'inline';
                 if (signupBtn) signupBtn.disabled = false;
+                if (signupBtn) signupBtn.classList.remove('is-loading');
             })
             .catch(function(err) {
                 if (signupSpinner) signupSpinner.style.display = 'none';
                 if (signupText) signupText.style.display = 'inline';
                 if (signupBtn) signupBtn.disabled = false;
+                if (signupBtn) signupBtn.classList.remove('is-loading');
                 console.error('Signup error:', err);
                 self.toast(err.message, 'error');
             });
@@ -10394,6 +10445,7 @@ loadMessages: function() {
         if (signupSpinner) signupSpinner.style.display = 'none';
         if (signupText) signupText.style.display = 'inline';
         if (signupBtn) signupBtn.disabled = false;
+        if (signupBtn) signupBtn.classList.remove('is-loading');
     },
 
     // ============== Handle redirect result (fallback) ==============
@@ -12478,13 +12530,15 @@ app.searchExplorePeople = function(query) {
             return;
         }
 
-        container.innerHTML = matches.map(function(uid) {
+        container.innerHTML = matches.map(function(uid, resultIndex) {
             var user = users[uid] || {};
             var name = user.name || 'User';
+            var displayName = app.isGuest ? 'Member ' + String(resultIndex + 1).padStart(2, '0') : name;
+            var displayMeta = app.isGuest ? 'Private member' : '@' + (user.username || 'user');
             var avatar = user.profilePhoto ? '<img src="' + user.profilePhoto + '" alt="">' : '<span>' + name.charAt(0).toUpperCase() + '</span>';
             return '<button type="button" class="explore-search-user" onclick="app.viewUserProfile(\'' + uid + '\')">' +
                 '<div class="explore-search-avatar">' + avatar + '</div>' +
-                '<div class="explore-search-user-copy"><strong>' + name + '</strong><span>@' + (user.username || 'user') + '</span></div>' +
+                '<div class="explore-search-user-copy"><strong class="' + (app.isGuest ? 'guest-explore-name' : '') + '">' + displayName + '</strong><span class="' + (app.isGuest ? 'guest-explore-meta' : '') + '">' + displayMeta + '</span></div>' +
                 '<span class="explore-search-arrow">View</span></button>';
         }).join('');
     };

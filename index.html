@@ -115,7 +115,7 @@
                 </div>
                 <button type="submit" class="btn-submit btn-animate glow-button" id="loginBtn">
                     <span class="login-btn-text">Log in</span>
-                    <span class="login-spinner" style="display: none;">⏳</span>
+                    <span class="login-spinner auth-button-spinner" style="display: none;" aria-hidden="true"></span>
                     <div class="button-glow"></div>
                 </button>
                 
@@ -160,7 +160,7 @@
                 
                 <button type="submit" class="btn-submit btn-animate glow-button" id="signupBtn">
                     <span class="signup-btn-text">Create Account</span>
-                    <span class="signup-spinner" style="display: none;">⏳</span>
+                    <span class="signup-spinner auth-button-spinner" style="display: none;" aria-hidden="true"></span>
                     <div class="button-glow"></div>
                 </button>
                 
@@ -199,7 +199,7 @@
         </div>
 
         <div class="header-actions">
-            <button class="btn-icon" id="headerEarnBtn" onclick="app.switchView('earn')" title="Earn">💰</button>
+            <button class="btn-icon header-earn-btn" id="headerEarnBtn" onclick="app.switchView('earn')" title="Earn"><img src="earn-icon.svg" alt="Earn" class="header-earn-icon"></button>
             <button class="btn-icon" id="headerMenuBtn" onclick="app.showHeaderMenu()">☰</button>
             <div class="header-menu" id="headerMenu" style="display:none;position:absolute;top:100%;right:0;background:white;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.15);min-width:180px;z-index:1000;">
                 <button id="menuProfile" onclick="app.switchView('profile')" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;">� My Profile</button>
