@@ -311,6 +311,14 @@ var app = {
                         }
                     }, 100);
                 });
+
+                chatInput.addEventListener('input', function() {
+                    if (chatInput.value.trim()) {
+                        self.startTypingIndicator();
+                    } else {
+                        self.stopTypingIndicator();
+                    }
+                });
             }
         }, 500);
 
@@ -597,7 +605,9 @@ var app = {
 
     notifyNewMessage: function(senderName, messageText, senderUid) {
     // Suppress notification if we're currently in this chat
-    if (this.currentChat && this.currentChat.uid === senderUid) {
+    var chatView = document.getElementById('chatView');
+    var chatIsVisible = chatView && (chatView.classList.contains('active') || chatView.style.display === 'flex');
+    if (chatIsVisible && this.currentChat && this.currentChat.uid === senderUid) {
         console.log('🔕 In chat, suppressing notification');
         return;
     }
@@ -928,11 +938,16 @@ var app = {
             messagesRef.on('value', function(s) {
                 var unreadCount = 0;
                 var messages = [];
+                var deliveryUpdates = {};
 
                 s.forEach(function(c) {
                     var m = c.val();
                     if (m && (m.text || m.image)) {
                         messages.push(m);
+                        if (m.sender !== self.user.uid && !m.delivered) {
+                            deliveryUpdates['chats/' + key + '/messages/' + c.key + '/delivered'] = true;
+                            deliveryUpdates['messages/' + key + '/' + c.key + '/delivered'] = true;
+                        }
                         if (m.sender !== self.user.uid && !m.read) {
                             unreadCount++;
                         }
@@ -944,6 +959,10 @@ var app = {
                 }
                 self.unreadMessages[key].count = unreadCount;
                 self.unreadMessages[key].messages = messages;
+
+                if (Object.keys(deliveryUpdates).length > 0) {
+                    db.ref().update(deliveryUpdates);
+                }
 
                 self.updateUnreadBadge();
                 self.loadMessages();
@@ -3356,11 +3375,28 @@ var app = {
     // ============================================
 
     toast: function(msg, type) {
+        var stack = document.getElementById('toastStack');
+        if (!stack) {
+            stack = document.createElement('div');
+            stack.id = 'toastStack';
+            stack.setAttribute('aria-live', 'polite');
+            stack.setAttribute('aria-atomic', 'false');
+            document.body.appendChild(stack);
+        }
+
+        while (stack.children.length >= 3) {
+            stack.firstElementChild.remove();
+        }
+
         var el = document.createElement('div');
         el.className = 'toast ' + type;
+        el.setAttribute('role', type === 'error' ? 'alert' : 'status');
         el.textContent = msg;
-        document.body.appendChild(el);
-        setTimeout(function() { el.remove(); }, 3000);
+        stack.appendChild(el);
+        setTimeout(function() {
+            el.classList.add('toast-leaving');
+            setTimeout(function() { if (el.parentNode) el.remove(); }, 180);
+        }, 3000);
     },
 
     // ============================================
@@ -6958,6 +6994,7 @@ loadMessages: function() {
     }
 
     this.currentChat = { uid: uid, name: name };
+    this.trackTyping();
     document.getElementById('chatHeaderName').textContent = name;
 
     var avatar = document.getElementById('chatHeaderAvatar');
@@ -6978,11 +7015,13 @@ loadMessages: function() {
     // Apply chat wallpaper if saved
     var chatKey = [this.user.uid, uid].sort().join('_');
     var wallpaperKey = this.getChatWallpaperKey(chatKey);
-    var savedWallpaper = localStorage.getItem(wallpaperKey);
+    var savedWallpaper = localStorage.getItem(wallpaperKey) || DEFAULT_CHAT_WALLPAPER;
+    var savedWallpaperBlur = localStorage.getItem(wallpaperKey + '_blur');
+    var savedWallpaperDim = localStorage.getItem(wallpaperKey + '_dim');
     this.applyChatWallpaper(
         savedWallpaper,
-        localStorage.getItem(wallpaperKey + '_blur'),
-        localStorage.getItem(wallpaperKey + '_dim')
+        savedWallpaperBlur === null ? DEFAULT_CHAT_WALLPAPER_BLUR : savedWallpaperBlur,
+        savedWallpaperDim === null ? DEFAULT_CHAT_WALLPAPER_DIM : savedWallpaperDim
     );
 
     document.getElementById('chatMessages').innerHTML = '';
@@ -7043,7 +7082,7 @@ loadMessages: function() {
     openEmojiPicker: function() {
         var emojis = ['😊', '😂', '😍', '🔥', '👍', '🎉', '😭', '🤔', '💯', '✨', '😎', '🤣', '😘', '🙌', '🚀', '❤️'];
         var emojiMenu = document.createElement('div');
-        emojiMenu.style.cssText = 'position:fixed;bottom:60px;right:10px;background:white;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:300;padding:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;';
+        emojiMenu.className = 'emoji-menu';
         
         emojis.forEach(function(emoji) {
             var btn = document.createElement('button');
@@ -7089,6 +7128,14 @@ loadMessages: function() {
             var key = [this.user.uid, this.currentChat.uid].sort().join('_');
             db.ref('chats/' + key + '/messages').off();
             this.chatMessagesListener = null;
+            db.ref('messages/' + key).off();
+            this.messageStoreListener = null;
+        }
+        this.stopTypingIndicator();
+        if (this.typingListener && this.currentChat) {
+            var typingKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+            db.ref('typing/' + typingKey).off();
+            this.typingListener = null;
         }
         this.currentChat = null;
         this.switchView('messages');
@@ -7106,12 +7153,19 @@ loadMessages: function() {
         if (this.chatMessagesListener) {
             db.ref('chats/' + key + '/messages').off();
         }
+        if (this.messageStoreListener) {
+            db.ref('messages/' + key).off();
+            this.messageStoreListener = null;
+        }
 
         db.ref('chats/' + key + '/messages').once('value').then(function(snapshot) {
             var messages = [];
             snapshot.forEach(function(c) {
                 var m = c.val();
-                if (m && (m.text || m.image)) { messages.push(m); }
+                if (m) {
+                    m.id = c.key;
+                    if (m.text || m.image) messages.push(m);
+                }
             });
             messages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
             self.chatMessages[key] = messages;
@@ -7120,18 +7174,23 @@ loadMessages: function() {
             self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
                 var m = snap.val();
                 if (m && (m.text || m.image) && m.sender !== self.user.uid) {
+                    m.id = snap.key;
+                    var currentMessages = self.chatMessages[key] || [];
+                    var alreadyVisible = currentMessages.some(function(item) { return item.id === m.id; });
+                    if (!alreadyVisible) {
+                        currentMessages.push(m);
+                        currentMessages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+                        self.chatMessages[key] = currentMessages;
+                        self.displayChatMessages(currentMessages, key);
+                    }
                     self.markAsRead(self.currentChat.uid);
-                    db.ref('chats/' + key + '/messages').once('value').then(function(s) {
-                        var updated = [];
-                        s.forEach(function(c) {
-                            var msg = c.val();
-                            if (msg && (msg.text || msg.image)) { updated.push(msg); }
-                        });
-                        updated.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
-                        self.chatMessages[key] = updated;
-                        self.displayChatMessages(updated, key);
-                    });
                 }
+            });
+            db.ref('chats/' + key + '/messages').on('child_changed', function() {
+                self.loadChatMessages();
+            });
+            self.messageStoreListener = db.ref('messages/' + key).on('child_added', function(snap) {
+                self.appendIncomingChatMessage(snap, key);
             });
         });
     },
@@ -7153,7 +7212,7 @@ loadMessages: function() {
         var html = '';
         var lastDate = '';
         messages.forEach(function(m, idx) {
-            if (!m || (!m.text && !m.image)) return;
+            if (!m || m.deleted || m.deletedForEveryone || (m.deleted_for && m.deleted_for[self.user.uid]) || (!m.text && !m.image)) return;
             var side = m.sender === self.user.uid ? 'own' : 'other';
             var timestamp = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
 
@@ -7184,9 +7243,7 @@ loadMessages: function() {
             var actionMenu = '';
             if (m.sender === self.user.uid) {
                 actionMenu = `<div class="msg-actions" style="display:flex;gap:4px;margin-left:8px;">
-                    <button onclick="app.editMessage('${m.id || m._key || ''}','${key}')" title="Edit" style="background:none;border:none;cursor:pointer;font-size:12px;">✏️</button>
-                    <button onclick="app.deleteMessage('${m.id || m._key || ''}','${key}')" title="Delete" style="background:none;border:none;cursor:pointer;font-size:12px;color:#ef4444;">🗑️</button>
-                    <button onclick="app.deleteForEveryone('${m.id || m._key || ''}','${key}')" title="Delete for everyone" style="background:none;border:none;cursor:pointer;font-size:12px;color:#dc2626;">🚫</button>
+                    <button onclick="event.stopPropagation(); app.showMessageActionMenu('${m.id || m._key || ''}', event)" title="Message actions" style="background:none;border:none;cursor:pointer;font-size:16px;color:#52635e;">⋯</button>
                 </div>`;
             }
 
@@ -7197,7 +7254,13 @@ loadMessages: function() {
             html += '<div class="message-wrapper">';
             if (side === 'other') { html += '<div class="message-sender">' + otherUserName + '</div>'; }
             html += '<div class="message-bubble">' + content + '</div>';
-            html += '<div class="message-meta"><span>' + timestamp + '</span>' + actionMenu + '</div>';
+            var deliveryStatus = '';
+            if (side === 'own') {
+                var deliveryClass = m.read ? 'read' : (m.delivered ? 'delivered' : 'sent');
+                var deliveryTicks = m.read || m.delivered ? '✓✓' : '✓';
+                deliveryStatus = '<span class="message-read-status ' + deliveryClass + '" aria-label="' + (m.read ? 'Read' : (m.delivered ? 'Delivered' : 'Sent')) + '">' + deliveryTicks + '</span>';
+            }
+            html += '<div class="message-meta"><span>' + timestamp + '</span>' + deliveryStatus + actionMenu + '</div>';
             html += '</div></div>';
         });
 
@@ -9429,6 +9492,8 @@ loadMessages: function() {
             var key = [this.user.uid, this.currentChat.uid].sort().join('_');
             db.ref('chats/' + key + '/messages').off();
             this.chatMessagesListener = null;
+            db.ref('messages/' + key).off();
+            this.messageStoreListener = null;
         }
         this.currentChat = null;
         this.switchView('messages');
@@ -9446,12 +9511,19 @@ loadMessages: function() {
         if (this.chatMessagesListener) {
             db.ref('chats/' + key + '/messages').off();
         }
+        if (this.messageStoreListener) {
+            db.ref('messages/' + key).off();
+            this.messageStoreListener = null;
+        }
 
         db.ref('chats/' + key + '/messages').once('value').then(function(snapshot) {
             var messages = [];
             snapshot.forEach(function(c) {
                 var m = c.val();
-                if (m && (m.text || m.image)) { messages.push(m); }
+                if (m) {
+                    m.id = c.key;
+                    if (m.text || m.image) messages.push(m);
+                }
             });
             messages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
             self.chatMessages[key] = messages;
@@ -9460,18 +9532,23 @@ loadMessages: function() {
             self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
                 var m = snap.val();
                 if (m && (m.text || m.image) && m.sender !== self.user.uid) {
+                    m.id = snap.key;
+                    var currentMessages = self.chatMessages[key] || [];
+                    var alreadyVisible = currentMessages.some(function(item) { return item.id === m.id; });
+                    if (!alreadyVisible) {
+                        currentMessages.push(m);
+                        currentMessages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+                        self.chatMessages[key] = currentMessages;
+                        self.displayChatMessages(currentMessages, key);
+                    }
                     self.markAsRead(self.currentChat.uid);
-                    db.ref('chats/' + key + '/messages').once('value').then(function(s) {
-                        var updated = [];
-                        s.forEach(function(c) {
-                            var msg = c.val();
-                            if (msg && (msg.text || msg.image)) { updated.push(msg); }
-                        });
-                        updated.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
-                        self.chatMessages[key] = updated;
-                        self.displayChatMessages(updated, key);
-                    });
                 }
+            });
+            db.ref('chats/' + key + '/messages').on('child_changed', function() {
+                self.loadChatMessages();
+            });
+            self.messageStoreListener = db.ref('messages/' + key).on('child_added', function(snap) {
+                self.appendIncomingChatMessage(snap, key);
             });
         });
     },
@@ -9493,7 +9570,7 @@ loadMessages: function() {
         var html = '';
         var lastDate = '';
         messages.forEach(function(m, idx) {
-            if (!m || (!m.text && !m.image)) return;
+            if (!m || m.deleted || m.deletedForEveryone || (m.deleted_for && m.deleted_for[self.user.uid]) || (!m.text && !m.image)) return;
             var side = m.sender === self.user.uid ? 'own' : 'other';
             var timestamp = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
 
@@ -9519,6 +9596,11 @@ loadMessages: function() {
 
             var otherUserName = self.currentChat.name || 'User';
             var otherUserInitial = otherUserName.charAt(0).toUpperCase();
+                        var actionMenu = m.sender === self.user.uid
+                                ? '<div class="msg-actions" style="display:flex;gap:4px;margin-left:8px;">' +
+                                    '<button onclick="event.stopPropagation(); app.showMessageActionMenu(\'' + m.id + '\', event)" title="Message actions" style="background:none;border:none;cursor:pointer;font-size:16px;color:#52635e;">⋯</button>' +
+                                    '</div>'
+                                : '';
 
             html += '<div class="message-group ' + side + '">';
             if (side === 'other') {
@@ -9527,7 +9609,13 @@ loadMessages: function() {
             html += '<div class="message-wrapper">';
             if (side === 'other') { html += '<div class="message-sender">' + otherUserName + '</div>'; }
             html += '<div class="message-bubble">' + content + '</div>';
-            html += '<div class="message-meta"><span>' + timestamp + '</span></div>';
+            var deliveryStatus = '';
+            if (side === 'own') {
+                var deliveryClass = m.read ? 'read' : (m.delivered ? 'delivered' : 'sent');
+                var deliveryTicks = m.read || m.delivered ? '✓✓' : '✓';
+                deliveryStatus = '<span class="message-read-status ' + deliveryClass + '" aria-label="' + (m.read ? 'Read' : (m.delivered ? 'Delivered' : 'Sent')) + '">' + deliveryTicks + '</span>';
+            }
+            html += '<div class="message-meta"><span>' + timestamp + '</span>' + deliveryStatus + actionMenu + '</div>';
             html += '</div></div>';
         });
 
@@ -11498,6 +11586,22 @@ app.displayTypingIndicator = function(userName) {
     chatMsgs.scrollTop = chatMsgs.scrollHeight;
 };
 
+app.appendIncomingChatMessage = function(snapshot, chatKey) {
+    if (!this.currentChat || !this.user) return;
+    var message = snapshot.val();
+    if (!message || message.sender === this.user.uid || (!message.text && !message.image)) return;
+
+    message.id = snapshot.key;
+    var messages = this.chatMessages[chatKey] || [];
+    if (!messages.some(function(item) { return item.id === message.id; })) {
+        messages.push(message);
+        messages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+        this.chatMessages[chatKey] = messages;
+        this.displayChatMessages(messages, chatKey);
+    }
+    this.markAsRead(this.currentChat.uid);
+};
+
 app.trackTyping = function() {
     if (!this.currentChat) return;
     var self = this;
@@ -11690,7 +11794,7 @@ app.deleteMessage = function(msgId, chatKey) {
                     <div style="font-size: 11px; color: #6b7280; font-weight: 400; margin-top: 4px;">Only you can see this message will be deleted</div>
                 </button>
                 
-                <button onclick="app.confirmDeleteMessage('${msgId}', '${chatKey}', 'everyone'); this.closest('.modal-overlap').remove();" style="padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; cursor: pointer; font-weight: 600; color: #991b1b; font-size: 14px; transition: 0.3s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='#fef2f2'">
+                <button onclick="app.confirmDeleteMessage('${msgId}', '${chatKey}', 'everyone'); this.closest('.modal-overlay').remove();" style="padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; cursor: pointer; font-weight: 600; color: #991b1b; font-size: 14px; transition: 0.3s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='#fef2f2'">
                     🗑️ Delete for Everyone
                     <div style="font-size: 11px; color: #991b1b; font-weight: 400; margin-top: 4px;">Message will be deleted for all participants</div>
                 </button>
@@ -11709,6 +11813,16 @@ app.confirmDeleteMessage = function(msgId, chatKey, scope) {
     
     var self = this;
     var updates = {};
+
+    if (scope === 'everyone') {
+        var message = this.chatMessages && this.chatMessages[chatKey]
+            ? this.chatMessages[chatKey].find(function(item) { return item.id === msgId || item._key === msgId; })
+            : null;
+        if (!message || message.sender !== this.user.uid) {
+            this.toast('You can only delete your own messages for everyone', 'error');
+            return;
+        }
+    }
     
     if (scope === 'me') {
         // Delete only for current user
@@ -11720,8 +11834,18 @@ app.confirmDeleteMessage = function(msgId, chatKey, scope) {
         updates['deletedAt'] = firebase.database.ServerValue.TIMESTAMP;
     }
     
-    db.ref('messages/' + msgId).update(updates).then(function() {
+    db.ref('messages/' + chatKey + '/' + msgId).update(updates).then(function() {
         db.ref('chats/' + chatKey + '/messages/' + msgId).update(updates);
+        var localMessage = self.chatMessages[chatKey] && self.chatMessages[chatKey].find(function(item) {
+            return item.id === msgId || item._key === msgId;
+        });
+        if (localMessage) {
+            if (scope === 'everyone') localMessage.deletedForEveryone = true;
+            if (scope === 'me') {
+                localMessage.deleted_for = localMessage.deleted_for || {};
+                localMessage.deleted_for[self.user.uid] = true;
+            }
+        }
         self.displayChatMessages(self.chatMessages[chatKey], chatKey);
         var action = scope === 'me' ? 'Deleted for you' : 'Deleted for everyone';
         self.toast('✓ ' + action, 'success');
@@ -11808,12 +11932,20 @@ app.showMessageActionMenu = function(msgId, event) {
 
     var msgEl = document.querySelector('[data-msg-id="' + msgId + '"]');
     var msgText = msgEl ? msgEl.querySelector('.message-bubble').textContent : '';
+    var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
+    var currentMessage = this.chatMessages[chatKey] && this.chatMessages[chatKey].find(function(message) {
+        return message.id === msgId || message._key === msgId;
+    });
+    var deleteForEveryoneAction = currentMessage && currentMessage.sender === this.user.uid
+        ? `<div onclick="app.deleteForEveryone('${msgId}','${chatKey}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;color:#991b1b;">🗑️ Delete for Everyone</div>`
+        : '';
 
     menu.innerHTML = `
         <div style="padding:8px 0;">
             <div onclick="app.copyMessageToClipboard('${msgText.replace(/'/g, "\\'")}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;hover:background:#f3f4f6;font-size:14px;">📋 Copy</div>
             <div onclick="app.editMessage('${msgId}','${[this.user.uid, this.currentChat.uid].sort().join('_')}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;">✏️ Edit</div>
             <div onclick="app.deleteMessage('${msgId}','${[this.user.uid, this.currentChat.uid].sort().join('_')}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;color:#ef4444;">🗑️ Delete</div>
+            ${deleteForEveryoneAction}
             <div onclick="app.pinMessage('${msgId}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;">📌 Pin</div>
             <div onclick="app.forwardMessage('${msgId}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;">↪️ Forward</div>
         </div>
@@ -13958,6 +14090,10 @@ app.openNewChat = function() {
 // ============================================
 // NEW FUNCTION: Change chat wallpaper
 // ============================================
+var DEFAULT_CHAT_WALLPAPER = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1600&q=90';
+var DEFAULT_CHAT_WALLPAPER_BLUR = 5;
+var DEFAULT_CHAT_WALLPAPER_DIM = 22;
+
 app.getChatWallpaperKey = function(chatKey) {
     var profileKey = 'chat_wallpaper_profile_' + this.user.uid;
     var previousChatKey = 'chat_wallpaper_' + this.user.uid + '_' + chatKey;
@@ -14055,9 +14191,13 @@ app.changeChatWallpaper = function() {
         { genre: 'Glamour', name: 'Rose glow', url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1600&q=90' }
     ];
     var wallpaperKey = this.getChatWallpaperKey(chatKey);
-    var savedWallpaper = localStorage.getItem(wallpaperKey) || '';
-    var savedBlur = parseInt(localStorage.getItem(wallpaperKey + '_blur'), 10) || 0;
-    var savedDim = parseInt(localStorage.getItem(wallpaperKey + '_dim'), 10) || 0;
+    var savedWallpaper = localStorage.getItem(wallpaperKey) || DEFAULT_CHAT_WALLPAPER;
+    var savedBlur = localStorage.getItem(wallpaperKey + '_blur') === null
+        ? DEFAULT_CHAT_WALLPAPER_BLUR
+        : parseInt(localStorage.getItem(wallpaperKey + '_blur'), 10) || 0;
+    var savedDim = localStorage.getItem(wallpaperKey + '_dim') === null
+        ? DEFAULT_CHAT_WALLPAPER_DIM
+        : parseInt(localStorage.getItem(wallpaperKey + '_dim'), 10) || 0;
     var genres = ['Bubbles', 'Nature', 'Classic', 'Anime', 'Bold', 'Glamour'];
     var wallpaperCards = wallpapers.map(function(w) {
         var preview = w.url === 'small-bubbles' ? 'background-image:radial-gradient(rgba(15,118,110,.22) 1px,transparent 1.2px);background-size:12px 12px;background-color:#edf5f2;' : (w.url ? 'background-image:url(\'' + w.url + '\');' : 'background-image:radial-gradient(circle at 20% 20%,rgba(255,255,255,.85) 0 10px,transparent 11px),radial-gradient(circle at 75% 35%,rgba(15,118,110,.18) 0 16px,transparent 17px),radial-gradient(circle at 42% 78%,rgba(15,118,110,.12) 0 21px,transparent 22px);background-color:#edf5f2;');
@@ -14204,16 +14344,14 @@ app.deleteForEveryone = function(msgId, chatKey) {
         });
     }
 
-    if (!msg || msg.sender !== this.user.uid) {
+            if (!msg || msg.sender !== this.user.uid) {
         this.toast('You can only delete your own messages for everyone', 'error');
         return;
     }
 
-    if (!confirm('Delete this message for everyone? This cannot be undone.')) return;
-
     var self = this;
     // Set deletedForEveryone flag
-    db.ref('messages/' + msgId).update({
+    db.ref('messages/' + chatKey + '/' + msgId).update({
         deletedForEveryone: true,
         deletedAt: firebase.database.ServerValue.TIMESTAMP
     }).then(function() {
@@ -14222,6 +14360,7 @@ app.deleteForEveryone = function(msgId, chatKey) {
             deletedAt: firebase.database.ServerValue.TIMESTAMP
         });
         // Refresh messages
+        msg.deletedForEveryone = true;
         self.displayChatMessages(self.chatMessages[chatKey], chatKey);
         self.toast('✅ Message deleted for everyone', 'success');
     }).catch(function(err) {

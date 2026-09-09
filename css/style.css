@@ -843,7 +843,7 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 .nav-label {
-    display: none;
+    display: block;
 }
 
 .nav-item.active .nav-label {
@@ -2545,20 +2545,40 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 /* ===== TOAST ===== */
-.toast {
+#toastStack {
     position: fixed;
-    bottom: 100px;
-    left: 20px;
-    right: 20px;
+    right: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.toast {
+    width: min(420px, 100%);
+    box-sizing: border-box;
     background: white;
     padding: 12px 16px;
-    border-radius: 14px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 10000;
-    font-size: 0.8rem;
+    border: 1px solid rgba(15, 118, 110, 0.12);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+    font-size: 0.82rem;
+    line-height: 1.35;
     font-weight: 500;
-    animation: smoothFadeIn 0.3s ease;
+    overflow-wrap: anywhere;
+    animation: toastEnter 0.22s ease both;
     font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
+    pointer-events: auto;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.toast-leaving {
+    opacity: 0;
+    transform: translateY(8px);
 }
 
 .toast.success {
@@ -2574,6 +2594,11 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 .toast.info {
     border-left: 4px solid #3b82f6;
     color: #3b82f6;
+}
+
+@keyframes toastEnter {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* ============================================
@@ -7189,9 +7214,9 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 #chatWallpaperLayer.has-small-bubbles::before {
-    background-color: #edf5f2;
-    background-image: radial-gradient(rgba(15, 118, 110, 0.14) 1px, transparent 1.2px);
-    background-size: 18px 18px;
+    background-color: #e3f1ed;
+    background-image: radial-gradient(rgba(15, 118, 110, 0.28) 2px, transparent 2.4px);
+    background-size: 26px 26px;
 }
 
 #chatWallpaperLayer::after {
@@ -7270,6 +7295,22 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     color: #71827c;
 }
 
+.message-read-status {
+    margin-left: 5px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+
+.message-read-status.sent,
+.message-read-status.delivered {
+    color: #71827c;
+}
+
+.message-read-status.read {
+    color: #1683d8;
+}
+
 .message-date-divider {
     align-self: center;
     padding: 5px 10px;
@@ -7303,6 +7344,25 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     background: #e6f3ee;
     color: #0f766e;
     transform: none;
+}
+
+.emoji-menu {
+    position: fixed;
+    right: 12px;
+    bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+    z-index: 2100;
+    width: min(240px, calc(100vw - 24px));
+    max-height: min(260px, 42vh);
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid #dbe8e3;
+    border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.2);
 }
 
 #chatMessageInput {
