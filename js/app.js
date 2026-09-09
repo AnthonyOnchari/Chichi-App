@@ -5020,7 +5020,7 @@ var app = {
         // Control FAB (Create Post button)
         var fab = document.querySelector('.fab-button-nav');
         if (fab) {
-            fab.style.display = this.isGuest ? 'none' : 'flex';
+            fab.style.display = 'flex';
         }
     },
 
@@ -5165,7 +5165,7 @@ var app = {
         // Hide FAB for guests
         var fab = document.querySelector('.fab-button-nav');
         if (fab) {
-            fab.style.display = this.isGuest ? 'none' : 'flex';
+            fab.style.display = 'flex';
         }
 
         var self = this;
@@ -6622,7 +6622,7 @@ var app = {
 
     showCreateModal: function() {
         if (!this.user || this.isGuest) {
-            this.showGuestModal('create a post');
+            this.showGuestPostPrompt();
             return;
         }
         var modal = document.getElementById('createModal');
@@ -7907,6 +7907,53 @@ loadMessages: function() {
             </div>
         `;
         document.body.appendChild(modal);
+    },
+
+    showGuestPostPrompt: function() {
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.zIndex = '99999';
+        modal.innerHTML = `
+            <div class="modal" style="max-width:400px;">
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+                <h2 style="margin-bottom:8px;font-weight:800;">Create your first post</h2>
+                <p style="color:var(--text-light);margin:0 0 16px;line-height:1.45;">Tell us your name first, then we’ll take you to sign in or create your account.</p>
+                <label class="form-label" for="guestPostName">Your name</label>
+                <input id="guestPostName" class="form-input" type="text" maxlength="60" placeholder="Enter your name" autocomplete="name">
+                <div style="display:flex;gap:10px;margin-top:16px;">
+                    <button type="button" onclick="app.continueGuestPostAuth('login')" style="flex:1;background:#f1f5f9;color:#334155;border:0;padding:12px;border-radius:10px;font-weight:700;cursor:pointer;">Log in</button>
+                    <button type="button" onclick="app.continueGuestPostAuth('signup')" style="flex:1;background:#0f766e;color:white;border:0;padding:12px;border-radius:10px;font-weight:700;cursor:pointer;">Create account</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        setTimeout(function() {
+            var input = document.getElementById('guestPostName');
+            if (input) input.focus();
+        }, 50);
+    },
+
+    continueGuestPostAuth: function(tab) {
+        var input = document.getElementById('guestPostName');
+        var name = input ? input.value.trim() : '';
+        if (!name) {
+            this.toast('Please enter your name first', 'error');
+            if (input) input.focus();
+            return;
+        }
+
+        var modal = input && input.closest('.modal-overlay');
+        if (modal) modal.remove();
+        this.pendingGuestPostName = name;
+        this.showLoginPage(tab);
+
+        if (tab === 'signup') {
+            var signupName = document.getElementById('signupName');
+            if (signupName) {
+                signupName.value = name;
+                signupName.focus();
+            }
+        }
     },
 
     continueAsGuest: function() {
@@ -9489,7 +9536,7 @@ loadMessages: function() {
 
     showCreateModal: function() {
         if (!this.user || this.isGuest) {
-            this.showGuestModal('create a post');
+            this.showGuestPostPrompt();
             return;
         }
         var modal = document.getElementById('createModal');
