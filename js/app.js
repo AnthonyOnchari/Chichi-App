@@ -6723,6 +6723,42 @@ var app = {
 // LOAD MESSAGES - REDESIGNED
 // ============================================
 
+initSwipeListeners: function() {
+    var items = document.querySelectorAll('.msg-item-wrapper');
+    var activeItem = null;
+    var startX = 0;
+    var startY = 0;
+
+    items.forEach(function(item) {
+        if (item.dataset.swipeBound === 'true') return;
+        item.dataset.swipeBound = 'true';
+
+        item.addEventListener('touchstart', function(event) {
+            if (!event.touches || !event.touches[0]) return;
+            startX = event.touches[0].clientX;
+            startY = event.touches[0].clientY;
+            activeItem = item;
+        }, {passive: true});
+
+        item.addEventListener('touchend', function(event) {
+            if (!activeItem || !event.changedTouches || !event.changedTouches[0]) return;
+
+            var endTouch = event.changedTouches[0];
+            var deltaX = endTouch.clientX - startX;
+            var deltaY = endTouch.clientY - startY;
+            activeItem = null;
+
+            if (Math.abs(deltaX) < 40 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+
+            items.forEach(function(otherItem) {
+                otherItem.classList.remove('swiped');
+            });
+
+            if (deltaX < 0) item.classList.add('swiped');
+        }, {passive: true});
+    });
+},
+
 loadMessages: function() {
     var self = this;
     var isGuestView = !this.user || this.isGuest || !this.user.uid;

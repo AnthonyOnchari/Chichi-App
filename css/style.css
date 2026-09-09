@@ -1393,6 +1393,10 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     opacity: 1;
 }
 
+.msg-item-wrapper.swiped .msg-item-actions {
+    opacity: 1;
+}
+
 .action-btn {
     background: #f3f4f6;
     border: none;

@@ -262,7 +262,7 @@ public class LauncherActivity extends AppCompatActivity {
 
         FirebaseAuthSettings authSettings = mAuth.getFirebaseAuthSettings();
         if (mUsingTestPhoneAuth) {
-            authSettings.setAppVerificationDisabledForTesting();
+            authSettings.setAppVerificationDisabledForTesting(true);
             authSettings.setAutoRetrievedSmsCodeForPhoneNumber(mPendingPhoneNumber, "661122");
         }
 
