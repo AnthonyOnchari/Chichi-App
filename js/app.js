@@ -5288,8 +5288,8 @@ var app = {
                     <p class="guest-earn-kicker">YOUR SPACE</p>
                     <h2>Create your profile</h2>
                     <p>Sign in to add your photo, follow people, and make CHICHI yours.</p>
-                    <button onclick="app.showLoginPage('login')">Sign in to continue</button>
-                    <button class="guest-profile-secondary" onclick="app.showLoginPage('signup')">Create an account</button>
+                    <button onclick="app.showGuestPostPrompt('set up your profile')">Sign in to continue</button>
+                    <button class="guest-profile-secondary" onclick="app.showGuestPostPrompt('set up your profile')">Create an account</button>
                 </div>
             `;
             return;
@@ -6870,7 +6870,7 @@ loadMessages: function() {
                 <p class="guest-earn-kicker">PRIVATE CONVERSATIONS</p>
                 <h3>Sign in to see your messages</h3>
                 <p>Connect with friends and keep every conversation in one place.</p>
-                <button onclick="app.showLoginPage('login')">Sign in to continue</button>
+                <button onclick="app.showGuestPostPrompt('send a message')">Sign in to continue</button>
             </div>
         `;
         return;
@@ -7909,20 +7909,20 @@ loadMessages: function() {
         document.body.appendChild(modal);
     },
 
-    showGuestPostPrompt: function() {
+    showGuestPostPrompt: function(context) {
+        context = context || 'share your first post';
+        this.pendingGuestPostContext = context;
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
         modal.style.zIndex = '99999';
         modal.innerHTML = `
-            <div class="modal" style="max-width:400px;">
+            <div class="modal guest-post-chat" style="max-width:400px;">
                 <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <h2 style="margin-bottom:8px;font-weight:800;">Create your first post</h2>
-                <p style="color:var(--text-light);margin:0 0 16px;line-height:1.45;">Tell us your name first, then we’ll take you to sign in or create your account.</p>
-                <label class="form-label" for="guestPostName">Your name</label>
-                <input id="guestPostName" class="form-input" type="text" maxlength="60" placeholder="Enter your name" autocomplete="name">
-                <div style="display:flex;gap:10px;margin-top:16px;">
-                    <button type="button" onclick="app.continueGuestPostAuth('login')" style="flex:1;background:#f1f5f9;color:#334155;border:0;padding:12px;border-radius:10px;font-weight:700;cursor:pointer;">Log in</button>
-                    <button type="button" onclick="app.continueGuestPostAuth('signup')" style="flex:1;background:#0f766e;color:white;border:0;padding:12px;border-radius:10px;font-weight:700;cursor:pointer;">Create account</button>
+                <div class="guest-post-chat-bubble guest-post-chat-support"><strong>Chat Support · CHICHI 👋</strong><span>Hi! I can help you ${context}. What name would you like to go by?</span></div>
+                <input id="guestPostName" class="form-input" type="text" maxlength="60" placeholder="e.g. Tonnie" autocomplete="name">
+                <div class="guest-post-chat-start-options">
+                    <button type="button" onclick="app.continueGuestPostName()">Let’s continue</button>
+                    <button type="button" onclick="app.skipGuestSupport()">Skip for now</button>
                 </div>
             </div>
         `;
@@ -7933,7 +7933,7 @@ loadMessages: function() {
         }, 50);
     },
 
-    continueGuestPostAuth: function(tab) {
+    continueGuestPostName: function() {
         var input = document.getElementById('guestPostName');
         var name = input ? input.value.trim() : '';
         if (!name) {
@@ -7942,9 +7942,96 @@ loadMessages: function() {
             return;
         }
 
-        var modal = input && input.closest('.modal-overlay');
-        if (modal) modal.remove();
         this.pendingGuestPostName = name;
+        var context = this.pendingGuestPostContext || 'sharing your post';
+        var jokes = [
+            'Why did the post bring a ladder? It wanted to reach the top of the feed. 😄',
+            'Why was the caption so calm? It had already found its inner post. 🧘',
+            'What did the photo say to the caption? “You complete me.” 📸',
+            'Why did the hashtag go to school? It wanted to become a trending topic. 🎓',
+            'Why did the phone take a nap? It needed to recharge its social battery. 🔋',
+            'What is a post’s favorite exercise? Scrolling and squatting. 😂'
+        ];
+        var joke = jokes[Math.floor(Math.random() * jokes.length)];
+        var modal = input.closest('.modal-overlay');
+        var content = modal ? modal.querySelector('.guest-post-chat') : null;
+        if (!content) return;
+        content.innerHTML = `
+            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+            <div class="guest-post-chat-bubble guest-post-chat-support"><strong>Chat Support · CHICHI 😊</strong><span>Nice to meet you, ${name}! Quick joke: ${joke}<br><br>Was that funny?</span></div>
+            <div class="guest-post-chat-options">
+                <button type="button" onclick="app.guestPostJokeResponse('funny')">Yes, that was funny 😄</button>
+                <button type="button" onclick="app.guestPostJokeResponse('tell')">Not really — I have one</button>
+            </div>
+            <button type="button" onclick="app.skipGuestSupport()" style="width:100%;margin-top:8px;background:none;color:#64748b;border:0;padding:8px;border-radius:8px;font-weight:600;cursor:pointer;">Skip for now</button>
+        `;
+    },
+
+    guestPostJokeResponse: function(response) {
+        var modal = document.querySelector('.guest-post-chat')?.closest('.modal-overlay');
+        var content = modal ? modal.querySelector('.guest-post-chat') : null;
+        if (!content) return;
+
+        if (response === 'tell') {
+            content.innerHTML = `
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+                <div class="guest-post-chat-bubble guest-post-chat-support"><strong>Chat Support · CHICHI 😂</strong><span>Okay, I’m ready! Tell me your joke.</span></div>
+                <textarea id="guestPostJoke" class="form-input" maxlength="500" placeholder="Tell me something funny..."></textarea>
+                <button type="button" onclick="app.submitGuestPostJoke()" style="width:100%;margin-top:10px;background:#0f766e;color:white;border:0;padding:12px;border-radius:10px;font-weight:700;cursor:pointer;">Tell the joke</button>
+                <button type="button" onclick="app.skipGuestSupport()" style="width:100%;margin-top:8px;background:none;color:#64748b;border:0;padding:8px;border-radius:8px;font-weight:600;cursor:pointer;">Skip for now</button>
+            `;
+            var jokeInput = document.getElementById('guestPostJoke');
+            if (jokeInput) jokeInput.focus();
+            return;
+        }
+
+        this.showGuestPostAccountQuestion('Glad it made you smile! 😄');
+    },
+
+    submitGuestPostJoke: function() {
+        var jokeInput = document.getElementById('guestPostJoke');
+        if (!jokeInput || !jokeInput.value.trim()) {
+            this.toast('Tell me your joke first', 'error');
+            if (jokeInput) jokeInput.focus();
+            return;
+        }
+        this.showGuestPostAccountQuestion('😂 Hahaha, that was great! How could I have not seen that one coming?');
+    },
+
+    showGuestPostAccountQuestion: function(reply) {
+        var modal = document.querySelector('.guest-post-chat')?.closest('.modal-overlay');
+        var content = modal ? modal.querySelector('.guest-post-chat') : null;
+        if (!content) return;
+        var context = this.pendingGuestPostContext || 'sharing your post';
+        content.innerHTML = `
+            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+            <div class="guest-post-chat-bubble guest-post-chat-support"><strong>Chat Support · CHICHI 😊</strong><span>${reply}<br><br>You’re ready to start ${context}. Do you already have a CHICHI account?</span></div>
+            <div class="guest-post-chat-options">
+                <button type="button" onclick="app.continueGuestPostAuth('login')">Yes, take me to Log in</button>
+                <button type="button" onclick="app.continueGuestPostAuth('signup')">Not yet, create account</button>
+            </div>
+        `;
+    },
+
+    skipGuestSupport: function() {
+        this.showGuestPostAccountQuestion('No problem — we can keep it simple.');
+    },
+
+    continueGuestPostAuth: function(tab) {
+        var name = this.pendingGuestPostName || '';
+        if (!name) {
+            if (tab === 'login') {
+                var loginModal = document.querySelector('.guest-post-chat')?.closest('.modal-overlay');
+                if (loginModal) loginModal.remove();
+                this.showLoginPage('login');
+            } else {
+                this.showGuestPostPrompt('create your account');
+            }
+            return;
+        }
+
+        var modal = document.querySelector('.guest-post-chat')?.closest('.modal-overlay');
+        if (modal) modal.remove();
         this.showLoginPage(tab);
 
         if (tab === 'signup') {
@@ -14972,7 +15059,7 @@ app.renderEarnDefault = function() {
     if (!earnContainer) return;
 
     if (this.isGuest || !this.user) {
-        earnContainer.innerHTML = '<main class="guest-earn"><div class="guest-earn-mark"><img src="icon-192.png" alt="CHICHI"></div><p class="guest-earn-kicker">CHICHI EARN</p><h1>Earn with CHICHI</h1><p class="guest-earn-copy">Sign in to play trivia, complete daily activities, and collect coins.</p><button class="guest-earn-button" onclick="app.showLoginPage(\'login\')">Sign in to continue</button><p class="guest-earn-note">Your rewards and progress are saved to your account.</p></main>';
+        earnContainer.innerHTML = '<main class="guest-earn"><div class="guest-earn-mark"><img src="icon-192.png" alt="CHICHI"></div><p class="guest-earn-kicker">CHICHI EARN</p><h1>Earn with CHICHI</h1><p class="guest-earn-copy">Sign in to play trivia, complete daily activities, and collect coins.</p><button class="guest-earn-button" onclick="app.showGuestPostPrompt(\'start earning\')">Sign in to continue</button><p class="guest-earn-note">Your rewards and progress are saved to your account.</p></main>';
         return;
     }
 
