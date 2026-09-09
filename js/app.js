@@ -157,6 +157,7 @@ var app = {
         document.addEventListener('keydown', interactionHandler, { once: false });
 
         this.initConsent();
+        this.initPullToRefresh();
         this.initActivityTracking();
         this.initSuspiciousActivityDetection();
         this.loadEngagementStats();
@@ -915,6 +916,7 @@ var app = {
                     var m = c.val();
                     if (m && (m.text || m.image)) {
                         count++;
+                        self.notifiedMessages[key + '_' + c.key] = true;
                     }
                 });
                 self.messageCountTracker[key] = count;
@@ -923,7 +925,7 @@ var app = {
                     var m = childSnap.val();
                     if (!m) return;
 
-                    if (m.sender !== self.user.uid && (m.text || m.image)) {
+                    if (m.sender !== self.user.uid && (m.text || m.image) && !m.read) {
                         var notifyKey = key + '_' + childSnap.key;
 
                         if (!self.notifiedMessages[notifyKey]) {
@@ -6529,6 +6531,12 @@ var app = {
             modal.id = 'postCropModal';
             modal.innerHTML = '<div class="modal" style="max-width:420px;"><div class="modal-close"><button onclick="app.cancelPostCrop()">✕</button></div><h2 style="margin:0 0 6px;">Fit your photo</h2><p style="margin:0 0 14px;color:#6b7280;font-size:13px;">Adjust the image for the feed frame.</p><canvas id="postCropCanvas" width="1080" height="1350" style="display:block;width:100%;aspect-ratio:4/5;background:#111827;border-radius:8px;"></canvas><label class="form-label" for="postCropZoom" style="margin-top:14px;">Zoom</label><input id="postCropZoom" type="range" min="1" max="2.5" value="1" step="0.01" style="width:100%;" oninput="app.updatePostCropPreview()"><label class="form-label" for="postCropX" style="margin-top:10px;">Horizontal position</label><input id="postCropX" type="range" min="-100" max="100" value="0" style="width:100%;" oninput="app.updatePostCropPreview()"><label class="form-label" for="postCropY" style="margin-top:10px;">Vertical position</label><input id="postCropY" type="range" min="-100" max="100" value="0" style="width:100%;" oninput="app.updatePostCropPreview()"><button class="btn-submit" style="margin-top:16px;" onclick="app.applyPostCrop()">Use this photo</button><button style="width:100%;margin-top:10px;padding:10px;border:0;background:none;color:#6b7280;font:inherit;cursor:pointer;" onclick="app.cancelPostCrop()">Use original photo</button></div>';
             document.body.appendChild(modal);
+            var cropCanvas = document.getElementById('postCropCanvas');
+            var cropWidth = 1080;
+            var cropHeight = Math.max(480, Math.round(cropWidth * image.height / image.width));
+            cropCanvas.width = cropWidth;
+            cropCanvas.height = cropHeight;
+            cropCanvas.style.aspectRatio = cropWidth + ' / ' + cropHeight;
             self.updatePostCropPreview();
         };
         image.src = imageUrl;
@@ -8199,15 +8207,13 @@ loadMessages: function() {
         var feedContainer = document.getElementById('feedContainer');
         if (!feedContainer) return;
 
-        // Hide/show feed tabs based on guest status
+        // Keep feed controls visible so guests can see the Post entry point.
         var feedTabsContainer = document.getElementById('feedTabsContainer');
         if (feedTabsContainer) {
             if (this.isGuest) {
-                feedTabsContainer.style.display = 'none';
                 this.currentFeedTab = 'forYou'; // Always show all posts for guests
-            } else {
-                feedTabsContainer.style.display = 'flex';
             }
+            feedTabsContainer.style.display = 'flex';
         }
 
         if (!this.posts) this.posts = [];
@@ -8253,7 +8259,7 @@ loadMessages: function() {
                         isSupportPost = true;
                     }
 
-                    var postHtml = '<div class="post" id="post-' + p.id + '" style="' + (isSupportPost ? 'border-radius:12px;' : '') + '"><div class="post-header"><div class="post-user"><div class="post-avatar" style="background-image:url(' + (p.userPhoto || '') + ');cursor:pointer;" onclick="app.viewUserProfile(\'' + p.userId + '\')">' + (!p.userPhoto ? p.userName.charAt(0).toUpperCase() : '') + '</div><div><div class="post-name" onclick="app.viewUserProfile(\'' + p.userId + '\')">' + p.userName + '</div><div class="post-time">' + p.createdAt + '</div></div></div>' + (isOwnPost ? '<button class="post-menu" onclick="app.deletePost(\'' + p.id + '\')">🗑️</button>' : '') + '</div>';
+                    var postHtml = '<div class="post" id="post-' + p.id + '" style="' + (isSupportPost ? 'border-radius:12px;' : '') + '"><div class="post-header"><div class="post-user"><div class="post-avatar" style="background-image:url(' + (p.userPhoto || '') + ');cursor:pointer;" onclick="app.viewUserProfile(\'' + p.userId + '\')">' + (!p.userPhoto ? p.userName.charAt(0).toUpperCase() : '') + '</div><div><div class="post-name" onclick="app.viewUserProfile(\'' + p.userId + '\')">' + p.userName + '</div><div class="post-time">' + p.createdAt + '</div></div></div>' + (isOwnPost ? '<button class="post-menu" aria-label="Post options" title="Post options" onclick="app.showPostOptions(\'' + p.id + '\', event)">⋯</button>' : '') + '</div>';
 
                     postHtml += '<img src="' + p.photoUrl + '" class="post-image" loading="eager" decoding="async" fetchpriority="high" onload="this.classList.add(\'post-image-loaded\')" onerror="this.classList.add(\'post-image-loaded\')" style="' + (isSupportPost ? 'border-radius:0;' : '') + '"><div class="post-caption">' + p.caption + '</div>';
 
@@ -8393,12 +8399,68 @@ loadMessages: function() {
         }
     },
 
+    showPostOptions: function(id, event) {
+        if (!this.user) return;
+        event.stopPropagation();
+        var post = this.posts && this.posts.find(function(item) { return item.id === id; });
+        if (!post || post.userId !== this.user.uid) return;
+
+        var existing = document.querySelector('.post-options-menu');
+        if (existing) existing.remove();
+
+        var menu = document.createElement('div');
+        menu.className = 'post-options-menu';
+        menu.innerHTML = '<button type="button" onclick="app.editPostCaption(\'' + id + '\'); this.closest(\'.post-options-menu\').remove();">✏️ Edit caption</button>' +
+            '<button type="button" class="danger" onclick="app.deletePost(\'' + id + '\'); this.closest(\'.post-options-menu\').remove();">🗑️ Delete post</button>';
+        document.body.appendChild(menu);
+
+        var rect = event.currentTarget.getBoundingClientRect();
+        menu.style.top = Math.min(rect.bottom + 6, window.innerHeight - menu.offsetHeight - 12) + 'px';
+        menu.style.left = Math.max(12, rect.right - menu.offsetWidth) + 'px';
+        setTimeout(function() {
+            document.addEventListener('click', function() { if (menu.parentNode) menu.remove(); }, {once: true});
+        }, 0);
+    },
+
+    editPostCaption: function(id) {
+        if (!this.user) return;
+        var post = this.posts && this.posts.find(function(item) { return item.id === id; });
+        if (!post || post.userId !== this.user.uid) return;
+
+        var self = this;
+        var modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = '<div class="modal post-caption-editor"><div class="modal-close"><button type="button" aria-label="Close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2>Edit caption</h2><textarea id="postCaptionEditor" maxlength="1000" placeholder="Write a caption..."></textarea><div class="post-caption-editor-actions"><button type="button" class="post-caption-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button><button type="button" class="post-caption-save" onclick="app.savePostCaption(\'' + id + '\')">Save</button></div></div>';
+        document.body.appendChild(modal);
+        modal.querySelector('#postCaptionEditor').value = post.caption || '';
+        modal.querySelector('#postCaptionEditor').focus();
+    },
+
+    savePostCaption: function(id) {
+        if (!this.user) return;
+        var post = this.posts && this.posts.find(function(item) { return item.id === id; });
+        if (!post || post.userId !== this.user.uid) return;
+        var input = document.getElementById('postCaptionEditor');
+        var caption = input ? input.value.trim() : '';
+        var self = this;
+        db.ref('posts/' + id + '/caption').set(caption).then(function() {
+            var modal = document.querySelector('.post-caption-editor');
+            if (modal && modal.parentNode) modal.parentNode.remove();
+            self.toast('Caption updated', 'success');
+            self.loadPosts();
+        }).catch(function() {
+            self.toast('Could not update caption', 'error');
+        });
+    },
+
     // ============================================
     // DELETE POST
     // ============================================
 
     deletePost: function(id) {
-        if (!confirm('Delete this post?')) return;
+        if (!this.user) return;
+        var post = this.posts && this.posts.find(function(item) { return item.id === id; });
+        if (!post || post.userId !== this.user.uid) return;
         var self = this;
         db.ref('posts/' + id).remove().then(function() {
             self.toast('Post deleted', 'success');
@@ -10604,6 +10666,61 @@ loadMessages: function() {
     // ============================================
     // REFRESH FEED - FIXED
     // ============================================
+
+    initPullToRefresh: function() {
+        if (this.pullToRefreshInitialized) return;
+        var feedView = document.getElementById('feedView');
+        if (!feedView) return;
+        this.pullToRefreshInitialized = true;
+
+        var self = this;
+        var startY = 0;
+        var pulling = false;
+        var refreshing = false;
+        var indicator = document.createElement('div');
+        indicator.className = 'pull-refresh-indicator';
+        indicator.textContent = 'Pull to refresh';
+        feedView.prepend(indicator);
+
+        feedView.addEventListener('touchstart', function(event) {
+            if (refreshing || feedView.scrollTop > 0 || !event.touches[0]) return;
+            startY = event.touches[0].clientY;
+            pulling = true;
+        }, {passive: true});
+
+        feedView.addEventListener('touchmove', function(event) {
+            if (!pulling || refreshing || !event.touches[0]) return;
+            var distance = event.touches[0].clientY - startY;
+            if (distance <= 0) return;
+            event.preventDefault();
+            var progress = Math.min(distance / 90, 1);
+            indicator.style.transform = 'translateY(' + (progress * 42 - 42) + 'px)';
+            indicator.classList.toggle('ready', distance >= 70);
+            indicator.textContent = distance >= 70 ? 'Release to refresh' : 'Pull to refresh';
+        }, {passive: false});
+
+        feedView.addEventListener('touchend', function(event) {
+            if (!pulling || refreshing) return;
+            var distance = event.changedTouches[0] ? event.changedTouches[0].clientY - startY : 0;
+            pulling = false;
+            if (distance >= 70) {
+                refreshing = true;
+                indicator.classList.add('loading');
+                indicator.textContent = 'Refreshing...';
+                self.refreshFeed();
+                setTimeout(function() {
+                    refreshing = false;
+                    indicator.classList.remove('loading', 'ready');
+                    indicator.style.transform = 'translateY(-42px)';
+                    indicator.textContent = 'Pull to refresh';
+                }, 900);
+            } else {
+                indicator.classList.remove('ready');
+                indicator.style.transform = 'translateY(-42px)';
+                indicator.textContent = 'Pull to refresh';
+            }
+        }, {passive: true});
+    },
 
     refreshFeed: function() {
         var btn = document.getElementById('refreshFeedBtn');

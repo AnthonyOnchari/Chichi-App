@@ -758,32 +758,36 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0 env(safe-area-inset-right, 0) env(safe-area-inset-left, 0);
-    background: white;
-    border-top: 1px solid #e5e7eb;
+    padding: 0 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: transparent;
     flex-shrink: 0;
     height: auto;
     border-radius: 0;
 }
 
 .nav-wrapper {
-    display: flex;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: center;
-    gap: 0;
+    justify-items: stretch;
+    gap: 6px;
     width: 100%;
-    max-width: none;
+    max-width: 620px;
     position: relative;
-    background: transparent;
-    border-radius: 0;
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-    box-shadow: none;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 24px;
+    padding: 8px 14px;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.14);
+    backdrop-filter: blur(16px) saturate(1.15);
+    -webkit-backdrop-filter: blur(16px) saturate(1.15);
 }
 
 .nav-item {
-    flex: 1;
+    width: 100%;
     text-align: center;
-    padding: 6px 4px;
+    min-height: 54px;
+    padding: 7px 4px 5px;
     cursor: pointer;
     color: #9ca3af;
     display: flex;
@@ -793,7 +797,7 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     gap: 0;
     font-size: 0.65rem;
     transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 0;
+    border-radius: 12px;
     position: relative;
     min-width: auto;
     background: transparent;
@@ -804,11 +808,12 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 
 .nav-item:hover {
     color: #6b7280;
+    background: rgba(15, 118, 110, 0.05);
 }
 
 .nav-item.active {
     color: #111827;
-    background: transparent;
+    background: rgba(15, 118, 110, 0.09);
     box-shadow: none;
     animation: none;
 }
@@ -821,7 +826,7 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 .nav-item.active .nav-icon {
-    transform: none;
+    transform: translateY(-1px);
     filter: none;
 }
 
@@ -848,31 +853,33 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 
 .nav-item.active .nav-label {
     font-weight: 700;
+    color: #0f766e;
 }
 
 /* ===== FAB BUTTON IN NAV ===== */
 .fab-button-nav {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    background: white;
-    color: #111827;
-    border: 3px solid #111827;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #0f766e, #0b5f59);
+    color: white;
+    border: 3px solid white;
     cursor: pointer;
     font-size: 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: none;
+    box-shadow: 0 6px 16px rgba(15, 118, 110, 0.3);
     flex-shrink: 0;
-    margin: 0 8px;
+    justify-self: center;
+    margin: 0;
     font-weight: 600;
 }
 
 .fab-button-nav:hover {
     transform: scale(1.1) translateY(-2px);
-    box-shadow: none;
+    box-shadow: 0 9px 20px rgba(15, 118, 110, 0.38);
 }
 
 .fab-button-nav:active {
@@ -965,27 +972,71 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     gap: 0;
 }
 
+.pull-refresh-indicator {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    z-index: 12;
+    width: max-content;
+    padding: 7px 12px;
+    border: 1px solid #dbe8e3;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #52706a;
+    font-size: 11px;
+    font-weight: 700;
+    pointer-events: none;
+    transform: translate(-50%, -42px);
+    transition: transform 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.12);
+}
+
+.pull-refresh-indicator.ready,
+.pull-refresh-indicator.loading {
+    color: #0f766e;
+    border-color: #8accc0;
+}
+
+.pull-refresh-indicator.loading::before {
+    content: '↻';
+    display: inline-block;
+    margin-right: 5px;
+    animation: spin 0.8s linear infinite;
+}
+
 /* ===== FEED TABS ===== */
 .feed-tabs-container {
     display: flex;
-    background: white;
-    border-bottom: 2px solid var(--border);
-    padding: 0;
-    margin: 0;
+    justify-content: center;
+    gap: 4px;
+    width: calc(100% - 24px);
+    max-width: 400px;
+    box-sizing: border-box;
+    background: #edf5f2;
+    border: 1px solid #dbe8e3;
+    border-radius: 12px;
+    padding: 4px;
+    margin: 8px auto 2px;
     position: sticky;
     top: 0;
     z-index: 10;
 }
 
+.feed-tabs-container::before {
+    display: none;
+}
+
 .feed-tab {
-    flex: 1;
-    padding: 12px 16px;
+    flex: 0 1 180px;
+    min-height: 38px;
+    padding: 8px 18px;
     text-align: center;
     cursor: pointer;
     font-weight: 600;
     color: var(--text-light);
     border: none;
-    background: none;
+    border-radius: 9px;
+    background: transparent;
     position: relative;
     transition: 0.3s;
     font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
@@ -994,27 +1045,45 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 
 .feed-tab.active {
     color: var(--primary);
+    background: white;
+    box-shadow: 0 2px 8px rgba(15, 118, 110, 0.12);
 }
 
 .feed-tab-underline {
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: var(--primary);
-    transform: scaleX(0);
-    transform-origin: center;
-    transition: transform 0.3s ease;
-}
-
-.feed-tab.active .feed-tab-underline {
-    transform: scaleX(1);
+    display: none;
 }
 
 .feed-tab:hover {
     color: var(--primary);
-    background: rgba(0, 136, 204, 0.05);
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.feed-create-button {
+    flex: 0 1 150px;
+    min-height: 38px;
+    padding: 8px 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 0;
+    border-radius: 9px;
+    background: #0f766e;
+    color: white;
+    cursor: pointer;
+    font: 700 13px 'Sora', 'Plus Jakarta Sans', sans-serif;
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feed-create-button span:first-child {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.feed-create-button:hover {
+    background: #0b5f59;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(15, 118, 110, 0.22);
 }
 
 /* ===== POST ===== */
@@ -1026,6 +1095,10 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     overflow: hidden;
     animation: smoothFadeIn 0.4s ease;
     transition: all 0.3s ease;
+}
+
+#feedContainer > .post:first-child {
+    margin-top: 4px;
 }
 
 .post-header {
@@ -1070,32 +1143,127 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 .post-menu {
-    background: none;
-    border: none;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: #f4f8f7;
+    border: 1px solid #dbe8e3;
+    border-radius: 10px;
     cursor: pointer;
-    font-size: 1.2rem;
-    color: var(--text-light);
-    transition: 0.3s;
-    padding: 4px;
+    font-size: 1.35rem;
+    line-height: 1;
+    color: #71827c;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    padding: 0;
 }
 
 .post-menu:hover {
-    color: var(--primary);
+    background: #fff1f2;
+    border-color: #fecdd3;
+    color: #dc2626;
+    transform: translateY(-1px);
+}
+
+.post-options-menu {
+    position: fixed;
+    z-index: 10000;
+    min-width: 170px;
+    padding: 6px;
+    background: white;
+    border: 1px solid #dbe8e3;
+    border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+}
+
+.post-options-menu button {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #334155;
+    text-align: left;
+    cursor: pointer;
+    font: 600 13px 'Sora', 'Plus Jakarta Sans', sans-serif;
+}
+
+.post-options-menu button:hover {
+    background: #f1f7f5;
+}
+
+.post-options-menu button.danger {
+    color: #b91c1c;
+}
+
+.post-options-menu button.danger:hover {
+    background: #fff1f2;
+}
+
+.post-caption-editor {
+    width: min(420px, 100%);
+}
+
+.post-caption-editor h2 {
+    margin: 0 0 14px;
+    font-size: 20px;
+}
+
+.post-caption-editor textarea {
+    width: 100%;
+    min-height: 130px;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid #cddfd8;
+    border-radius: 10px;
+    resize: vertical;
+    font: 14px/1.5 'Sora', 'Plus Jakarta Sans', sans-serif;
+}
+
+.post-caption-editor-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.post-caption-editor-actions button {
+    flex: 1;
+    padding: 11px 14px;
+    border: 0;
+    border-radius: 9px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.post-caption-cancel {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.post-caption-save {
+    background: #0f766e;
+    color: white;
 }
 
 .post-image {
-    width: auto;
+    width: 100%;
     max-width: 100%;
     height: auto;
-    max-height: 480px;
+    max-height: 560px;
     object-fit: contain;
     display: block;
     margin: 0 auto;
     background: var(--light);
-    min-height: 220px;
     background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
     background-size: 200% 100%;
     animation: feedSkeletonPulse 1.4s ease-in-out infinite;
+}
+
+.post-image:not(.post-image-loaded) {
+    min-height: 220px;
 }
 
 .post-image-loaded {
@@ -1106,13 +1274,18 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 
 .post-caption {
     padding: 14px 16px;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 1rem;
-    line-height: 1.8;
+    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.02rem;
+    line-height: 1.72;
     font-weight: 500;
-    color: #1f2937;
+    letter-spacing: 0.08px;
+    color: #203c38;
     word-break: break-word;
     overflow-wrap: break-word;
+}
+
+.post-caption::first-line {
+    font-weight: 600;
 }
 
 .post-stats {
@@ -1192,6 +1365,11 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 #messagesView {
     flex-direction: column;
     margin: 0 auto;
+    padding-top: 48px;
+}
+
+#profileView {
+    padding-top: 48px;
 }
 
 .messages-header {
@@ -3537,8 +3715,26 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 :root.dark-mode .bottom-nav {
-    background: #1a1a1a;
-    border-top: 1px solid #333;
+    background: transparent;
+}
+
+:root.dark-mode .nav-wrapper {
+    background: rgba(26, 26, 26, 0.95);
+    border-color: rgba(148, 163, 184, 0.18);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+}
+
+:root.dark-mode .nav-item.active {
+    color: #f8fafc;
+    background: rgba(45, 212, 191, 0.12);
+}
+
+:root.dark-mode .nav-item.active .nav-label {
+    color: #5eead4;
+}
+
+:root.dark-mode .fab-button-nav {
+    border-color: #1a1a1a;
 }
 
 :root.dark-mode .modal,
@@ -3946,16 +4142,16 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     }
     
     .nav-wrapper {
-        max-width: none;
-        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
-        border-radius: 0;
+        max-width: 620px;
+        padding: 8px 12px;
+        border-radius: 22px;
     }
     
     .fab-button-nav {
         width: 34px;
         height: 34px;
         font-size: 2rem;
-        margin: 0 8px;
+        margin: 0;
     }
     
     .messages-header h2 {
@@ -3997,6 +4193,14 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 @media (max-width: 480px) {
+    #messagesView {
+        padding-top: 42px;
+    }
+
+    #profileView {
+        padding-top: 42px;
+    }
+
     .view {
         padding-bottom: 80px;
     }
@@ -4024,17 +4228,17 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     }
     
     .nav-wrapper {
-        max-width: none;
-        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
-        border-radius: 0;
-        gap: 0;
+        max-width: 620px;
+        padding: 8px 10px;
+        border-radius: 20px;
+        gap: 4px;
     }
     
     .fab-button-nav {
         width: 34px;
         height: 34px;
         font-size: 2rem;
-        margin: 0 8px;
+        margin: 0;
     }
     
     .message-item-avatar {
@@ -4141,12 +4345,16 @@ html.chichi-returning-session #loadingScreen .loading-progress {
         display: flex;
         justify-content: center;
         position: relative;
+        padding-left: 112px;
+        box-sizing: border-box;
     }
 
     .view {
-        max-width: 1000px;
-        width: 100%;
-        margin: 0 auto;
+        max-width: none;
+        width: calc(100% - 112px);
+        margin: 0;
+        left: 112px;
+        right: 0;
         position: fixed;
         display: none !important;
         visibility: hidden;
@@ -4176,16 +4384,45 @@ html.chichi-returning-session #loadingScreen .loading-progress {
     }
 
     .bottom-nav {
-        max-width: 1000px;
-        margin: 0 auto;
-        left: 0;
-        right: 0;
+        top: 50%;
+        bottom: auto;
+        left: 16px;
+        right: auto;
+        width: 82px;
+        transform: translateY(-50%);
+        padding: 0;
+        background: transparent;
+    }
+
+    .bottom-nav .nav-wrapper {
+        width: 82px;
+        max-width: none;
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(5, minmax(58px, auto));
+        gap: 8px;
+        padding: 10px 8px;
+        border-radius: 24px;
+    }
+
+    .bottom-nav .nav-item {
+        min-height: 58px;
+        padding: 7px 3px 5px;
+    }
+
+    .bottom-nav .fab-button-nav {
+        width: 44px;
+        height: 44px;
     }
 }
 
 .feed-loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     width: 100%;
     max-width: 720px;
+    box-sizing: border-box;
+    margin: 0 auto;
     padding: 32px 0 120px;
     text-align: center;
 }
@@ -4207,6 +4444,8 @@ html.chichi-returning-session #loadingScreen .loading-progress {
 }
 
 .feed-skeleton-post {
+    width: 100%;
+    box-sizing: border-box;
     background: white;
     border-radius: 16px;
     margin: 12px 0;

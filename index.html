@@ -38,6 +38,16 @@
 </head>
 <body>
 
+<div id="loadingScreen" class="active" aria-label="Loading CHICHI">
+    <div class="loading-spinner">
+        <img class="loading-spinner-logo" src="icon-512.png" alt="CHICHI">
+    </div>
+    <div class="loading-text">CHICHI</div>
+    <div class="loading-progress" aria-hidden="true">
+        <div class="loading-progress-bar"></div>
+    </div>
+</div>
+
 <!-- CONSENT BANNER -->
 <div id="consentBanner" class="consent-banner">
     <div class="consent-content">
@@ -216,6 +226,10 @@
                     <span class="feed-tab-text">Following</span>
                     <span class="feed-tab-underline"></span>
                 </button>
+                <button class="feed-create-button" type="button" onclick="app.showCreateModal()" title="Make a post">
+                    <span aria-hidden="true">+</span>
+                    <span>Post</span>
+                </button>
             </div>
             <div id="feedContainer"></div>
         </div>
@@ -258,15 +272,6 @@
 
         <!-- MESSAGES VIEW -->
         <div class="view" id="messagesView">
-            <!-- Messages Header -->
-            <div class="messages-header" style="padding: 16px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #1a202c;">Messages</h2>
-                <div class="messages-controls" id="messagesControls" style="display: flex; gap: 8px;">
-                    <button class="icon-btn" onclick="if(typeof app !== 'undefined' && app.showNotificationsTab) app.showNotificationsTab()" title="Notifications" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 8px;">🔔</button>
-                    <button class="icon-btn" onclick="if(typeof app !== 'undefined' && app.showFavoritesModal) app.showFavoritesModal()" title="Favorites" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 8px;">❤️</button>
-                </div>
-            </div>
-
             <!-- Search and filter controls -->
             <div class="messages-toolbar">
                 <div id="messageSearchBar">
@@ -304,7 +309,14 @@
                 <span class="nav-label">Home</span>
             </button>
             <button class="nav-item" onclick="app.switchView('explore')">
-                <span class="nav-icon">👥</span>
+                <span class="nav-icon" aria-label="Friends">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="9" cy="8" r="3"></circle>
+                        <path d="M3.5 19c.7-3 2.5-4.5 5.5-4.5s4.8 1.5 5.5 4.5"></path>
+                        <path d="M15.5 5.5a2.8 2.8 0 0 1 0 5.5"></path>
+                        <path d="M17 14.5c1.9.5 3.1 2 3.5 4.5"></path>
+                    </svg>
+                </span>
                 <span class="nav-label">Friends</span>
             </button>
             <!-- FAB BUTTON IN CENTER -->
