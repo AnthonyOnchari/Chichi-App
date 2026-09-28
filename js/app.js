@@ -85,12 +85,14 @@ var app = {
     currentFeedTab: 'forYou',
     homeOfferSettings: null,
     homeOfferSettingsLoaded: false,
+    homeOfferCloudsEffect: null,
     phoneAuthMode: 'login',
     phoneSignupDraft: null,
     phoneConfirmationResult: null,
     phoneRecaptchaVerifier: null,
     phoneRecaptchaRenderPromise: null,
     phoneUsingNativeBridge: false,
+    _showLoginWelcome: false,
 
     // ============================================
     // INIT
@@ -193,6 +195,7 @@ var app = {
                 db.ref('bannedUsers/' + u.uid).once('value', function(snapshot) {
                     if (snapshot.exists()) {
                         var banData = snapshot.val();
+                        self._showLoginWelcome = false;
                         self.showBannedScreen(banData);
                         auth.signOut();
                         return;
@@ -249,6 +252,10 @@ var app = {
                     self.setupUserNotifications();
                     self.checkAndShowUsernameSetup();
                     self.showApp();
+                    if (self._showLoginWelcome) {
+                        self._showLoginWelcome = false;
+                        self.showLoginWelcomePopup();
+                    }
                     // CRITICAL: Always show feed as default view on login
                     setTimeout(function() {
                         self.switchView('feed');
@@ -1896,10 +1903,10 @@ var app = {
             accountName: 'CHICHI Offers',
             accountSubtitle: 'Available now',
             verifiedLabel: 'VERIFIED',
-            eyebrow: 'Today’s Netflix offer',
-            title: '4K Premium Netflix Profile',
-            description: 'Get a Premium Netflix profile with 4K access today for only KSh 200/-.',
-            buttonLabel: 'Get your profile today',
+            eyebrow: 'NETFLIX · PREMIUM 4K + HDR',
+            title: 'Premium4K + HDR',
+            description: 'KES 200 offer',
+            buttonLabel: 'Get access',
             tile1Label: 'Movie nights',
             tile1Image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=80',
             tile2Label: 'Series picks',
@@ -1923,6 +1930,12 @@ var app = {
         var defaults = this.getDefaultHomeOfferSettings();
         var saved = savedSettings || {};
         var settings = Object.assign({}, defaults, saved);
+        if (saved.eyebrow === 'Today’s Netflix offer' || saved.eyebrow === 'NETFLIX · 4K') settings.eyebrow = defaults.eyebrow;
+        if (saved.title === '4K Premium Netflix Profile' || saved.title === 'Premium access') settings.title = defaults.title;
+        if (saved.description === 'Profile access · KSh 200') settings.description = defaults.description;
+        if (saved.description === 'KES 200 offer · KES 1,100/month standard') settings.description = defaults.description;
+        if (saved.description === 'Get a Premium Netflix profile with 4K access today for only KSh 200/-.') settings.description = defaults.description;
+        if (saved.buttonLabel === 'Get your profile today') settings.buttonLabel = defaults.buttonLabel;
         if (saved.eyebrow === 'Affordable streaming access') settings.eyebrow = defaults.eyebrow;
         if (saved.title === 'Enjoy more. Pay less.') settings.title = defaults.title;
         if (saved.description === 'Get reliable access at friendly rates and chat with us for today\'s available offers.') settings.description = defaults.description;
@@ -1960,6 +1973,34 @@ var app = {
             return /^[A-Za-z0-9_-]{11}$/.test(videoId) ? videoId : '';
         } catch (e) {
             return '';
+        }
+    },
+
+    destroyHomeOfferClouds: function() {
+        if (!this.homeOfferCloudsEffect) return;
+        try { this.homeOfferCloudsEffect.destroy(); } catch (error) { console.warn('Could not stop Home offer background:', error); }
+        this.homeOfferCloudsEffect = null;
+    },
+
+    initHomeOfferClouds: function() {
+        var background = document.getElementById('homeOfferCloudsBackground');
+        if (!background || !window.VANTA || typeof window.VANTA.CLOUDS2 !== 'function') return;
+        this.destroyHomeOfferClouds();
+        try {
+            this.homeOfferCloudsEffect = window.VANTA.CLOUDS2({
+                el: background,
+                mouseControls: true,
+                touchControls: true,
+                gyroControls: false,
+                minHeight: 200,
+                minWidth: 200,
+                scale: 1,
+                cloudColor: 0x2e477f,
+                speed: 1.2,
+                texturePath: './gallery/noise.svg'
+            });
+        } catch (error) {
+            console.warn('Could not initialize Home offer clouds background:', error);
         }
     },
 
@@ -2084,7 +2125,7 @@ var app = {
             var videoId = item.videoId;
             var title = escape(trailer.title || 'Movie trailer');
             var autoplay = index === 0 ? '1' : '0';
-            var muted = index === 0 ? '1' : '0';
+            var muted = '0';
             var loading = index === 0 ? 'eager' : 'lazy';
             return '<article class="home-trailer-card" role="listitem" aria-label="Trailer: ' + title + '"><div class="home-trailer-video"><iframe id="homeTrailerPlayer_' + index + '" src="https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=' + autoplay + '&mute=' + muted + '&enablejsapi=1&playsinline=1&rel=0&controls=1&loop=1&playlist=' + videoId + '&cc_load_policy=0' + playerOriginParam + '" title="' + title + '" loading="' + loading + '" onload="this.dataset.playerLoaded=\'true\';app.disableHomeTrailerCaptions(' + index + ')" referrerpolicy="origin" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div></article>';
         }).join('');
@@ -2092,9 +2133,10 @@ var app = {
         if (container.dataset.trailerSignature === signature) return;
         container.dataset.trailerSignature = signature;
         this.currentHomeTrailerIndex = 0;
-        this.homeTrailerPlayingByIndex = {};
-        this.homeTrailerMutedByIndex = validTrailers.length ? {0: true} : {};
+        this.homeTrailerPlayingByIndex = validTrailers.length ? {0: true} : {};
+        this.homeTrailerMutedByIndex = {};
         container.innerHTML = markup ? '<section class="home-trailers-section"><div class="home-trailers-heading"><strong>Movie trailers</strong><span>Swipe sideways for more trailers</span></div><div class="home-trailers-track" id="homeTrailersTrack" role="list" tabindex="0" aria-label="Movie trailers. Swipe horizontally or use the trailer controls below.">' + markup + '</div><div class="home-trailer-toolbar" role="group" aria-label="Trailer controls"><button id="homeTrailerPlaybackButton" type="button" onclick="app.toggleHomeTrailerPlayback()">Play with sound</button><button id="homeTrailerSoundButton" type="button" onclick="app.toggleHomeTrailerSound()" aria-label="Toggle trailer sound">Sound on</button><button id="homeNextTrailerButton" type="button" onclick="app.playNextHomeTrailer()">' + (validTrailers.length > 1 ? 'Play next trailer' : 'Replay trailer') + '</button></div></section>' : '';
+        if (validTrailers.length) this.updateHomeTrailerControls(0);
     },
 
     playNextHomeTrailer: function() {
@@ -8572,7 +8614,7 @@ loadMessages: function() {
             var inquiry = {
                 sender: self.user.uid,
                 senderName: (self.profile && self.profile.name) || 'Customer',
-                text: 'Hi, I would like information about the 4K Premium Netflix profile offer (KSh 200/-).',
+                text: 'Hi, I would like information about the Netflix Premium4K + HDR offer (KES 200; standard monthly price KES 1,100).',
                 timestamp: firebase.database.ServerValue.TIMESTAMP,
                 read: false,
                 type: 'plan_inquiry'
@@ -8582,10 +8624,10 @@ loadMessages: function() {
             }).then(function() {
                 self.openChat(supportAdmin.uid, adminName);
                 var firstName = ((self.profile && self.profile.name) || 'there').split(' ')[0];
-                var welcome = 'Hi ' + firstName + '! The current offer is a 4K Premium Netflix profile for KSh 200/-. Choose what you need help with:';
+                var welcome = 'Hi ' + firstName + '! The Premium4K + HDR offer is KES 200 (standard monthly price: KES 1,100). Choose what you need help with:';
                 return self.writePlanAssistantReply(chatKey, supportAdmin.uid, welcome, self.getPlanQuickReplies());
             }).then(function() {
-                self.sendPushNotification(supportAdmin.uid, 'New plan enquiry', (self.profile && self.profile.name || 'A customer') + ' asked about the KSh 200/- 4K Netflix profile.');
+                self.sendPushNotification(supportAdmin.uid, 'New plan enquiry', (self.profile && self.profile.name || 'A customer') + ' asked about the KES 200 Premium4K + HDR offer.');
             });
         }).catch(function(err) {
             self.toast('Could not send inquiry: ' + err.message, 'error');
@@ -8663,8 +8705,8 @@ loadMessages: function() {
         var chatKey = [this.user.uid, adminId].sort().join('_');
         var choices = {
             pay_now: {
-                selection: 'I want to buy the 4K Premium Netflix profile.',
-                response: 'To pay, use M-Pesa Buy Goods and enter Till number 8941840. Pay KSh 200/- for the 4K Premium Netflix profile. After paying, tap “I have paid” and paste the full M-Pesa confirmation message here. Onchari will verify it before any login details are sent or your access countdown starts.',
+                selection: 'I want to buy the Netflix Premium4K + HDR offer for KES 200.',
+                response: 'The standard monthly price is KES 1,100; this offer is KES 200. To pay, use M-Pesa Buy Goods and enter Till number 8941840. After paying, tap “I have paid” and paste the full M-Pesa confirmation message here. Onchari will verify it before any login details are sent or your access countdown starts.',
                 quickReplies: [{label: 'I have paid · submit confirmation', value: 'submit_receipt'}],
                 push: false
             },
@@ -8675,8 +8717,8 @@ loadMessages: function() {
                 push: false
             },
             plan_details: {
-                selection: 'What is included with the KSh 200/- offer?',
-                response: 'It is a Premium Netflix profile with 4K access for KSh 200/-. Onchari can confirm current availability and setup details.',
+                selection: 'What is included with the KES 200 Premium4K + HDR offer?',
+                response: 'Premium4K + HDR details:\n• Resolution: 4K Ultra HD + HDR\n• Spatial audio: included\n• Supported devices: TV, computer, mobile phone, and tablet\n• Standard monthly price: KES 1,100\n• Your offer price: KES 200\nPlease ask Onchari to confirm how many household devices can watch at the same time and current profile availability before paying.',
                 push: false
             },
             talk_to_onchari: {
@@ -8737,7 +8779,7 @@ loadMessages: function() {
                 userEmail: String(self.user.email || ''),
                 supportAdminUid: supportAdminUid,
                 chatKey: chatKey,
-                planName: '4K Premium Netflix profile',
+                planName: 'Netflix Premium4K + HDR offer',
                 expectedAmountKsh: 200,
                 claimedAmountKsh: claimedAmount,
                 paymentMethod: 'M-Pesa Buy Goods',
@@ -8822,7 +8864,7 @@ loadMessages: function() {
             var modal = document.createElement('div');
             modal.id = 'reviewPlanPaymentModal';
             modal.className = 'modal-overlay active';
-            modal.innerHTML = '<div class="modal admin-verify-payment-modal"><div class="modal-close"><button type="button" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><span class="admin-kicker">MANUAL PAYMENT CHECK</span><h2>Verify M-Pesa &amp; send access</h2><p>First confirm this receipt in your M-Pesa transaction history. Pasted text alone is not proof of payment.</p><div class="admin-payment-receipt-preview"><strong>Customer receipt</strong><pre id="reviewPlanPaymentReceipt"></pre></div><label>Verified amount (KSh)<input id="verifiedPlanPaymentAmount" type="number" min="1" step="1" value="' + self.escapeAdminPaymentHtml(order.claimedAmountKsh || order.expectedAmountKsh || 200) + '"></label><label>Access duration (days, based on verified amount)<input id="verifiedPlanDurationDays" type="number" min="1" max="365" step="1" placeholder="Enter the duration for this payment"></label><label>Netflix profile<input id="verifiedNetflixProfile" type="text" value="4K Premium Netflix Profile"></label><label>Netflix login credentials<textarea id="verifiedNetflixCredentials" rows="4" placeholder="Paste the verified login details for this customer"></textarea></label><p>The access countdown starts from the moment you confirm payment and send the credentials.</p><div class="admin-verify-payment-actions"><button type="button" class="admin-verify-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button><button type="button" class="admin-verify-confirm" onclick="app.verifyPlanPaymentAndSendAccess(\'' + orderId + '\')">Confirm payment &amp; send credentials</button></div></div>';
+            modal.innerHTML = '<div class="modal admin-verify-payment-modal"><div class="modal-close"><button type="button" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><span class="admin-kicker">MANUAL PAYMENT CHECK</span><h2>Verify M-Pesa &amp; send access</h2><p>First confirm this receipt in your M-Pesa transaction history. Pasted text alone is not proof of payment.</p><div class="admin-payment-receipt-preview"><strong>Customer receipt</strong><pre id="reviewPlanPaymentReceipt"></pre></div><label>Verified amount (KSh)<input id="verifiedPlanPaymentAmount" type="number" min="1" step="1" value="' + self.escapeAdminPaymentHtml(order.claimedAmountKsh || order.expectedAmountKsh || 200) + '"></label><label>Access duration (days, based on verified amount)<input id="verifiedPlanDurationDays" type="number" min="1" max="365" step="1" placeholder="Enter the duration for this payment"></label><label>Netflix profile<input id="verifiedNetflixProfile" type="text" value="Premium4K + HDR"></label><label>Netflix login credentials<textarea id="verifiedNetflixCredentials" rows="4" placeholder="Paste the verified login details for this customer"></textarea></label><p>The access countdown starts from the moment you confirm payment and send the credentials.</p><div class="admin-verify-payment-actions"><button type="button" class="admin-verify-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button><button type="button" class="admin-verify-confirm" onclick="app.verifyPlanPaymentAndSendAccess(\'' + orderId + '\')">Confirm payment &amp; send credentials</button></div></div>';
             document.body.appendChild(modal);
             modal.querySelector('#reviewPlanPaymentReceipt').textContent = order.receiptMessage || 'No receipt supplied';
             modal.dataset.orderUserId = order.userId || '';
@@ -9538,6 +9580,41 @@ loadMessages: function() {
         document.body.appendChild(modal);
     },
 
+    showLoginWelcomePopup: function() {
+        if (document.getElementById('loginWelcomeModal')) return;
+        var modal = document.createElement('div');
+        modal.id = 'loginWelcomeModal';
+        modal.className = 'modal-overlay active';
+        modal.style.zIndex = '100000';
+        var card = document.createElement('div');
+        card.className = 'modal';
+        card.style.maxWidth = '380px';
+        card.setAttribute('role', 'dialog');
+        card.setAttribute('aria-modal', 'true');
+        card.setAttribute('aria-labelledby', 'loginWelcomeTitle');
+        var close = document.createElement('div');
+        close.className = 'modal-close';
+        var closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.setAttribute('aria-label', 'Close welcome message');
+        closeButton.textContent = '✕';
+        closeButton.addEventListener('click', function() { modal.remove(); });
+        close.appendChild(closeButton);
+        var title = document.createElement('h2');
+        title.id = 'loginWelcomeTitle';
+        title.style.marginBottom = '8px';
+        title.textContent = 'Welcome back, ' + ((this.profile && this.profile.name) || 'Guest');
+        var subtitle = document.createElement('p');
+        subtitle.style.color = 'var(--text-light)';
+        subtitle.style.margin = '0';
+        subtitle.textContent = 'Your Chichi space';
+        card.appendChild(close);
+        card.appendChild(title);
+        card.appendChild(subtitle);
+        modal.appendChild(card);
+        document.body.appendChild(modal);
+    },
+
     showGuestPostPrompt: function(context) {
         context = context || 'share your first post';
         this.pendingGuestPostContext = context;
@@ -10052,13 +10129,13 @@ loadMessages: function() {
         // Home is now the storefront; community chat remains available in Inbox.
         var userName = this.profile && this.profile.name ? this.profile.name.split(' ')[0] : 'there';
         var isUpdatesView = this.currentFeedTab === 'following';
-        var welcomeCard = '<div class="post" style="margin-top:12px;"><div class="post-header"><div><div class="post-name">Welcome back, ' + userName + '</div><div class="post-time">Your Chichi space</div></div></div></div>';
         var updatesCard = '<div class="post home-updates-summary" style="margin-top:12px;display:' + (isUpdatesView ? 'block' : 'none') + ';">' +
             '<div class="post-header"><div><div class="post-name">' + userName + ' · ' + ((this.profile && this.profile.accessProfile) || 'Assigned profile') + '</div><div class="post-time">Netflix access countdown</div></div><span class="verified-tick" title="Verified CHICHI update">✓</span></div>' +
             '<div class="updates-fintech-metric"><span class="updates-metric-label">TIME REMAINING</span><div id="homeAccessExpiryCountdown" class="updates-metric-value">' + (this.profile && Number(this.profile.accessExpiry) > 0 ? 'Checking...' : 'No personal subscription') + '</div><span class="updates-metric-note">Your private membership</span></div><div id="homePublicSubscriptions"></div></div>';
-        feedContainer.innerHTML = welcomeCard + updatesCard + '<div id="homeOffersHero" class="post" style="margin-top:12px;display:' + (isUpdatesView ? 'none' : 'block') + ';">' +
+        this.destroyHomeOfferClouds();
+        feedContainer.innerHTML = updatesCard + '<div id="homeOffersHero" class="post" style="margin-top:12px;display:' + (isUpdatesView ? 'none' : 'block') + ';">' +
             '<div class="post-header"><div class="post-user"><div class="post-avatar chichi-offer-avatar"><img src="icon-192.png" alt="CHICHI logo"></div><div><div class="post-name"><span id="homeOfferAccountName">CHICHI Offers</span> <span class="verified-tick" title="Verified CHICHI offer">✓</span></div><div class="post-time" id="homeOfferAccountSubtitle">Available now</div></div></div><span id="homeOfferVerifiedLabel" class="home-offer-verified">VERIFIED</span></div>' +
-            '<div class="home-offer-copy"><div id="homeOfferEyebrow" class="home-offer-eyebrow">Today’s Netflix offer</div><div id="homeOfferTitle" class="home-offer-title">4K Premium Netflix Profile</div><div id="homeOfferDescription" class="home-offer-description">Get a Premium Netflix profile with 4K access today for only KSh 200/-.</div><button id="homeOfferButtonLabel" type="button" onclick="app.askAboutPlans()" class="home-offer-cta">Get your profile today</button></div>' +
+            '<div class="home-offer-copy"><div id="homeOfferCloudsBackground" class="home-offer-clouds-background" aria-hidden="true"></div><div id="homeOfferEyebrow" class="home-offer-eyebrow">NETFLIX · PREMIUM 4K + HDR</div><div id="homeOfferTitle" class="home-offer-title">Premium4K + HDR</div><div id="homeOfferDescription" class="home-offer-description">KES 200 offer</div><div class="home-offer-standard-price"><del>KES 1,100</del> / month standard</div><button id="homeOfferButtonLabel" type="button" onclick="app.askAboutPlans()" class="home-offer-cta">Get access</button></div>' +
             '<div class="home-offer-tiles">' +
             '<div class="home-offer-tile"><img id="homeOfferTile1Image" src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=80" alt="Movie nights"><span id="homeOfferTile1Label">Movie nights</span></div>' +
             '<div class="home-offer-tile"><img id="homeOfferTile2Image" src="https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=500&q=80" alt="Series picks"><span id="homeOfferTile2Label">Series picks</span></div>' +
@@ -10067,6 +10144,7 @@ loadMessages: function() {
             '<div class="home-offer-benefits"><div><strong id="homeOfferBenefit1Title">Fast</strong><span id="homeOfferBenefit1Detail">Up Time</span></div><div><strong id="homeOfferBenefit2Title">Fair</strong><span id="homeOfferBenefit2Detail">Rates</span></div><div><strong id="homeOfferBenefit3Title">Live</strong><span id="homeOfferBenefit3Detail">Support 24/7</span></div></div></div>' +
             '<div id="homeOfferTrailers" class="post home-trailers-post"></div>' +
             '<div id="homeAdminOffers"></div>';
+        this.initHomeOfferClouds();
         this.loadHomeAdminOffers();
         this.loadHomeOfferSettings();
         this.updateHomeAccessCountdown();
@@ -12266,12 +12344,14 @@ loadMessages: function() {
 
     _performLogin: function(email, password, loginBtn, loginSpinner, loginText) {
         var self = this;
+        self._showLoginWelcome = true;
         auth.signInWithEmailAndPassword(email, password)
             .then(function(result) {
                 self.toast('✅ Login successful!', 'success');
                 self.logUserActivity('login_success', 'User logged in: ' + email);
             })
             .catch(function(err) {
+                self._showLoginWelcome = false;
                 if (loginSpinner) loginSpinner.style.display = 'none';
                 if (loginText) loginText.style.display = 'inline';
                 if (loginBtn) loginBtn.disabled = false;

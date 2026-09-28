@@ -3490,10 +3490,13 @@ h1, h2, h3, h4, h5, h6,
 .chichi-offer-avatar { display: grid !important; place-items: center; overflow: hidden; background: #fff !important; border: 1px solid #e2ece9; }
 .chichi-offer-avatar img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .home-offer-verified { color: #0f766e; font-size: 12px; font-weight: 800; }
-.home-offer-copy { padding: 18px 16px 20px; background: linear-gradient(135deg,#0f766e,#0b5f59); color: #fff; }
+.home-offer-copy { position: relative; isolation: isolate; overflow: hidden; padding: 18px 16px 20px; background: linear-gradient(135deg,#0f766e,#0b5f59); color: #fff; }
+.home-offer-clouds-background { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.home-offer-copy > :not(.home-offer-clouds-background) { position: relative; z-index: 1; }
 .home-offer-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .82; }
 .home-offer-title { margin: 7px 0 8px; font-size: 25px; font-weight: 800; line-height: 1.2; }
 .home-offer-description { font-size: 14px; line-height: 1.5; opacity: .92; }
+.home-offer-standard-price { margin-top: 3px; font-size: 12px; line-height: 1.4; opacity: .82; }
 .home-offer-cta { margin-top: 16px; border: 0; border-radius: 9px; padding: 11px 17px; background: #fff; color: #0f766e; font: inherit; font-weight: 800; cursor: pointer; }
 .home-offer-tiles { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; padding: 10px 12px; background: #102a43; }
 .home-offer-tile { position: relative; display: flex; align-items: flex-end; min-width: 0; height: 178px; overflow: hidden; border-radius: 9px; background: #183751; color: #fff; }
