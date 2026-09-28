@@ -82,6 +82,10 @@ var app = {
     _selectedRecipient: null,
     postsLoading: false,
     presenceStatus: {},
+    chatMessageListenerKey: null,
+    chatMessagesListener: null,
+    chatMessagesChangedListener: null,
+    messageStoreListener: null,
     currentFeedTab: 'forYou',
     homeOfferSettings: null,
     homeOfferSettingsLoaded: false,
@@ -113,6 +117,7 @@ var app = {
                     ? event.target
                     : null;
                 if (!backdrop) return;
+                if (backdrop.id === 'usernameSetupModal') return;
 
                 if (backdrop.id) {
                     backdrop.classList.remove('active');
@@ -342,6 +347,7 @@ var app = {
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 e.preventDefault();
+                if (document.getElementById('usernameSetupModal')) return;
                 self.goBack();
             }
         });
@@ -1095,28 +1101,27 @@ var app = {
     checkAndShowUsernameSetup: function() {
         if (!this.user) return;
 
-        var hasUsername = this.profile && this.profile.username && this.profile.username.trim() !== '';
-        var shownUsernamePopup = sessionStorage.getItem('shownUsernamePopup_' + this.user.uid);
-
-        if (!hasUsername && !shownUsernamePopup) {
-            sessionStorage.setItem('shownUsernamePopup_' + this.user.uid, 'true');
-            this.showUsernameSetupModal();
-        }
+        var hasUsername = this.profile && typeof this.profile.username === 'string' && this.profile.username.trim() !== '';
+        if (!hasUsername) this.showUsernameSetupModal();
     },
 
     showUsernameSetupModal: function() {
+        if (!this.user || document.getElementById('usernameSetupModal')) return;
         var self = this;
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
         modal.id = 'usernameSetupModal';
         modal.style.zIndex = '10000';
         modal.style.backdropFilter = 'blur(8px)';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'usernameSetupTitle');
 
         modal.innerHTML = `
             <div style="background: white; border-radius: 20px; padding: 32px 28px; max-width: 440px; width: 95%; text-align: center; animation: slideUp 0.4s ease; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);">
                 <div style="font-size: 40px; margin-bottom: 16px;">👤</div>
-                <h2 style="font-size: 22px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0;">Create Your Username</h2>
-                <p style="font-size: 14px; color: #64748b; margin: 0 0 24px 0; line-height: 1.6;">You need a unique username to connect with other users.</p>
+                <h2 id="usernameSetupTitle" style="font-size: 22px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0;">Create Your Username</h2>
+                <p style="font-size: 14px; color: #64748b; margin: 0 0 24px 0; line-height: 1.6;">Set a unique username to finish signing in and continue using CHICHI.</p>
 
                 <div style="margin-bottom: 20px;">
                     <input type="text" id="setupUsername" placeholder="e.g. anthony_onchari" maxlength="30" style="width: 100%; padding: 13px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 14px; font-family: inherit; box-sizing: border-box; transition: 0.2s;" onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none'" onkeyup="document.getElementById('usernameHint').textContent = '@' + this.value">
@@ -1131,7 +1136,7 @@ var app = {
                 <button onclick="app.saveNewUsername()" style="width: 100%; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 13px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s; margin-bottom: 10px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 20px rgba(59, 130, 246, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
                     Continue
                 </button>
-                <p style="font-size: 11px; color: #94a3b8; margin: 0;">You can change this later in settings</p>
+                <p style="font-size: 11px; color: #94a3b8; margin: 0;">A username is required to continue. You can change it later in settings.</p>
             </div>
         `;
 
@@ -1146,7 +1151,10 @@ var app = {
     },
 
     saveNewUsername: function() {
-        var username = document.getElementById('setupUsername').value.trim();
+        var input = document.getElementById('setupUsername');
+        var username = input ? input.value.trim().toLowerCase() : '';
+        var modal = document.getElementById('usernameSetupModal');
+        if (!this.user || !modal || !db) return;
 
         if (!username || username.length < 3) {
             this.toast('Username must be at least 3 characters', 'error');
@@ -1160,22 +1168,35 @@ var app = {
 
         var self = this;
 
-        db.ref('users').orderByChild('username').equalTo(username).once('value')
+        var continueButton = modal.querySelector('button');
+        if (continueButton) { continueButton.disabled = true; continueButton.textContent = 'Checking username…'; }
+        return db.ref('users').once('value')
             .then(function(snapshot) {
-                if (snapshot.exists()) {
-                    self.toast('This username is already taken', 'error');
-                    return;
-                }
+                var isTaken = false;
+                snapshot.forEach(function(child) {
+                    if (child.key !== self.user.uid && String((child.val() || {}).username || '').trim().toLowerCase() === username) {
+                        isTaken = true;
+                    }
+                });
+                if (isTaken) throw new Error('This username is already taken');
 
-                db.ref('users/' + self.user.uid + '/username').set(username);
-                self.profile.username = username;
+                return db.ref('users/' + self.user.uid + '/username').set(username);
+            }).then(function() {
+                self.profile = Object.assign({}, self.profile || {}, {username: username});
+                self.users = self.users || {};
+                self.users[self.user.uid] = Object.assign({}, self.users[self.user.uid] || {}, {username: username});
                 self.toast('Username set to @' + username, 'success');
                 self.logUserActivity('username_setup', 'Set username to ' + username);
-                document.getElementById('usernameSetupModal').remove();
+                var setupModal = document.getElementById('usernameSetupModal');
+                if (setupModal) setupModal.remove();
+                if (self.currentView === 'profile') self.renderProfile();
             })
             .catch(function(err) {
-                console.error('Error checking username:', err);
-                self.toast('Error saving username', 'error');
+                if (continueButton && continueButton.isConnected) {
+                    continueButton.disabled = false;
+                    continueButton.textContent = 'Continue';
+                }
+                self.toast(err && err.message ? err.message : 'Error saving username', 'error');
             });
     },
 
@@ -1271,12 +1292,38 @@ var app = {
         }
     },
 
+    setAdminNavigationCompact: function(isCompact) {
+        var navigation = document.getElementById('adminNavDisclosure');
+        if (!navigation) return;
+        navigation.open = !isCompact;
+        navigation.querySelectorAll('.admin-tab-group').forEach(function(group) {
+            group.open = !isCompact;
+        });
+    },
+
+    syncAdminNavigation: function() {
+        var self = this;
+        var compact = window.matchMedia('(max-width: 700px)').matches;
+        this.setAdminNavigationCompact(compact);
+        this.adminNavigationCompact = compact;
+        if (this.adminNavigationResizeBound) return;
+        this.adminNavigationResizeBound = true;
+        window.addEventListener('resize', function() {
+            if (!self.adminOpen) return;
+            var nextCompact = window.matchMedia('(max-width: 700px)').matches;
+            if (nextCompact === self.adminNavigationCompact) return;
+            self.adminNavigationCompact = nextCompact;
+            self.setAdminNavigationCompact(nextCompact);
+        });
+    },
+
     openAdminPortal: function() {
         if (!this.user || !this.isAdmin) {
             this.toast('Admin access required', 'error');
             return;
         }
         this.adminOpen = true;
+        this.syncAdminNavigation();
         document.getElementById('mainApp').classList.remove('active');
         document.getElementById('adminPortal').classList.add('active');
         document.querySelector('.bottom-nav').style.display = 'none';
@@ -1354,6 +1401,13 @@ var app = {
         }
         if (tab === 'offers') this.loadAdminOffers();
         if (tab === 'suspicious') this.loadSuspiciousActivity();
+        if (window.matchMedia('(max-width: 700px)').matches) {
+            var navigation = document.getElementById('adminNavDisclosure');
+            if (navigation) navigation.open = false;
+            document.querySelectorAll('#adminNavDisclosure .admin-tab-group').forEach(function(group) {
+                group.open = false;
+            });
+        }
     },
     // ============================================
 
@@ -1976,35 +2030,6 @@ var app = {
         }
     },
 
-    destroyHomeOfferClouds: function() {
-        if (!this.homeOfferCloudsEffect) return;
-        try { this.homeOfferCloudsEffect.destroy(); } catch (error) { console.warn('Could not stop Home offer background:', error); }
-        this.homeOfferCloudsEffect = null;
-    },
-
-    initHomeOfferClouds: function() {
-        var background = document.getElementById('homeOfferCloudsBackground');
-        if (!background || !window.VANTA || typeof window.VANTA.CLOUDS2 !== 'function') return;
-        this.destroyHomeOfferClouds();
-        try {
-            this.homeOfferCloudsEffect = window.VANTA.CLOUDS2({
-                el: background,
-                mouseControls: true,
-                touchControls: true,
-                gyroControls: false,
-                minHeight: 200,
-                minWidth: 200,
-                scale: 1,
-                cloudColor: 0x2e477f,
-                speed: 1.2,
-                texturePath: './gallery/noise.svg'
-            });
-        } catch (error) {
-            console.warn('Could not initialize Home offer clouds background:', error);
-        }
-    },
-
-
     renderHomeOfferTrailerFields: function(trailers) {
         var container = document.getElementById('homeOfferTrailerFields');
         if (!container || this.homeOfferTrailerFieldsDirty || container.contains(document.activeElement)) return;
@@ -2125,18 +2150,32 @@ var app = {
             var videoId = item.videoId;
             var title = escape(trailer.title || 'Movie trailer');
             var autoplay = index === 0 ? '1' : '0';
-            var muted = '0';
+            // Browsers block autoplay with sound; start muted, then let users enable sound.
+            var muted = '1';
             var loading = index === 0 ? 'eager' : 'lazy';
-            return '<article class="home-trailer-card" role="listitem" aria-label="Trailer: ' + title + '"><div class="home-trailer-video"><iframe id="homeTrailerPlayer_' + index + '" src="https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=' + autoplay + '&mute=' + muted + '&enablejsapi=1&playsinline=1&rel=0&controls=1&loop=1&playlist=' + videoId + '&cc_load_policy=0' + playerOriginParam + '" title="' + title + '" loading="' + loading + '" onload="this.dataset.playerLoaded=\'true\';app.disableHomeTrailerCaptions(' + index + ')" referrerpolicy="origin" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div></article>';
+            return '<article class="home-trailer-card" role="listitem" aria-label="Trailer: ' + title + '"><div class="home-trailer-video"><iframe id="homeTrailerPlayer_' + index + '" src="https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=' + autoplay + '&mute=' + muted + '&enablejsapi=1&playsinline=1&rel=0&controls=1&loop=1&playlist=' + videoId + '&cc_load_policy=0' + playerOriginParam + '" title="' + title + '" loading="' + loading + '" onload="this.dataset.playerLoaded=\'true\';app.disableHomeTrailerCaptions(' + index + ')" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div></article>';
         }).join('');
         var signature = JSON.stringify(validTrailers.map(function(item) { return [item.videoId, item.trailer.title || 'Movie trailer']; }));
         if (container.dataset.trailerSignature === signature) return;
         container.dataset.trailerSignature = signature;
         this.currentHomeTrailerIndex = 0;
         this.homeTrailerPlayingByIndex = validTrailers.length ? {0: true} : {};
-        this.homeTrailerMutedByIndex = {};
-        container.innerHTML = markup ? '<section class="home-trailers-section"><div class="home-trailers-heading"><strong>Movie trailers</strong><span>Swipe sideways for more trailers</span></div><div class="home-trailers-track" id="homeTrailersTrack" role="list" tabindex="0" aria-label="Movie trailers. Swipe horizontally or use the trailer controls below.">' + markup + '</div><div class="home-trailer-toolbar" role="group" aria-label="Trailer controls"><button id="homeTrailerPlaybackButton" type="button" onclick="app.toggleHomeTrailerPlayback()">Play with sound</button><button id="homeTrailerSoundButton" type="button" onclick="app.toggleHomeTrailerSound()" aria-label="Toggle trailer sound">Sound on</button><button id="homeNextTrailerButton" type="button" onclick="app.playNextHomeTrailer()">' + (validTrailers.length > 1 ? 'Play next trailer' : 'Replay trailer') + '</button></div></section>' : '';
+        this.homeTrailerMutedByIndex = validTrailers.length ? {0: true} : {};
+        container.innerHTML = markup ? '<section class="home-trailers-section"><div class="home-trailers-heading"><strong>Movie trailers</strong><span>Swipe sideways for more trailers</span></div><div class="home-trailers-track" id="homeTrailersTrack" role="list" tabindex="0" aria-label="Movie trailers. Swipe horizontally or use the trailer controls below.">' + markup + '</div><div class="home-trailer-toolbar" role="group" aria-label="Trailer controls"><button id="homeTrailerPlaybackButton" type="button" onclick="app.toggleHomeTrailerPlayback()">Play with sound</button><button id="homeTrailerSoundButton" type="button" onclick="app.toggleHomeTrailerSound()" aria-label="Toggle trailer sound">Sound on</button><button id="homeNextTrailerButton" type="button" onclick="app.playNextHomeTrailer()">' + (validTrailers.length > 1 ? 'Play next trailer' : 'Replay trailer') + '</button><button id="homeTrailerOpenButton" type="button" onclick="app.openHomeTrailerOnYouTube()">Open on YouTube</button></div></section>' : '';
         if (validTrailers.length) this.updateHomeTrailerControls(0);
+    },
+
+    openHomeTrailerOnYouTube: function() {
+        var iframe = document.getElementById('homeTrailerPlayer_' + (this.currentHomeTrailerIndex || 0));
+        if (!iframe) return;
+        try {
+            var videoId = new URL(iframe.src).pathname.split('/').filter(Boolean).pop();
+            if (/^[A-Za-z0-9_-]{11}$/.test(videoId)) {
+                window.open('https://www.youtube.com/watch?v=' + videoId, '_blank', 'noopener');
+            }
+        } catch (error) {
+            this.toast('Could not open this trailer', 'error');
+        }
     },
 
     playNextHomeTrailer: function() {
@@ -2692,24 +2731,6 @@ var app = {
                     </div>
                 </div>
 
-                <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                    <div style="font-weight: 600; margin-bottom: 12px;">📊 Recent Transactions</div>
-                    ${transactions.slice(0, 10).map(function(tx) {
-                        var isEarned = tx.type === 'earned';
-                        return `<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
-                            <div>
-                                <span style="font-weight: 600;">${tx.userName || 'User'}</span>
-                                <span style="color: #6b7280; font-size: 12px; margin-left: 8px;">${tx.item || ''}</span>
-                            </div>
-                            <div>
-                                <span style="color: ${isEarned ? '#22c55e' : '#ef4444'}; font-weight: 600;">
-                                    ${isEarned ? '+' : '-'}${tx.amount.toFixed(2)} Coins
-                                </span>
-                            </div>
-                        </div>`;
-                    }).join('')}
-                    ${transactions.length === 0 ? '<div style="color: #6b7280; text-align: center; padding: 20px;">No transactions yet</div>' : ''}
-                </div>
             `;
 
             document.getElementById('adminAnalytics').innerHTML = html;
@@ -6426,7 +6447,7 @@ var app = {
         }.bind(this));
         var isVerified = !!this.profile.phone && hasFollowedAdmin;
         var profileIdentityClass = username.toLowerCase() === 'chichi_support' ? 'support-profile-identity' : '';
-        var profileDisplayName = profileIdentityClass ? 'Chichi Support' : (this.profile.name || 'User');
+        var profileDisplayName = profileIdentityClass ? 'Chichi Support (Mr. Onchari)' : (this.profile.name || 'User');
 
         // Generate posts grid HTML
         var postsHtml = '';
@@ -8104,6 +8125,18 @@ loadMessages: function() {
     // OPEN CHAT
     // ============================================
 
+    stopActiveChatMessageListeners: function(chatKey) {
+        var key = chatKey || this.chatMessageListenerKey;
+        if (!key || !db) return;
+        if (this.chatMessagesListener) db.ref('chats/' + key + '/messages').off('child_added', this.chatMessagesListener);
+        if (this.chatMessagesChangedListener) db.ref('chats/' + key + '/messages').off('child_changed', this.chatMessagesChangedListener);
+        if (this.messageStoreListener) db.ref('messages/' + key).off('child_added', this.messageStoreListener);
+        this.chatMessagesListener = null;
+        this.chatMessagesChangedListener = null;
+        this.messageStoreListener = null;
+        if (this.chatMessageListenerKey === key) this.chatMessageListenerKey = null;
+    },
+
     openChat: function(uid, name) {
     if (!this.user || this.isGuest) {
         this.toast('🔐 Sign up to message users', 'info');
@@ -8114,11 +8147,7 @@ loadMessages: function() {
     var nextChatKey = [this.user.uid, uid].sort().join('_');
     var previousChatKey = this.chatMessageListenerKey || (this.currentChat && [this.user.uid, this.currentChat.uid].sort().join('_'));
     if (previousChatKey && previousChatKey !== nextChatKey) {
-        db.ref('chats/' + previousChatKey + '/messages').off();
-        db.ref('messages/' + previousChatKey).off();
-        this.chatMessagesListener = null;
-        this.messageStoreListener = null;
-        this.chatMessageListenerKey = null;
+        this.stopActiveChatMessageListeners(previousChatKey);
     }
     this.chatMessageLoadId = (this.chatMessageLoadId || 0) + 1;
     this.currentView = 'chat';
@@ -8176,7 +8205,7 @@ loadMessages: function() {
             supportAdminSelf.isPlanSupportConversation = true;
             supportAdminSelf.setPlanSupportPresence(uid, true);
             var supportHeader = document.getElementById('chatHeaderName');
-            if (supportHeader) supportHeader.textContent = 'Customer · CHICHI Support';
+            if (supportHeader) supportHeader.textContent = 'Customer · Chichi Support (Mr. Onchari)';
         });
     } else if (uid === this.planSupportAdminId || chatPartnerEmail === 'onchari.dev@gmail.com') {
         var customerApp = this;
@@ -8187,7 +8216,7 @@ loadMessages: function() {
             if (!isPlanChat || customerApp.currentView !== 'chat' || !customerApp.currentChat || customerApp.currentChat.uid !== uid) return;
             customerApp.planSupportAdminId = uid;
             customerApp.isPlanSupportConversation = true;
-            if (headerName) headerName.textContent = 'CHICHI Plans Assistant';
+            if (headerName) headerName.textContent = 'Chichi Support (Mr. Onchari)';
             if (avatar) {
                 avatar.style.backgroundImage = 'url(icon-192.png)';
                 avatar.style.backgroundSize = 'cover';
@@ -8195,7 +8224,7 @@ loadMessages: function() {
                 avatar.textContent = '';
             }
             var supportStatus = document.getElementById('statusText');
-            if (supportStatus) supportStatus.textContent = 'Automated plan help · Onchari replies here';
+            if (supportStatus) supportStatus.textContent = 'Automated plan help · Chichi Support (Mr. Onchari) replies here';
             customerApp.listenForPlanSupportPresence(uid);
         });
     } else {
@@ -8221,6 +8250,7 @@ loadMessages: function() {
 
     document.getElementById('chatMessages').innerHTML = '<div class="chat-loading-state" role="status">Loading conversation…</div>';
     document.getElementById('chatMessageInput').value = '';
+    document.getElementById('chatMessageInput').placeholder = 'Type a message...';
 
     var self = this;
     setTimeout(function() {
@@ -8326,12 +8356,9 @@ loadMessages: function() {
         this.stopTypingIndicator();
         if (this.activePlanSupport && this.currentChat) this.setPlanSupportPresence(this.currentChat.uid, false);
         this.stopPlanSupportPresenceListener();
-        if (this.currentChat && this.chatMessagesListener) {
+        if (this.currentChat) {
             var key = [this.user.uid, this.currentChat.uid].sort().join('_');
-            db.ref('chats/' + key + '/messages').off();
-            this.chatMessagesListener = null;
-            db.ref('messages/' + key).off();
-            this.messageStoreListener = null;
+            this.stopActiveChatMessageListeners(key);
         }
         if (this.typingListener && this.currentChat) {
             var typingKey = [this.user.uid, this.currentChat.uid].sort().join('_');
@@ -8356,7 +8383,7 @@ loadMessages: function() {
             presenceRef.set({
                 adminUid: this.user.uid,
                 adminEmail: adminEmail,
-                adminName: 'Onchari',
+                adminName: 'Chichi Support (Mr. Onchari)',
                 adminPhoto: this.profile.profilePhoto || this.user.photoURL || '',
                 active: true,
                 lastActiveAt: firebase.database.ServerValue.TIMESTAMP
@@ -8388,7 +8415,7 @@ loadMessages: function() {
                 self.planSupportAdminId = adminUid;
                 self.planSupportAdminActive = true;
                 self.isPlanSupportConversation = true;
-                if (title) title.textContent = 'CHICHI Support – Onchari';
+                if (title) title.textContent = 'Chichi Support (Mr. Onchari)';
                 if (photo) {
                     if (activeSession.adminPhoto) {
                         photo.style.backgroundImage = 'url(' + activeSession.adminPhoto + ')';
@@ -8405,15 +8432,15 @@ loadMessages: function() {
                 var wasActive = self.planSupportAdminActive;
                 self.planSupportAdminActive = false;
                 self.isPlanSupportConversation = true;
-                if (title) title.textContent = 'CHICHI Plans Assistant';
+                if (title) title.textContent = 'Chichi Support (Mr. Onchari)';
                 if (photo) {
                     photo.style.backgroundImage = 'none';
                     photo.textContent = 'C';
                 }
-                if (status) { status.textContent = 'Automated plan help · Onchari replies here'; status.style.color = 'rgba(255,255,255,0.78)'; }
+                if (status) { status.textContent = 'Automated plan help · Chichi Support (Mr. Onchari) replies here'; status.style.color = 'rgba(255,255,255,0.78)'; }
                 if (wasActive) {
                     var chatKey = [self.user.uid, adminUid].sort().join('_');
-                    self.writePlanAssistantReply(chatKey, adminUid, 'Onchari has left the chat. I’m back to help instantly—choose an option or type your question.', self.getPlanQuickReplies()).catch(function(error) {
+                    self.writePlanAssistantReply(chatKey, adminUid, 'Chichi Support (Mr. Onchari) has left the chat. I’m back to help instantly—choose an option or type your question.', self.getPlanQuickReplies()).catch(function(error) {
                         console.warn('Could not resume plan assistant:', error);
                     });
                 }
@@ -8439,13 +8466,7 @@ loadMessages: function() {
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
         var loadToken = this.chatMessageLoadId = (this.chatMessageLoadId || 0) + 1;
         if (!this.chatMessages) this.chatMessages = {};
-        if (this.chatMessageListenerKey) {
-            db.ref('chats/' + this.chatMessageListenerKey + '/messages').off();
-            db.ref('messages/' + this.chatMessageListenerKey).off();
-            this.chatMessageListenerKey = null;
-        }
-        this.chatMessagesListener = null;
-        this.messageStoreListener = null;
+        if (this.chatMessageListenerKey) this.stopActiveChatMessageListeners(this.chatMessageListenerKey);
 
         db.ref('chats/' + key + '/messages').once('value').then(function(snapshot) {
             if (loadToken !== self.chatMessageLoadId || !self.currentChat || [self.user.uid, self.currentChat.uid].sort().join('_') !== key) return;
@@ -8464,7 +8485,7 @@ loadMessages: function() {
 
             self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
                 var m = snap.val();
-                if (m && (m.text || m.image) && m.sender !== self.user.uid) {
+                if (self.currentChat && [self.user.uid, self.currentChat.uid].sort().join('_') === key && m && (m.text || m.image) && m.sender !== self.user.uid) {
                     m.id = snap.key;
                     var currentMessages = self.chatMessages[key] || [];
                     var alreadyVisible = currentMessages.some(function(item) { return item.id === m.id; });
@@ -8477,7 +8498,7 @@ loadMessages: function() {
                     self.markAsRead(self.currentChat.uid);
                 }
             });
-            db.ref('chats/' + key + '/messages').on('child_changed', function(snap) {
+            self.chatMessagesChangedListener = db.ref('chats/' + key + '/messages').on('child_changed', function(snap) {
                 var updated = snap.val() || {};
                 var currentMessages = self.chatMessages[key] || [];
                 var cachedMessage = currentMessages.find(function(message) { return message.id === snap.key; });
@@ -8609,28 +8630,19 @@ loadMessages: function() {
         this.findPlanSupportAdmin().then(function(supportAdmin) {
             self.planSupportAdminId = supportAdmin.uid;
             self.users[supportAdmin.uid] = Object.assign({}, self.users[supportAdmin.uid] || {}, supportAdmin.profile);
-            var adminName = supportAdmin.profile.name || supportAdmin.profile.username || 'Onchari';
+            var adminName = supportAdmin.profile.name || supportAdmin.profile.username || 'Chichi Support (Mr. Onchari)';
             var chatKey = [self.user.uid, supportAdmin.uid].sort().join('_');
-            var inquiry = {
-                sender: self.user.uid,
-                senderName: (self.profile && self.profile.name) || 'Customer',
-                text: 'Hi, I would like information about the Netflix Premium4K + HDR offer (KES 200; standard monthly price KES 1,100).',
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                read: false,
-                type: 'plan_inquiry'
-            };
-            return db.ref('planSupportChats/' + chatKey).update({isPlanSupport: true}).then(function() {
-                return self.writePlanChatMessage(chatKey, inquiry);
+            return db.ref('planSupportChats/' + chatKey).update({
+                isPlanSupport: true,
+                supportAdminUid: supportAdmin.uid
             }).then(function() {
                 self.openChat(supportAdmin.uid, adminName);
-                var firstName = ((self.profile && self.profile.name) || 'there').split(' ')[0];
-                var welcome = 'Hi ' + firstName + '! The Premium4K + HDR offer is KES 200 (standard monthly price: KES 1,100). Choose what you need help with:';
-                return self.writePlanAssistantReply(chatKey, supportAdmin.uid, welcome, self.getPlanQuickReplies());
-            }).then(function() {
-                self.sendPushNotification(supportAdmin.uid, 'New plan enquiry', (self.profile && self.profile.name || 'A customer') + ' asked about the KES 200 Premium4K + HDR offer.');
+                var input = document.getElementById('chatMessageInput');
+                if (input) input.placeholder = 'Ask about the Premium4K + HDR offer...';
+                self.toast('Send a message to start the conversation. The assistant will reply after you send it.', 'info');
             });
         }).catch(function(err) {
-            self.toast('Could not send inquiry: ' + err.message, 'error');
+            self.toast('Could not open support chat: ' + err.message, 'error');
         });
     },
 
@@ -8644,7 +8656,7 @@ loadMessages: function() {
                     supportAdmin = {uid: child.key, profile: profile};
                 }
             });
-            if (!supportAdmin) throw new Error('Onchari support is temporarily unavailable. Please try again later.');
+            if (!supportAdmin) throw new Error('Chichi Support (Mr. Onchari) is temporarily unavailable. Please try again later.');
             return supportAdmin;
         });
     },
@@ -8670,7 +8682,7 @@ loadMessages: function() {
         return [
             {label: 'Buy now · KSh 200/-', value: 'pay_now'},
             {label: 'What is included?', value: 'plan_details'},
-            {label: 'Talk to Onchari', value: 'talk_to_onchari'}
+            {label: 'Talk to Chichi Support (Mr. Onchari)', value: 'talk_to_onchari'}
         ];
     },
 
@@ -8684,13 +8696,51 @@ loadMessages: function() {
     writePlanAssistantReply: function(chatKey, adminId, text, quickReplies) {
         return this.writePlanChatMessage(chatKey, {
             sender: adminId,
-            senderName: 'CHICHI Plans Assistant',
+            senderName: 'Chichi Support (Mr. Onchari)',
             text: text,
             timestamp: firebase.database.ServerValue.TIMESTAMP,
             read: false,
             isAutoReply: true,
             type: 'plan_bot',
             quickReplies: quickReplies || []
+        });
+    },
+
+    sendPlanAssistantWelcomeIfNeeded: function(chatKey, adminId) {
+        var self = this;
+        if (this.isOnchariSupportAdmin()) return Promise.resolve(false);
+        return this.isPlanSupportChat(chatKey).then(function(isPlanChat) {
+            if (!isPlanChat) return false;
+            var supportRef = db.ref('planSupportChats/' + chatKey);
+            return supportRef.once('value').then(function(supportSnapshot) {
+                var supportChat = supportSnapshot.val() || {};
+                var replyAdminId = supportChat.supportAdminUid || adminId;
+                if (!replyAdminId) return false;
+                return db.ref('chats/' + chatKey + '/messages').once('value').then(function(snapshot) {
+                    var alreadyWelcomed = false;
+                    snapshot.forEach(function(child) {
+                        var message = child.val() || {};
+                        if (message.type === 'plan_bot') alreadyWelcomed = true;
+                    });
+                    if (alreadyWelcomed) {
+                        return supportRef.child('assistantWelcomed').set(true).then(function() { return false; });
+                    }
+                    return supportRef.transaction(function(state) {
+                        if (state === true) state = {isPlanSupport: true};
+                        if (!state || state.isPlanSupport !== true || state.assistantWelcomed === true) return;
+                        return Object.assign({}, state, {assistantWelcomed: true});
+                    }).then(function(result) {
+                        if (!result.committed) return false;
+                        var firstName = ((self.profile && self.profile.name) || 'there').split(' ')[0];
+                        var welcome = 'Hi ' + firstName + '! The Premium4K + HDR offer is KES 200 (standard monthly price: KES 1,100). Choose what you need help with:';
+                        return self.writePlanAssistantReply(chatKey, replyAdminId, welcome, self.getPlanQuickReplies()).then(function() {
+                            self.sendPushNotification(replyAdminId, 'New plan enquiry', (self.profile && self.profile.name || 'A customer') + ' asked about the KES 200 Premium4K + HDR offer.');
+                        }).catch(function(error) {
+                            return supportRef.child('assistantWelcomed').set(false).then(function() { throw error; });
+                        });
+                    });
+                });
+            });
         });
     },
 
@@ -8706,24 +8756,24 @@ loadMessages: function() {
         var choices = {
             pay_now: {
                 selection: 'I want to buy the Netflix Premium4K + HDR offer for KES 200.',
-                response: 'The standard monthly price is KES 1,100; this offer is KES 200. To pay, use M-Pesa Buy Goods and enter Till number 8941840. After paying, tap “I have paid” and paste the full M-Pesa confirmation message here. Onchari will verify it before any login details are sent or your access countdown starts.',
+                response: 'The standard monthly price is KES 1,100; this offer is KES 200. To pay, use M-Pesa Buy Goods and enter Till number 8941840. After paying, tap “I have paid” and paste the full M-Pesa confirmation message here. Chichi Support (Mr. Onchari) will verify it before any login details are sent or your access countdown starts.',
                 quickReplies: [{label: 'I have paid · submit confirmation', value: 'submit_receipt'}],
                 push: false
             },
             submit_receipt: {
                 selection: 'I have paid and will submit my M-Pesa confirmation.',
-                response: 'Please paste the complete M-Pesa confirmation SMS in your next message. Your request will be marked pending until Onchari verifies the payment. We will only send login details and start your access countdown after verification.',
+                response: 'Please paste the complete M-Pesa confirmation SMS in your next message. Your request will be marked pending until Chichi Support (Mr. Onchari) verifies the payment. We will only send login details and start your access countdown after verification.',
                 awaitingReceipt: true,
                 push: false
             },
             plan_details: {
                 selection: 'What is included with the KES 200 Premium4K + HDR offer?',
-                response: 'Premium4K + HDR details:\n• Resolution: 4K Ultra HD + HDR\n• Spatial audio: included\n• Supported devices: TV, computer, mobile phone, and tablet\n• Standard monthly price: KES 1,100\n• Your offer price: KES 200\nPlease ask Onchari to confirm how many household devices can watch at the same time and current profile availability before paying.',
+                response: 'Premium4K + HDR details:\n• Resolution: 4K Ultra HD + HDR\n• Spatial audio: included\n• Supported devices: TV, computer, mobile phone, and tablet\n• Standard monthly price: KES 1,100\n• Your offer price: KES 200\nPlease ask Chichi Support (Mr. Onchari) to confirm how many household devices can watch at the same time and current profile availability before paying.',
                 push: false
             },
             talk_to_onchari: {
-                selection: 'Please have Onchari contact me about the Netflix profile.',
-                response: 'Your request is in Onchari’s chat inbox. You can also type any details or questions here.',
+                selection: 'Please have Chichi Support (Mr. Onchari) contact me about the Netflix profile.',
+                response: 'Your request is in the Chichi Support (Mr. Onchari) chat inbox. You can also type any details or questions here.',
                 push: true
             },
         };
@@ -8745,7 +8795,7 @@ loadMessages: function() {
             : Promise.resolve();
         updateState.then(function() { return self.writePlanChatMessage(chatKey, customerMessage); }).then(function() {
             var followUpOptions = choice === 'plan_details' ? [
-                {label: 'Talk to Onchari', value: 'talk_to_onchari'}
+                {label: 'Talk to Chichi Support (Mr. Onchari)', value: 'talk_to_onchari'}
             ] : [];
             return self.writePlanAssistantReply(chatKey, adminId, selected.response, followUpOptions);
         }).then(function() {
@@ -8794,7 +8844,7 @@ loadMessages: function() {
             return db.ref().update(updates).then(function() {
                 if (self.planSupportAdminActive) return true;
                 return self.writePlanAssistantReply(chatKey, supportAdminUid,
-                    'Thanks! Your M-Pesa confirmation has been sent to Onchari for verification. It is pending review. We will send your Netflix login details and start the access countdown only after payment is confirmed.', []);
+                    'Thanks! Your M-Pesa confirmation has been sent to Chichi Support (Mr. Onchari) for verification. It is pending review. We will send your Netflix login details and start the access countdown only after payment is confirmed.', []);
             }).then(function() {
                 self.sendPushNotification(supportAdminUid, 'M-Pesa payment needs verification', (self.profile && self.profile.name || 'A customer') + ' submitted an M-Pesa receipt for the KSh 200/- Netflix profile.');
                 return true;
@@ -8824,7 +8874,7 @@ loadMessages: function() {
         var container = document.getElementById('adminPlanPaymentOrders');
         if (!container) return;
         if (!this.isOnchariSupportAdmin() || !db) {
-            container.innerHTML = '<div class="admin-empty-state">Payment verification is available to Onchari only.</div>';
+            container.innerHTML = '<div class="admin-empty-state">Payment verification is available to Chichi Support (Mr. Onchari) only.</div>';
             return;
         }
         if (this.adminPlanPaymentsListener) return;
@@ -8854,7 +8904,7 @@ loadMessages: function() {
 
     reviewPlanPayment: function(orderId) {
         if (!this.isOnchariSupportAdmin() || !db) {
-            this.toast('Only Onchari can verify these payments', 'error');
+            this.toast('Only Chichi Support (Mr. Onchari) can verify these payments', 'error');
             return;
         }
         var self = this;
@@ -8919,7 +8969,7 @@ loadMessages: function() {
             var message = {
                 id: messageRef.key,
                 sender: self.user.uid,
-                senderName: 'CHICHI Support – Onchari',
+                senderName: 'Chichi Support (Mr. Onchari)',
                 text: credentialMessage,
                 timestamp: firebase.database.ServerValue.TIMESTAMP,
                 read: false,
@@ -9980,6 +10030,7 @@ loadMessages: function() {
     // ============================================
 
     goBack: function() {
+        if (document.getElementById('usernameSetupModal')) return;
         if (!this.backPressCount) {
             this.backPressCount = 0;
         }
@@ -10132,7 +10183,6 @@ loadMessages: function() {
         var updatesCard = '<div class="post home-updates-summary" style="margin-top:12px;display:' + (isUpdatesView ? 'block' : 'none') + ';">' +
             '<div class="post-header"><div><div class="post-name">' + userName + ' · ' + ((this.profile && this.profile.accessProfile) || 'Assigned profile') + '</div><div class="post-time">Netflix access countdown</div></div><span class="verified-tick" title="Verified CHICHI update">✓</span></div>' +
             '<div class="updates-fintech-metric"><span class="updates-metric-label">TIME REMAINING</span><div id="homeAccessExpiryCountdown" class="updates-metric-value">' + (this.profile && Number(this.profile.accessExpiry) > 0 ? 'Checking...' : 'No personal subscription') + '</div><span class="updates-metric-note">Your private membership</span></div><div id="homePublicSubscriptions"></div></div>';
-        this.destroyHomeOfferClouds();
         feedContainer.innerHTML = updatesCard + '<div id="homeOffersHero" class="post" style="margin-top:12px;display:' + (isUpdatesView ? 'none' : 'block') + ';">' +
             '<div class="post-header"><div class="post-user"><div class="post-avatar chichi-offer-avatar"><img src="icon-192.png" alt="CHICHI logo"></div><div><div class="post-name"><span id="homeOfferAccountName">CHICHI Offers</span> <span class="verified-tick" title="Verified CHICHI offer">✓</span></div><div class="post-time" id="homeOfferAccountSubtitle">Available now</div></div></div><span id="homeOfferVerifiedLabel" class="home-offer-verified">VERIFIED</span></div>' +
             '<div class="home-offer-copy"><div id="homeOfferCloudsBackground" class="home-offer-clouds-background" aria-hidden="true"></div><div id="homeOfferEyebrow" class="home-offer-eyebrow">NETFLIX · PREMIUM 4K + HDR</div><div id="homeOfferTitle" class="home-offer-title">Premium4K + HDR</div><div id="homeOfferDescription" class="home-offer-description">KES 200 offer</div><div class="home-offer-standard-price"><del>KES 1,100</del> / month standard</div><button id="homeOfferButtonLabel" type="button" onclick="app.askAboutPlans()" class="home-offer-cta">Get access</button></div>' +
@@ -10144,7 +10194,6 @@ loadMessages: function() {
             '<div class="home-offer-benefits"><div><strong id="homeOfferBenefit1Title">Fast</strong><span id="homeOfferBenefit1Detail">Up Time</span></div><div><strong id="homeOfferBenefit2Title">Fair</strong><span id="homeOfferBenefit2Detail">Rates</span></div><div><strong id="homeOfferBenefit3Title">Live</strong><span id="homeOfferBenefit3Detail">Support 24/7</span></div></div></div>' +
             '<div id="homeOfferTrailers" class="post home-trailers-post"></div>' +
             '<div id="homeAdminOffers"></div>';
-        this.initHomeOfferClouds();
         this.loadHomeAdminOffers();
         this.loadHomeOfferSettings();
         this.updateHomeAccessCountdown();
@@ -10583,7 +10632,7 @@ loadMessages: function() {
                     var user = s.val();
                     var isFollowing = this.following[uid] || false;
                     var supportClass = user.username && user.username.toLowerCase() === 'chichi_support' ? 'support-profile-identity' : '';
-                    var displayName = supportClass ? 'Chichi Support' : (user.name || 'User');
+                    var displayName = supportClass ? 'Chichi Support (Mr. Onchari)' : (user.name || 'User');
                     var userFollowsAdmin = Object.keys(user.following || {}).some(function(adminUid) {
                         var admin = this.users && this.users[adminUid];
                         return admin && admin.email && ['support-chichi@gmail.com', 'onchari.dev@gmail.com', 'support@chichi.buzz'].indexOf(admin.email.toLowerCase()) !== -1;
@@ -11594,11 +11643,7 @@ loadMessages: function() {
         this.stopPlanSupportPresenceListener();
         if (this.currentChat) {
             var key = this.chatMessageListenerKey || [this.user.uid, this.currentChat.uid].sort().join('_');
-            db.ref('chats/' + key + '/messages').off();
-            this.chatMessagesListener = null;
-            db.ref('messages/' + key).off();
-            this.messageStoreListener = null;
-            this.chatMessageListenerKey = null;
+            this.stopActiveChatMessageListeners(key);
         }
         this.chatMessageLoadId = (this.chatMessageLoadId || 0) + 1;
         this.currentChat = null;
@@ -11617,13 +11662,7 @@ loadMessages: function() {
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
         var loadToken = this.chatMessageLoadId = (this.chatMessageLoadId || 0) + 1;
         if (!this.chatMessages) this.chatMessages = {};
-        if (this.chatMessageListenerKey) {
-            db.ref('chats/' + this.chatMessageListenerKey + '/messages').off();
-            db.ref('messages/' + this.chatMessageListenerKey).off();
-            this.chatMessageListenerKey = null;
-        }
-        this.chatMessagesListener = null;
-        this.messageStoreListener = null;
+        if (this.chatMessageListenerKey) this.stopActiveChatMessageListeners(this.chatMessageListenerKey);
 
         db.ref('chats/' + key + '/messages').once('value').then(function(snapshot) {
             if (loadToken !== self.chatMessageLoadId || !self.currentChat || [self.user.uid, self.currentChat.uid].sort().join('_') !== key) return;
@@ -11642,7 +11681,7 @@ loadMessages: function() {
 
             self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
                 var m = snap.val();
-                if (m && (m.text || m.image) && m.sender !== self.user.uid) {
+                if (self.currentChat && [self.user.uid, self.currentChat.uid].sort().join('_') === key && m && (m.text || m.image) && m.sender !== self.user.uid) {
                     m.id = snap.key;
                     var currentMessages = self.chatMessages[key] || [];
                     var alreadyVisible = currentMessages.some(function(item) { return item.id === m.id; });
@@ -11655,7 +11694,7 @@ loadMessages: function() {
                     self.markAsRead(self.currentChat.uid);
                 }
             });
-            db.ref('chats/' + key + '/messages').on('child_changed', function(snap) {
+            self.chatMessagesChangedListener = db.ref('chats/' + key + '/messages').on('child_changed', function(snap) {
                 var updated = snap.val() || {};
                 var currentMessages = self.chatMessages[key] || [];
                 var cachedMessage = currentMessages.find(function(message) { return message.id === snap.key; });
@@ -11818,6 +11857,12 @@ loadMessages: function() {
         }).then(function() {
             tempMessage.pending = false;
             self.displayChatMessages(self.chatMessages[key], key);
+            return self.sendPlanAssistantWelcomeIfNeeded(key, self.planSupportAdminId || (self.currentChat && self.currentChat.uid)).catch(function(error) {
+                console.error('Plan assistant welcome failed:', error);
+                self.toast('Your message was sent, but the assistant could not reply just now.', 'error');
+                return false;
+            });
+        }).then(function() {
             return self.capturePlanPaymentReceiptIfNeeded(key, text);
         }).catch(function(err) {
             self.toast('Error sending message', 'error');
@@ -13809,6 +13854,7 @@ app.displayTypingIndicator = function(userName) {
 
 app.appendIncomingChatMessage = function(snapshot, chatKey) {
     if (!this.currentChat || !this.user) return;
+    if ([this.user.uid, this.currentChat.uid].sort().join('_') !== chatKey) return;
     var message = snapshot.val();
     if (!message || message.sender === this.user.uid || (!message.text && !message.image)) return;
 

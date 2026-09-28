@@ -804,12 +804,15 @@
         <div><div class="admin-kicker">CHICHI OPERATIONS</div><h2>Admin workspace</h2><p>Manage customers, access, and the community from one place.</p></div>
         <button class="admin-close-btn" onclick="app.closeAdminPortal()">Close workspace</button>
     </div>
-    <div class="admin-tabs">
-        <div class="admin-tab-group"><span>Overview</span><button class="admin-tab active" onclick="app.switchAdminTab('dashboard')">Dashboard</button><button class="admin-tab" onclick="app.switchAdminTab('analytics')">Analytics</button></div>
-        <div class="admin-tab-group"><span>People</span><button class="admin-tab" onclick="app.switchAdminTab('users')">Users</button><button class="admin-tab" onclick="app.switchAdminTab('chats')">All conversations</button><button class="admin-tab" onclick="app.switchAdminTab('admins')">Admin access</button></div>
-        <div class="admin-tab-group"><span>Operations</span><button class="admin-tab" onclick="app.switchAdminTab('notifications')">Access & alerts</button><button class="admin-tab" onclick="app.switchAdminTab('offers')">Offers</button><button class="admin-tab" onclick="app.switchAdminTab('email')">Email</button></div>
-        <div class="admin-tab-group"><span>Safety & records</span><button class="admin-tab" onclick="app.switchAdminTab('suspicious')">Suspicious</button><button class="admin-tab" onclick="app.switchAdminTab('logs')">Activity logs</button><button class="admin-tab" onclick="app.switchAdminTab('posts')">Community posts</button></div>
-    </div>
+    <details class="admin-nav-disclosure" id="adminNavDisclosure" open>
+        <summary class="admin-nav-summary">Admin sections</summary>
+        <div class="admin-tabs">
+            <details class="admin-tab-group" open><summary>Overview</summary><button class="admin-tab active" onclick="app.switchAdminTab('dashboard')">Dashboard</button><button class="admin-tab" onclick="app.switchAdminTab('analytics')">Analytics</button></details>
+            <details class="admin-tab-group" open><summary>People</summary><button class="admin-tab" onclick="app.switchAdminTab('users')">Users</button><button class="admin-tab" onclick="app.switchAdminTab('chats')">All conversations</button><button class="admin-tab" onclick="app.switchAdminTab('admins')">Admin access</button></details>
+            <details class="admin-tab-group" open><summary>Operations</summary><button class="admin-tab" onclick="app.switchAdminTab('notifications')">Access & alerts</button><button class="admin-tab" onclick="app.switchAdminTab('offers')">Offers</button><button class="admin-tab" onclick="app.switchAdminTab('email')">Email</button></details>
+            <details class="admin-tab-group" open><summary>Safety & records</summary><button class="admin-tab" onclick="app.switchAdminTab('suspicious')">Suspicious</button><button class="admin-tab" onclick="app.switchAdminTab('logs')">Activity logs</button><button class="admin-tab" onclick="app.switchAdminTab('posts')">Community posts</button></details>
+        </div>
+    </details>
     <div class="admin-content">
         <!-- Dashboard -->
         <div class="admin-tab-content active" id="adminDashboard">
@@ -1136,10 +1139,6 @@
 
 <!-- TOAST CONTAINER -->
 <div id="toastContainer"></div>
-
-<!-- Vanta Clouds2 background dependencies -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.clouds2.min.js"></script>
 
 <!-- APP JS -->
 <script src="js/app.js"></script>
