@@ -2053,6 +2053,30 @@ var app = {
         var validTrailers = trailers.map(function(trailer) {
             return {trailer: trailer, videoId: this.getYouTubeVideoId(trailer && trailer.url)};
         }.bind(this)).filter(function(item) { return Boolean(item.videoId); });
+        var trailerSourceSignature = JSON.stringify(validTrailers.map(function(item) { return [item.videoId, item.trailer.title || 'Movie trailer']; }));
+        if (this.homeTrailerShuffleSourceSignature !== trailerSourceSignature) {
+            var trailerOrder = validTrailers.map(function(item, index) { return index; });
+            for (var shuffleIndex = trailerOrder.length - 1; shuffleIndex > 0; shuffleIndex--) {
+                var swapIndex = Math.floor(Math.random() * (shuffleIndex + 1));
+                var swapValue = trailerOrder[shuffleIndex];
+                trailerOrder[shuffleIndex] = trailerOrder[swapIndex];
+                trailerOrder[swapIndex] = swapValue;
+            }
+            var previousFirstVideoId = '';
+            try { previousFirstVideoId = localStorage.getItem('chichiLastHomeTrailerFirstId') || ''; } catch (e) {}
+            if (trailerOrder.length > 1 && validTrailers[trailerOrder[0]].videoId === previousFirstVideoId) {
+                var alternateIndex = 1 + Math.floor(Math.random() * (trailerOrder.length - 1));
+                var firstIndex = trailerOrder[0];
+                trailerOrder[0] = trailerOrder[alternateIndex];
+                trailerOrder[alternateIndex] = firstIndex;
+            }
+            this.homeTrailerShuffleSourceSignature = trailerSourceSignature;
+            this.homeTrailerShuffleOrder = trailerOrder;
+            if (trailerOrder.length) {
+                try { localStorage.setItem('chichiLastHomeTrailerFirstId', validTrailers[trailerOrder[0]].videoId); } catch (e) {}
+            }
+        }
+        validTrailers = (this.homeTrailerShuffleOrder || []).map(function(index) { return validTrailers[index]; }).filter(Boolean);
         var pageOrigin = window.location && window.location.origin;
         var playerOriginParam = pageOrigin && pageOrigin !== 'null' ? '&origin=' + encodeURIComponent(pageOrigin) : '';
         var markup = validTrailers.map(function(item, index) {
