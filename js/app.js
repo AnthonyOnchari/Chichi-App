@@ -2068,10 +2068,9 @@ var app = {
         if (container.dataset.trailerSignature === signature) return;
         container.dataset.trailerSignature = signature;
         this.currentHomeTrailerIndex = 0;
-        this.homeTrailerTitles = validTrailers.map(function(item) { return item.trailer.title || 'Movie trailer'; });
         this.homeTrailerPlayingByIndex = {};
         this.homeTrailerMutedByIndex = validTrailers.length ? {0: false} : {};
-        container.innerHTML = markup ? '<section class="home-trailers-section"><div class="home-trailers-heading"><strong>Movie trailers</strong><span>Swipe sideways for more trailers</span></div><div class="home-trailers-track" id="homeTrailersTrack" role="list" tabindex="0" aria-label="Movie trailers. Swipe horizontally or use the trailer controls below.">' + markup + '</div><div class="home-trailer-toolbar" role="group" aria-label="Trailer controls"><strong id="homeCurrentTrailerTitle">' + escape(this.homeTrailerTitles[0]) + '</strong><button id="homeTrailerPlaybackButton" type="button" onclick="app.toggleHomeTrailerPlayback()">Play with sound</button><button id="homeTrailerSoundButton" type="button" onclick="app.toggleHomeTrailerSound()" aria-label="Toggle trailer sound">Mute</button><button id="homeNextTrailerButton" type="button" onclick="app.playNextHomeTrailer()">' + (validTrailers.length > 1 ? 'Play next trailer' : 'Replay trailer') + '</button></div></section>' : '';
+        container.innerHTML = markup ? '<section class="home-trailers-section"><div class="home-trailers-heading"><strong>Movie trailers</strong><span>Swipe sideways for more trailers</span></div><div class="home-trailers-track" id="homeTrailersTrack" role="list" tabindex="0" aria-label="Movie trailers. Swipe horizontally or use the trailer controls below.">' + markup + '</div><div class="home-trailer-toolbar" role="group" aria-label="Trailer controls"><button id="homeTrailerPlaybackButton" type="button" onclick="app.toggleHomeTrailerPlayback()">Play with sound</button><button id="homeTrailerSoundButton" type="button" onclick="app.toggleHomeTrailerSound()" aria-label="Toggle trailer sound">Mute</button><button id="homeNextTrailerButton" type="button" onclick="app.playNextHomeTrailer()">' + (validTrailers.length > 1 ? 'Play next trailer' : 'Replay trailer') + '</button></div></section>' : '';
     },
 
     playNextHomeTrailer: function() {
@@ -2159,10 +2158,8 @@ var app = {
         if (index !== this.currentHomeTrailerIndex) return;
         var playbackButton = document.getElementById('homeTrailerPlaybackButton');
         var soundButton = document.getElementById('homeTrailerSoundButton');
-        var title = document.getElementById('homeCurrentTrailerTitle');
         if (playbackButton) playbackButton.textContent = this.homeTrailerPlayingByIndex && this.homeTrailerPlayingByIndex[index] ? 'Pause' : 'Play with sound';
         if (soundButton) soundButton.textContent = this.homeTrailerMutedByIndex && this.homeTrailerMutedByIndex[index] ? 'Sound on' : 'Mute';
-        if (title && this.homeTrailerTitles) title.textContent = this.homeTrailerTitles[index] || 'Movie trailer';
     },
 
     applyHomeOfferSettings: function() {
