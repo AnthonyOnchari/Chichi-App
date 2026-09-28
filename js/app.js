@@ -8298,19 +8298,6 @@ loadMessages: function() {
                 active: true,
                 lastActiveAt: firebase.database.ServerValue.TIMESTAMP
             });
-            var customerChatKey = [customerUid, this.user.uid].sort().join('_');
-            var adminChatKey = customerChatKey;
-            db.ref('chats/' + adminChatKey + '/messages').once('value').then(function(snapshot) {
-                var updates = {};
-                snapshot.forEach(function(child) {
-                    var message = child.val() || {};
-                    if (message.type === 'plan_bot' && Array.isArray(message.quickReplies) && message.quickReplies.length) {
-                        updates['chats/' + adminChatKey + '/messages/' + child.key + '/quickReplies'] = null;
-                        updates['messages/' + adminChatKey + '/' + child.key + '/quickReplies'] = null;
-                    }
-                });
-                if (Object.keys(updates).length) db.ref().update(updates);
-            }).catch(function() {});
         } else {
             this.activePlanSupport = false;
             presenceRef.remove();
@@ -8503,11 +8490,15 @@ loadMessages: function() {
                 content += '<img src="' + m.image + '" style="max-width:180px;border-radius:12px;cursor:pointer;" onclick="app.viewFullImage(\'' + m.image + '\')">';
             }
             if (m.text) { content += '<div>' + self.escapeChatMessageText(m.text) + '</div>'; }
-            if (Array.isArray(m.quickReplies) && m.quickReplies.length) {
+            if (Array.isArray(m.quickReplies) && m.quickReplies.length && m.sender !== self.user.uid) {
                 content += '<div class="plan-quick-replies" role="group" aria-label="Plan options">' + m.quickReplies.map(function(reply) {
                     if (!reply || !reply.value || !reply.label) return '';
                     return '<button type="button" onclick="app.handlePlanChoice(\'' + escapeMessageHtml(reply.value) + '\')">' + escapeMessageHtml(reply.label) + '</button>';
                 }).join('') + '</div>';
+            }
+            if (m.type === 'plan_bot' && m.sender !== self.user.uid && /till number\s*8941840/i.test(m.text || '') &&
+                !(Array.isArray(m.quickReplies) && m.quickReplies.some(function(reply) { return reply && reply.value === 'submit_receipt'; }))) {
+                content += '<div class="plan-quick-replies" role="group" aria-label="Payment confirmation"><button type="button" onclick="app.handlePlanChoice(\'submit_receipt\')">I have paid · submit confirmation</button></div>';
             }
 
             var otherUserName = self.currentChat.name || 'User';
@@ -8642,10 +8633,6 @@ loadMessages: function() {
 
     handlePlanChoice: function(choice) {
         if (!this.user || !this.currentChat || !this.isPlanSupportConversation) return;
-        if (this.planSupportAdminActive) {
-            this.toast('Onchari is here and will help you directly.', 'info');
-            return;
-        }
         if (this.planChoicePending) return;
         var currentSupportProfile = this.users && this.users[this.currentChat.uid];
         var isOnchariSupport = String(currentSupportProfile && currentSupportProfile.email || '').trim().toLowerCase() === 'onchari.dev@gmail.com';
@@ -11643,7 +11630,7 @@ loadMessages: function() {
 
             var otherUserName = self.currentChat.name || 'User';
             var otherUserInitial = otherUserName.charAt(0).toUpperCase();
-            if (Array.isArray(m.quickReplies) && m.quickReplies.length) {
+            if (Array.isArray(m.quickReplies) && m.quickReplies.length && m.sender !== self.user.uid) {
                 var escapeReply = function(value) {
                     return String(value == null ? '' : value).replace(/[&<>"']/g, function(character) {
                         return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character];
@@ -11653,6 +11640,10 @@ loadMessages: function() {
                     if (!reply || !reply.value || !reply.label) return '';
                     return '<button type="button" onclick="app.handlePlanChoice(\'' + escapeReply(reply.value) + '\')">' + escapeReply(reply.label) + '</button>';
                 }).join('') + '</div>';
+            }
+            if (m.type === 'plan_bot' && m.sender !== self.user.uid && /till number\s*8941840/i.test(m.text || '') &&
+                !(Array.isArray(m.quickReplies) && m.quickReplies.some(function(reply) { return reply && reply.value === 'submit_receipt'; }))) {
+                content += '<div class="plan-quick-replies" role="group" aria-label="Payment confirmation"><button type="button" onclick="app.handlePlanChoice(\'submit_receipt\')">I have paid · submit confirmation</button></div>';
             }
 
                         var actionMenu = m.sender === self.user.uid
