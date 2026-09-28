@@ -52,6 +52,9 @@ var app = {
     chatMessages: {},
     notifiedMessages: {},
     currentView: 'feed',
+    planSupportPresenceListener: null,
+    planSupportPresenceKey: null,
+    activePlanSupport: false,
     heatmapMap: null,
     heatmapListenerSetup: false,
     blockedUsers: {},
@@ -80,6 +83,8 @@ var app = {
     postsLoading: false,
     presenceStatus: {},
     currentFeedTab: 'forYou',
+    homeOfferSettings: null,
+    homeOfferSettingsLoaded: false,
     phoneAuthMode: 'login',
     phoneSignupDraft: null,
     phoneConfirmationResult: null,
@@ -241,12 +246,12 @@ var app = {
                         });
                     }
                     self.loadProfile();
+                    self.setupUserNotifications();
                     self.checkAndShowUsernameSetup();
                     self.showApp();
                     // CRITICAL: Always show feed as default view on login
                     setTimeout(function() {
                         self.switchView('feed');
-                        self.showDailyPostPrompt();
                     }, 100);
                     self.setOnlineStatus();
                     self.startTriviaTimer();
@@ -1270,10 +1275,14 @@ var app = {
         document.querySelector('.bottom-nav').style.display = 'none';
         this.loadAdminDashboard();
         this.loadAdminUsers();
+        this.loadAdminChats();
         this.loadAdminPosts();
         this.loadActivityLog();
         this.loadSuspiciousActivity();
         this.loadAdminNotifications();
+        this.loadAdminPlanPaymentOrders();
+        this.loadAdminOffers();
+        this.loadHomeOfferEditor();
         this.loadAdminAnalytics();
         this.loadAdminGifts();
         if (typeof this.loadAdminAirtimeRequests === 'function') this.loadAdminAirtimeRequests();
@@ -1282,6 +1291,11 @@ var app = {
 
     closeAdminPortal: function() {
         this.adminOpen = false;
+        if (this.adminPlanPaymentsQuery && this.adminPlanPaymentsListener) {
+            this.adminPlanPaymentsQuery.off('value', this.adminPlanPaymentsListener);
+            this.adminPlanPaymentsQuery = null;
+            this.adminPlanPaymentsListener = null;
+        }
         document.getElementById('adminPortal').classList.remove('active');
         document.getElementById('mainApp').classList.add('active');
         document.querySelector('.bottom-nav').style.display = 'flex';
@@ -1293,21 +1307,22 @@ var app = {
         document.querySelectorAll('.admin-tab-content').forEach(function(c) { if (c && c.classList) c.classList.remove('active'); });
 
         var buttons = document.querySelectorAll('.admin-tab');
-        var tabMap = ['dashboard', 'users', 'incomplete', 'posts', 'analytics', 'gifts', 'admins', 'notifications', 'suspicious', 'logs', 'email'];
-        var tabIndex = tabMap.indexOf(tab);
-        if (tabIndex >= 0) {
-            buttons[tabIndex].classList.add('active');
-        }
+        buttons.forEach(function(button) {
+            var action = button.getAttribute('onclick') || '';
+            if (action.indexOf("'" + tab + "'") !== -1) button.classList.add('active');
+        });
 
         var contentMap = {
             'dashboard': 'adminDashboard',
             'users': 'adminUsers',
+            'chats': 'adminChats',
             'incomplete': 'adminIncomplete',
             'posts': 'adminPosts',
             'analytics': 'adminAnalytics',
             'gifts': 'adminGifts',
             'admins': 'adminAdmins',
             'notifications': 'adminNotificationsTab',
+            'offers': 'adminOffers',
             'suspicious': 'adminSuspicious',
             'logs': 'adminLogs',
             'email': 'adminEmail'
@@ -1319,13 +1334,18 @@ var app = {
         }
 
         if (tab === 'users') this.loadAdminUsers();
+        if (tab === 'chats') this.loadAdminChats();
         if (tab === 'incomplete') this.loadIncompleteUsers();
         if (tab === 'posts') this.loadAdminPosts();
         if (tab === 'analytics') this.loadAdminAnalytics();
         if (tab === 'gifts') this.loadAdminGifts();
         if (tab === 'admins') this.loadAdminList();
         if (tab === 'logs') this.loadActivityLog();
-        if (tab === 'notifications') this.loadAdminNotifications();
+        if (tab === 'notifications') {
+            this.loadAdminNotifications();
+            this.loadAdminPlanPaymentOrders();
+        }
+        if (tab === 'offers') this.loadAdminOffers();
         if (tab === 'suspicious') this.loadSuspiciousActivity();
     },
     // ============================================
@@ -1518,7 +1538,7 @@ var app = {
                         var userFollowers = fixedUser.followers || 0;
 
                         html += `
-                            <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; ${isBanned ? 'background: #fef2f2;' : ''}">
+                            <div class="admin-user-row" data-user-search="${String((fixedUser.name || '') + ' ' + (fixedUser.email || '') + ' ' + (fixedUser.username || '')).toLowerCase()}" style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; ${isBanned ? 'background: #fef2f2;' : ''}">
                                 <div>
                                     <div style="font-weight: 600; font-size: 0.95rem;">${fixedUser.name || 'Unknown User'} ${isBanned ? '🚫' : ''}</div>
                                     <div style="font-size: 0.8rem; color: var(--text-light);">${userEmail}</div>
@@ -1807,13 +1827,654 @@ var app = {
                         <div style="display: flex; gap: 12px; align-items: center;">
                             <span style="font-size: 0.75rem; color: var(--text-light);">❤️ ${likes}</span>
                             <span style="font-size: 0.75rem; color: var(--text-light);">💬 ${comments}</span>
-                            <button onclick="app.adminDeletePost('${p.id}')" style="margin-left: auto; padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🗑️</button>
+                            <button onclick="app.editAdminPost('${p.id}')" style="margin-left: auto; padding: 6px 12px; background: #0f766e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Edit</button>
+                            <button onclick="app.adminDeletePost('${p.id}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Delete</button>
                         </div>
                     </div>
                 `;
             });
         }
         document.getElementById('adminPostsList').innerHTML = html;
+    },
+
+    loadAdminChats: function() {
+        var container = document.getElementById('adminChatsList');
+        if (!container) return;
+        container.innerHTML = '<div class="admin-empty-state">Loading conversations...</div>';
+        var users = this.users || {};
+        db.ref('messages').once('value').then(function(snapshot) {
+            var chats = [];
+            snapshot.forEach(function(chatSnapshot) {
+                var chatKey = chatSnapshot.key;
+                var messages = chatSnapshot.val() || {};
+                var rows = [];
+                chatSnapshot.forEach(function(messageSnapshot) {
+                    var message = messageSnapshot.val() || {};
+                    if (message.deleted || (!message.text && !message.image && !message.voiceUrl)) return;
+                    rows.push(message);
+                });
+                if (!rows.length) return;
+                rows.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+                var ids = chatKey.split('_');
+                var names = ids.map(function(id) { return (users[id] && (users[id].name || users[id].username)) || id; });
+                chats.push({ key: chatKey, names: names, rows: rows.slice(-8), latest: rows[rows.length - 1] });
+            });
+            chats.sort(function(a, b) { return (b.latest.timestamp || 0) - (a.latest.timestamp || 0); });
+            if (!chats.length) {
+                container.innerHTML = '<div class="admin-empty-state">No conversations available.</div>';
+                return;
+            }
+            var count = document.getElementById('adminChatCount');
+            if (count) count.textContent = chats.length;
+            container.innerHTML = chats.map(function(chat) {
+                var messagesHtml = chat.rows.map(function(message) {
+                    var text = message.text || (message.image ? 'Photo message' : 'Voice message');
+                    var senderName = message.senderName || (users[message.sender] && (users[message.sender].name || users[message.sender].username)) || 'Unknown user';
+                    var recipientNames = chat.names.filter(function(name) { return name !== senderName; });
+                    var verifiedMark = message.isAutoReply || senderName === 'CHICHI Admin' ? '<span class="verified-tick" title="Verified CHICHI admin">✓</span>' : '';
+                    return '<div class="admin-chat-message"><div class="admin-chat-message-person"><span class="admin-chat-message-avatar">' + senderName.charAt(0).toUpperCase() + '</span><div><strong>Sent by ' + senderName + verifiedMark + '</strong><small>To ' + (recipientNames.join(', ') || 'conversation participant') + '</small></div></div><span class="admin-chat-message-text">' + text + '</span><time>' + (message.createdAt || '') + '</time></div>';
+                }).join('');
+                var latestText = chat.latest.text || (chat.latest.image ? 'Photo message' : 'Voice message');
+                var latestSender = chat.latest.senderName || (users[chat.latest.sender] && (users[chat.latest.sender].name || users[chat.latest.sender].username)) || 'Unknown user';
+                var searchText = (chat.names.join(' ') + ' ' + latestText).replace(/"/g, '&quot;').toLowerCase();
+                return '<section class="admin-chat-card" data-chat-search="' + searchText + '"><header><div class="admin-chat-identity"><span class="admin-chat-avatar">' + chat.names.join('').charAt(0).toUpperCase() + '</span><div><strong>' + chat.names.join('  <>  ') + '</strong><small>Conversation · Last activity ' + (chat.latest.createdAt || 'recently') + '</small></div></div><span class="admin-readonly-badge">READ ONLY</span></header><div class="admin-chat-latest"><span class="admin-chat-label">LATEST MESSAGE · SENT BY ' + latestSender.toUpperCase() + '</span><p>' + latestText + '</p></div><details><summary>View recent messages <span>' + chat.rows.length + '</span></summary><div class="admin-chat-transcript">' + messagesHtml + '</div></details></section>';
+            }).join('');
+        }).catch(function(err) {
+            container.innerHTML = '<div class="admin-empty-state">Could not load conversations: ' + err.message + '</div>';
+        });
+    },
+
+    filterAdminChats: function(query) {
+        var normalized = String(query || '').trim().toLowerCase();
+        document.querySelectorAll('#adminChatsList .admin-chat-card').forEach(function(card) {
+            card.style.display = !normalized || (card.getAttribute('data-chat-search') || '').indexOf(normalized) !== -1 ? '' : 'none';
+        });
+    },
+
+    getDefaultHomeOfferSettings: function() {
+        return {
+            accountName: 'CHICHI Offers',
+            accountSubtitle: 'Available now',
+            verifiedLabel: 'VERIFIED',
+            eyebrow: 'Today’s Netflix offer',
+            title: '4K Premium Netflix Profile',
+            description: 'Get a Premium Netflix profile with 4K access today for only KSh 200/-.',
+            buttonLabel: 'Get your profile today',
+            tile1Label: 'Movie nights',
+            tile1Image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=80',
+            tile2Label: 'Series picks',
+            tile2Image: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=500&q=80',
+            tile3Label: 'Family time',
+            tile3Image: 'https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?auto=format&fit=crop&w=500&q=80',
+            trailers: [
+                {title: 'Movie trailer', url: 'https://youtu.be/FKSdXH89jbo?si=FQ_dWgh_Bs3ma6Rk'},
+                {title: 'Movie trailer 2', url: 'https://www.youtube.com/embed/3oB9AxspVow?si=MdTbmCMBKqNuzgm9'}
+            ],
+            benefit1Title: 'Fast',
+            benefit1Detail: 'Up Time',
+            benefit2Title: 'Fair',
+            benefit2Detail: 'Rates',
+            benefit3Title: 'Live',
+            benefit3Detail: 'Support 24/7'
+        };
+    },
+
+    mergeHomeOfferSettings: function(savedSettings) {
+        var defaults = this.getDefaultHomeOfferSettings();
+        var saved = savedSettings || {};
+        var settings = Object.assign({}, defaults, saved);
+        if (saved.eyebrow === 'Affordable streaming access') settings.eyebrow = defaults.eyebrow;
+        if (saved.title === 'Enjoy more. Pay less.') settings.title = defaults.title;
+        if (saved.description === 'Get reliable access at friendly rates and chat with us for today\'s available offers.') settings.description = defaults.description;
+        if (saved.description === 'Get a Premium Netflix profile with 4K access today for only 200.') settings.description = defaults.description;
+        if (saved.buttonLabel === 'Ask about plans') settings.buttonLabel = defaults.buttonLabel;
+        if (saved.benefit1Detail === 'Delivery') settings.benefit1Detail = defaults.benefit1Detail;
+        if (saved.benefit3Detail === 'Support') settings.benefit3Detail = defaults.benefit3Detail;
+        if (saved.trailersCustomized !== true) {
+            var savedTrailers = Array.isArray(saved.trailers) ? saved.trailers : [];
+            var knownIds = savedTrailers.map(function(trailer) { return this.getYouTubeVideoId(trailer && trailer.url); }.bind(this));
+            settings.trailers = savedTrailers.concat(defaults.trailers.filter(function(trailer) {
+                var defaultId = this.getYouTubeVideoId(trailer.url);
+                return defaultId && knownIds.indexOf(defaultId) === -1;
+            }.bind(this)));
+        }
+        return settings;
+    },
+
+    normalizeHomeOfferImage: function(value) {
+        var url = String(value || '').trim();
+        if (/^https?:\/\//i.test(url) || /^[a-z0-9/_-]+\.(png|jpe?g|webp|gif)$/i.test(url)) return url;
+        return '';
+    },
+
+    getYouTubeVideoId: function(value) {
+        try {
+            var parsed = new URL(String(value || '').trim());
+            var host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+            var videoId = '';
+            if (host === 'youtu.be') videoId = parsed.pathname.split('/').filter(Boolean)[0] || '';
+            else if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
+                videoId = parsed.searchParams.get('v') || '';
+                if (!videoId) videoId = (parsed.pathname.match(/^\/(?:embed|shorts|live)\/([^/]+)/) || [])[1] || '';
+            }
+            return /^[A-Za-z0-9_-]{11}$/.test(videoId) ? videoId : '';
+        } catch (e) {
+            return '';
+        }
+    },
+
+
+    renderHomeOfferTrailerFields: function(trailers) {
+        var container = document.getElementById('homeOfferTrailerFields');
+        if (!container || this.homeOfferTrailerFieldsDirty || container.contains(document.activeElement)) return;
+        container.innerHTML = '';
+        var items = Array.isArray(trailers) ? trailers : [];
+        if (!items.length) items = [{title: '', url: ''}];
+        items.slice(0, 12).forEach(function(trailer) {
+            this.addHomeOfferTrailerField(trailer.title || '', trailer.url || '', false);
+        }.bind(this));
+        this.updateHomeOfferTrailerAddButton();
+    },
+
+    addHomeOfferTrailerField: function(title, url, focusTitle) {
+        var container = document.getElementById('homeOfferTrailerFields');
+        if (!container) return;
+        if (container.querySelectorAll('.home-offer-trailer-row').length >= 12) {
+            this.toast('You can add up to 12 trailers', 'info');
+            return;
+        }
+        var row = document.createElement('div');
+        row.className = 'home-offer-trailer-row';
+        var titleLabel = document.createElement('label');
+        titleLabel.textContent = 'Trailer title';
+        var titleInput = document.createElement('input');
+        titleInput.type = 'text';
+        titleInput.className = 'home-offer-trailer-title-input';
+        titleInput.placeholder = 'e.g. The End of Oak Street';
+        titleInput.value = title || '';
+        titleLabel.appendChild(titleInput);
+        var urlLabel = document.createElement('label');
+        urlLabel.textContent = 'YouTube video link';
+        var urlInput = document.createElement('input');
+        urlInput.type = 'url';
+        urlInput.className = 'home-offer-trailer-url-input';
+        urlInput.placeholder = 'Paste a YouTube link';
+        urlInput.value = url || '';
+        urlLabel.appendChild(urlInput);
+        var removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'home-offer-trailer-remove';
+        removeButton.textContent = 'Remove';
+        removeButton.setAttribute('aria-label', 'Remove this trailer');
+        removeButton.addEventListener('click', function() {
+            this.homeOfferTrailerFieldsDirty = true;
+            row.remove();
+            if (!container.querySelector('.home-offer-trailer-row')) this.addHomeOfferTrailerField('', '', false);
+            this.updateHomeOfferTrailerAddButton();
+        }.bind(this));
+        row.appendChild(titleLabel);
+        row.appendChild(urlLabel);
+        row.appendChild(removeButton);
+        container.appendChild(row);
+        titleInput.addEventListener('input', function() { this.homeOfferTrailerFieldsDirty = true; }.bind(this));
+        urlInput.addEventListener('input', function() { this.homeOfferTrailerFieldsDirty = true; }.bind(this));
+        this.updateHomeOfferTrailerAddButton();
+        if (focusTitle) {
+            this.homeOfferTrailerFieldsDirty = true;
+            titleInput.focus();
+        }
+    },
+
+    updateHomeOfferTrailerAddButton: function() {
+        var container = document.getElementById('homeOfferTrailerFields');
+        var button = document.querySelector('.home-trailer-add-button');
+        if (!container || !button) return;
+        var count = container.querySelectorAll('.home-offer-trailer-row').length;
+        button.disabled = count >= 12;
+        button.textContent = count >= 12 ? 'Maximum of 12 trailers' : '+ Add another trailer';
+    },
+    disableHomeTrailerCaptions: function(index) {
+        var iframe = document.getElementById('homeTrailerPlayer_' + index);
+        if (!iframe || !iframe.contentWindow) return;
+        iframe.contentWindow.postMessage(JSON.stringify({event: 'command', func: 'unloadModule', args: ['captions']}), 'https://www.youtube-nocookie.com');
+        iframe.contentWindow.postMessage(JSON.stringify({event: 'command', func: 'setOption', args: ['captions', 'track', {}]}), 'https://www.youtube-nocookie.com');
+    },
+
+    renderHomeTrailers: function() {
+        var container = document.getElementById('homeOfferTrailers');
+        if (!container) return;
+        var settings = this.mergeHomeOfferSettings(this.homeOfferSettings);
+        var trailers = Array.isArray(settings.trailers) ? settings.trailers : [];
+        var escape = function(value) {
+            return String(value || '').replace(/[&<>"']/g, function(character) {
+                return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character];
+            });
+        };
+        var validTrailers = trailers.map(function(trailer) {
+            return {trailer: trailer, videoId: this.getYouTubeVideoId(trailer && trailer.url)};
+        }.bind(this)).filter(function(item) { return Boolean(item.videoId); });
+        var pageOrigin = window.location && window.location.origin;
+        var playerOriginParam = pageOrigin && pageOrigin !== 'null' ? '&origin=' + encodeURIComponent(pageOrigin) : '';
+        var markup = validTrailers.map(function(item, index) {
+            var trailer = item.trailer;
+            var videoId = item.videoId;
+            var title = escape(trailer.title || 'Movie trailer');
+            var autoplay = index === 0 ? '1' : '0';
+            var muted = index === 0 ? '1' : '0';
+            var loading = index === 0 ? 'eager' : 'lazy';
+            return '<article class="home-trailer-card" role="listitem" aria-label="Trailer: ' + title + '"><div class="home-trailer-video"><iframe id="homeTrailerPlayer_' + index + '" src="https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=' + autoplay + '&mute=' + muted + '&enablejsapi=1&playsinline=1&rel=0&controls=0&loop=1&playlist=' + videoId + '&cc_load_policy=0' + playerOriginParam + '" title="' + title + '" loading="' + loading + '" onload="this.dataset.playerLoaded=\'true\';app.disableHomeTrailerCaptions(' + index + ')" referrerpolicy="origin" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div></article>';
+        }).join('');
+        var signature = JSON.stringify(validTrailers.map(function(item) { return [item.videoId, item.trailer.title || 'Movie trailer']; }));
+        if (container.dataset.trailerSignature === signature) return;
+        container.dataset.trailerSignature = signature;
+        this.currentHomeTrailerIndex = 0;
+        this.homeTrailerTitles = validTrailers.map(function(item) { return item.trailer.title || 'Movie trailer'; });
+        this.homeTrailerPlayingByIndex = {};
+        this.homeTrailerMutedByIndex = validTrailers.length ? {0: true} : {};
+        container.innerHTML = markup ? '<section class="home-trailers-section"><div class="home-trailers-heading"><strong>Movie trailers</strong><span>Swipe sideways for more trailers</span></div><div class="home-trailers-track" id="homeTrailersTrack" role="list" tabindex="0" aria-label="Movie trailers. Swipe horizontally or use the trailer controls below.">' + markup + '</div><div class="home-trailer-toolbar" role="group" aria-label="Trailer controls"><strong id="homeCurrentTrailerTitle">' + escape(this.homeTrailerTitles[0]) + '</strong><button id="homeTrailerPlaybackButton" type="button" onclick="app.toggleHomeTrailerPlayback()">Play with sound</button><button id="homeTrailerSoundButton" type="button" onclick="app.toggleHomeTrailerSound()" aria-label="Toggle trailer sound">Sound on</button><button id="homeNextTrailerButton" type="button" onclick="app.playNextHomeTrailer()">' + (validTrailers.length > 1 ? 'Play next trailer' : 'Replay trailer') + '</button></div></section>' : '';
+    },
+
+    playNextHomeTrailer: function() {
+        var track = document.getElementById('homeTrailersTrack');
+        if (!track) return;
+        var cards = track.querySelectorAll('.home-trailer-card');
+        if (!cards.length) return;
+        var nextIndex = ((this.currentHomeTrailerIndex || 0) + 1) % cards.length;
+        track.scrollTo({left: cards[nextIndex].offsetLeft - cards[0].offsetLeft, behavior: 'smooth'});
+        this.playHomeTrailerWithSound(nextIndex);
+    },
+
+    playHomeTrailerWithSound: function(index) {
+        var iframe = document.getElementById('homeTrailerPlayer_' + index);
+        if (!iframe || !iframe.contentWindow) return;
+        var previousIndex = this.currentHomeTrailerIndex;
+        var youtubeOrigin = 'https://www.youtube-nocookie.com';
+        var previousFrame = document.getElementById('homeTrailerPlayer_' + previousIndex);
+        if (previousFrame && previousFrame !== iframe && previousFrame.contentWindow) {
+            previousFrame.contentWindow.postMessage(JSON.stringify({event: 'command', func: 'pauseVideo', args: []}), youtubeOrigin);
+            this.homeTrailerPlayingByIndex = this.homeTrailerPlayingByIndex || {};
+            this.homeTrailerPlayingByIndex[previousIndex] = false;
+            this.updateHomeTrailerControls(previousIndex);
+        }
+        this.currentHomeTrailerIndex = index;
+        var self = this;
+        var activatePlayer = function() {
+            if (!iframe.contentWindow) return;
+            self.disableHomeTrailerCaptions(index);
+            iframe.contentWindow.postMessage(JSON.stringify({event: 'command', func: 'unMute', args: []}), youtubeOrigin);
+            iframe.contentWindow.postMessage(JSON.stringify({event: 'command', func: 'playVideo', args: []}), youtubeOrigin);
+            setTimeout(function() { self.disableHomeTrailerCaptions(index); }, 700);
+        };
+        if (iframe.dataset.playerLoaded === 'true') {
+            activatePlayer();
+        } else {
+            iframe.loading = 'eager';
+            if (iframe._playWhenLoaded) iframe.removeEventListener('load', iframe._playWhenLoaded);
+            iframe._playWhenLoaded = function() {
+                iframe.dataset.playerLoaded = 'true';
+                iframe.removeEventListener('load', iframe._playWhenLoaded);
+                iframe._playWhenLoaded = null;
+                if (self.currentHomeTrailerIndex === index) setTimeout(activatePlayer, 250);
+            };
+            iframe.addEventListener('load', iframe._playWhenLoaded, {once: true});
+        }
+        this.homeTrailerPlayingByIndex = this.homeTrailerPlayingByIndex || {};
+        this.homeTrailerMutedByIndex = this.homeTrailerMutedByIndex || {};
+        this.homeTrailerPlayingByIndex[index] = true;
+        this.homeTrailerMutedByIndex[index] = false;
+        this.updateHomeTrailerControls(index);
+    },
+
+    toggleHomeTrailerPlayback: function() {
+        var index = this.currentHomeTrailerIndex || 0;
+        this.homeTrailerPlayingByIndex = this.homeTrailerPlayingByIndex || {};
+        var isPlaying = Boolean(this.homeTrailerPlayingByIndex[index]);
+        if (!isPlaying) {
+            this.playHomeTrailerWithSound(index);
+            return;
+        }
+        var iframe = document.getElementById('homeTrailerPlayer_' + index);
+        if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage(JSON.stringify({event: 'command', func: 'pauseVideo', args: []}), 'https://www.youtube-nocookie.com');
+        this.homeTrailerPlayingByIndex[index] = false;
+        this.updateHomeTrailerControls(index);
+    },
+
+    toggleHomeTrailerSound: function() {
+        var index = this.currentHomeTrailerIndex || 0;
+        var iframe = document.getElementById('homeTrailerPlayer_' + index);
+        if (!iframe || !iframe.contentWindow) return;
+        this.homeTrailerMutedByIndex = this.homeTrailerMutedByIndex || {};
+        var isMuted = Boolean(this.homeTrailerMutedByIndex[index]);
+        var command = isMuted ? 'unMute' : 'mute';
+        iframe.contentWindow.postMessage(JSON.stringify({event: 'command', func: command, args: []}), 'https://www.youtube-nocookie.com');
+        this.homeTrailerMutedByIndex[index] = !isMuted;
+        if (isMuted && !this.homeTrailerPlayingByIndex[index]) {
+            iframe.contentWindow.postMessage(JSON.stringify({event: 'command', func: 'playVideo', args: []}), 'https://www.youtube-nocookie.com');
+            this.homeTrailerPlayingByIndex[index] = true;
+        }
+        this.updateHomeTrailerControls(index);
+    },
+
+    updateHomeTrailerControls: function(index) {
+        if (index !== this.currentHomeTrailerIndex) return;
+        var playbackButton = document.getElementById('homeTrailerPlaybackButton');
+        var soundButton = document.getElementById('homeTrailerSoundButton');
+        var title = document.getElementById('homeCurrentTrailerTitle');
+        if (playbackButton) playbackButton.textContent = this.homeTrailerPlayingByIndex && this.homeTrailerPlayingByIndex[index] ? 'Pause' : 'Play with sound';
+        if (soundButton) soundButton.textContent = this.homeTrailerMutedByIndex && this.homeTrailerMutedByIndex[index] ? 'Sound on' : 'Mute';
+        if (title && this.homeTrailerTitles) title.textContent = this.homeTrailerTitles[index] || 'Movie trailer';
+    },
+
+    applyHomeOfferSettings: function() {
+        var settings = this.mergeHomeOfferSettings(this.homeOfferSettings);
+        var textTargets = {
+            homeOfferAccountName: 'accountName',
+            homeOfferAccountSubtitle: 'accountSubtitle',
+            homeOfferVerifiedLabel: 'verifiedLabel',
+            homeOfferEyebrow: 'eyebrow',
+            homeOfferTitle: 'title',
+            homeOfferDescription: 'description',
+            homeOfferButtonLabel: 'buttonLabel',
+            homeOfferTile1Label: 'tile1Label',
+            homeOfferTile2Label: 'tile2Label',
+            homeOfferTile3Label: 'tile3Label',
+            homeOfferBenefit1Title: 'benefit1Title',
+            homeOfferBenefit1Detail: 'benefit1Detail',
+            homeOfferBenefit2Title: 'benefit2Title',
+            homeOfferBenefit2Detail: 'benefit2Detail',
+            homeOfferBenefit3Title: 'benefit3Title',
+            homeOfferBenefit3Detail: 'benefit3Detail'
+        };
+        Object.keys(textTargets).forEach(function(id) {
+            var element = document.getElementById(id);
+            if (element) element.textContent = settings[textTargets[id]] || '';
+        });
+        [1, 2, 3].forEach(function(index) {
+            var image = document.getElementById('homeOfferTile' + index + 'Image');
+            var imageUrl = this.normalizeHomeOfferImage(settings['tile' + index + 'Image']);
+            if (image && imageUrl && image.getAttribute('src') !== imageUrl) image.setAttribute('src', imageUrl);
+            if (image) image.setAttribute('alt', settings['tile' + index + 'Label'] || 'CHICHI offer');
+        }.bind(this));
+        var editorTextTargets = {
+            homeOfferAccountNameInput: 'accountName', homeOfferAccountSubtitleInput: 'accountSubtitle',
+            homeOfferVerifiedInput: 'verifiedLabel',
+            homeOfferEyebrowInput: 'eyebrow', homeOfferTitleInput: 'title',
+            homeOfferDescriptionInput: 'description', homeOfferButtonInput: 'buttonLabel',
+            homeOfferTile1LabelInput: 'tile1Label', homeOfferTile1ImageInput: 'tile1Image',
+            homeOfferTile2LabelInput: 'tile2Label', homeOfferTile2ImageInput: 'tile2Image',
+            homeOfferTile3LabelInput: 'tile3Label', homeOfferTile3ImageInput: 'tile3Image',
+            homeOfferBenefit1TitleInput: 'benefit1Title', homeOfferBenefit1DetailInput: 'benefit1Detail',
+            homeOfferBenefit2TitleInput: 'benefit2Title', homeOfferBenefit2DetailInput: 'benefit2Detail',
+            homeOfferBenefit3TitleInput: 'benefit3Title', homeOfferBenefit3DetailInput: 'benefit3Detail'
+        };
+        Object.keys(editorTextTargets).forEach(function(id) {
+            var input = document.getElementById(id);
+            if (input && document.activeElement !== input) input.value = settings[editorTextTargets[id]] || '';
+        });
+        this.renderHomeOfferTrailerFields(settings.trailers);
+        this.renderHomeTrailers();
+    },
+
+    loadHomeOfferSettings: function() {
+        var self = this;
+        if (!this.homeOfferSettings) {
+            var cached = null;
+            try { cached = JSON.parse(localStorage.getItem('chichiHomeOfferSettings') || 'null'); } catch (e) {}
+            this.homeOfferSettings = this.mergeHomeOfferSettings(cached || {});
+            this.applyHomeOfferSettings();
+        }
+        if (!db || this.homeOfferSettingsLoaded || this.homeOfferSettingsLoading) return;
+        this.homeOfferSettingsLoading = true;
+        db.ref('settings/homeOfferHero').once('value').then(function(snapshot) {
+            self.homeOfferSettings = self.mergeHomeOfferSettings(snapshot.val() || {});
+            self.homeOfferSettingsLoaded = true;
+            self.homeOfferSettingsLoading = false;
+            try { localStorage.setItem('chichiHomeOfferSettings', JSON.stringify(self.homeOfferSettings)); } catch (e) {}
+            self.applyHomeOfferSettings();
+        }).catch(function(error) {
+            self.homeOfferSettingsLoading = false;
+            console.warn('Could not load Home offer settings:', error);
+        });
+    },
+
+    loadHomeOfferEditor: function() {
+        if (!this.user || !this.isAdmin || !db) return;
+        var self = this;
+        db.ref('settings/homeOfferHero').once('value').then(function(snapshot) {
+            self.homeOfferSettings = self.mergeHomeOfferSettings(snapshot.val() || {});
+            self.homeOfferSettingsLoaded = true;
+            try { localStorage.setItem('chichiHomeOfferSettings', JSON.stringify(self.homeOfferSettings)); } catch (e) {}
+            self.applyHomeOfferSettings();
+        }).catch(function(error) {
+            self.toast('Could not load storefront settings: ' + error.message, 'error');
+        });
+    },
+
+    saveHomeOfferSettings: function() {
+        if (!this.user || !this.isAdmin || !db) {
+            this.toast('Admin access required', 'error');
+            return;
+        }
+        var self = this;
+        var defaults = this.getDefaultHomeOfferSettings();
+        var fields = {
+            accountName: 'homeOfferAccountNameInput', accountSubtitle: 'homeOfferAccountSubtitleInput',
+            verifiedLabel: 'homeOfferVerifiedInput',
+            eyebrow: 'homeOfferEyebrowInput', title: 'homeOfferTitleInput',
+            description: 'homeOfferDescriptionInput', buttonLabel: 'homeOfferButtonInput',
+            tile1Label: 'homeOfferTile1LabelInput', tile2Label: 'homeOfferTile2LabelInput', tile3Label: 'homeOfferTile3LabelInput',
+            benefit1Title: 'homeOfferBenefit1TitleInput', benefit1Detail: 'homeOfferBenefit1DetailInput',
+            benefit2Title: 'homeOfferBenefit2TitleInput', benefit2Detail: 'homeOfferBenefit2DetailInput',
+            benefit3Title: 'homeOfferBenefit3TitleInput', benefit3Detail: 'homeOfferBenefit3DetailInput'
+        };
+        var settings = Object.assign({}, this.homeOfferSettings || defaults);
+        Object.keys(fields).forEach(function(key) {
+            var input = document.getElementById(fields[key]);
+            settings[key] = input ? input.value.trim() : settings[key];
+        });
+        var trailerRows = document.querySelectorAll('#homeOfferTrailerFields .home-offer-trailer-row');
+        if (trailerRows.length > 12) {
+            this.toast('You can add up to 12 trailers', 'error');
+            return;
+        }
+        settings.trailers = [];
+        for (var trailerIndex = 0; trailerIndex < trailerRows.length; trailerIndex++) {
+            var trailerTitle = trailerRows[trailerIndex].querySelector('.home-offer-trailer-title-input').value.trim();
+            var trailerUrl = trailerRows[trailerIndex].querySelector('.home-offer-trailer-url-input').value.trim();
+            if (!trailerTitle && !trailerUrl) continue;
+            if (!trailerTitle || !trailerUrl) {
+                this.toast('Trailer ' + (trailerIndex + 1) + ' needs both a title and a YouTube link', 'error');
+                return;
+            }
+            if (!this.getYouTubeVideoId(trailerUrl)) {
+                this.toast('Trailer ' + (trailerIndex + 1) + ' needs a valid YouTube URL', 'error');
+                return;
+            }
+            settings.trailers.push({title: trailerTitle, url: trailerUrl});
+        }
+        settings.trailersCustomized = true;
+        var imageJobs = [1, 2, 3].map(function(index) {
+            var fileInput = document.getElementById('homeOfferTile' + index + 'FileInput');
+            var urlInput = document.getElementById('homeOfferTile' + index + 'ImageInput');
+            var file = fileInput && fileInput.files && fileInput.files[0];
+            var url = urlInput && urlInput.value.trim();
+            if (!file) {
+                var resolved = self.normalizeHomeOfferImage(url || settings['tile' + index + 'Image'] || defaults['tile' + index + 'Image']);
+                if (!resolved) return Promise.reject(new Error('Enter a valid image URL for tile ' + index + ' or choose an image file.'));
+                settings['tile' + index + 'Image'] = resolved;
+                return Promise.resolve();
+            }
+            var formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', UPLOAD_PRESET);
+            return fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', {method: 'POST', body: formData})
+                .then(function(response) { if (!response.ok) throw new Error('Image upload failed for tile ' + index); return response.json(); })
+                .then(function(data) { if (!data.secure_url) throw new Error('Image upload returned no URL for tile ' + index); settings['tile' + index + 'Image'] = data.secure_url; });
+        });
+        Promise.all(imageJobs).then(function() {
+            return db.ref('settings/homeOfferHero').set(settings);
+        }).then(function() {
+            self.homeOfferSettings = self.mergeHomeOfferSettings(settings);
+            self.homeOfferSettingsLoaded = true;
+            self.homeOfferTrailerFieldsDirty = false;
+            try { localStorage.setItem('chichiHomeOfferSettings', JSON.stringify(self.homeOfferSettings)); } catch (e) {}
+            self.applyHomeOfferSettings();
+            [1, 2, 3].forEach(function(index) {
+                var fileInput = document.getElementById('homeOfferTile' + index + 'FileInput');
+                if (fileInput) fileInput.value = '';
+            });
+            self.toast('Home offer card updated', 'success');
+        }).catch(function(error) {
+            self.toast('Could not save storefront: ' + error.message, 'error');
+        });
+    },
+
+    publishAdminOffer: function() {
+        var titleInput = document.getElementById('adminOfferTitle');
+        var messageInput = document.getElementById('adminOfferMessage');
+        var postTypeInput = document.getElementById('adminPostType');
+        var imageFileInput = document.getElementById('adminOfferImageFile');
+        var imageInput = document.getElementById('adminOfferImage');
+        var title = titleInput && titleInput.value.trim();
+        var message = messageInput && messageInput.value.trim();
+        var postType = postTypeInput ? postTypeInput.value : 'offer';
+        if (!title || !message) {
+            this.toast('Add an offer title and message', 'error');
+            return;
+        }
+        var publishOffer = function(imageUrl) {
+            var offer = {
+            userId: this.user.uid,
+            userName: (this.homeOfferSettings && this.homeOfferSettings.accountName) || 'CHICHI Offers',
+            userPhoto: 'icon-192.png',
+            photoUrl: imageUrl || '',
+            caption: title + '\n\n' + message,
+            hashtags: ['#offer', '#chichi'],
+            likes: {}, comments: [], downloads: 0,
+            isSupportPost: true,
+            source: postType === 'update' ? 'CHICHI Admin Update' : 'CHICHI Admin Offer',
+            posterType: postType,
+            createdAt: new Date().toLocaleString('en-KE'),
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            return db.ref('posts').push(offer);
+        }.bind(this);
+        var selectedFile = imageFileInput && imageFileInput.files && imageFileInput.files[0];
+        var imageUrl = imageInput && imageInput.value.trim();
+        var uploadPromise = Promise.resolve(imageUrl);
+        if (selectedFile) {
+            var formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('upload_preset', UPLOAD_PRESET);
+            uploadPromise = fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', {
+                method: 'POST',
+                body: formData
+            }).then(function(response) {
+                if (!response.ok) throw new Error('Image upload failed');
+                return response.json();
+            }).then(function(data) { return data.secure_url || ''; });
+        }
+        uploadPromise.then(publishOffer).then(function() {
+            app.toast(postType === 'update' ? 'Update poster published' : 'Offer poster published', 'success');
+            if (titleInput) titleInput.value = '';
+            if (messageInput) messageInput.value = '';
+            if (imageFileInput) imageFileInput.value = '';
+            if (imageInput) imageInput.value = '';
+            app.loadPosts();
+            app.loadAdminOffers();
+        }).catch(function(err) { app.toast('Could not publish offer: ' + err.message, 'error'); });
+    },
+
+    loadAdminOffers: function() {
+        var container = document.getElementById('adminOffersList');
+        if (!container) return;
+        var offers = (this.posts || []).filter(function(post) { return post.source === 'CHICHI Admin Offer' || post.source === 'CHICHI Admin Update'; }).slice(0, 10);
+        container.innerHTML = offers.length ? offers.map(function(offer) {
+            var typeLabel = offer.source === 'CHICHI Admin Update' ? 'UPDATE POSTER' : 'OFFER POSTER';
+            return '<div class="admin-offer-row"><div><strong>' + (offer.caption || '').split('\n')[0] + '</strong><span>' + typeLabel + ' · ' + (offer.createdAt || '') + '</span></div><div class="admin-offer-row-actions"><button type="button" class="admin-offer-edit-button" onclick="app.editAdminPost(\'' + offer.id + '\')">Edit</button><button type="button" onclick="app.deleteAdminOffer(\'' + offer.id + '\')" title="Delete poster">Delete</button></div></div>';
+        }).join('') : '<div class="admin-empty-state">No offer or update posters published yet.</div>';
+    },
+
+    editAdminPost: function(id) {
+        if (!this.user || !this.isAdmin) {
+            this.toast('Admin access required', 'error');
+            return;
+        }
+        var post = (this.posts || []).find(function(item) { return item.id === id; });
+        if (!post) {
+            this.toast('Could not find that post. Refresh the admin posts list and try again.', 'error');
+            return;
+        }
+        var previousModal = document.getElementById('adminEditPostModal');
+        if (previousModal) previousModal.remove();
+        var modal = document.createElement('div');
+        modal.id = 'adminEditPostModal';
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = '<div class="modal admin-edit-post-modal"><div class="modal-close"><button type="button" aria-label="Close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2>Edit post</h2><p>Changes update this post in place; they will not create a duplicate.</p><label for="adminEditPostCaption">Post text / caption</label><textarea id="adminEditPostCaption" rows="6"></textarea><label for="adminEditPostImageUrl">Image URL</label><input id="adminEditPostImageUrl" type="url" placeholder="Paste a new image URL or leave blank to remove the image"><label for="adminEditPostImageFile">Or upload a replacement image</label><input id="adminEditPostImageFile" type="file" accept="image/*"><div class="admin-edit-post-actions"><button type="button" class="admin-edit-post-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button><button type="button" class="admin-edit-post-save" onclick="app.saveAdminPostEdits(\'' + id + '\')">Save post</button></div></div>';
+        document.body.appendChild(modal);
+        modal.querySelector('#adminEditPostCaption').value = post.caption || '';
+        modal.querySelector('#adminEditPostImageUrl').value = post.photoUrl || '';
+        modal.querySelector('#adminEditPostCaption').focus();
+    },
+
+    saveAdminPostEdits: function(id) {
+        if (!this.user || !this.isAdmin || !db) {
+            this.toast('Admin access required', 'error');
+            return;
+        }
+        var post = (this.posts || []).find(function(item) { return item.id === id; });
+        var modal = document.getElementById('adminEditPostModal');
+        if (!post || !modal) return;
+        var caption = modal.querySelector('#adminEditPostCaption').value.trim();
+        var imageUrl = modal.querySelector('#adminEditPostImageUrl').value.trim();
+        var imageFileInput = modal.querySelector('#adminEditPostImageFile');
+        var imageFile = imageFileInput && imageFileInput.files && imageFileInput.files[0];
+        if (!caption && !imageUrl && !imageFile) {
+            this.toast('A post needs text or an image', 'error');
+            return;
+        }
+        var self = this;
+        var uploadPromise = Promise.resolve(imageUrl);
+        if (imageFile) {
+            var formData = new FormData();
+            formData.append('file', imageFile);
+            formData.append('upload_preset', UPLOAD_PRESET);
+            uploadPromise = fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', {method: 'POST', body: formData})
+                .then(function(response) { if (!response.ok) throw new Error('Image upload failed'); return response.json(); })
+                .then(function(data) { if (!data.secure_url) throw new Error('Image upload returned no URL'); return data.secure_url; });
+        }
+        uploadPromise.then(function(photoUrl) {
+            return db.ref('posts/' + id).update({
+                caption: caption,
+                photoUrl: photoUrl,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            }).then(function() { return photoUrl; });
+        }).then(function(photoUrl) {
+            post.caption = caption;
+            post.photoUrl = photoUrl;
+            post.updatedAt = Date.now();
+            modal.remove();
+            self.toast('Post updated', 'success');
+            self.loadAdminPosts();
+            self.loadAdminOffers();
+            self.loadPosts();
+            if (self.currentView === 'feed') self.renderFeed();
+        }).catch(function(error) {
+            self.toast('Could not update post: ' + error.message, 'error');
+        });
+    },
+
+    deleteAdminOffer: function(id) {
+        if (!id || !confirm('Delete this official offer from Home?')) return;
+        var self = this;
+        db.ref('posts/' + id).remove().then(function() {
+            self.toast('Official offer deleted', 'success');
+            self.loadPosts();
+            self.loadAdminOffers();
+            self.renderFeed();
+        }).catch(function(err) {
+            self.toast('Could not delete offer: ' + err.message, 'error');
+        });
     },
 
     adminDeletePost: function(id) {
@@ -2260,6 +2921,18 @@ var app = {
             return;
         }
 
+        var userSelect = document.getElementById('adminNotificationUser');
+        if (userSelect) {
+            db.ref('users').once('value', function(userSnapshot) {
+                var options = '<option value="">Select a user...</option>';
+                userSnapshot.forEach(function(child) {
+                    var user = child.val() || {};
+                    options += '<option value="' + child.key + '">' + (user.name || 'Unnamed user') + ' (@' + (user.username || child.key) + ')</option>';
+                });
+                userSelect.innerHTML = options;
+            });
+        }
+
         notifContainer.innerHTML = '<div style="padding: 20px; text-align: center;">⏳ Loading notifications...</div>';
 
         db.ref('adminNotifications').limitToLast(50).once('value', function(snapshot) {
@@ -2311,6 +2984,125 @@ var app = {
         }, function(err) {
             console.error('❌ Firebase error:', err);
             notifContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">❌ Firebase Error: ' + err.message + '</div>';
+        });
+    },
+
+    sendUserAccessUpdate: function() {
+        var userSelect = document.getElementById('adminNotificationUser');
+        var messageInput = document.getElementById('adminNotificationMessage');
+        var profileInput = document.getElementById('adminAccessProfile');
+        var expiryInput = document.getElementById('adminAccessExpiry');
+        var paidInput = document.getElementById('adminAccessPaid');
+        var userId = userSelect && userSelect.value;
+        var message = messageInput && messageInput.value.trim();
+        var accessProfile = profileInput && profileInput.value.trim();
+        var expiry = expiryInput && expiryInput.value;
+        var accessPaid = paidInput ? paidInput.checked : false;
+
+        if (!userId || !message) {
+            this.toast('Select a user and enter a message', 'error');
+            return;
+        }
+
+        var updates = {};
+        var notificationRef = db.ref('notifications/' + userId).push();
+        updates['notifications/' + userId + '/' + notificationRef.key] = {
+            type: 'access_update',
+            message: message,
+            accessProfile: accessProfile || 'Assigned profile',
+            accessExpiry: expiry ? this.parseExpiryDate(expiry) : null,
+            accessPaid: accessPaid,
+            from: 'CHICHI Support',
+            read: false,
+            createdAt: new Date().toLocaleString('en-KE'),
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+        if (expiry) {
+            updates['users/' + userId + '/accessExpiry'] = this.parseExpiryDate(expiry);
+            updates['users/' + userId + '/accessPaid'] = accessPaid;
+            updates['users/' + userId + '/accessProfile'] = accessProfile || 'Assigned profile';
+        }
+
+        db.ref().update(updates).then(function() {
+        }).then(function() {
+            app.toast('Access update sent successfully', 'success');
+            if (messageInput) messageInput.value = '';
+            if (profileInput) profileInput.value = '';
+            if (expiryInput) expiryInput.value = '';
+        }).catch(function(err) {
+            app.toast('Could not send update: ' + err.message, 'error');
+        });
+    },
+
+    parseExpiryDate: function(dateValue) {
+        var parts = String(dateValue || '').split('-');
+        if (parts.length !== 3) return NaN;
+        return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 23, 59, 59, 999).getTime();
+    },
+
+    showPublicSubscribersModal: function() {
+        var existing = document.getElementById('publicSubscribersModal');
+        if (existing) existing.remove();
+        var modal = document.createElement('div');
+        modal.id = 'publicSubscribersModal';
+        modal.className = 'modal-overlay active';
+        modal.style.zIndex = '10060';
+        modal.innerHTML = '<div class="modal" style="max-width:430px;width:94%;"><div class="modal-close"><button type="button" onclick="document.getElementById(\'publicSubscribersModal\').remove()">✕</button></div><div class="admin-kicker">PUBLIC UPDATES</div><h2 style="margin:4px 0 6px;">Subscribed customers</h2><p style="margin:0 0 16px;color:#64748b;font-size:12px;line-height:1.4;">Add a customer to the public Updates list with their name, profile, and live countdown.</p><select id="publicSubscriberUser" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:10px;font:inherit;"><option value="">Select customer...</option></select><input id="publicSubscriberProfile" type="text" placeholder="Assigned profile, e.g. Profile 1" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:10px;box-sizing:border-box;font:inherit;"><label style="display:block;margin-bottom:5px;color:#475569;font-size:12px;font-weight:700;">Access expires on</label><input id="publicSubscriberExpiry" type="date" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;box-sizing:border-box;font:inherit;"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;background:#f8fbfb;border:1px solid #dbe8e3;border-radius:8px;color:#526b78;font-size:11px;line-height:1.35;"><input id="publicSubscriberConsent" type="checkbox" style="margin-top:2px;"><span>I confirm this customer has agreed to public marketing display of their name, profile, and countdown.</span></label><button type="button" onclick="app.addPublicSubscriber()" style="width:100%;padding:11px;margin-top:12px;background:#0f766e;color:#fff;border:0;border-radius:8px;font:inherit;font-weight:800;cursor:pointer;">Add to Updates</button><div id="publicSubscribersList" style="margin-top:18px;"></div></div>';
+        document.body.appendChild(modal);
+        var self = this;
+        var select = document.getElementById('publicSubscriberUser');
+        var appendUserOption = function(uid, user) {
+            if (!select || select.querySelector('option[value="' + uid + '"]')) return;
+            select.innerHTML += '<option value="' + uid + '">' + (user.name || 'Unnamed customer') + ' (@' + (user.username || uid) + ')</option>';
+        };
+        Object.keys(this.users || {}).forEach(function(uid) { appendUserOption(uid, self.users[uid] || {}); });
+        db.ref('users').once('value').then(function(snapshot) {
+            if (!select) return;
+            snapshot.forEach(function(child) {
+                appendUserOption(child.key, child.val() || {});
+            });
+            self.loadPublicSubscribersList();
+        }).catch(function(err) {
+            self.toast('Could not load customers: ' + err.message, 'error');
+            self.loadPublicSubscribersList();
+        });
+    },
+
+    addPublicSubscriber: function() {
+        var userId = document.getElementById('publicSubscriberUser').value;
+        var profile = document.getElementById('publicSubscriberProfile').value.trim() || 'Assigned profile';
+        var expiry = document.getElementById('publicSubscriberExpiry').value;
+        var consent = document.getElementById('publicSubscriberConsent').checked;
+        if (!userId || !expiry) {
+            this.toast('Select a customer and expiry date', 'error');
+            return;
+        }
+        if (!consent) {
+            this.toast('Confirm customer marketing consent first', 'error');
+            return;
+        }
+        var updates = {};
+        updates['users/' + userId + '/publicAccessStatus'] = true;
+        updates['users/' + userId + '/accessProfile'] = profile;
+        updates['users/' + userId + '/accessExpiry'] = this.parseExpiryDate(expiry);
+        updates['users/' + userId + '/accessPaid'] = true;
+        db.ref().update(updates).then(function() {
+            app.toast('Customer added to public Updates', 'success');
+            app.loadPublicSubscribersList();
+            app.renderFeed();
+        }).catch(function(err) { app.toast('Could not add subscriber: ' + err.message, 'error'); });
+    },
+
+    loadPublicSubscribersList: function() {
+        var list = document.getElementById('publicSubscribersList');
+        if (!list) return;
+        db.ref('users').once('value').then(function(snapshot) {
+            var rows = [];
+            snapshot.forEach(function(child) {
+                var user = child.val() || {};
+                if (user.publicAccessStatus === true && Number(user.accessExpiry) > 0) rows.push('<div class="public-admin-subscriber"><strong>' + (user.name || 'Customer') + '</strong><span>' + (user.accessProfile || 'Assigned profile') + '</span></div>');
+            });
+            list.innerHTML = '<div style="font-size:11px;font-weight:800;color:#526b78;text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;">Currently visible</div>' + (rows.length ? rows.join('') : '<div style="font-size:12px;color:#71838d;">No public subscribers yet.</div>');
         });
     },
 
@@ -3025,6 +3817,30 @@ var app = {
         resultsContainer.innerHTML = html;
     },
 
+    searchAdminUsers: function(query) {
+        var normalized = String(query || '').trim().toLowerCase();
+        var rows = document.querySelectorAll('#adminUsersList .admin-user-row');
+        var visible = 0;
+        rows.forEach(function(row) {
+            var matches = !normalized || (row.getAttribute('data-user-search') || '').indexOf(normalized) !== -1;
+            row.style.display = matches ? 'flex' : 'none';
+            if (matches) visible++;
+        });
+
+        var empty = document.getElementById('adminUsersSearchEmpty');
+        if (!empty && rows.length) {
+            empty = document.createElement('div');
+            empty.id = 'adminUsersSearchEmpty';
+            empty.style.cssText = 'padding:28px 16px;text-align:center;color:#71838d;background:#fff;display:none;';
+            var list = document.getElementById('adminUsersList');
+            if (list) list.appendChild(empty);
+        }
+        if (empty) {
+            empty.textContent = visible ? '' : 'No users match your search.';
+            empty.style.display = visible ? 'none' : 'block';
+        }
+    },
+
     searchExploreUsers: function(query) {
         if (!query || query === '') {
             var input = document.getElementById('exploreSearchInput');
@@ -3330,6 +4146,8 @@ var app = {
     },
 
     showDailyPostPrompt: function() {
+        return;
+
         if (!this.user || this.isGuest || !this.profile) return;
 
         var now = new Date();
@@ -3342,6 +4160,7 @@ var app = {
             modal.innerHTML = '<div class="modal" style="max-width:360px;text-align:center;"><div style="font-size:34px;margin-bottom:10px;">✦</div><h2 style="margin-bottom:8px;">Today\'s post reward</h2><p style="margin:0;color:#6b7280;font-size:14px;line-height:1.5;">Post a photo with a caption to win 10 redeemable CHICHI Coins today. You can redeem them instantly.</p><button class="btn-submit" style="margin-top:18px;" onclick="this.closest(\'.modal-overlay\').remove();app.showCreateModal();">Create today\'s post</button><button style="margin-top:10px;border:0;background:none;color:#6b7280;font:inherit;font-size:13px;cursor:pointer;" onclick="this.closest(\'.modal-overlay\').remove()">Not now</button></div>';
             document.body.appendChild(modal);
         });
+        return;
     },
 
     // ============================================
@@ -5204,6 +6023,13 @@ var app = {
 
     loadProfile: function() {
         var self = this;
+        if (!this.accessCountdownInterval) {
+            this.accessCountdownInterval = setInterval(function() {
+                self.updateAccessCountdown();
+                self.updateHomeAccessCountdown();
+                self.updatePublicSubscriptionCountdowns();
+            }, 1000);
+        }
         db.ref('users/' + this.user.uid).on('value', function(s) {
             if (s.exists()) {
                 self.profile = s.val();
@@ -5234,7 +6060,202 @@ var app = {
 
                 self.checkAndShowHashtagPopup();
                 self.renderProfile();
+                self.updateAccessCountdown();
+                self.syncOwnFollowerCount();
             }
+        });
+    },
+
+    syncOwnFollowerCount: function() {
+        if (!this.user || !db) return;
+        var self = this;
+        db.ref('users').once('value').then(function(snapshot) {
+            var count = 0;
+            snapshot.forEach(function(child) {
+                var following = (child.val() || {}).following || {};
+                if (following[self.user.uid]) count++;
+            });
+            self.profile.followers = count;
+            db.ref('users/' + self.user.uid + '/followers').set(count);
+            if (self.users && self.users[self.user.uid]) self.users[self.user.uid].followers = count;
+            if (self.currentView === 'profile') self.renderProfile();
+        }).catch(function(err) {
+            console.warn('Could not synchronize follower count:', err);
+        });
+    },
+
+    setupUserNotifications: function() {
+        if (!this.user || this.isGuest || !db || this.userNotificationListenerActive) return;
+        var self = this;
+        var notificationsRef = db.ref('notifications/' + this.user.uid);
+        this.userNotificationListenerActive = true;
+        this.refreshClientNotificationBadge();
+        notificationsRef.once('value').then(function(snapshot) {
+            var known = {};
+            var latestAccessExpiry = 0;
+            var latestAccessProfile = '';
+            snapshot.forEach(function(child) { known[child.key] = true; });
+            snapshot.forEach(function(child) {
+                var existingNotification = child.val() || {};
+                var notificationExpiry = Number(existingNotification.accessExpiry || 0);
+                if (existingNotification.type === 'access_update' && notificationExpiry > latestAccessExpiry) {
+                    latestAccessExpiry = notificationExpiry;
+                    latestAccessProfile = existingNotification.accessProfile || '';
+                }
+            });
+            if (latestAccessExpiry) {
+                self.profile = self.profile || {};
+                self.profile.accessExpiry = latestAccessExpiry;
+                if (latestAccessProfile) self.profile.accessProfile = latestAccessProfile;
+                self.updateHomeAccessCountdown();
+                self.updateAccessCountdown();
+            }
+            notificationsRef.on('child_added', function(child) {
+                if (known[child.key]) return;
+                var notification = child.val() || {};
+                if (notification.type !== 'access_update') return;
+                if (notification.accessExpiry) {
+                    self.profile = self.profile || {};
+                    self.profile.accessExpiry = Number(notification.accessExpiry);
+                    if (notification.accessProfile) self.profile.accessProfile = notification.accessProfile;
+                    self.updateHomeAccessCountdown();
+                    self.updateAccessCountdown();
+                }
+                self.showAccessUpdateNotice(notification);
+                self.refreshClientNotificationBadge();
+                if (self.currentView === 'profile') self.renderProfile();
+            });
+        });
+    },
+
+    refreshClientNotificationBadge: function() {
+        if (!this.user || this.isGuest || !db) return;
+        var badge = document.getElementById('clientNotificationBadge');
+        db.ref('notifications/' + this.user.uid).orderByChild('read').equalTo(false).once('value', function(snapshot) {
+            var count = snapshot.numChildren();
+            if (!badge) return;
+            badge.textContent = count > 9 ? '9+' : String(count);
+            badge.style.display = count ? 'block' : 'none';
+        });
+    },
+
+    showAccessUpdateNotice: function(notification) {
+        var existing = document.getElementById('accessUpdateNotice');
+        if (existing) existing.remove();
+        var notice = document.createElement('button');
+        notice.id = 'accessUpdateNotice';
+        notice.type = 'button';
+        notice.className = 'access-update-notice';
+        notice.innerHTML = '<span class="access-update-icon">✓</span><span><strong>Access update received</strong><small>' + (notification.message || 'Your streaming access has been updated.') + '</small></span><span class="access-update-arrow">›</span>';
+        notice.onclick = function() {
+            notice.remove();
+            self.markAccessNotificationsRead();
+            self.switchView('profile');
+        }.bind(this);
+        document.body.appendChild(notice);
+        setTimeout(function() { if (notice.parentNode) notice.remove(); }, 10000);
+    },
+
+    markAccessNotificationsRead: function() {
+        if (!this.user || !db) return;
+        db.ref('notifications/' + this.user.uid).once('value').then(function(snapshot) {
+            var updates = {};
+            snapshot.forEach(function(child) {
+                if ((child.val() || {}).type === 'access_update') updates[child.key + '/read'] = true;
+            });
+            return db.ref('notifications/' + this.user.uid).update(updates);
+        }).then(function() { app.refreshClientNotificationBadge(); });
+    },
+
+    updateAccessCountdown: function() {
+        var countdown = document.getElementById('accessExpiryCountdown');
+        if (!countdown) return;
+        var expiry = Number(this.profile && this.profile.accessExpiry);
+        if (!this.profile || !expiry) {
+            countdown.textContent = 'Paid access expiry will appear here';
+            return;
+        }
+        var remaining = expiry - Date.now();
+        if (remaining <= 0) {
+            countdown.textContent = 'Access expired';
+            countdown.style.color = '#dc2626';
+            return;
+        }
+        var days = Math.floor(remaining / 86400000);
+        var hours = Math.floor((remaining % 86400000) / 3600000);
+        var minutes = Math.floor((remaining % 3600000) / 60000);
+        var seconds = Math.floor((remaining % 60000) / 1000);
+        countdown.textContent = days + 'd ' + hours + 'h ' + minutes + 'm ' + seconds + 's remaining';
+        countdown.style.color = days <= 3 ? '#d97706' : '#0f766e';
+    },
+
+    updateHomeAccessCountdown: function() {
+        var countdown = document.getElementById('homeAccessExpiryCountdown');
+        if (!countdown) return;
+        var expiry = Number(this.profile && this.profile.accessExpiry);
+        if (!this.profile || !expiry) {
+            countdown.textContent = 'No personal subscription';
+            return;
+        }
+        var remaining = expiry - Date.now();
+        if (remaining <= 0) {
+            countdown.textContent = 'Access expired';
+            countdown.style.color = '#dc2626';
+            return;
+        }
+        var days = Math.floor(remaining / 86400000);
+        var hours = Math.floor((remaining % 86400000) / 3600000);
+        var minutes = Math.floor((remaining % 3600000) / 60000);
+        var seconds = Math.floor((remaining % 60000) / 1000);
+        countdown.textContent = days + 'd ' + hours + 'h ' + minutes + 'm ' + seconds + 's remaining';
+        countdown.style.color = days <= 3 ? '#d97706' : '#0f766e';
+    },
+
+    loadPublicSubscriptions: function() {
+        var container = document.getElementById('homePublicSubscriptions');
+        if (!container || !db || !this.user || this.isGuest || this.currentFeedTab !== 'following') {
+            if (container) container.innerHTML = '';
+            return;
+        }
+        var currentUserId = this.user.uid;
+        db.ref('users').once('value').then(function(snapshot) {
+            var subscribers = [];
+            snapshot.forEach(function(child) {
+                var user = child.val() || {};
+                if (child.key !== currentUserId && user.publicAccessStatus === true && Number(user.accessExpiry) > Date.now()) {
+                    subscribers.push({
+                        name: user.name || user.username || 'CHICHI customer',
+                        profile: user.accessProfile || 'Assigned profile',
+                        expiry: Number(user.accessExpiry),
+                        photo: user.profilePhoto || ''
+                    });
+                }
+            });
+            if (!subscribers.length) {
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = '<section class="public-subscriptions-section"><div class="public-subscriptions-heading">Community memberships</div><p class="public-subscriptions-note">Active access shared by other CHICHI members</p>' + subscribers.map(function(subscriber) {
+                var avatar = subscriber.photo ? '<img src="' + subscriber.photo + '" alt="" class="public-subscription-avatar">' : '<span class="public-subscription-avatar public-subscription-initial">' + subscriber.name.charAt(0).toUpperCase() + '</span>';
+                return '<div class="public-subscription-row">' + avatar + '<div class="public-subscription-person"><strong>' + subscriber.name + '</strong><span>' + subscriber.profile + '</span></div><b class="public-subscription-countdown" data-public-expiry="' + subscriber.expiry + '">Checking...</b></div>';
+            }).join('') + '</section>';
+            app.updatePublicSubscriptionCountdowns();
+        });
+    },
+
+    updatePublicSubscriptionCountdowns: function() {
+        document.querySelectorAll('.public-subscription-countdown').forEach(function(element) {
+            var remaining = Number(element.getAttribute('data-public-expiry')) - Date.now();
+            if (remaining <= 0) {
+                element.textContent = 'Expired';
+                element.classList.add('expired');
+                return;
+            }
+            var days = Math.floor(remaining / 86400000);
+            var hours = Math.floor((remaining % 86400000) / 3600000);
+            var minutes = Math.floor((remaining % 3600000) / 60000);
+            var seconds = Math.floor((remaining % 60000) / 1000);
+            element.textContent = days + 'd ' + hours + 'h ' + minutes + 'm ' + seconds + 's';
         });
     },
 
@@ -5434,6 +6455,12 @@ var app = {
                     </div>
                 </div>
 
+                <div style="display:${Number(this.profile.accessExpiry) > 0 || this.profile.accessPaid === true ? 'block' : 'none'};margin:12px 16px 0;padding:14px 16px;background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;">
+                    <div style="font-size:10px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.5px;">Streaming access</div>
+                    <div id="accessExpiryCountdown" style="font-size:20px;font-weight:800;color:#0f766e;margin-top:5px;">${this.profile.accessExpiry ? 'Checking expiry...' : 'No access expiry set yet'}</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:3px;">Your access countdown updates when CHICHI sends your access details.</div>
+                </div>
+
                 <!-- ABOUT & BIO SECTION -->
                 <div style="background: white; padding: 14px 16px; border-bottom: 1px solid #f0f0f0;">
                     <!-- Email -->
@@ -5493,6 +6520,7 @@ var app = {
         `;
 
         profileContent.innerHTML = html;
+        this.updateAccessCountdown();
         console.log('✅ Profile rendered successfully!');
     },
 
@@ -6100,7 +7128,7 @@ var app = {
 
             var storiesList = document.getElementById('storiesList');
             if (storiesList) {
-                storiesList.innerHTML = html;
+                if (storiesList.innerHTML !== html) storiesList.innerHTML = html;
             }
         });
     },
@@ -6621,6 +7649,9 @@ var app = {
     // ============================================
 
     showCreateModal: function() {
+        this.switchView('messages');
+        return;
+
         if (!this.user || this.isGuest) {
             this.showGuestPostPrompt();
             return;
@@ -6996,7 +8027,7 @@ loadMessages: function() {
             });
         }
 
-        container.innerHTML = html;
+        if (container.innerHTML !== html) container.innerHTML = html;
         
         // After rendering, update badges
         self.updateUnreadBadge();
@@ -7017,6 +8048,23 @@ loadMessages: function() {
         return;
     }
 
+    var nextChatKey = [this.user.uid, uid].sort().join('_');
+    var previousChatKey = this.chatMessageListenerKey || (this.currentChat && [this.user.uid, this.currentChat.uid].sort().join('_'));
+    if (previousChatKey && previousChatKey !== nextChatKey) {
+        db.ref('chats/' + previousChatKey + '/messages').off();
+        db.ref('messages/' + previousChatKey).off();
+        this.chatMessagesListener = null;
+        this.messageStoreListener = null;
+        this.chatMessageListenerKey = null;
+    }
+    this.chatMessageLoadId = (this.chatMessageLoadId || 0) + 1;
+    this.currentView = 'chat';
+
+    if (this.activePlanSupport && this.currentChat && this.currentChat.uid !== uid) {
+        this.setPlanSupportPresence(this.currentChat.uid, false);
+    }
+    this.stopPlanSupportPresenceListener();
+
     // CRITICAL: Mark messages as read FIRST
     this.markAsRead(uid);
     var openedRow = document.querySelector('.msg-item-wrapper[data-uid="' + uid + '"]');
@@ -7027,7 +8075,6 @@ loadMessages: function() {
 
     document.querySelectorAll('.view').forEach(function(view) {
         view.classList.remove('active');
-        view.style.display = 'none !important';
     });
 
     var chatView = document.getElementById('chatView');
@@ -7040,7 +8087,9 @@ loadMessages: function() {
 
     this.currentChat = { uid: uid, name: name };
     this.trackTyping();
-    document.getElementById('chatHeaderName').textContent = name;
+    var headerName = document.getElementById('chatHeaderName');
+    if (headerName) headerName.textContent = name;
+    this.planSupportAdminActive = false;
 
     var avatar = document.getElementById('chatHeaderAvatar');
     var userPhoto = this.users[uid] && this.users[uid].profilePhoto;
@@ -7052,6 +8101,44 @@ loadMessages: function() {
     } else {
         avatar.style.backgroundImage = 'none';
         avatar.textContent = name.charAt(0).toUpperCase();
+    }
+
+    var chatPartnerEmail = String((this.users[uid] && this.users[uid].email) || '').trim().toLowerCase();
+    if (String(this.user.email || '').trim().toLowerCase() === 'onchari.dev@gmail.com') {
+        var supportAdminSelf = this;
+        var adminChatKey = [this.user.uid, uid].sort().join('_');
+        this.isPlanSupportConversation = false;
+        this.isPlanSupportChat(adminChatKey).then(function(isPlanChat) {
+            if (!isPlanChat || supportAdminSelf.currentView !== 'chat' || !supportAdminSelf.currentChat || supportAdminSelf.currentChat.uid !== uid) return;
+            supportAdminSelf.isPlanSupportConversation = true;
+            supportAdminSelf.setPlanSupportPresence(uid, true);
+            var supportHeader = document.getElementById('chatHeaderName');
+            if (supportHeader) supportHeader.textContent = 'Customer · CHICHI Support';
+        });
+    } else if (uid === this.planSupportAdminId || chatPartnerEmail === 'onchari.dev@gmail.com') {
+        var customerApp = this;
+        var customerChatKey = [this.user.uid, uid].sort().join('_');
+        this.isPlanSupportConversation = false;
+        this.planSupportAdminId = null;
+        this.isPlanSupportChat(customerChatKey).then(function(isPlanChat) {
+            if (!isPlanChat || customerApp.currentView !== 'chat' || !customerApp.currentChat || customerApp.currentChat.uid !== uid) return;
+            customerApp.planSupportAdminId = uid;
+            customerApp.isPlanSupportConversation = true;
+            if (headerName) headerName.textContent = 'CHICHI Plans Assistant';
+            if (avatar) {
+                avatar.style.backgroundImage = 'url(icon-192.png)';
+                avatar.style.backgroundSize = 'cover';
+                avatar.style.backgroundPosition = 'center';
+                avatar.textContent = '';
+            }
+            var supportStatus = document.getElementById('statusText');
+            if (supportStatus) supportStatus.textContent = 'Automated plan help · Onchari replies here';
+            customerApp.listenForPlanSupportPresence(uid);
+        });
+    } else {
+        this.planSupportAdminId = null;
+        this.planSupportAdminActive = false;
+        this.isPlanSupportConversation = false;
     }
 
     // Update online status
@@ -7069,7 +8156,7 @@ loadMessages: function() {
         savedWallpaperDim === null ? DEFAULT_CHAT_WALLPAPER_DIM : savedWallpaperDim
     );
 
-    document.getElementById('chatMessages').innerHTML = '';
+    document.getElementById('chatMessages').innerHTML = '<div class="chat-loading-state" role="status">Loading conversation…</div>';
     document.getElementById('chatMessageInput').value = '';
 
     var self = this;
@@ -7083,23 +8170,27 @@ loadMessages: function() {
     // CHAT FEATURES - TYPING INDICATOR  
     // ============================================
 
-    showTypingIndicator: function() {
+    showTypingIndicator: function(userName) {
         if (!this.currentChat) return;
         var indicator = document.getElementById('typingIndicator');
         if (indicator) {
+            var text = document.getElementById('typingText');
+            if (text) text.textContent = (userName || this.currentChat.name || 'User') + ' is typing';
             indicator.style.display = 'flex';
-            setTimeout(function() {
-                if (indicator.style.display === 'flex') {
-                    indicator.style.display = 'none';
-                }
-            }, 3000);
         }
+        if (this.typingDisplayTimeout) clearTimeout(this.typingDisplayTimeout);
+        var self = this;
+        this.typingDisplayTimeout = setTimeout(function() { self.hideTypingIndicator(); }, 5500);
     },
 
     hideTypingIndicator: function() {
         var indicator = document.getElementById('typingIndicator');
         if (indicator) {
             indicator.style.display = 'none';
+        }
+        if (this.typingDisplayTimeout) {
+            clearTimeout(this.typingDisplayTimeout);
+            this.typingDisplayTimeout = null;
         }
     },
 
@@ -7169,6 +8260,9 @@ loadMessages: function() {
             chatView.classList.remove('active');
             chatView.style.display = 'none';
         }
+        this.stopTypingIndicator();
+        if (this.activePlanSupport && this.currentChat) this.setPlanSupportPresence(this.currentChat.uid, false);
+        this.stopPlanSupportPresenceListener();
         if (this.currentChat && this.chatMessagesListener) {
             var key = [this.user.uid, this.currentChat.uid].sort().join('_');
             db.ref('chats/' + key + '/messages').off();
@@ -7176,14 +8270,113 @@ loadMessages: function() {
             db.ref('messages/' + key).off();
             this.messageStoreListener = null;
         }
-        this.stopTypingIndicator();
         if (this.typingListener && this.currentChat) {
             var typingKey = [this.user.uid, this.currentChat.uid].sort().join('_');
             db.ref('typing/' + typingKey).off();
             this.typingListener = null;
         }
         this.currentChat = null;
+        this.isPlanSupportConversation = false;
+        this.planSupportAdminActive = false;
         this.switchView('messages');
+    },
+
+    setPlanSupportPresence: function(customerUid, isActive) {
+        if (!this.user || !this.user.uid || !customerUid || !db) return;
+        var adminEmail = String(this.user.email || '').trim().toLowerCase();
+        if (adminEmail !== 'onchari.dev@gmail.com') return;
+        var sessionKey = [customerUid, this.user.uid].sort().join('_');
+        var presenceRef = db.ref('planSupportPresence/' + customerUid + '/' + sessionKey);
+        if (isActive) {
+            this.activePlanSupport = true;
+            presenceRef.onDisconnect().remove();
+            presenceRef.set({
+                adminUid: this.user.uid,
+                adminEmail: adminEmail,
+                adminName: 'Onchari',
+                adminPhoto: this.profile.profilePhoto || this.user.photoURL || '',
+                active: true,
+                lastActiveAt: firebase.database.ServerValue.TIMESTAMP
+            });
+            var customerChatKey = [customerUid, this.user.uid].sort().join('_');
+            var adminChatKey = customerChatKey;
+            db.ref('chats/' + adminChatKey + '/messages').once('value').then(function(snapshot) {
+                var updates = {};
+                snapshot.forEach(function(child) {
+                    var message = child.val() || {};
+                    if (message.type === 'plan_bot' && Array.isArray(message.quickReplies) && message.quickReplies.length) {
+                        updates['chats/' + adminChatKey + '/messages/' + child.key + '/quickReplies'] = null;
+                        updates['messages/' + adminChatKey + '/' + child.key + '/quickReplies'] = null;
+                    }
+                });
+                if (Object.keys(updates).length) db.ref().update(updates);
+            }).catch(function() {});
+        } else {
+            this.activePlanSupport = false;
+            presenceRef.remove();
+        }
+    },
+
+    listenForPlanSupportPresence: function(adminUid) {
+        if (!this.currentChat || !this.user || !adminUid || !db) return;
+        var self = this;
+        this.stopPlanSupportPresenceListener();
+        var ref = db.ref('planSupportPresence/' + this.user.uid);
+        this.planSupportPresenceKey = this.user.uid;
+        this.planSupportPresenceListener = ref.on('value', function(snapshot) {
+            if (!self.currentChat || self.currentChat.uid !== adminUid) return;
+            var activeSession = null;
+            snapshot.forEach(function(child) {
+                var value = child.val() || {};
+                if (value.active && value.adminEmail === 'onchari.dev@gmail.com' && value.adminUid === adminUid) activeSession = value;
+            });
+            var title = document.getElementById('chatHeaderName');
+            var photo = document.getElementById('chatHeaderAvatar');
+            var status = document.getElementById('statusText');
+            if (activeSession) {
+                var wasActive = self.planSupportAdminActive;
+                self.planSupportAdminId = adminUid;
+                self.planSupportAdminActive = true;
+                self.isPlanSupportConversation = true;
+                if (title) title.textContent = 'CHICHI Support – Onchari';
+                if (photo) {
+                    if (activeSession.adminPhoto) {
+                        photo.style.backgroundImage = 'url(' + activeSession.adminPhoto + ')';
+                        photo.style.backgroundSize = 'cover';
+                        photo.style.backgroundPosition = 'center';
+                        photo.textContent = '';
+                    } else {
+                        photo.style.backgroundImage = 'none';
+                        photo.textContent = 'O';
+                    }
+                }
+                if (status) { status.textContent = 'Support agent is here'; status.style.color = '#d9f99d'; }
+            } else {
+                var wasActive = self.planSupportAdminActive;
+                self.planSupportAdminActive = false;
+                self.isPlanSupportConversation = true;
+                if (title) title.textContent = 'CHICHI Plans Assistant';
+                if (photo) {
+                    photo.style.backgroundImage = 'none';
+                    photo.textContent = 'C';
+                }
+                if (status) { status.textContent = 'Automated plan help · Onchari replies here'; status.style.color = 'rgba(255,255,255,0.78)'; }
+                if (wasActive) {
+                    var chatKey = [self.user.uid, adminUid].sort().join('_');
+                    self.writePlanAssistantReply(chatKey, adminUid, 'Onchari has left the chat. I’m back to help instantly—choose an option or type your question.', self.getPlanQuickReplies()).catch(function(error) {
+                        console.warn('Could not resume plan assistant:', error);
+                    });
+                }
+            }
+        });
+    },
+
+    stopPlanSupportPresenceListener: function() {
+        if (this.planSupportPresenceListener && this.planSupportPresenceKey && db) {
+            db.ref('planSupportPresence/' + this.planSupportPresenceKey).off('value', this.planSupportPresenceListener);
+        }
+        this.planSupportPresenceListener = null;
+        this.planSupportPresenceKey = null;
     },
 
     // ============================================
@@ -7194,16 +8387,18 @@ loadMessages: function() {
         if (!this.currentChat) return;
         var self = this;
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+        var loadToken = this.chatMessageLoadId = (this.chatMessageLoadId || 0) + 1;
         if (!this.chatMessages) this.chatMessages = {};
-        if (this.chatMessagesListener) {
-            db.ref('chats/' + key + '/messages').off();
+        if (this.chatMessageListenerKey) {
+            db.ref('chats/' + this.chatMessageListenerKey + '/messages').off();
+            db.ref('messages/' + this.chatMessageListenerKey).off();
+            this.chatMessageListenerKey = null;
         }
-        if (this.messageStoreListener) {
-            db.ref('messages/' + key).off();
-            this.messageStoreListener = null;
-        }
+        this.chatMessagesListener = null;
+        this.messageStoreListener = null;
 
         db.ref('chats/' + key + '/messages').once('value').then(function(snapshot) {
+            if (loadToken !== self.chatMessageLoadId || !self.currentChat || [self.user.uid, self.currentChat.uid].sort().join('_') !== key) return;
             var messages = [];
             snapshot.forEach(function(c) {
                 var m = c.val();
@@ -7214,6 +8409,7 @@ loadMessages: function() {
             });
             messages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
             self.chatMessages[key] = messages;
+            self.chatMessageListenerKey = key;
             self.displayChatMessages(messages, key);
 
             self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
@@ -7231,8 +8427,29 @@ loadMessages: function() {
                     self.markAsRead(self.currentChat.uid);
                 }
             });
-            db.ref('chats/' + key + '/messages').on('child_changed', function() {
-                self.loadChatMessages();
+            db.ref('chats/' + key + '/messages').on('child_changed', function(snap) {
+                var updated = snap.val() || {};
+                var currentMessages = self.chatMessages[key] || [];
+                var cachedMessage = currentMessages.find(function(message) { return message.id === snap.key; });
+                if (!cachedMessage) return;
+                var contentChanged = cachedMessage.text !== updated.text || cachedMessage.image !== updated.image ||
+                    cachedMessage.deleted !== updated.deleted || cachedMessage.deletedForEveryone !== updated.deletedForEveryone ||
+                    JSON.stringify(cachedMessage.quickReplies || []) !== JSON.stringify(updated.quickReplies || []);
+                Object.keys(updated).forEach(function(property) { cachedMessage[property] = updated[property]; });
+                if (!updated.quickReplies) delete cachedMessage.quickReplies;
+                if (contentChanged || (updated.deleted_for && updated.deleted_for[self.user.uid])) {
+                    self.displayChatMessages(currentMessages, key);
+                    return;
+                }
+                var messageRow = document.querySelector('.message-group[data-message-id="' + snap.key + '"]');
+                var readStatus = messageRow && messageRow.querySelector('.message-read-status');
+                if (readStatus && cachedMessage.sender === self.user.uid) {
+                    var status = cachedMessage.read ? 'read' : (cachedMessage.delivered ? 'delivered' : 'sent');
+                    readStatus.classList.remove('read', 'delivered', 'sent');
+                    readStatus.classList.add(status);
+                    readStatus.textContent = cachedMessage.read || cachedMessage.delivered ? '✓✓' : '✓';
+                    readStatus.setAttribute('aria-label', status.charAt(0).toUpperCase() + status.slice(1));
+                }
             });
             self.messageStoreListener = db.ref('messages/' + key).on('child_added', function(snap) {
                 self.appendIncomingChatMessage(snap, key);
@@ -7256,9 +8473,15 @@ loadMessages: function() {
 
         var html = '';
         var lastDate = '';
+        var escapeMessageHtml = function(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, function(character) {
+                return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character];
+            });
+        };
         messages.forEach(function(m, idx) {
             if (!m || m.deleted || m.deletedForEveryone || (m.deleted_for && m.deleted_for[self.user.uid]) || (!m.text && !m.image)) return;
             var side = m.sender === self.user.uid ? 'own' : 'other';
+            var arrivalClass = m.isAutoReply ? ' admin-reply-arrival' : '';
             var timestamp = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
 
             if (idx === 0 || (messages[idx-1] && new Date(messages[idx-1].timestamp).toDateString() !== new Date(m.timestamp).toDateString())) {
@@ -7279,7 +8502,13 @@ loadMessages: function() {
             if (m.image) {
                 content += '<img src="' + m.image + '" style="max-width:180px;border-radius:12px;cursor:pointer;" onclick="app.viewFullImage(\'' + m.image + '\')">';
             }
-            if (m.text) { content += '<div>' + m.text + '</div>'; }
+            if (m.text) { content += '<div>' + self.escapeChatMessageText(m.text) + '</div>'; }
+            if (Array.isArray(m.quickReplies) && m.quickReplies.length) {
+                content += '<div class="plan-quick-replies" role="group" aria-label="Plan options">' + m.quickReplies.map(function(reply) {
+                    if (!reply || !reply.value || !reply.label) return '';
+                    return '<button type="button" onclick="app.handlePlanChoice(\'' + escapeMessageHtml(reply.value) + '\')">' + escapeMessageHtml(reply.label) + '</button>';
+                }).join('') + '</div>';
+            }
 
             var otherUserName = self.currentChat.name || 'User';
             var otherUserInitial = otherUserName.charAt(0).toUpperCase();
@@ -7292,12 +8521,12 @@ loadMessages: function() {
                 </div>`;
             }
 
-            html += '<div class="message-group ' + side + '">';
+            html += '<div class="message-group ' + side + arrivalClass + '" data-message-id="' + m.id + '">';
             if (side === 'other') {
                 html += '<div class="message-avatar" style="' + (self.users[self.currentChat.uid] && self.users[self.currentChat.uid].profilePhoto ? 'background-image: url(' + self.users[self.currentChat.uid].profilePhoto + '); background-size: cover; background-position: center;' : '') + '">' + (!self.users[self.currentChat.uid] || !self.users[self.currentChat.uid].profilePhoto ? otherUserInitial : '') + '</div>';
             }
             html += '<div class="message-wrapper">';
-            if (side === 'other') { html += '<div class="message-sender">' + otherUserName + '</div>'; }
+            if (side === 'other') { html += '<div class="message-sender">' + self.escapeChatMessageText(m.senderName || otherUserName) + '</div>'; }
             html += '<div class="message-bubble">' + content + '</div>';
             var deliveryStatus = '';
             if (side === 'own') {
@@ -7315,6 +8544,394 @@ loadMessages: function() {
             setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 50);
             setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 150);
         }
+    },
+
+    askAboutPlans: function() {
+        if (!this.user || this.isGuest) {
+            this.showLoginPage();
+            return;
+        }
+        var self = this;
+        this.findPlanSupportAdmin().then(function(supportAdmin) {
+            self.planSupportAdminId = supportAdmin.uid;
+            self.users[supportAdmin.uid] = Object.assign({}, self.users[supportAdmin.uid] || {}, supportAdmin.profile);
+            var adminName = supportAdmin.profile.name || supportAdmin.profile.username || 'Onchari';
+            var chatKey = [self.user.uid, supportAdmin.uid].sort().join('_');
+            var inquiry = {
+                sender: self.user.uid,
+                senderName: (self.profile && self.profile.name) || 'Customer',
+                text: 'Hi, I would like information about the 4K Premium Netflix profile offer (KSh 200/-).',
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                read: false,
+                type: 'plan_inquiry'
+            };
+            return db.ref('planSupportChats/' + chatKey).update({isPlanSupport: true}).then(function() {
+                return self.writePlanChatMessage(chatKey, inquiry);
+            }).then(function() {
+                self.openChat(supportAdmin.uid, adminName);
+                var firstName = ((self.profile && self.profile.name) || 'there').split(' ')[0];
+                var welcome = 'Hi ' + firstName + '! The current offer is a 4K Premium Netflix profile for KSh 200/-. Choose what you need help with:';
+                return self.writePlanAssistantReply(chatKey, supportAdmin.uid, welcome, self.getPlanQuickReplies());
+            }).then(function() {
+                self.sendPushNotification(supportAdmin.uid, 'New plan enquiry', (self.profile && self.profile.name || 'A customer') + ' asked about the KSh 200/- 4K Netflix profile.');
+            });
+        }).catch(function(err) {
+            self.toast('Could not send inquiry: ' + err.message, 'error');
+        });
+    },
+
+    findPlanSupportAdmin: function() {
+        if (!db) return Promise.reject(new Error('Support is unavailable right now'));
+        return db.ref('users').once('value').then(function(snapshot) {
+            var supportAdmin = null;
+            snapshot.forEach(function(child) {
+                var profile = child.val() || {};
+                if (String(profile.email || '').trim().toLowerCase() === 'onchari.dev@gmail.com') {
+                    supportAdmin = {uid: child.key, profile: profile};
+                }
+            });
+            if (!supportAdmin) throw new Error('Onchari support is temporarily unavailable. Please try again later.');
+            return supportAdmin;
+        });
+    },
+
+    isPlanSupportChat: function(chatKey) {
+        if (!db || !chatKey) return Promise.resolve(false);
+        return db.ref('planSupportChats/' + chatKey).once('value').then(function(snapshot) {
+            var supportChat = snapshot.val();
+            if (supportChat === true || (supportChat && supportChat.isPlanSupport === true)) return true;
+            return db.ref('chats/' + chatKey + '/messages').once('value').then(function(messagesSnapshot) {
+                var isPlanChat = false;
+                messagesSnapshot.forEach(function(child) {
+                    var message = child.val() || {};
+                    if (message.type === 'plan_inquiry' || message.type === 'plan_bot' || message.type === 'plan_inquiry_choice') isPlanChat = true;
+                });
+                if (isPlanChat) db.ref('planSupportChats/' + chatKey).set(true);
+                return isPlanChat;
+            });
+        }).catch(function() { return false; });
+    },
+
+    getPlanQuickReplies: function() {
+        return [
+            {label: 'Buy now · KSh 200/-', value: 'pay_now'},
+            {label: 'What is included?', value: 'plan_details'},
+            {label: 'Talk to Onchari', value: 'talk_to_onchari'}
+        ];
+    },
+
+    writePlanChatMessage: function(chatKey, message) {
+        var messageRef = db.ref('messages/' + chatKey).push();
+        message.id = messageRef.key;
+        var chatRef = db.ref('chats/' + chatKey + '/messages/' + messageRef.key);
+        return Promise.all([messageRef.set(message), chatRef.set(message)]);
+    },
+
+    writePlanAssistantReply: function(chatKey, adminId, text, quickReplies) {
+        return this.writePlanChatMessage(chatKey, {
+            sender: adminId,
+            senderName: 'CHICHI Plans Assistant',
+            text: text,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            read: false,
+            isAutoReply: true,
+            type: 'plan_bot',
+            quickReplies: quickReplies || []
+        });
+    },
+
+    handlePlanChoice: function(choice) {
+        if (!this.user || !this.currentChat || !this.isPlanSupportConversation) return;
+        if (this.planSupportAdminActive) {
+            this.toast('Onchari is here and will help you directly.', 'info');
+            return;
+        }
+        if (this.planChoicePending) return;
+        var currentSupportProfile = this.users && this.users[this.currentChat.uid];
+        var isOnchariSupport = String(currentSupportProfile && currentSupportProfile.email || '').trim().toLowerCase() === 'onchari.dev@gmail.com';
+        if (this.currentChat.uid !== this.planSupportAdminId && !isOnchariSupport) return;
+        var adminId = this.currentChat.uid;
+        this.planSupportAdminId = adminId;
+        var chatKey = [this.user.uid, adminId].sort().join('_');
+        var choices = {
+            pay_now: {
+                selection: 'I want to buy the 4K Premium Netflix profile.',
+                response: 'To pay, use M-Pesa Buy Goods and enter Till number 8941840. Pay KSh 200/- for the 4K Premium Netflix profile. After paying, tap “I have paid” and paste the full M-Pesa confirmation message here. Onchari will verify it before any login details are sent or your access countdown starts.',
+                quickReplies: [{label: 'I have paid · submit confirmation', value: 'submit_receipt'}],
+                push: false
+            },
+            submit_receipt: {
+                selection: 'I have paid and will submit my M-Pesa confirmation.',
+                response: 'Please paste the complete M-Pesa confirmation SMS in your next message. Your request will be marked pending until Onchari verifies the payment. We will only send login details and start your access countdown after verification.',
+                awaitingReceipt: true,
+                push: false
+            },
+            plan_details: {
+                selection: 'What is included with the KSh 200/- offer?',
+                response: 'It is a Premium Netflix profile with 4K access for KSh 200/-. Onchari can confirm current availability and setup details.',
+                push: false
+            },
+            talk_to_onchari: {
+                selection: 'Please have Onchari contact me about the Netflix profile.',
+                response: 'Your request is in Onchari’s chat inbox. You can also type any details or questions here.',
+                push: true
+            },
+        };
+        var selected = choices[choice];
+        if (!selected) return;
+        this.planChoicePending = true;
+        document.querySelectorAll('.plan-quick-replies button').forEach(function(button) { button.disabled = true; });
+        var self = this;
+        var customerMessage = {
+            sender: this.user.uid,
+            senderName: (this.profile && this.profile.name) || 'Customer',
+            text: selected.selection,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            read: false,
+            type: 'plan_inquiry_choice'
+        };
+        var updateState = selected.awaitingReceipt
+            ? db.ref('planSupportChats/' + chatKey).update({isPlanSupport: true, awaitingReceipt: true})
+            : Promise.resolve();
+        updateState.then(function() { return self.writePlanChatMessage(chatKey, customerMessage); }).then(function() {
+            var followUpOptions = choice === 'plan_details' ? [
+                {label: 'Talk to Onchari', value: 'talk_to_onchari'}
+            ] : [];
+            return self.writePlanAssistantReply(chatKey, adminId, selected.response, followUpOptions);
+        }).then(function() {
+            self.planChoicePending = false;
+            if (selected.push) self.sendPushNotification(adminId, 'Customer wants a Netflix profile', (self.profile && self.profile.name || 'A customer') + ' wants follow-up about the KSh 200/- offer.');
+        }).catch(function(error) {
+            self.planChoicePending = false;
+            self.toast('Could not send your selection: ' + error.message, 'error');
+        });
+    },
+
+    capturePlanPaymentReceiptIfNeeded: function(chatKey, receiptText) {
+        if (!this.user || this.isGuest || !db || String(this.user.email || '').toLowerCase() === 'onchari.dev@gmail.com') return Promise.resolve(false);
+        var self = this;
+        var supportAdminUid = this.currentChat && this.currentChat.uid;
+        if (!supportAdminUid) return Promise.resolve(false);
+        if (receiptText.length > 4000) return Promise.reject(new Error('Please send the M-Pesa confirmation as a short text message.'));
+        var supportChatRef = db.ref('planSupportChats/' + chatKey);
+        return supportChatRef.transaction(function(supportChat) {
+            if (!supportChat || supportChat.awaitingReceipt !== true) return;
+            return Object.assign({}, supportChat, {awaitingReceipt: false, receiptClaimedAt: Date.now()});
+        }).then(function(claim) {
+            if (!claim.committed) return false;
+            var orderRef = db.ref('planPaymentOrders').push();
+            var amountMatch = receiptText.match(/(?:KSh|KES)\s*\.?\s*([\d,]+(?:\.\d{1,2})?)/i);
+            var claimedAmount = amountMatch ? Number(amountMatch[1].replace(/,/g, '')) : null;
+            var order = {
+                orderId: orderRef.key,
+                userId: self.user.uid,
+                userName: (self.profile && self.profile.name) || 'Customer',
+                userEmail: String(self.user.email || ''),
+                supportAdminUid: supportAdminUid,
+                chatKey: chatKey,
+                planName: '4K Premium Netflix profile',
+                expectedAmountKsh: 200,
+                claimedAmountKsh: claimedAmount,
+                paymentMethod: 'M-Pesa Buy Goods',
+                tillNumber: '8941840',
+                receiptMessage: receiptText,
+                status: 'pending_verification',
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            var updates = {};
+            updates['planPaymentOrders/' + orderRef.key] = order;
+            updates['planSupportChats/' + chatKey + '/currentPaymentOrderId'] = orderRef.key;
+            return db.ref().update(updates).then(function() {
+                if (self.planSupportAdminActive) return true;
+                return self.writePlanAssistantReply(chatKey, supportAdminUid,
+                    'Thanks! Your M-Pesa confirmation has been sent to Onchari for verification. It is pending review. We will send your Netflix login details and start the access countdown only after payment is confirmed.', []);
+            }).then(function() {
+                self.sendPushNotification(supportAdminUid, 'M-Pesa payment needs verification', (self.profile && self.profile.name || 'A customer') + ' submitted an M-Pesa receipt for the KSh 200/- Netflix profile.');
+                return true;
+            }).catch(function(error) {
+                return supportChatRef.update({awaitingReceipt: true, receiptClaimedAt: null}).then(function() { throw error; });
+            });
+        });
+    },
+
+    isOnchariSupportAdmin: function() {
+        return Boolean(this.user && String(this.user.email || '').trim().toLowerCase() === 'onchari.dev@gmail.com');
+    },
+
+    escapeAdminPaymentHtml: function(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function(character) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character];
+        });
+    },
+
+    escapeChatMessageText: function(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function(character) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character];
+        });
+    },
+
+    loadAdminPlanPaymentOrders: function() {
+        var container = document.getElementById('adminPlanPaymentOrders');
+        if (!container) return;
+        if (!this.isOnchariSupportAdmin() || !db) {
+            container.innerHTML = '<div class="admin-empty-state">Payment verification is available to Onchari only.</div>';
+            return;
+        }
+        if (this.adminPlanPaymentsListener) return;
+        var self = this;
+        var query = db.ref('planPaymentOrders').orderByChild('status').equalTo('pending_verification');
+        this.adminPlanPaymentsQuery = query;
+        this.adminPlanPaymentsListener = query.on('value', function(snapshot) {
+            var orders = [];
+            snapshot.forEach(function(child) {
+                var order = child.val() || {};
+                order.id = child.key;
+                orders.push(order);
+            });
+            orders.sort(function(a, b) { return Number(b.createdAt || 0) - Number(a.createdAt || 0); });
+            if (!orders.length) {
+                container.innerHTML = '<div class="admin-empty-state">No M-Pesa receipts are waiting for verification.</div>';
+                return;
+            }
+            container.innerHTML = orders.map(function(order) {
+                var receipt = self.escapeAdminPaymentHtml(order.receiptMessage || 'No receipt text');
+                return '<article class="admin-plan-payment-order"><div class="admin-plan-payment-order-head"><div><strong>' + self.escapeAdminPaymentHtml(order.userName || 'Customer') + '</strong><span>' + self.escapeAdminPaymentHtml(order.planName || 'Netflix profile') + ' · Submitted ' + self.escapeAdminPaymentHtml(order.createdAt ? new Date(order.createdAt).toLocaleString() : 'just now') + '</span></div><b>PENDING</b></div><div class="admin-plan-payment-meta">Till <strong>' + self.escapeAdminPaymentHtml(order.tillNumber || '8941840') + '</strong> · Expected KSh ' + self.escapeAdminPaymentHtml(order.expectedAmountKsh || 200) + (order.claimedAmountKsh ? ' · Receipt says KSh ' + self.escapeAdminPaymentHtml(order.claimedAmountKsh) : '') + '</div><details><summary>View M-Pesa confirmation</summary><pre>' + receipt + '</pre></details><button type="button" onclick="app.reviewPlanPayment(\'' + order.id + '\')">Verify payment &amp; prepare access</button></article>';
+            }).join('');
+        }, function(error) {
+            container.innerHTML = '<div class="admin-empty-state">Could not load payment requests: ' + self.escapeAdminPaymentHtml(error.message) + '</div>';
+        });
+    },
+
+    reviewPlanPayment: function(orderId) {
+        if (!this.isOnchariSupportAdmin() || !db) {
+            this.toast('Only Onchari can verify these payments', 'error');
+            return;
+        }
+        var self = this;
+        db.ref('planPaymentOrders/' + orderId).once('value').then(function(snapshot) {
+            var order = snapshot.val();
+            if (!order || order.status !== 'pending_verification') throw new Error('This payment is no longer pending review.');
+            var modal = document.createElement('div');
+            modal.id = 'reviewPlanPaymentModal';
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = '<div class="modal admin-verify-payment-modal"><div class="modal-close"><button type="button" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><span class="admin-kicker">MANUAL PAYMENT CHECK</span><h2>Verify M-Pesa &amp; send access</h2><p>First confirm this receipt in your M-Pesa transaction history. Pasted text alone is not proof of payment.</p><div class="admin-payment-receipt-preview"><strong>Customer receipt</strong><pre id="reviewPlanPaymentReceipt"></pre></div><label>Verified amount (KSh)<input id="verifiedPlanPaymentAmount" type="number" min="1" step="1" value="' + self.escapeAdminPaymentHtml(order.claimedAmountKsh || order.expectedAmountKsh || 200) + '"></label><label>Access duration (days, based on verified amount)<input id="verifiedPlanDurationDays" type="number" min="1" max="365" step="1" placeholder="Enter the duration for this payment"></label><label>Netflix profile<input id="verifiedNetflixProfile" type="text" value="4K Premium Netflix Profile"></label><label>Netflix login credentials<textarea id="verifiedNetflixCredentials" rows="4" placeholder="Paste the verified login details for this customer"></textarea></label><p>The access countdown starts from the moment you confirm payment and send the credentials.</p><div class="admin-verify-payment-actions"><button type="button" class="admin-verify-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button><button type="button" class="admin-verify-confirm" onclick="app.verifyPlanPaymentAndSendAccess(\'' + orderId + '\')">Confirm payment &amp; send credentials</button></div></div>';
+            document.body.appendChild(modal);
+            modal.querySelector('#reviewPlanPaymentReceipt').textContent = order.receiptMessage || 'No receipt supplied';
+            modal.dataset.orderUserId = order.userId || '';
+            modal.dataset.orderChatKey = order.chatKey || '';
+        }).catch(function(error) {
+            self.toast(error.message || 'Could not open payment request', 'error');
+        });
+    },
+
+    verifyPlanPaymentAndSendAccess: function(orderId) {
+        if (!this.isOnchariSupportAdmin() || !db) {
+            this.toast('Only Onchari can verify these payments', 'error');
+            return;
+        }
+        var modal = document.getElementById('reviewPlanPaymentModal');
+        if (!modal) return;
+        if (modal.dataset.saving === 'true') return;
+        var order = {
+            userId: modal.dataset.orderUserId,
+            chatKey: modal.dataset.orderChatKey,
+            amountKsh: Number(modal.querySelector('#verifiedPlanPaymentAmount').value),
+            durationDays: Number(modal.querySelector('#verifiedPlanDurationDays').value),
+            profile: modal.querySelector('#verifiedNetflixProfile').value.trim(),
+            credentials: modal.querySelector('#verifiedNetflixCredentials').value.trim()
+        };
+        if (!order.userId || !order.chatKey || !Number.isFinite(order.amountKsh) || order.amountKsh <= 0 || !Number.isInteger(order.durationDays) || order.durationDays < 1 || order.durationDays > 365 || !order.profile || !order.credentials) {
+            this.toast('Enter the verified amount, access duration, profile, and login credentials', 'error');
+            return;
+        }
+        modal.dataset.saving = 'true';
+        var confirmButton = modal.querySelector('.admin-verify-confirm');
+        if (confirmButton) { confirmButton.disabled = true; confirmButton.textContent = 'Sending credentials…'; }
+        var self = this;
+        var orderRef = db.ref('planPaymentOrders/' + orderId);
+        var accessIssued = false;
+        orderRef.child('status').transaction(function(currentStatus) {
+            if (currentStatus !== 'pending_verification') return;
+            return 'verifying';
+        }).then(function(lock) {
+            if (!lock.committed) throw new Error('This payment has already been processed in another session.');
+            return orderRef.once('value');
+        }).then(function(snapshot) {
+            var savedOrder = snapshot.val();
+            if (!savedOrder || savedOrder.status !== 'verifying' || savedOrder.userId !== order.userId || savedOrder.chatKey !== order.chatKey) {
+                throw new Error('This order has already been processed or is invalid.');
+            }
+            var grantedAt = Date.now();
+            var expiresAt = grantedAt + order.durationDays * 86400000;
+            var expiryLabel = new Date(expiresAt).toLocaleString();
+            var credentialMessage = 'M-Pesa payment verified: KSh ' + order.amountKsh + '.\nPlan: ' + order.profile + '\nAccess duration: ' + order.durationDays + ' days.\nAccess expires: ' + expiryLabel + '\n\nNetflix login details:\n' + order.credentials;
+            var messageRef = db.ref('messages/' + order.chatKey).push();
+            var message = {
+                id: messageRef.key,
+                sender: self.user.uid,
+                senderName: 'CHICHI Support – Onchari',
+                text: credentialMessage,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                read: false,
+                isAutoReply: true,
+                type: 'plan_credentials',
+                paymentOrderId: orderId
+            };
+            var updates = {};
+            updates['messages/' + order.chatKey + '/' + messageRef.key] = message;
+            updates['chats/' + order.chatKey + '/messages/' + messageRef.key] = message;
+            updates['users/' + order.userId + '/accessExpiry'] = expiresAt;
+            updates['users/' + order.userId + '/accessProfile'] = order.profile;
+            updates['users/' + order.userId + '/accessPaid'] = true;
+            updates['users/' + order.userId + '/accessGrantedAt'] = grantedAt;
+            updates['users/' + order.userId + '/accessDurationDays'] = order.durationDays;
+            updates['planPaymentOrders/' + orderId + '/status'] = 'verified';
+            updates['planPaymentOrders/' + orderId + '/verifiedAmountKsh'] = order.amountKsh;
+            updates['planPaymentOrders/' + orderId + '/durationDays'] = order.durationDays;
+            updates['planPaymentOrders/' + orderId + '/verifiedBy'] = self.user.uid;
+            updates['planPaymentOrders/' + orderId + '/verifiedByEmail'] = 'onchari.dev@gmail.com';
+            updates['planPaymentOrders/' + orderId + '/verifiedAt'] = grantedAt;
+            updates['planPaymentOrders/' + orderId + '/credentialsSent'] = true;
+            updates['planPaymentOrders/' + orderId + '/credentialMessageId'] = messageRef.key;
+            updates['planSupportChats/' + order.chatKey + '/awaitingReceipt'] = false;
+            return db.ref().update(updates).then(function() {
+                accessIssued = true;
+                modal.remove();
+                self.toast('Payment verified. Credentials sent and countdown started.', 'success');
+                self.sendPushNotification(order.userId, 'Netflix access is ready', 'Your payment was verified. Check your CHICHI support chat for login details.');
+                self.loadAdminPlanPaymentOrders();
+            });
+        }).catch(function(error) {
+            if (!accessIssued) {
+                orderRef.child('status').transaction(function(currentStatus) {
+                    if (currentStatus !== 'verifying') return;
+                    return 'pending_verification';
+                }).catch(function() {});
+            }
+            var openModal = document.getElementById('reviewPlanPaymentModal');
+            if (openModal) {
+                openModal.dataset.saving = 'false';
+                var button = openModal.querySelector('.admin-verify-confirm');
+                if (button) { button.disabled = false; button.textContent = 'Confirm payment & send credentials'; }
+            }
+            self.toast('Could not verify and send access: ' + error.message, 'error');
+        });
+    },
+
+    getAdminUserIds: function() {
+        var self = this;
+        return Promise.all([db.ref('users').once('value'), db.ref('adminUsers').once('value')]).then(function(snapshots) {
+            var usersSnapshot = snapshots[0];
+            var customAdmins = snapshots[1].val() || {};
+            var ids = [];
+            usersSnapshot.forEach(function(child) {
+                var user = child.val() || {};
+                var email = String(user.email || '').toLowerCase();
+                var encodedEmail = email.replace(/\./g, '_');
+                if (self.DEFAULT_ADMINS.indexOf(email) !== -1 || customAdmins[encodedEmail]) ids.push(child.key);
+            });
+            return ids;
+        });
     },
 
     sendChatMessage: function() {
@@ -7601,6 +9218,8 @@ loadMessages: function() {
                 <div style="font-size:0.75rem;color:#999;margin-top:4px;">Type to see suggestions, click to add</div>
             </div>
 
+            <label style="display:flex;align-items:flex-start;gap:9px;margin-bottom:16px;padding:12px;border:1px solid #dbe8e3;border-radius:9px;background:#f8fbfb;font-size:12px;color:#526b78;"><input type="checkbox" id="editPublicAccessStatus" ${this.profile.publicAccessStatus === true ? 'checked' : ''} style="margin-top:2px;"><span><strong style="display:block;color:#102a43;margin-bottom:3px;">Show my subscription in public marketing</strong>Allow my name, assigned profile, and live countdown to appear in Updates for logged-in customers. You can turn this off anytime.</span></label>
+
             <div style="display:flex;gap:12px;margin-top:24px;">
                 <button onclick="this.closest('div').closest('div').parentElement.parentElement.remove()" style="flex:1;padding:12px;background:#e5e7eb;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:1rem;">Cancel</button>
                 <button onclick="app.saveProfileChanges()" style="flex:1;padding:12px;background:var(--primary);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:1rem;">Save Changes</button>
@@ -7696,6 +9315,7 @@ loadMessages: function() {
         var username = document.getElementById('editProfileUsername').value.trim();
         var phone = document.getElementById('editProfilePhone').value.trim();
         var bio = document.getElementById('editProfileBio').value.trim();
+        var publicAccessStatus = document.getElementById('editPublicAccessStatus').checked;
         var self = this;
 
         if (!name) {
@@ -7732,21 +9352,22 @@ loadMessages: function() {
                         return;
                     }
                 }
-                self._saveProfileData(name, username, phone, bio, interests);
+                self._saveProfileData(name, username, phone, bio, interests, publicAccessStatus);
             });
         } else {
-            this._saveProfileData(name, username, phone, bio, interests);
+            this._saveProfileData(name, username, phone, bio, interests, publicAccessStatus);
         }
     },
 
-    _saveProfileData: function(name, username, phone, bio, interests) {
+    _saveProfileData: function(name, username, phone, bio, interests, publicAccessStatus) {
         var self = this;
         var updateData = {
             name: name,
             username: username,
             phone: phone,
             bio: bio,
-            interests: interests
+            interests: interests,
+            publicAccessStatus: publicAccessStatus === true
         };
 
         if (this.editProfilePhoto && this.editProfilePhoto.startsWith('data:')) {
@@ -8136,6 +9757,10 @@ loadMessages: function() {
 
     switchView: function(view) {
         var app = this;
+        if (this.activePlanSupport && this.currentChat && view !== 'chat') {
+            this.setPlanSupportPresence(this.currentChat.uid, false);
+            this.activePlanSupport = false;
+        }
         if (this.isGuest && ['messages', 'earn', 'profile'].includes(view)) {
             var guestAuthPage = document.getElementById('authPage');
             var guestMainApp = document.getElementById('mainApp');
@@ -8155,6 +9780,7 @@ loadMessages: function() {
         if (!this.navigationHistory) this.navigationHistory = [];
         if (!this.currentView) this.currentView = 'feed';
 
+        var previousView = this.currentView;
         if (this.currentView !== view) {
             this.navigationHistory.push(this.currentView);
         }
@@ -8189,8 +9815,6 @@ loadMessages: function() {
         if (viewElement) {
             viewElement.classList.add('active');
             viewElement.classList.remove('view-enter');
-            void viewElement.offsetWidth;
-            viewElement.classList.add('view-enter');
         }
 
         if (view === 'profile') {
@@ -8206,8 +9830,15 @@ loadMessages: function() {
                 self.renderProfile();
             }, 50);
         } else if (view === 'feed') {
-            this.loadPosts();
-            this.loadStories();
+            var feedContainer = document.getElementById('feedContainer');
+            if (!this.postsListenerRef) {
+                this.loadPosts();
+            } else if (this.postsViewNeedsRender) {
+                this.postsViewNeedsRender = false;
+                if (!feedContainer || !feedContainer.innerHTML.trim()) this.renderFeed();
+                else this.loadHomeAdminOffers();
+            }
+            if (previousView !== 'feed') this.loadStories();
         } else if (view === 'messages') {
             this.loadMessages();
             this.clearUnreadBadge();
@@ -8307,6 +9938,8 @@ loadMessages: function() {
     },
 
     getCurrentView: function() {
+        var chatView = document.getElementById('chatView');
+        if (chatView && chatView.classList.contains('active')) return 'chat';
         var views = document.querySelectorAll('.view');
         for (var i = 0; i < views.length; i++) {
             if (views[i].classList.contains('active')) {
@@ -8328,7 +9961,8 @@ loadMessages: function() {
     loadPosts: function() {
         var self = this;
         this.postsLoading = true;
-        this.renderFeed();
+        var feedContainer = document.getElementById('feedContainer');
+        if (!feedContainer || !feedContainer.innerHTML.trim()) this.renderFeed();
         if (!db) {
             setTimeout(function() {
                 if (db) self.loadPosts();
@@ -8348,12 +9982,22 @@ loadMessages: function() {
                 var post = c.val();
                 if (post) {
                     post.id = c.key;
+                    if (post.source === 'CHICHI Admin Offer' || post.source === 'CHICHI Admin Update' || post.posterType === 'offer' || post.posterType === 'update' || post.userName === 'CHICHI Offers') {
+                        post.userPhoto = 'icon-192.png';
+                    }
                     p.unshift(post);
                 }
             });
             self.posts = p;
             console.log('✅ posts loaded:', self.posts.length);
             self.postsLoading = false;
+            var homeAnnouncementSignature = JSON.stringify(p.filter(function(post) {
+                return post.source === 'CHICHI Admin Offer' || post.source === 'CHICHI Admin Update' || post.posterType === 'offer' || post.posterType === 'update';
+            }).map(function(post) {
+                return [post.id, post.source, post.posterType, post.caption, post.photoUrl, post.createdAt].join('|');
+            }));
+            var announcementsChanged = self.homeAnnouncementSignature !== homeAnnouncementSignature;
+            self.homeAnnouncementSignature = homeAnnouncementSignature;
             if (self.pendingLikePostId) {
                 clearTimeout(self.pendingLikeRenderTimeout);
                 self.pendingLikeRenderTimeout = setTimeout(function() {
@@ -8361,12 +10005,20 @@ loadMessages: function() {
                 }, 500);
                 return;
             }
-            self.renderFeed();
+            var currentFeed = document.getElementById('feedContainer');
+            if (self.currentView === 'feed') {
+                if (!currentFeed || !currentFeed.innerHTML.trim()) self.renderFeed();
+                else if (announcementsChanged) self.loadHomeAdminOffers();
+            } else if (announcementsChanged) {
+                self.postsViewNeedsRender = true;
+            }
         }, function(err) {
             console.error('❌ Error loading posts:', err.message);
             self.posts = [];
             self.postsLoading = false;
-            self.renderFeed();
+            var currentFeed = document.getElementById('feedContainer');
+            if (self.currentView === 'feed' && (!currentFeed || !currentFeed.innerHTML.trim())) self.renderFeed();
+            else self.postsViewNeedsRender = true;
         });
     },
 
@@ -8388,6 +10040,30 @@ loadMessages: function() {
         }
 
         if (!this.posts) this.posts = [];
+
+        // Home is now the storefront; community chat remains available in Inbox.
+        var userName = this.profile && this.profile.name ? this.profile.name.split(' ')[0] : 'there';
+        var isUpdatesView = this.currentFeedTab === 'following';
+        var welcomeCard = '<div class="post" style="margin-top:12px;"><div class="post-header"><div><div class="post-name">Welcome back, ' + userName + '</div><div class="post-time">Your Chichi space</div></div></div></div>';
+        var updatesCard = '<div class="post home-updates-summary" style="margin-top:12px;display:' + (isUpdatesView ? 'block' : 'none') + ';">' +
+            '<div class="post-header"><div><div class="post-name">' + userName + ' · ' + ((this.profile && this.profile.accessProfile) || 'Assigned profile') + '</div><div class="post-time">Netflix access countdown</div></div><span class="verified-tick" title="Verified CHICHI update">✓</span></div>' +
+            '<div class="updates-fintech-metric"><span class="updates-metric-label">TIME REMAINING</span><div id="homeAccessExpiryCountdown" class="updates-metric-value">' + (this.profile && Number(this.profile.accessExpiry) > 0 ? 'Checking...' : 'No personal subscription') + '</div><span class="updates-metric-note">Your private membership</span></div><div id="homePublicSubscriptions"></div></div>';
+        feedContainer.innerHTML = welcomeCard + updatesCard + '<div id="homeOffersHero" class="post" style="margin-top:12px;display:' + (isUpdatesView ? 'none' : 'block') + ';">' +
+            '<div class="post-header"><div class="post-user"><div class="post-avatar chichi-offer-avatar"><img src="icon-192.png" alt="CHICHI logo"></div><div><div class="post-name"><span id="homeOfferAccountName">CHICHI Offers</span> <span class="verified-tick" title="Verified CHICHI offer">✓</span></div><div class="post-time" id="homeOfferAccountSubtitle">Available now</div></div></div><span id="homeOfferVerifiedLabel" class="home-offer-verified">VERIFIED</span></div>' +
+            '<div class="home-offer-copy"><div id="homeOfferEyebrow" class="home-offer-eyebrow">Today’s Netflix offer</div><div id="homeOfferTitle" class="home-offer-title">4K Premium Netflix Profile</div><div id="homeOfferDescription" class="home-offer-description">Get a Premium Netflix profile with 4K access today for only KSh 200/-.</div><button id="homeOfferButtonLabel" type="button" onclick="app.askAboutPlans()" class="home-offer-cta">Get your profile today</button></div>' +
+            '<div class="home-offer-tiles">' +
+            '<div class="home-offer-tile"><img id="homeOfferTile1Image" src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=80" alt="Movie nights"><span id="homeOfferTile1Label">Movie nights</span></div>' +
+            '<div class="home-offer-tile"><img id="homeOfferTile2Image" src="https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=500&q=80" alt="Series picks"><span id="homeOfferTile2Label">Series picks</span></div>' +
+            '<div class="home-offer-tile"><img id="homeOfferTile3Image" src="https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?auto=format&fit=crop&w=500&q=80" alt="Family time"><span id="homeOfferTile3Label">Family time</span></div>' +
+            '</div>' +
+            '<div class="home-offer-benefits"><div><strong id="homeOfferBenefit1Title">Fast</strong><span id="homeOfferBenefit1Detail">Up Time</span></div><div><strong id="homeOfferBenefit2Title">Fair</strong><span id="homeOfferBenefit2Detail">Rates</span></div><div><strong id="homeOfferBenefit3Title">Live</strong><span id="homeOfferBenefit3Detail">Support 24/7</span></div></div></div>' +
+            '<div id="homeOfferTrailers" class="post home-trailers-post"></div>' +
+            '<div id="homeAdminOffers"></div>';
+        this.loadHomeAdminOffers();
+        this.loadHomeOfferSettings();
+        this.updateHomeAccessCountdown();
+        this.loadPublicSubscriptions();
+        return;
 
         var html = '';
         if (this.postsLoading) {
@@ -8465,6 +10141,92 @@ loadMessages: function() {
             var loadingState = feedContainer.querySelector('.feed-loading-state');
             if (loadingState) loadingState.remove();
         }
+    },
+
+    loadHomeAdminOffers: function() {
+        var container = document.getElementById('homeAdminOffers');
+        if (!container) return;
+        var isUpdatesView = this.currentFeedTab === 'following';
+        var requestTab = this.currentFeedTab;
+        var cacheKey = 'chichiHomeCards_v2_' + (isUpdatesView ? 'updates' : 'offers');
+        if (!container.innerHTML.trim()) {
+            try {
+                var cachedMarkup = localStorage.getItem(cacheKey);
+                if (cachedMarkup) {
+                    container.innerHTML = cachedMarkup;
+                    container.dataset.homeMarkup = cachedMarkup;
+                }
+            } catch (e) {}
+        }
+        if (!db) return;
+        var self = this;
+        var revealAnnouncements = function() {
+            var section = container.querySelector('.home-announcements');
+            if (!section) return;
+            section.classList.add('scroll-reveal');
+            if (!('IntersectionObserver' in window)) {
+                section.classList.add('is-visible');
+                return;
+            }
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12 });
+            observer.observe(section);
+        };
+        db.ref('posts').limitToLast(30).once('value').then(function(snapshot) {
+            if (self.currentFeedTab !== requestTab) return;
+            var offers = [];
+            var legacyStatusPosts = [];
+            snapshot.forEach(function(child) {
+                var post = child.val() || {};
+                var isStatusUpdate = String(post.caption || '').indexOf('Access status update') === 0;
+                if (isStatusUpdate && (post.source === 'CHICHI Admin Update' || post.posterType === 'update')) {
+                    legacyStatusPosts.push(child.key);
+                    return;
+                }
+                var isUpdate = post.source === 'CHICHI Admin Update' && !isStatusUpdate;
+                var isOffer = post.source === 'CHICHI Admin Offer' || post.posterType === 'offer';
+                isUpdate = isUpdate || post.posterType === 'update';
+                if ((isUpdatesView && isUpdate) || (!isUpdatesView && isOffer)) {
+                    post.id = child.key;
+                    offers.unshift(post);
+                }
+            });
+            if (legacyStatusPosts.length) {
+                var cleanup = {};
+                legacyStatusPosts.forEach(function(postId) { cleanup[postId] = null; });
+                db.ref('posts').update(cleanup);
+            }
+            if (!offers.length) {
+                var emptyMarkup = isUpdatesView
+                    ? '<section class="home-announcements"><div class="home-announcements-heading"><span>CHICHI announcements</span><small>News and service notices</small></div><div class="home-empty-updates"><span class="home-empty-updates-icon" aria-hidden="true">✓</span><strong>You’re all caught up</strong><span>There are no new announcements right now. Membership countdowns above are status details, not updates.</span></div></section>'
+                    : '<div class="home-empty-updates"><strong>No offers available</strong><span>Check back soon for new offers.</span></div>';
+                if (container.dataset.homeMarkup !== emptyMarkup) {
+                    container.innerHTML = emptyMarkup;
+                    container.dataset.homeMarkup = emptyMarkup;
+                }
+                try { localStorage.setItem(cacheKey, emptyMarkup); } catch (e) {}
+                revealAnnouncements();
+                return;
+            }
+            var offersMarkup = '<section class="home-announcements"><div class="home-announcements-heading"><span>' + (isUpdatesView ? 'CHICHI announcements' : 'Latest offers') + '</span><small>' + (isUpdatesView ? 'News and service notices' : 'Handpicked for you') + '</small></div>' + offers.slice(0, 5).map(function(offer) {
+                var parts = String(offer.caption || '').split('\n\n');
+                var isUpdate = offer.source === 'CHICHI Admin Update' || offer.posterType === 'update';
+                var image = offer.photoUrl ? '<div class="home-offer-image-wrap"><img src="' + offer.photoUrl + '" alt="Offer poster" class="home-offer-image"></div>' : '';
+                return '<article class="post chichi-offer-post" style="margin-bottom:10px;"><div class="post-header"><div class="post-user"><div class="post-avatar chichi-offer-avatar"><img src="icon-192.png" alt="CHICHI logo"></div><div><div class="post-name">CHICHI ' + (isUpdate ? 'Updates' : 'Offers') + ' <span class="verified-tick" title="Verified CHICHI poster">✓</span></div><div class="post-time">' + (offer.createdAt || 'Available now') + '</div></div></div><span style="font-size:10px;color:#0f766e;font-weight:800;">VERIFIED</span></div>' + image + '<div class="post-caption"><strong>' + (parts[0] || (isUpdate ? 'New update' : 'New offer')) + '</strong>' + (parts[1] ? '<br>' + parts[1] : '') + '</div><div style="padding:0 12px 12px;"><button type="button" onclick="app.' + (isUpdate ? 'switchView(\'messages\')' : 'askAboutPlans()') + '" style="padding:9px 13px;border:1px solid #dbe8e3;border-radius:8px;background:#f8fbfa;color:#0f766e;font:inherit;font-size:12px;font-weight:700;cursor:pointer;">' + (isUpdate ? 'Message CHICHI' : 'Ask about this offer') + '</button></div></article>';
+            }).join('') + '</section>';
+            if (container.dataset.homeMarkup !== offersMarkup) {
+                container.innerHTML = offersMarkup;
+                container.dataset.homeMarkup = offersMarkup;
+            }
+            try { localStorage.setItem(cacheKey, offersMarkup); } catch (e) {}
+            revealAnnouncements();
+        });
     },
 
     // ============================================
@@ -9165,7 +10927,7 @@ loadMessages: function() {
 
             var storiesList = document.getElementById('storiesList');
             if (storiesList) {
-                storiesList.innerHTML = html;
+                if (storiesList.innerHTML !== html) storiesList.innerHTML = html;
             }
         });
     },
@@ -9622,6 +11384,20 @@ loadMessages: function() {
     // ============================================
 
     showCreateModal: function() {
+        this.switchView('messages');
+        return;
+
+        var existing = document.getElementById('chichiQuickActions');
+        if (existing) existing.remove();
+        var modal = document.createElement('div');
+        modal.id = 'chichiQuickActions';
+        modal.className = 'modal-overlay active';
+        modal.style.display = 'flex';
+        modal.style.zIndex = '9999';
+        modal.innerHTML = '<div class="modal modal-animate" style="max-width:380px;"><div class="modal-close"><button type="button" onclick="document.getElementById(\'chichiQuickActions\').remove()" style="background:none;border:0;color:#6b7280;font-size:22px;cursor:pointer;">✕</button></div><div style="font-size:12px;color:#0f766e;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">CHICHI QUICK ACTIONS</div><h2 style="margin:6px 0 4px;">What would you like to do?</h2><p style="margin:0 0 16px;color:#64748b;font-size:13px;">Choose an action or message someone directly.</p><div style="display:grid;gap:10px;"><button type="button" onclick="app.switchView(\'messages\');document.getElementById(\'chichiQuickActions\').remove();" style="padding:13px 14px;border:1px solid #dbe8e3;border-radius:10px;background:#f8fbfa;text-align:left;color:#0f766e;font:inherit;font-weight:700;cursor:pointer;">💬 Message someone<span style="display:block;color:#64748b;font-size:12px;font-weight:400;margin-top:3px;">Chat with the community or ask about an offer</span></button><button type="button" onclick="app.toast(\'Plan requests are coming soon. Message us to get started.\',\'info\');document.getElementById(\'chichiQuickActions\').remove();" style="padding:13px 14px;border:1px solid #dbe8e3;border-radius:10px;background:#f8fbfa;text-align:left;color:#0f766e;font:inherit;font-weight:700;cursor:pointer;">🎬 Ask about available plans<span style="display:block;color:#64748b;font-size:12px;font-weight:400;margin-top:3px;">See current rates and availability</span></button><button type="button" onclick="app.toast(\'Renewal support is available through Inbox.\',\'info\');app.switchView(\'messages\');document.getElementById(\'chichiQuickActions\').remove();" style="padding:13px 14px;border:1px solid #dbe8e3;border-radius:10px;background:#f8fbfa;text-align:left;color:#0f766e;font:inherit;font-weight:700;cursor:pointer;">🔄 Get renewal support<span style="display:block;color:#64748b;font-size:12px;font-weight:400;margin-top:3px;">Continue an existing conversation</span></button></div></div>';
+        document.body.appendChild(modal);
+        return;
+
         if (!this.user || this.isGuest) {
             this.showGuestPostPrompt();
             return;
@@ -9727,14 +11503,21 @@ loadMessages: function() {
             chatView.classList.remove('active');
             chatView.style.display = 'none';
         }
-        if (this.currentChat && this.chatMessagesListener) {
-            var key = [this.user.uid, this.currentChat.uid].sort().join('_');
+        this.stopTypingIndicator();
+        if (this.activePlanSupport && this.currentChat) this.setPlanSupportPresence(this.currentChat.uid, false);
+        this.stopPlanSupportPresenceListener();
+        if (this.currentChat) {
+            var key = this.chatMessageListenerKey || [this.user.uid, this.currentChat.uid].sort().join('_');
             db.ref('chats/' + key + '/messages').off();
             this.chatMessagesListener = null;
             db.ref('messages/' + key).off();
             this.messageStoreListener = null;
+            this.chatMessageListenerKey = null;
         }
+        this.chatMessageLoadId = (this.chatMessageLoadId || 0) + 1;
         this.currentChat = null;
+        this.isPlanSupportConversation = false;
+        this.planSupportAdminActive = false;
         this.switchView('messages');
     },
 
@@ -9746,16 +11529,18 @@ loadMessages: function() {
         if (!this.currentChat) return;
         var self = this;
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+        var loadToken = this.chatMessageLoadId = (this.chatMessageLoadId || 0) + 1;
         if (!this.chatMessages) this.chatMessages = {};
-        if (this.chatMessagesListener) {
-            db.ref('chats/' + key + '/messages').off();
+        if (this.chatMessageListenerKey) {
+            db.ref('chats/' + this.chatMessageListenerKey + '/messages').off();
+            db.ref('messages/' + this.chatMessageListenerKey).off();
+            this.chatMessageListenerKey = null;
         }
-        if (this.messageStoreListener) {
-            db.ref('messages/' + key).off();
-            this.messageStoreListener = null;
-        }
+        this.chatMessagesListener = null;
+        this.messageStoreListener = null;
 
         db.ref('chats/' + key + '/messages').once('value').then(function(snapshot) {
+            if (loadToken !== self.chatMessageLoadId || !self.currentChat || [self.user.uid, self.currentChat.uid].sort().join('_') !== key) return;
             var messages = [];
             snapshot.forEach(function(c) {
                 var m = c.val();
@@ -9766,6 +11551,7 @@ loadMessages: function() {
             });
             messages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
             self.chatMessages[key] = messages;
+            self.chatMessageListenerKey = key;
             self.displayChatMessages(messages, key);
 
             self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
@@ -9783,8 +11569,29 @@ loadMessages: function() {
                     self.markAsRead(self.currentChat.uid);
                 }
             });
-            db.ref('chats/' + key + '/messages').on('child_changed', function() {
-                self.loadChatMessages();
+            db.ref('chats/' + key + '/messages').on('child_changed', function(snap) {
+                var updated = snap.val() || {};
+                var currentMessages = self.chatMessages[key] || [];
+                var cachedMessage = currentMessages.find(function(message) { return message.id === snap.key; });
+                if (!cachedMessage) return;
+                var contentChanged = cachedMessage.text !== updated.text || cachedMessage.image !== updated.image ||
+                    cachedMessage.deleted !== updated.deleted || cachedMessage.deletedForEveryone !== updated.deletedForEveryone ||
+                    JSON.stringify(cachedMessage.quickReplies || []) !== JSON.stringify(updated.quickReplies || []);
+                Object.keys(updated).forEach(function(property) { cachedMessage[property] = updated[property]; });
+                if (!updated.quickReplies) delete cachedMessage.quickReplies;
+                if (contentChanged || (updated.deleted_for && updated.deleted_for[self.user.uid])) {
+                    self.displayChatMessages(currentMessages, key);
+                    return;
+                }
+                var messageRow = document.querySelector('.message-group[data-message-id="' + snap.key + '"]');
+                var readStatus = messageRow && messageRow.querySelector('.message-read-status');
+                if (readStatus && cachedMessage.sender === self.user.uid) {
+                    var status = cachedMessage.read ? 'read' : (cachedMessage.delivered ? 'delivered' : 'sent');
+                    readStatus.classList.remove('read', 'delivered', 'sent');
+                    readStatus.classList.add(status);
+                    readStatus.textContent = cachedMessage.read || cachedMessage.delivered ? '✓✓' : '✓';
+                    readStatus.setAttribute('aria-label', status.charAt(0).toUpperCase() + status.slice(1));
+                }
             });
             self.messageStoreListener = db.ref('messages/' + key).on('child_added', function(snap) {
                 self.appendIncomingChatMessage(snap, key);
@@ -9811,6 +11618,7 @@ loadMessages: function() {
         messages.forEach(function(m, idx) {
             if (!m || m.deleted || m.deletedForEveryone || (m.deleted_for && m.deleted_for[self.user.uid]) || (!m.text && !m.image)) return;
             var side = m.sender === self.user.uid ? 'own' : 'other';
+            var arrivalClass = m.isAutoReply ? ' admin-reply-arrival' : '';
             var timestamp = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
 
             if (idx === 0 || (messages[idx-1] && new Date(messages[idx-1].timestamp).toDateString() !== new Date(m.timestamp).toDateString())) {
@@ -9831,22 +11639,34 @@ loadMessages: function() {
             if (m.image) {
                 content += '<img src="' + m.image + '" style="max-width:180px;border-radius:12px;cursor:pointer;" onclick="app.viewFullImage(\'' + m.image + '\')">';
             }
-            if (m.text) { content += '<div>' + m.text + '</div>'; }
+            if (m.text) { content += '<div>' + self.escapeChatMessageText(m.text) + '</div>'; }
 
             var otherUserName = self.currentChat.name || 'User';
             var otherUserInitial = otherUserName.charAt(0).toUpperCase();
+            if (Array.isArray(m.quickReplies) && m.quickReplies.length) {
+                var escapeReply = function(value) {
+                    return String(value == null ? '' : value).replace(/[&<>"']/g, function(character) {
+                        return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character];
+                    });
+                };
+                content += '<div class="plan-quick-replies" role="group" aria-label="Plan options">' + m.quickReplies.map(function(reply) {
+                    if (!reply || !reply.value || !reply.label) return '';
+                    return '<button type="button" onclick="app.handlePlanChoice(\'' + escapeReply(reply.value) + '\')">' + escapeReply(reply.label) + '</button>';
+                }).join('') + '</div>';
+            }
+
                         var actionMenu = m.sender === self.user.uid
                                 ? '<div class="msg-actions" style="display:flex;gap:4px;margin-left:8px;">' +
                                     '<button onclick="event.stopPropagation(); app.showMessageActionMenu(\'' + m.id + '\', event)" title="Message actions" style="background:none;border:none;cursor:pointer;font-size:16px;color:#52635e;">⋯</button>' +
                                     '</div>'
                                 : '';
 
-            html += '<div class="message-group ' + side + '">';
+            html += '<div class="message-group ' + side + arrivalClass + '" data-message-id="' + m.id + '">';
             if (side === 'other') {
                 html += '<div class="message-avatar" style="' + (self.users[self.currentChat.uid] && self.users[self.currentChat.uid].profilePhoto ? 'background-image: url(' + self.users[self.currentChat.uid].profilePhoto + '); background-size: cover; background-position: center;' : '') + '">' + (!self.users[self.currentChat.uid] || !self.users[self.currentChat.uid].profilePhoto ? otherUserInitial : '') + '</div>';
             }
             html += '<div class="message-wrapper">';
-            if (side === 'other') { html += '<div class="message-sender">' + otherUserName + '</div>'; }
+            if (side === 'other') { html += '<div class="message-sender">' + self.escapeChatMessageText(m.senderName || otherUserName) + '</div>'; }
             html += '<div class="message-bubble">' + content + '</div>';
             var deliveryStatus = '';
             if (side === 'own') {
@@ -9899,14 +11719,16 @@ loadMessages: function() {
             timestamp: firebase.database.ServerValue.TIMESTAMP,
             read: false
         }).then(function() {
-            db.ref('chats/' + key + '/messages/' + messageRef.key).set({
+            return db.ref('chats/' + key + '/messages/' + messageRef.key).set({
                 text: text,
                 sender: self.user.uid,
                 timestamp: firebase.database.ServerValue.TIMESTAMP,
                 read: false
             });
+        }).then(function() {
             tempMessage.pending = false;
             self.displayChatMessages(self.chatMessages[key], key);
+            return self.capturePlanPaymentReceiptIfNeeded(key, text);
         }).catch(function(err) {
             self.toast('Error sending message', 'error');
             var idx = self.chatMessages[key].indexOf(tempMessage);
@@ -11886,8 +13708,9 @@ app.displayTypingIndicator = function(userName) {
     if (existing) existing.remove();
 
     var typingDiv = document.createElement('div');
-    typingDiv.className = 'typing-indicator';
-    typingDiv.innerHTML = '<div style="font-size:13px;color:#6b7280;font-style:italic;padding:8px;"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span> ' + userName + ' is typing...</div>';
+    typingDiv.className = 'typing-indicator admin-typing incoming-typing-bubble';
+    typingDiv.setAttribute('aria-live', 'polite');
+    typingDiv.innerHTML = '<span>' + userName + ' is typing</span><span class="typing-dots"><span></span><span></span><span></span></span>';
     chatMsgs.appendChild(typingDiv);
     chatMsgs.scrollTop = chatMsgs.scrollHeight;
 };
@@ -12009,6 +13832,7 @@ app.trackPresence = function() {
     if (this.presenceListener) db.ref('presence/' + otherUserId).off();
 
     this.presenceListener = db.ref('presence/' + otherUserId).on('value', function(snapshot) {
+        if (self.isPlanSupportConversation) return;
         var presence = snapshot.val();
         var headerStatus = document.querySelector('.chat-header-status');
         if (!headerStatus) return;
@@ -13084,23 +14908,25 @@ app.stopTypingIndicator = function() {
 };
 
 app.displayTypingIndicator = function(userName) {
-    var chatMsgs = document.getElementById('chatMessages');
-    if (!chatMsgs) return;
-    var existing = chatMsgs.querySelector('.typing-indicator');
-    if (existing) existing.remove();
-    var typingDiv = document.createElement('div');
-    typingDiv.className = 'typing-indicator';
-    typingDiv.innerHTML = '<div style="font-size:13px;color:#6b7280;font-style:italic;padding:8px;"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span> ' + userName + ' is typing...</div>';
-    chatMsgs.appendChild(typingDiv);
-    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    var indicator = document.getElementById('typingIndicator');
+    var text = document.getElementById('typingText');
+    if (!indicator || !text) return;
+    if (this.typingDisplayTimeout) {
+        clearTimeout(this.typingDisplayTimeout);
+        this.typingDisplayTimeout = null;
+    }
+    text.textContent = (userName || 'User') + ' is typing';
+    indicator.style.display = 'flex';
 };
 
 app.trackTyping = function() {
     if (!this.currentChat) return;
     var self = this;
     var key = [self.user.uid, self.currentChat.uid].sort().join('_');
-    if (this.typingListener) db.ref('typing/' + key).off();
+    if (this.typingListenerKey) db.ref('typing/' + this.typingListenerKey).off();
+    this.typingListenerKey = key;
     this.typingListener = db.ref('typing/' + key).on('value', function(snapshot) {
+        if (!self.currentChat || [self.user.uid, self.currentChat.uid].sort().join('_') !== key) return;
         var typing = snapshot.val();
         var typingUsers = [];
         if (typing) {
@@ -13110,11 +14936,10 @@ app.trackTyping = function() {
                 }
             });
         }
-        var existing = document.querySelector('.typing-indicator');
         if (typingUsers.length > 0) {
-            if (!existing) self.displayTypingIndicator(typingUsers[0]);
-        } else if (existing) {
-            existing.remove();
+            self.displayTypingIndicator(typingUsers[0]);
+        } else {
+            self.hideTypingIndicator();
         }
     });
 };

@@ -6,7 +6,7 @@
     <title>CHICHI - Social Media</title>
     <meta name="description" content="CHICHI social media community for sharing, connecting, and earning rewards.">
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- CSS -->
     <link rel="stylesheet" href="css/style.css">
@@ -200,6 +200,7 @@
 
         <div class="header-actions">
             <button class="btn-icon header-earn-btn" id="headerEarnBtn" onclick="app.switchView('earn')" title="Earn"><img src="earn-icon.svg" alt="Earn" class="header-earn-icon"></button>
+            <button class="btn-icon header-notification-btn" id="headerNotificationBtn" onclick="app.showNotificationsTab()" title="Notifications">🔔<span id="clientNotificationBadge" style="display:none;">0</span></button>
             <button class="btn-icon" id="headerMenuBtn" onclick="app.showHeaderMenu()">☰</button>
             <div class="header-menu" id="headerMenu" style="display:none;position:absolute;top:100%;right:0;background:white;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.15);min-width:180px;z-index:1000;">
                 <button id="menuProfile" onclick="app.switchView('profile')" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;">� My Profile</button>
@@ -219,16 +220,16 @@
             <!-- Feed Tabs -->
             <div class="feed-tabs-container" id="feedTabsContainer">
                 <button class="feed-tab active" onclick="app.switchFeedTab('forYou')" data-tab="forYou">
-                    <span class="feed-tab-text">For You</span>
+                    <span class="feed-tab-text">Offers</span>
                     <span class="feed-tab-underline"></span>
                 </button>
                 <button class="feed-tab" onclick="app.switchFeedTab('following')" data-tab="following">
-                    <span class="feed-tab-text">Following</span>
+                    <span class="feed-tab-text">Updates</span>
                     <span class="feed-tab-underline"></span>
                 </button>
-                <button class="feed-create-button" type="button" onclick="app.showCreateModal()" title="Make a post">
+                <button class="feed-create-button" type="button" onclick="app.switchView('messages')" title="Open inbox">
                     <span aria-hidden="true">+</span>
-                    <span>Post</span>
+                    <span>Chat</span>
                 </button>
             </div>
             <div id="feedContainer"></div>
@@ -236,16 +237,17 @@
 
         <!-- EXPLORE VIEW -->
         <div class="view" id="exploreView">
-            <div id="exploreContainer" style="padding: 20px;">
+            <div id="exploreContainer" class="explore-shell">
+                <div class="explore-page-heading"><div><span class="explore-kicker">DISCOVER</span><h2>Explore</h2><p>Find people, conversations, and fresh CHICHI updates.</p></div></div>
                 <section class="explore-stories-section">
                     <div class="explore-stories-heading"><span>Stories</span><small>What the community is sharing</small></div>
                     <div id="storiesList"></div>
                 </section>
                 
                 <!-- Search People Section -->
-                <div style="margin-bottom: 24px;">
+                <div class="explore-search-block">
                     <div style="position: relative;">
-                        <input type="text" id="exploreSearchInput" placeholder="🔍 Search people..." style="width: 100%; padding: 12px 16px 12px 40px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 14px; font-family: inherit; transition: 0.2s;" onfocus="this.style.borderColor='#0088cc'; this.style.boxShadow='0 0 0 3px rgba(0, 136, 204, 0.1)'" onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'" onkeyup="if(typeof app !== 'undefined' && app.searchExplorePeople) app.searchExplorePeople(this.value)">
+                        <input type="search" id="exploreSearchInput" placeholder="Search people..." onfocus="this.style.borderColor='#0f766e'; this.style.boxShadow='0 0 0 3px rgba(15, 118, 110, 0.1)'" onblur="this.style.borderColor=''; this.style.boxShadow='none'" oninput="if(typeof app !== 'undefined' && app.searchExplorePeople) app.searchExplorePeople(this.value)">
                         <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #9ca3af; pointer-events: none;">🔍</div>
                     </div>
                 </div>
@@ -257,16 +259,11 @@
                 </div>
 
                 <!-- Explore People Section -->
-                <div style="margin-bottom: 32px;">
-                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">People to Follow</h2>
-                    <div id="explorePeopleContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;"></div>
+                <div class="explore-people-section">
+                    <div class="explore-section-heading"><h2>People to follow</h2><span>Connect with the community</span></div>
+                    <div id="explorePeopleContainer"></div>
                 </div>
 
-                <!-- Trending Posts Section -->
-                <div>
-                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">Most Liked</h2>
-                    <div id="trendingPostsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
-                </div>
             </div>
         </div>
 
@@ -309,7 +306,7 @@
                 <span class="nav-label">Home</span>
             </button>
             <button class="nav-item" onclick="app.switchView('explore')">
-                <span class="nav-icon" aria-label="Friends">
+                <span class="nav-icon" aria-label="Explore">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="9" cy="8" r="3"></circle>
                         <path d="M3.5 19c.7-3 2.5-4.5 5.5-4.5s4.8 1.5 5.5 4.5"></path>
@@ -317,10 +314,10 @@
                         <path d="M17 14.5c1.9.5 3.1 2 3.5 4.5"></path>
                     </svg>
                 </span>
-                <span class="nav-label">Friends</span>
+                <span class="nav-label">Explore</span>
             </button>
             <!-- FAB BUTTON IN CENTER -->
-            <button type="button" class="fab-button-nav" onclick="app.showCreateModal(); return false;" title="Create Post">+</button>
+            <button type="button" class="fab-button-nav" onclick="app.switchView('messages'); return false;" title="Open inbox">+</button>
             <button class="nav-item" onclick="app.switchView('messages')" id="messagesNavBtn">
                 <span class="nav-icon">💬</span>
                 <span class="nav-label">Inbox</span>
@@ -344,24 +341,20 @@
             <div id="chatHeaderName">User</div>
             <div id="chatHeaderStatus" class="status-indicator">
                 <span class="status-dot"></span>
-                <span id="statusText">Checking status...</span>
+                <span id="statusText" aria-live="polite">Checking status...</span>
             </div>
         </div>
         <button id="callBtn" onclick="app.initiateCall()" title="Start Call" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px; padding: 6px; opacity: 0.9; transition: 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.9'">📞</button>
         <button id="chatMenuBtn" onclick="app.showChatMenu()" title="More options">⋯</button>
     </div>
 
-    <!-- Typing Indicator -->
-    <div id="typingIndicator" class="typing-indicator" style="display:none; padding: 8px 16px; background: #f9fafb; font-size: 12px; color: #6b7280;">
-        <span id="typingText">User is typing</span>
-        <span class="typing-dots">
-            <span></span><span></span><span></span>
-        </span>
-    </div>
-
     <!-- Messages Container -->
     <div id="chatWallpaperLayer" aria-hidden="true"></div>
     <div id="chatMessages"></div>
+    <div id="typingIndicator" class="typing-indicator" style="display:none;" role="status" aria-live="polite">
+        <span id="typingText">User is typing</span>
+        <span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+    </div>
 
     <!-- Enhanced Chat Input -->
     <div id="chatInput" class="enhanced-chat-input">
@@ -529,17 +522,6 @@
         <button onclick="app.muteChat()" style="width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;margin-bottom:8px;">🔕 Mute</button>
         <button onclick="app.blockUser()" style="width:100%;padding:10px;background:#fef2f2;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;color:#ff4444;">🚫 Block</button>
     </div>
-</div>
-
-<!-- TYPING INDICATOR (Phase 1) -->
-<div id="typingIndicator" class="typing-indicator" style="display:none;padding:8px 16px;font-size:12px;color:#9ca3af;font-style:italic;">
-    <span id="typingUserName">User</span> is typing<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
-    <style>
-        @keyframes typing { 0%,60%,100%{opacity:0.3} 30%{opacity:1} }
-        .typing-indicator .dot { animation: typing 1.4s infinite; }
-        .typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
-    </style>
 </div>
 
 <!-- SCROLL TO LATEST BUTTON (Phase 2) -->
@@ -819,21 +801,14 @@
 <!-- ADMIN PORTAL (existing) -->
 <div class="admin-portal" id="adminPortal">
     <div class="admin-header">
-        <h2>⚙️ Admin Portal</h2>
-        <button onclick="app.closeAdminPortal()" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 16px;border-radius:8px;cursor:pointer;font-weight:600;margin-top:8px;">Close</button>
+        <div><div class="admin-kicker">CHICHI OPERATIONS</div><h2>Admin workspace</h2><p>Manage customers, access, and the community from one place.</p></div>
+        <button class="admin-close-btn" onclick="app.closeAdminPortal()">Close workspace</button>
     </div>
     <div class="admin-tabs">
-        <button class="admin-tab active" onclick="app.switchAdminTab('dashboard')">📊 Dashboard</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('users')">👥 Users</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('incomplete')">⚠️ Incomplete</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('posts')">📝 Posts</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('analytics')">📈 Analytics</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('gifts')">🎁 Gifts</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('admins')">👑 Admin Access</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('notifications')">🔔 Notifications</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('suspicious')">🚨 Suspicious</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('logs')">📋 Logs</button>
-        <button class="admin-tab" onclick="app.switchAdminTab('email')">📧 Email</button>
+        <div class="admin-tab-group"><span>Overview</span><button class="admin-tab active" onclick="app.switchAdminTab('dashboard')">Dashboard</button><button class="admin-tab" onclick="app.switchAdminTab('analytics')">Analytics</button></div>
+        <div class="admin-tab-group"><span>People</span><button class="admin-tab" onclick="app.switchAdminTab('users')">Users</button><button class="admin-tab" onclick="app.switchAdminTab('chats')">All conversations</button><button class="admin-tab" onclick="app.switchAdminTab('admins')">Admin access</button></div>
+        <div class="admin-tab-group"><span>Operations</span><button class="admin-tab" onclick="app.switchAdminTab('notifications')">Access & alerts</button><button class="admin-tab" onclick="app.switchAdminTab('offers')">Offers</button><button class="admin-tab" onclick="app.switchAdminTab('email')">Email</button></div>
+        <div class="admin-tab-group"><span>Safety & records</span><button class="admin-tab" onclick="app.switchAdminTab('suspicious')">Suspicious</button><button class="admin-tab" onclick="app.switchAdminTab('logs')">Activity logs</button><button class="admin-tab" onclick="app.switchAdminTab('posts')">Community posts</button></div>
     </div>
     <div class="admin-content">
         <!-- Dashboard -->
@@ -852,9 +827,16 @@
         <!-- Users -->
         <div class="admin-tab-content" id="adminUsers">
             <div style="margin-bottom:16px;">
-                <input type="text" id="userSearchInput" placeholder="Search users..." class="form-input" onkeyup="if(typeof app !== 'undefined' && app.searchUsers) app.searchUsers(this.value)">
+                <input type="search" id="userSearchInput" placeholder="Search name, email, or username..." class="form-input" oninput="if(typeof app !== 'undefined' && app.searchAdminUsers) app.searchAdminUsers(this.value)">
             </div>
             <div id="adminUsersList"></div>
+        </div>
+
+        <!-- All conversations -->
+        <div class="admin-tab-content" id="adminChats">
+            <div class="admin-section-heading"><div><span class="admin-kicker">MESSAGE OVERSIGHT</span><h3>All conversations</h3><p>Read-only support and safety view. Users can continue chatting normally.</p></div><span class="admin-readonly-badge">READ ONLY</span></div>
+            <div class="admin-chat-toolbar"><div><strong id="adminChatCount">0</strong><span> conversations</span></div><label><span>Search</span><input id="adminChatSearch" type="search" placeholder="Search a person or message..." oninput="app.filterAdminChats(this.value)"></label></div>
+            <div id="adminChatsList"></div>
         </div>
         
         <!-- Incomplete Users -->
@@ -899,7 +881,91 @@
         
         <!-- Notifications -->
         <div class="admin-tab-content" id="adminNotificationsTab">
+            <div style="padding:16px;background:#f0f7ff;border-radius:12px;margin-bottom:18px;border:1px solid #bfdbfe;">
+                <h3 style="margin:0 0 6px;color:#1e40af;">Send access update</h3>
+                <p style="margin:0 0 14px;color:#64748b;font-size:12px;">Notify one user about login instructions and optionally set their access expiry countdown.</p>
+                <select id="adminNotificationUser" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:10px;font:inherit;">
+                    <option value="">Select a user...</option>
+                </select>
+                <input id="adminNotificationMessage" type="text" placeholder="Message, e.g. Your access login details are ready." style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:10px;box-sizing:border-box;font:inherit;">
+                <input id="adminAccessProfile" type="text" placeholder="Streaming profile, e.g. Profile 1" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:10px;box-sizing:border-box;font:inherit;">
+                <label style="display:block;color:#475569;font-size:12px;font-weight:700;margin-bottom:5px;">Access expires on</label>
+                <input id="adminAccessExpiry" type="date" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;box-sizing:border-box;font:inherit;">
+                <label style="display:flex;align-items:center;gap:8px;color:#475569;font-size:12px;margin-bottom:12px;"><input id="adminAccessPaid" type="checkbox" checked> Payment received for this access</label>
+                <button type="button" onclick="app.sendUserAccessUpdate()" style="width:100%;padding:11px;background:#1e40af;color:white;border:0;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;">Send update and save countdown</button>
+                <button type="button" onclick="app.showPublicSubscribersModal()" style="width:100%;padding:10px;margin-top:8px;background:#fff;color:#0f766e;border:1px solid #99cfc7;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;">Manage subscribed customers</button>
+                <div style="margin-top:8px;font-size:11px;color:#64748b;">Private notifications stay private. Use the subscribed-customer manager only after confirming marketing consent.</div>
+            </div>
+            <section class="admin-plan-payment-section">
+                <div class="admin-section-heading"><div><span class="admin-kicker">PAYMENT REVIEW</span><h3>Pending M-Pesa confirmations</h3><p>Check each receipt in M-Pesa before marking it paid. Credentials and access countdown are sent only after verification.</p></div></div>
+                <div id="adminPlanPaymentOrders" class="admin-plan-payment-list"><div class="admin-empty-state">Loading payment requests…</div></div>
+            </section>
             <div id="adminNotificationsList"></div>
+        </div>
+
+        <!-- Official offers -->
+        <div class="admin-tab-content" id="adminOffers">
+            <div class="admin-section-heading"><div><span class="admin-kicker">HOME STOREFRONT</span><h3>Manage Home card and trailers</h3><p>Start with the trailer editor below, or edit the CHICHI Offers card text, images, and highlights.</p></div></div>
+            <div class="admin-offer-form home-offer-settings-form">
+                <section class="home-trailer-editor" aria-labelledby="homeTrailerEditorTitle">
+                    <span class="admin-kicker">MOVIE TRAILERS</span>
+                    <h4 id="homeTrailerEditorTitle">Add or edit trailers on Home</h4>
+                    <p>Each trailer has its own title and YouTube link. Use <strong>Add another trailer</strong> to create a separate entry.</p>
+                    <div id="homeOfferTrailerFields" class="home-trailer-editor-fields"></div>
+                    <button class="home-trailer-add-button" type="button" onclick="app.addHomeOfferTrailerField('', '', true)">+ Add another trailer</button>
+                    <small>Trailers appear in the horizontal Home carousel. Up to 12 trailers are supported.</small>
+                    <button type="button" onclick="app.saveHomeOfferSettings()">Save trailers to Home</button>
+                    <small>This also saves any other storefront edits you have made.</small>
+                </section>
+                <div class="home-offer-settings-grid">
+                    <label>Account name<input id="homeOfferAccountNameInput" type="text"></label>
+                    <label>Availability subtitle<input id="homeOfferAccountSubtitleInput" type="text"></label>
+                    <label>Verification label<input id="homeOfferVerifiedInput" type="text"></label>
+                    <label class="home-offer-settings-wide">Eyebrow text<input id="homeOfferEyebrowInput" type="text"></label>
+                    <label class="home-offer-settings-wide">Main headline<input id="homeOfferTitleInput" type="text"></label>
+                    <label class="home-offer-settings-wide">Description<textarea id="homeOfferDescriptionInput" rows="3"></textarea></label>
+                    <label>Button label<input id="homeOfferButtonInput" type="text"></label>
+                </div>
+                <div class="home-offer-settings-heading"><strong>Showcase tiles</strong><span>Choose a new image file or paste an image URL for each tile.</span></div>
+                <div class="home-offer-settings-grid">
+                    <label>Tile 1 label<input id="homeOfferTile1LabelInput" type="text"></label>
+                    <label>Tile 1 image URL<input id="homeOfferTile1ImageInput" type="url"></label>
+                    <label class="home-offer-settings-wide">Tile 1 image file<input id="homeOfferTile1FileInput" type="file" accept="image/*"></label>
+                    <label>Tile 2 label<input id="homeOfferTile2LabelInput" type="text"></label>
+                    <label>Tile 2 image URL<input id="homeOfferTile2ImageInput" type="url"></label>
+                    <label class="home-offer-settings-wide">Tile 2 image file<input id="homeOfferTile2FileInput" type="file" accept="image/*"></label>
+                    <label>Tile 3 label<input id="homeOfferTile3LabelInput" type="text"></label>
+                    <label>Tile 3 image URL<input id="homeOfferTile3ImageInput" type="url"></label>
+                    <label class="home-offer-settings-wide">Tile 3 image file<input id="homeOfferTile3FileInput" type="file" accept="image/*"></label>
+                </div>
+                <div class="home-offer-settings-heading"><strong>Service highlights</strong><span>Three short benefits shown at the bottom of the card.</span></div>
+                <div class="home-offer-settings-grid">
+                    <label>Highlight 1 title<input id="homeOfferBenefit1TitleInput" type="text"></label>
+                    <label>Highlight 1 detail<input id="homeOfferBenefit1DetailInput" type="text"></label>
+                    <label>Highlight 2 title<input id="homeOfferBenefit2TitleInput" type="text"></label>
+                    <label>Highlight 2 detail<input id="homeOfferBenefit2DetailInput" type="text"></label>
+                    <label>Highlight 3 title<input id="homeOfferBenefit3TitleInput" type="text"></label>
+                    <label>Highlight 3 detail<input id="homeOfferBenefit3DetailInput" type="text"></label>
+                </div>
+                <button type="button" onclick="app.saveHomeOfferSettings()">Save storefront changes</button>
+                <small>Image files upload to the configured image host. The fixed CHICHI logo profile photo cannot be replaced here.</small>
+            </div>
+            <div class="admin-section-heading"><div><span class="admin-kicker">STOREFRONT</span><h3>Publish a poster</h3><p>Publish a verified CHICHI offer or update to the Home page.</p></div></div>
+            <div class="admin-offer-form">
+                <label class="admin-offer-file-label" for="adminPostType">Poster type</label>
+                <select id="adminPostType">
+                    <option value="offer">Offer poster</option>
+                    <option value="update">Update poster</option>
+                </select>
+                <input id="adminOfferTitle" type="text" placeholder="Offer title, e.g. Premium access this month">
+                <textarea id="adminOfferMessage" rows="4" placeholder="Describe the rate, duration, availability, and how customers should contact you."></textarea>
+                <label class="admin-offer-file-label" for="adminOfferImageFile">Choose poster image</label>
+                <input id="adminOfferImageFile" type="file" accept="image/*">
+                <input id="adminOfferImage" type="url" placeholder="Poster image URL (optional)">
+                <button type="button" onclick="app.publishAdminOffer()">Publish official offer</button>
+                <small>Do not include passwords or private credentials in public offers.</small>
+            </div>
+            <div id="adminOffersList"></div>
         </div>
         
         <!-- Suspicious Activity -->
