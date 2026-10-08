@@ -75,7 +75,7 @@ const SPINNER_CONFIG = {
 const EARNING_SETTINGS = {
     free: {
         label: 'Free',
-        badge: '✨',
+        badge: 'F',
         badgeColor: '#6b7280',
         price: 0,
         dailyQuestions: 5,
@@ -86,8 +86,8 @@ const EARNING_SETTINGS = {
         bonus: '5 trivia questions/day'
     },
     premium: {
-        label: '⭐ Premium',
-        badge: '⭐',
+        label: 'Premium',
+        badge: 'P',
         badgeColor: '#f59e0b',
         price: 330,
         dailyQuestions: 15,
@@ -98,8 +98,8 @@ const EARNING_SETTINGS = {
         bonus: 'No ads + 5 extra questions/day'
     },
     vip: {
-        label: '👑 VIP',
-        badge: '👑',
+        label: 'VIP',
+        badge: 'V',
         badgeColor: '#8b5cf6',
         price: 100,
         dailyQuestions: 150,
@@ -172,9 +172,9 @@ const TRIVIA_QUESTIONS = [
 // ============================================
 
 const GIFT_CATALOG = [
-    { id: 'gift1', name: '� Netflix', description: '1-month Netflix subscription', cost: 500, category: 'entertainment', image: '🎬' },
-    { id: 'gift2', name: '📱 Airtime', description: 'Phone airtime top-up', cost: 200, category: 'mobile', image: '📱' },
-    { id: 'gift3', name: '📊 Mobile Data', description: 'Mobile data bundle', cost: 300, category: 'mobile', image: '📊' }
+    { id: 'gift1', name: 'Netflix', description: '1-month Netflix subscription', cost: 500, category: 'entertainment', image: '' },
+    { id: 'gift2', name: 'Airtime', description: 'Phone airtime top-up', cost: 200, category: 'mobile', image: '' },
+    { id: 'gift3', name: 'Mobile Data', description: 'Mobile data bundle', cost: 300, category: 'mobile', image: '' }
 ];
 
 // ============================================

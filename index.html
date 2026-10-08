@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CHICHI - Social Media</title>
-    <meta name="description" content="CHICHI social media community for sharing, connecting, and earning rewards.">
+    <title>CHICHI - Messages</title>
+    <meta name="description" content="CHICHI messaging keeps your conversations and community connections in one place.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com">
+    <link rel="preconnect" href="https://res.cloudinary.com">
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     
@@ -12,9 +16,9 @@
     <link rel="stylesheet" href="css/style.css">
     
     <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
     <!-- ========== PWA META TAGS ========== -->
     <link rel="manifest" href="/manifest.json">
@@ -33,7 +37,7 @@
     </script>
 
     <!-- CONFIG -->
-    <script src="config.js"></script>
+    <script defer src="config.js"></script>
     
 </head>
 <body>
@@ -70,6 +74,7 @@
     <div class="auth-overlay"></div>
     
     <div class="auth-card auth-animate">
+        <button class="auth-modal-close" type="button" aria-label="Close sign in" onclick="app.closeAuthModal()">×</button>
         <!-- Animated Background Glow -->
         <div class="auth-glow auth-glow-1"></div>
         <div class="auth-glow auth-glow-2"></div>
@@ -124,10 +129,8 @@
                 </div>
             </form>
         </div>
-
         <!-- SIGNUP TAB -->
         <div class="tab-content" id="signupTab">
-            <p style="margin:0 0 16px;text-align:center;color:#0f766e;font-size:13px;font-weight:700;">Sign up and receive 10 redeemable CHICHI Coins.</p>
             <form onsubmit="app.handleSignup(event)">
                 <div class="form-group form-animate">
                     <label class="form-label">Full Name</label>
@@ -157,6 +160,14 @@
                         <div class="input-glow"></div>
                     </div>
                 </div>
+                <div class="form-group form-animate">
+                    <label class="form-label" for="signupReferralCode">Referral code <span style="font-weight:400;color:#999;">(optional)</span></label>
+                    <div class="form-input-wrapper">
+                        <input type="text" class="form-input" id="signupReferralCode" placeholder="Enter a friend's code" maxlength="40" autocomplete="off" autocapitalize="characters">
+                        <div class="input-glow"></div>
+                    </div>
+                    <small style="display:block;margin-top:6px;color:#999;font-size:11px;">Your friend earns KSh 10 when you join with their code.</small>
+                </div>
                 
                 <button type="submit" class="btn-submit btn-animate glow-button" id="signupBtn">
                     <span class="signup-btn-text">Create Account</span>
@@ -164,8 +175,8 @@
                     <div class="button-glow"></div>
                 </button>
                 
-                <div style="text-align: center; margin-top: 16px; font-size: 12px; color: #999;">
-                    Hey Already have an account? <a href="#" onclick="app.switchTab('login'); return false;" class="login-link">Log in</a>
+                <div class="signup-login-prompt">
+                    Already have an account? <a href="#" onclick="app.switchTab('login'); return false;" class="login-link">Log in</a>
                 </div>
             </form>
         </div>
@@ -175,7 +186,7 @@
 <!-- FORGOT PASSWORD MODAL -->
 <div class="modal-overlay" id="forgotPasswordModal" style="display:none;">
     <div class="modal modal-animate" style="max-width:360px;">
-        <div class="modal-close"><button onclick="app.closeForgotPasswordModal()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;">✕</button></div>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeForgotPasswordModal()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;"></button></div>
         <h2 style="font-weight:700;margin-bottom:12px;color:#fff;">Reset Password</h2>
         <p style="color:#999;margin-bottom:16px;font-size:13px;">Enter your email to receive a password reset link.</p>
         <div class="form-group">
@@ -199,15 +210,51 @@
         </div>
 
         <div class="header-actions">
-            <button class="btn-icon header-earn-btn" id="headerEarnBtn" onclick="app.switchView('earn')" title="Earn"><img src="earn-icon.svg" alt="Earn" class="header-earn-icon"></button>
-            <button class="btn-icon header-notification-btn" id="headerNotificationBtn" onclick="app.showNotificationsTab()" title="Notifications">🔔<span id="clientNotificationBadge" style="display:none;">0</span></button>
-            <button class="btn-icon" id="headerMenuBtn" onclick="app.showHeaderMenu()">☰</button>
-            <div class="header-menu" id="headerMenu" style="display:none;position:absolute;top:100%;right:0;background:white;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.15);min-width:180px;z-index:1000;">
-                <button id="menuProfile" onclick="app.switchView('profile')" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;">� My Profile</button>
-                <button id="menuDeveloper" onclick="app.showDeveloperInfo(); app.closeHeaderMenu();" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-top:1px solid #e5e7eb;">⚙️ Developer</button>
-                <button id="adminMenuBtn" onclick="app.toggleAdminModal()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-top:1px solid #e5e7eb; display:none;">⚙️ Admin Panel</button>
-                <button id="menuLogin" onclick="app.showLoginPage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-top:1px solid #e5e7eb;border-radius:0 0 12px 12px;display:none;">🔑 Sign In</button>
-                <button id="menuLogout" onclick="app.justLogout()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-top:1px solid #e5e7eb;border-radius:0 0 12px 12px;">🚪 Sign Out</button>
+            <button class="btn-icon header-earn-btn" id="headerEarnBtn" onclick="app.switchView('earn')" title="Earn" aria-label="Earn">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M8 14.5c.7.8 1.8 1.2 3.2 1.2 1.7 0 2.8-.7 2.8-1.8 0-1-.7-1.5-2.5-1.9l-1-.2C8.8 11.4 8 10.8 8 9.7c0-1.2 1.1-2 2.9-2 1.2 0 2.2.3 3 .9M12 6v12"></path>
+                </svg>
+            </button>
+            <button class="btn-icon header-notification-btn" id="headerNotificationBtn" onclick="app.showNotificationsTab()" title="Notifications" aria-label="Notifications">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+                    <path d="M10 21h4"></path>
+                </svg>
+                <span id="clientNotificationBadge" style="display:none;">0</span>
+            </button>
+            <button class="btn-icon" id="headerMenuBtn" onclick="app.showHeaderMenu()" title="More options" aria-label="More options" aria-haspopup="true" aria-controls="headerMenu" aria-expanded="false">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                    <path d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            <div class="header-menu" id="headerMenu" role="menu" aria-label="Main menu" style="display:none;">
+                <div class="header-menu-heading">Account &amp; settings</div>
+                <button class="header-menu-item" id="menuProfile" role="menuitem" onclick="app.switchView('profile'); app.closeHeaderMenu();">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.6-3.4 3-5.2 7-5.2s6.4 1.8 7 5.2"></path></svg>
+                    <span>My profile</span>
+                </button>
+                <button class="header-menu-item" id="menuReferrals" role="menuitem" onclick="app.closeHeaderMenu(); app.showReferralDashboard();">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="16" r="3"></circle><path d="M10.5 10.5 14.5 13.5M17 5v4M15 7h4M5 17v4M3 19h4"></path></svg>
+                    <span>Refer &amp; earn</span>
+                </button>
+                <button class="header-menu-item" id="menuDeveloper" role="menuitem" onclick="app.showDeveloperInfo(); app.closeHeaderMenu();">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.2 9a2.9 2.9 0 1 1 4.9 2.1c-1.3 1.1-2.1 1.6-2.1 3.1M12 17.5v.1"></path></svg>
+                    <span>About CHICHI</span>
+                </button>
+                <button class="header-menu-item" id="adminMenuBtn" role="menuitem" onclick="app.closeHeaderMenu(); app.toggleAdminModal()" style="display:none;">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 6v5c0 5.1-3.5 8.5-8 10-4.5-1.5-8-4.9-8-10V6l8-3Z"></path><path d="m9 12 2 2 4-4"></path></svg>
+                    <span>Admin panel</span>
+                </button>
+                <div class="header-menu-divider" role="separator"></div>
+                <button class="header-menu-item header-menu-auth" id="menuLogin" role="menuitem" onclick="app.closeHeaderMenu(); app.showLoginPage()" style="display:none;">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5M10 16l4-4-4-4M14 12H4"></path></svg>
+                    <span>Sign in</span>
+                </button>
+                <button class="header-menu-item header-menu-auth" id="menuLogout" role="menuitem" onclick="app.closeHeaderMenu(); app.justLogout()">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5M14 8l4 4-4 4M18 12H8"></path></svg>
+                    <span>Sign out</span>
+                </button>
             </div>
         </div>
     </div>
@@ -215,46 +262,24 @@
     <!-- APP CONTENT -->
     <div class="app-content" id="appContent">
         
-        <!-- FEED VIEW -->
-        <div class="view" id="feedView">
-            <!-- Feed Tabs -->
-            <div class="feed-tabs-container" id="feedTabsContainer">
-                <button class="feed-tab active" onclick="app.switchFeedTab('forYou')" data-tab="forYou">
-                    <span class="feed-tab-text">Offers</span>
-                    <span class="feed-tab-underline"></span>
-                </button>
-                <button class="feed-tab" onclick="app.switchFeedTab('following')" data-tab="following">
-                    <span class="feed-tab-text">Updates</span>
-                    <span class="feed-tab-underline"></span>
-                </button>
-                <button class="feed-create-button" type="button" onclick="app.switchView('messages')" title="Open inbox">
-                    <span aria-hidden="true">+</span>
-                    <span>Chat</span>
-                </button>
-            </div>
-            <div id="feedContainer"></div>
-        </div>
-
         <!-- EXPLORE VIEW -->
         <div class="view" id="exploreView">
             <div id="exploreContainer" class="explore-shell">
-                <div class="explore-page-heading"><div><span class="explore-kicker">DISCOVER</span><h2>Explore</h2><p>Find people, conversations, and fresh CHICHI updates.</p></div></div>
-                <section class="explore-stories-section">
-                    <div class="explore-stories-heading"><span>Stories</span><small>What the community is sharing</small></div>
-                    <div id="storiesList"></div>
-                </section>
+                <div class="explore-page-heading"><div><span class="explore-kicker">DISCOVER</span><h2>People</h2><p>Find people in the community and start a conversation.</p></div></div>
                 
                 <!-- Search People Section -->
                 <div class="explore-search-block">
                     <div style="position: relative;">
                         <input type="search" id="exploreSearchInput" placeholder="Search people..." onfocus="this.style.borderColor='#0f766e'; this.style.boxShadow='0 0 0 3px rgba(15, 118, 110, 0.1)'" onblur="this.style.borderColor=''; this.style.boxShadow='none'" oninput="if(typeof app !== 'undefined' && app.searchExplorePeople) app.searchExplorePeople(this.value)">
-                        <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #9ca3af; pointer-events: none;">🔍</div>
+                        <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none;" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Search Results Container (Hidden by default) -->
                 <div id="exploreSearchResults" style="display: none; margin-bottom: 32px;">
-                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;">👥 Search Results</h2>
+                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1a202c;"> Search Results</h2>
                     <div id="exploreSearchResultsContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
                 </div>
 
@@ -269,16 +294,16 @@
 
         <!-- MESSAGES VIEW -->
         <div class="view" id="messagesView">
-            <!-- Search and filter controls -->
             <div class="messages-toolbar">
+                <button type="button" id="messagesNewChatButton" onclick="app.openNewChat()">New message</button>
                 <div id="messageSearchBar">
-                    <input type="text" id="messageSearchInput" placeholder="🔍 Search messages or people..." onkeyup="if(typeof app !== 'undefined' && app.searchMessagesPage) app.searchMessagesPage(this.value)">
+                    <input type="text" id="messageSearchInput" placeholder="Search messages or people..." onkeyup="if(typeof app !== 'undefined' && app.searchMessagesPage) app.searchMessagesPage(this.value)">
                 </div>
                 <div id="messagesFilterTabs">
-                <button class="message-filter-tab active" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('all')" style="padding: 8px 14px; background: #0088cc; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">All</button>
-                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('unread')" style="padding: 8px 14px; background: #f3f4f6; color: #666; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">Unread</button>
-                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('favorites')" style="padding: 8px 14px; background: #f3f4f6; color: #666; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">❤️ Favorites</button>
-                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('archived')" style="padding: 8px 14px; background: #f3f4f6; color: #666; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap;">📦 Archived</button>
+                <button class="message-filter-tab active" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('all')">All</button>
+                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('unread')">Unread</button>
+                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('favorites')">Favorites</button>
+                <button class="message-filter-tab" onclick="if(typeof app !== 'undefined' && app.filterMessages) app.filterMessages('archived')">Archived</button>
                 </div>
             </div>
 
@@ -300,10 +325,26 @@
 
     <!-- BOTTOM NAVIGATION -->
     <div class="bottom-nav">
+        <div class="guest-nav-top" aria-label="CHICHI navigation and quick actions">
+            <div class="guest-nav-brand"><img src="icon-192.png" alt=""><span>CHICHI</span></div>
+            <nav class="guest-nav-links" aria-label="Main navigation">
+                <button type="button" class="guest-nav-link" data-guest-view="messages" onclick="app.switchView('messages')">Messages</button>
+                <button type="button" class="guest-nav-link" data-guest-view="explore" onclick="app.switchView('explore')">People</button>
+                <button type="button" class="guest-nav-link" data-guest-view="profile" onclick="app.switchView('profile')">Profile</button>
+            </nav>
+            <div class="guest-nav-actions"></div>
+        </div>
         <div class="nav-wrapper">
-            <button class="nav-item active" onclick="app.switchView('feed')">
-                <span class="nav-icon">⌂</span>
-                <span class="nav-label">Home</span>
+            <button class="nav-item active" onclick="app.switchView('messages')" id="messagesNavBtn">
+                <span class="nav-icon" aria-hidden="true">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20.5 11.5a7 7 0 0 1-7 7H8l-4 2 1.2-4.1A7 7 0 1 1 20.5 11.5Z"></path>
+                        <path d="M8.5 8.5h7M8.5 12h5"></path>
+                        <path d="M17.2 5.2a7.1 7.1 0 0 1 2.6 2.4"></path>
+                    </svg>
+                </span>
+                <span class="nav-label">Messages</span>
+                <span class="nav-badge" id="messagesBadge" style="display:none;">0</span>
             </button>
             <button class="nav-item" onclick="app.switchView('explore')">
                 <span class="nav-icon" aria-label="Explore">
@@ -314,17 +355,15 @@
                         <path d="M17 14.5c1.9.5 3.1 2 3.5 4.5"></path>
                     </svg>
                 </span>
-                <span class="nav-label">Explore</span>
-            </button>
-            <!-- FAB BUTTON IN CENTER -->
-            <button type="button" class="fab-button-nav" onclick="app.switchView('messages'); return false;" title="Open inbox">+</button>
-            <button class="nav-item" onclick="app.switchView('messages')" id="messagesNavBtn">
-                <span class="nav-icon">💬</span>
-                <span class="nav-label">Inbox</span>
-                <span class="nav-badge" id="messagesBadge" style="display:none;">0</span>
+                <span class="nav-label">People</span>
             </button>
             <button class="nav-item" onclick="app.switchView('profile')">
-                <span class="nav-icon nav-profile-avatar" id="navProfileAvatar" aria-label="Profile">👤</span>
+                <span class="nav-icon nav-profile-avatar" id="navProfileAvatar" aria-label="Profile">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="8" r="4"></circle>
+                        <path d="M4 21a8 8 0 0 1 16 0"></path>
+                    </svg>
+                </span>
                 <span class="nav-label">Profile</span>
             </button>
         </div>
@@ -335,8 +374,18 @@
 <div id="chatView" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:2000;background:white;flex-direction:column;">
     <!-- Enhanced Chat Header -->
     <div id="chatHeader">
-        <button id="chatBackBtn" onclick="app.closeChatView()">←</button>
-        <div id="chatHeaderAvatar">👤</div>
+        <button id="chatBackBtn" type="button" onclick="app.closeChatView()" title="Back to messages" aria-label="Back to messages">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M19 12H5"></path>
+                <path d="m12 19-7-7 7-7"></path>
+            </svg>
+        </button>
+        <div id="chatHeaderAvatar" aria-label="User profile">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="8" r="4"></circle>
+                <path d="M4 21a8 8 0 0 1 16 0"></path>
+            </svg>
+        </div>
         <div class="chat-header-info">
             <div id="chatHeaderName">User</div>
             <div id="chatHeaderStatus" class="status-indicator">
@@ -344,7 +393,7 @@
                 <span id="statusText" aria-live="polite">Checking status...</span>
             </div>
         </div>
-        <button id="callBtn" onclick="app.initiateCall()" title="Start Call" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px; padding: 6px; opacity: 0.9; transition: 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.9'">📞</button>
+        <button id="callBtn" onclick="app.initiateCall()" title="Start Call">Call</button>
         <button id="chatMenuBtn" onclick="app.showChatMenu()" title="More options">⋯</button>
     </div>
 
@@ -358,11 +407,31 @@
 
     <!-- Enhanced Chat Input -->
     <div id="chatInput" class="enhanced-chat-input">
-        <button class="chat-action-btn" onclick="app.attachImageToChat()" title="Attach image">📎</button>
-        <button class="chat-action-btn" onclick="app.openEmojiPicker()" title="Emoji">😊</button>
+        <button class="chat-action-btn" onclick="app.attachImageToChat()" title="Attach image" aria-label="Attach image">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.82-2.83l8.49-8.48"></path>
+            </svg>
+        </button>
+        <button class="chat-action-btn" onclick="app.openEmojiPicker()" title="Insert an emoji" aria-label="Insert an emoji">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                <path d="M9 9h.01M15 9h.01"></path>
+            </svg>
+        </button>
         <input type="text" id="chatMessageInput" placeholder="Type a message..." />
-        <button class="chat-action-btn" onclick="app.recordVoiceMessage()" title="Voice message">🎤</button>
-        <button id="chatSendBtn" onclick="app.sendChatMessage()" title="Send">➤</button>
+        <button class="chat-action-btn" onclick="app.recordVoiceMessage()" title="Voice message" aria-label="Voice message">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+                <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"></path>
+            </svg>
+        </button>
+        <button id="chatSendBtn" onclick="app.sendChatMessage()" title="Send" aria-label="Send message">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m22 2-7 20-4-9-9-4Z"></path>
+                <path d="M22 2 11 13"></path>
+            </svg>
+        </button>
     </div>
 </div>
 
@@ -371,17 +440,17 @@
 <!-- EMOJI PICKER MODAL (Phase 2) -->
 <div class="modal-overlay" id="emojiPickerModal" style="display:none;">
     <div class="modal emoji-picker-modal">
-        <div class="modal-close"><button onclick="app.closeEmojiPicker()">✕</button></div>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeEmojiPicker()">×</button></div>
         <h3 style="margin:0 0 16px 0;font-weight:700;font-size:16px;">React with emoji</h3>
         <div class="emoji-picker-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-            <button class="emoji-btn" onclick="app.addReaction('👍')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">👍</button>
-            <button class="emoji-btn" onclick="app.addReaction('❤️')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">❤️</button>
-            <button class="emoji-btn" onclick="app.addReaction('😂')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">😂</button>
-            <button class="emoji-btn" onclick="app.addReaction('😢')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">😢</button>
-            <button class="emoji-btn" onclick="app.addReaction('🔥')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">🔥</button>
-            <button class="emoji-btn" onclick="app.addReaction('🎉')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">🎉</button>
-            <button class="emoji-btn" onclick="app.addReaction('😡')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">😡</button>
-            <button class="emoji-btn" onclick="app.addReaction('👏')" style="padding:12px;font-size:28px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">👏</button>
+            <button class="emoji-btn" onclick="app.addReaction(String.fromCodePoint(0x1F44D))">Like</button>
+            <button class="emoji-btn" onclick="app.addReaction(String.fromCodePoint(0x2764, 0xFE0F))">Love</button>
+            <button class="emoji-btn" onclick="app.addReaction(String.fromCodePoint(0x1F602))">Laugh</button>
+            <button class="emoji-btn" onclick="app.addReaction(String.fromCodePoint(0x1F622))">Sad</button>
+            <button class="emoji-btn" onclick="app.addReaction(String.fromCodePoint(0x1F525))">Fire</button>
+            <button class="emoji-btn" onclick="app.addReaction(String.fromCodePoint(0x1F389))">Celebrate</button>
+            <button class="emoji-btn" onclick="app.addReaction(String.fromCodePoint(0x1F621))">Angry</button>
+            <button class="emoji-btn" onclick="app.addReaction(String.fromCodePoint(0x1F44F))">Applause</button>
         </div>
     </div>
 </div>
@@ -389,7 +458,7 @@
 <!-- VOICE RECORDING MODAL (Phase 2) -->
 <div class="modal-overlay" id="voiceRecordingModal" style="display:none;">
     <div class="modal voice-recording-modal" style="max-width:300px;">
-        <h3 style="margin:0 0 16px 0;font-weight:700;text-align:center;">🎤 Recording Audio</h3>
+        <h3 style="margin:0 0 16px 0;font-weight:700;text-align:center;"> Recording Audio</h3>
         <div class="voice-recording-content" style="text-align:center;">
             <div class="recording-timer" id="recordingTimer" style="font-size:32px;font-weight:700;margin-bottom:16px;font-family:monospace;">0:00</div>
             <div class="recording-visualizer" style="display:flex;gap:4px;justify-content:center;margin-bottom:16px;height:40px;align-items:flex-end;">
@@ -420,9 +489,9 @@
         </div>
         
         <div class="call-controls" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:12px;z-index:10;">
-            <button id="toggleMicBtn" onclick="app.toggleCallMic()" style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.2);color:white;border:none;font-size:24px;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">🎤</button>
-            <button id="toggleCameraBtn" onclick="app.toggleCallCamera()" style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.2);color:white;border:none;font-size:24px;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">📹</button>
-            <button onclick="app.endCall()" style="width:50px;height:50px;border-radius:50%;background:#ff4444;color:white;border:none;font-size:24px;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#ff5555'" onmouseout="this.style.background='#ff4444'">✕</button>
+            <button id="toggleMicBtn" onclick="app.toggleCallMic()" aria-label="Toggle microphone">Mic</button>
+            <button id="toggleCameraBtn" onclick="app.toggleCallCamera()" aria-label="Toggle camera">Camera</button>
+            <button aria-label="End call" onclick="app.endCall()" style="width:64px;height:50px;border-radius:25px;background:#ff4444;color:white;border:none;font-size:13px;font-weight:700;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#ff5555'" onmouseout="this.style.background='#ff4444'">End</button>
         </div>
     </div>
 </div>
@@ -446,8 +515,8 @@
 <!-- MEDIA GALLERY MODAL (Phase 2) -->
 <div class="modal-overlay" id="mediaGalleryModal" style="display:none;">
     <div class="modal media-gallery-modal" style="max-width:600px;max-height:80vh;">
-        <div class="modal-close"><button onclick="app.closeMediaGallery()">✕</button></div>
-        <h3 style="margin:0 0 16px 0;font-weight:700;">📸 Media Gallery</h3>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeMediaGallery()"></button></div>
+        <h3 style="margin:0 0 16px 0;font-weight:700;"> Media Gallery</h3>
         <div id="mediaGalleryGrid" class="media-gallery-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;overflow-y:auto;max-height:calc(80vh - 100px);">
             <!-- Images will be inserted here -->
         </div>
@@ -457,27 +526,27 @@
 <!-- IMAGE VIEWER MODAL (Phase 2) -->
 <div class="modal-overlay" id="imageViewerModal" style="display:none;background:rgba(0,0,0,0.95);">
     <div class="image-viewer-container" style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
-        <button onclick="app.closeImageViewer()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.2);color:white;border:none;width:40px;height:40px;border-radius:50%;font-size:24px;cursor:pointer;">✕</button>
+        <button aria-label="Close image viewer" onclick="app.closeImageViewer()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.2);color:white;border:none;width:40px;height:40px;border-radius:50%;font-size:24px;cursor:pointer;">×</button>
         <img id="imageViewerSrc" src="" alt="Image" style="max-width:90%;max-height:90%;border-radius:8px;">
     </div>
 </div>
 
 <!-- MESSAGE ACTION MENU (Phase 1) -->
 <div id="messageActionMenu" class="message-action-menu" style="display:none;position:fixed;background:white;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.15);z-index:300;min-width:200px;">
-    <button onclick="app.copyMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">📋 Copy</button>
-    <button onclick="app.editMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">✏️ Edit</button>
-    <button onclick="app.pinMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">📌 Pin</button>
-    <button onclick="app.forwardMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">↪️ Forward</button>
-    <button onclick="app.reactToMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">😊 React</button>
-    <button onclick="app.starMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">⭐ Star</button>
-    <button onclick="app.deleteMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;color:#ff4444;border-radius:0 0 12px 12px;">🗑️ Delete</button>
+    <button onclick="app.copyMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Copy</button>
+    <button onclick="app.editMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Edit</button>
+    <button onclick="app.pinMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Pin</button>
+    <button onclick="app.forwardMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Forward</button>
+    <button onclick="app.reactToMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> React</button>
+    <button onclick="app.starMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Star</button>
+    <button onclick="app.deleteMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;color:#ff4444;border-radius:0 0 12px 12px;"> Delete</button>
 </div>
 
 <!-- FORWARD MESSAGE MODAL (Phase 3) -->
 <div class="modal-overlay" id="forwardModal" style="display:none;">
     <div class="modal forward-modal" style="max-width:400px;">
-        <div class="modal-close"><button onclick="app.closeForwardModal()">✕</button></div>
-        <h3 style="margin:0 0 16px 0;font-weight:700;">↪️ Forward to...</h3>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeForwardModal()"></button></div>
+        <h3 style="margin:0 0 16px 0;font-weight:700;"> Forward to...</h3>
         <div style="margin-bottom:16px;">
             <input type="text" placeholder="Search contacts..." id="forwardSearch" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;" onkeyup="if(typeof app !== 'undefined' && app.filterForwardContacts) app.filterForwardContacts(this.value)">
         </div>
@@ -490,8 +559,8 @@
 <!-- PINNED MESSAGES BANNER (Phase 3) -->
 <div id="pinnedBanner" class="pinned-banner" style="display:none;background:#f0f7ff;border-bottom:2px solid #0088cc;padding:12px 16px;border-radius:0;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="font-weight:700;color:#0088cc;">📌 Pinned Messages</span>
-        <button onclick="app.closePinnedBanner()" style="background:none;border:none;color:#0088cc;cursor:pointer;font-size:18px;padding:0;">✕</button>
+        <span style="font-weight:700;color:#0088cc;"> Pinned Messages</span>
+        <button aria-label="Close pinned messages" onclick="app.closePinnedBanner()" style="background:none;border:none;color:#0088cc;cursor:pointer;font-size:18px;padding:0;">×</button>
     </div>
     <div id="pinnedContent" style="background:white;padding:10px 12px;border-radius:8px;font-size:13px;color:#4b5563;max-height:80px;overflow-y:auto;">
         <!-- Pinned message content will be inserted here -->
@@ -503,7 +572,7 @@
     <div style="padding:16px;border-bottom:1px solid #f3f4f6;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <h3 style="margin:0;font-size:16px;font-weight:700;">Chat Info</h3>
-            <button onclick="app.closeChatInfo()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+            <button aria-label="Close chat information" onclick="app.closeChatInfo()" style="background:none;border:none;font-size:20px;cursor:pointer;">×</button>
         </div>
     </div>
     
@@ -519,14 +588,14 @@
         
         <h5 style="margin:0 0 12px 0;font-weight:700;font-size:12px;color:#6b7280;text-transform:uppercase;">Actions</h5>
         <button onclick="app.clearChat()" style="width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;margin-bottom:8px;">Clear Chat</button>
-        <button onclick="app.muteChat()" style="width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;margin-bottom:8px;">🔕 Mute</button>
-        <button onclick="app.blockUser()" style="width:100%;padding:10px;background:#fef2f2;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;color:#ff4444;">🚫 Block</button>
+        <button onclick="app.muteChat()" style="width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;margin-bottom:8px;"> Mute</button>
+        <button onclick="app.blockUser()" style="width:100%;padding:10px;background:#fef2f2;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;color:#ff4444;"> Block</button>
     </div>
 </div>
 
 <!-- SCROLL TO LATEST BUTTON (Phase 2) -->
 <button id="scrollToLatestBtn" class="scroll-to-latest-btn" onclick="app.scrollToLatest()" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:8px 16px;background:#0088cc;color:white;border:none;border-radius:20px;cursor:pointer;font-weight:600;font-size:12px;box-shadow:0 4px 12px rgba(0,136,204,0.3);z-index:99;">
-    <span>⬇️ New Messages</span>
+    <span> New Messages</span>
 </button>
 
 <!-- ==================== WHATSAPP FEATURE MODALS ==================== -->
@@ -541,22 +610,22 @@
 
 <!-- ADVANCED MESSAGE OPTIONS MENU (WhatsApp-like) -->
 <div id="advancedMessageMenu" class="advanced-message-menu" style="display:none;position:fixed;background:white;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.15);z-index:300;min-width:220px;overflow:hidden;">
-    <button class="menu-item" onclick="app.replyToMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">↩️ Reply</button>
-    <button class="menu-item" onclick="app.showEmojiPicker()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">😊 React</button>
-    <button class="menu-item" onclick="app.starMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">⭐ Star</button>
-    <button class="menu-item" onclick="app.copyMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">📋 Copy</button>
-    <button class="menu-item" onclick="app.editMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">✏️ Edit</button>
-    <button class="menu-item" onclick="app.forwardMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">↪️ Forward</button>
-    <button class="menu-item" onclick="app.pinMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">📌 Pin</button>
-    <button class="menu-item" onclick="app.translateMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;">🌐 Translate</button>
-    <button class="menu-item" onclick="app.deleteMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;color:#ff4444;border-radius:0 0 12px 12px;">🗑️ Delete</button>
+    <button class="menu-item" onclick="app.replyToMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Reply</button>
+    <button class="menu-item" onclick="app.showEmojiPicker()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> React</button>
+    <button class="menu-item" onclick="app.starMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Star</button>
+    <button class="menu-item" onclick="app.copyMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Copy</button>
+    <button class="menu-item" onclick="app.editMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Edit</button>
+    <button class="menu-item" onclick="app.forwardMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Forward</button>
+    <button class="menu-item" onclick="app.pinMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Pin</button>
+    <button class="menu-item" onclick="app.translateMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;border-bottom:1px solid #f3f4f6;"> Translate</button>
+    <button class="menu-item" onclick="app.deleteMessage()" style="width:100%;padding:12px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:14px;font-family:inherit;color:#ff4444;border-radius:0 0 12px 12px;"> Delete</button>
 </div>
 
 <!-- GROUP CREATION MODAL -->
 <div class="modal-overlay" id="groupCreationModal" style="display:none;">
     <div class="modal" style="max-width:500px;max-height:80vh;overflow-y:auto;">
-        <div class="modal-close"><button onclick="app.closeGroupCreation()">✕</button></div>
-        <h2 style="font-weight:700;margin-bottom:20px;">👥 Create Group</h2>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeGroupCreation()"></button></div>
+        <h2 style="font-weight:700;margin-bottom:20px;"> Create Group</h2>
         
         <div style="margin-bottom:20px;">
             <label style="display:block;font-weight:600;margin-bottom:8px;">Group Name *</label>
@@ -577,7 +646,7 @@
         
         <div style="display:flex;gap:10px;">
             <button onclick="app.closeGroupCreation()" style="flex:1;padding:12px;background:#f3f4f6;color:#1a202c;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Cancel</button>
-            <button onclick="app.createGroup()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">✅ Create</button>
+            <button onclick="app.createGroup()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;"> Create</button>
         </div>
     </div>
 </div>
@@ -585,8 +654,8 @@
 <!-- CALL HISTORY MODAL -->
 <div class="modal-overlay" id="callHistoryModal" style="display:none;">
     <div class="modal" style="max-width:500px;max-height:80vh;">
-        <div class="modal-close"><button onclick="app.closeCallHistory()">✕</button></div>
-        <h2 style="font-weight:700;margin-bottom:16px;">📞 Call History</h2>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeCallHistory()"></button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;"> Call History</h2>
         <div id="callHistoryList" style="display:flex;flex-direction:column;gap:8px;">
             <!-- Calls will be listed here -->
         </div>
@@ -596,8 +665,8 @@
 <!-- STARRED MESSAGES MODAL -->
 <div class="modal-overlay" id="starredMessagesModal" style="display:none;">
     <div class="modal" style="max-width:500px;max-height:80vh;">
-        <div class="modal-close"><button onclick="app.closeStarredMessages()">✕</button></div>
-        <h2 style="font-weight:700;margin-bottom:16px;">⭐ Starred Messages</h2>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeStarredMessages()"></button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;"> Starred Messages</h2>
         <div id="starredMessagesList" style="display:flex;flex-direction:column;gap:12px;">
             <!-- Starred messages will be listed here -->
         </div>
@@ -607,13 +676,13 @@
 <!-- USER PROFILE CARD -->
 <div class="modal-overlay" id="userProfileModal" style="display:none;">
     <div class="modal user-profile-modal" style="max-width:400px;">
-        <div class="modal-close"><button onclick="app.closeUserProfile()">✕</button></div>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeUserProfile()"></button></div>
         
         <div style="text-align:center;margin-bottom:20px;">
             <img id="profileImage" src="" alt="Profile" style="width:100px;height:100px;border-radius:50%;margin-bottom:12px;object-fit:cover;">
             <h2 id="profileName" style="margin:0 0 4px 0;font-weight:700;">User Name</h2>
             <p id="profileUsername" style="margin:0 0 8px 0;color:#999;font-size:13px;">@username</p>
-            <p id="profileStatus" style="margin:0;color:#666;font-size:12px;">🟢 Online</p>
+            <p id="profileStatus" style="margin:0;color:#666;font-size:12px;"> Online</p>
         </div>
         
         <div style="padding:12px;background:#f3f4f6;border-radius:8px;margin-bottom:16px;">
@@ -621,9 +690,9 @@
         </div>
         
         <div style="display:flex;gap:8px;">
-            <button onclick="app.callUser()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📞 Call</button>
-            <button onclick="app.videoCallUser()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📹 Video</button>
-            <button onclick="app.blockUser()" style="flex:1;padding:12px;background:#fef2f2;color:#ff4444;border:none;border-radius:8px;cursor:pointer;font-weight:600;">🚫 Block</button>
+            <button onclick="app.callUser()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;"> Call</button>
+            <button onclick="app.videoCallUser()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;"> Video</button>
+            <button onclick="app.blockUser()" style="flex:1;padding:12px;background:#fef2f2;color:#ff4444;border:none;border-radius:8px;cursor:pointer;font-weight:600;"> Block</button>
         </div>
     </div>
 </div>
@@ -631,8 +700,8 @@
 <!-- ADVANCED SEARCH MODAL -->
 <div class="modal-overlay" id="advancedSearchModal" style="display:none;">
     <div class="modal" style="max-width:600px;">
-        <div class="modal-close"><button onclick="app.closeAdvancedSearch()">✕</button></div>
-        <h2 style="font-weight:700;margin-bottom:20px;">🔍 Advanced Search</h2>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeAdvancedSearch()"></button></div>
+        <h2 style="font-weight:700;margin-bottom:20px;"> Advanced Search</h2>
         
         <div style="margin-bottom:16px;">
             <label style="display:block;font-weight:600;margin-bottom:8px;">Search Text</label>
@@ -660,7 +729,7 @@
         
         <div style="display:flex;gap:10px;">
             <button onclick="app.closeAdvancedSearch()" style="flex:1;padding:12px;background:#f3f4f6;color:#1a202c;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Cancel</button>
-            <button onclick="app.performAdvancedSearch()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">🔍 Search</button>
+            <button onclick="app.performAdvancedSearch()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;"> Search</button>
         </div>
     </div>
 </div>
@@ -668,8 +737,8 @@
 <!-- NOTIFICATION SETTINGS MODAL -->
 <div class="modal-overlay" id="notificationSettingsModal" style="display:none;">
     <div class="modal" style="max-width:500px;">
-        <div class="modal-close"><button onclick="app.closeNotificationSettings()">✕</button></div>
-        <h2 style="font-weight:700;margin-bottom:20px;">🔔 Notification Settings</h2>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeNotificationSettings()"></button></div>
+        <h2 style="font-weight:700;margin-bottom:20px;"> Notification Settings</h2>
         
         <div style="padding:12px;background:#f3f4f6;border-radius:8px;margin-bottom:16px;">
             <div style="font-weight:600;margin-bottom:12px;font-size:14px;">Chat: <span id="notifChatName">Loading...</span></div>
@@ -703,7 +772,7 @@
         
         <div style="display:flex;gap:10px;">
             <button onclick="app.closeNotificationSettings()" style="flex:1;padding:12px;background:#f3f4f6;color:#1a202c;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Cancel</button>
-            <button onclick="app.saveNotificationSettings()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">✅ Save</button>
+            <button onclick="app.saveNotificationSettings()" style="flex:1;padding:12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;"> Save</button>
         </div>
     </div>
 </div>
@@ -711,8 +780,8 @@
 <!-- BLOCK LIST MODAL -->
 <div class="modal-overlay" id="blockListModal" style="display:none;">
     <div class="modal" style="max-width:500px;max-height:80vh;">
-        <div class="modal-close"><button onclick="app.closeBlockList()">✕</button></div>
-        <h2 style="font-weight:700;margin-bottom:16px;">🚫 Blocked Contacts</h2>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeBlockList()"></button></div>
+        <h2 style="font-weight:700;margin-bottom:16px;"> Blocked Contacts</h2>
         <div id="blockListContainer" style="display:flex;flex-direction:column;gap:8px;">
             <!-- Blocked users will be listed here -->
         </div>
@@ -736,7 +805,7 @@
 <!-- TEMPLATE: Voice Message Player -->
 <template id="voiceMessageTemplate">
     <div class="voice-message" style="display:flex;gap:8px;align-items:center;padding:8px;background:#f3f4f6;border-radius:8px;">
-        <button class="voice-play-btn" onclick="app.playVoiceMessage(event)" style="width:32px;height:32px;border-radius:50%;background:#0088cc;color:white;border:none;cursor:pointer;font-size:14px;flex-shrink:0;">▶</button>
+        <button class="voice-play-btn" aria-label="Play voice message" onclick="app.playVoiceMessage(event)" style="width:32px;height:32px;border-radius:50%;background:#0088cc;color:white;border:none;cursor:pointer;font-size:11px;flex-shrink:0;">Play</button>
         <div class="voice-progress" style="flex:1;height:4px;background:#e5e7eb;border-radius:2px;position:relative;">
             <div class="progress-bar" style="height:100%;background:#0088cc;border-radius:2px;width:0%;"></div>
         </div>
@@ -747,7 +816,7 @@
 <!-- TEMPLATE: Reaction Badge -->
 <template id="reactionTemplate">
     <div class="reaction-badge" style="display:inline-flex;gap:4px;align-items:center;padding:4px 8px;background:#f3f4f6;border-radius:12px;font-size:12px;margin:2px;">
-        <span class="reaction-emoji" style="font-size:14px;">👍</span>
+        <span class="reaction-emoji" style="font-size:14px;">Like</span>
         <span class="reaction-count" style="color:#6b7280;font-weight:600;">1</span>
     </div>
 </template>
@@ -755,40 +824,10 @@
 <!-- RINGTONE AUDIO -->
 <audio id="ringtoneAudio" src="data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==" style="display:none;"></audio>
 
-<!-- CREATE POST MODAL -->
-<div class="modal-overlay" id="createModal" style="display:none;">
-    <div class="create-modal">
-        <div class="modal-close"><button onclick="app.closeCreateModal()">✕</button></div>
-        <p class="eyebrow">Share something real</p>
-        <h2 style="font-weight:700;margin-bottom:6px;">Create a daily post</h2>
-        <p class="post-creator-intro">Use the daily hashtag to qualify for today’s 10-coin participation reward.</p>
-        <div id="photoPreview"></div>
-        <input type="file" id="photoInput" accept="image/*" style="display:none;">
-        <button type="button" class="photo-button" onclick="document.getElementById('photoInput').click()">
-            📷 Choose Photo
-        </button>
-        <label class="post-field-label" for="dailyPostHashtag">Participation hashtag</label>
-        <select id="dailyPostHashtag" class="post-field-select">
-            <option value="dailypost">#dailypost · Daily participation</option>
-        </select>
-        <label class="post-field-label" for="captionInput">Caption</label>
-        <textarea id="captionInput" placeholder="What are you sharing today?" rows="4"></textarea>
-        <label class="post-consent-row" for="postSharingConsent">
-            <input type="checkbox" id="postSharingConsent">
-            <span>I consent once to CHICHI storing and sharing this post according to the community policy.</span>
-        </label>
-        <p id="postConsentStatus" class="post-consent-status"></p>
-        <button type="button" class="btn-submit" id="sharePostBtn" onclick="app.createPost()">
-            <span class="share-btn-text">Publish daily post</span>
-            <span class="share-spinner" style="display:none;">⏳</span>
-        </button>
-    </div>
-</div>
-
 <!-- ADMIN MODAL -->
 <div class="modal-overlay" id="adminModal" style="display:none;">
     <div class="modal" style="max-width:400px;">
-        <div class="modal-close"><button onclick="app.closeAdminModal()">✕</button></div>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeAdminModal()"></button></div>
         <h2 style="font-weight:700;margin-bottom:16px;">Admin Access</h2>
         <div class="form-group">
             <label class="form-label">Admin Password</label>
@@ -810,10 +849,15 @@
             <details class="admin-tab-group" open><summary>Overview</summary><button class="admin-tab active" onclick="app.switchAdminTab('dashboard')">Dashboard</button><button class="admin-tab" onclick="app.switchAdminTab('analytics')">Analytics</button></details>
             <details class="admin-tab-group" open><summary>People</summary><button class="admin-tab" onclick="app.switchAdminTab('users')">Users</button><button class="admin-tab" onclick="app.switchAdminTab('chats')">All conversations</button><button class="admin-tab" onclick="app.switchAdminTab('admins')">Admin access</button></details>
             <details class="admin-tab-group" open><summary>Operations</summary><button class="admin-tab" onclick="app.switchAdminTab('notifications')">Access & alerts</button><button class="admin-tab" onclick="app.switchAdminTab('offers')">Offers</button><button class="admin-tab" onclick="app.switchAdminTab('email')">Email</button></details>
-            <details class="admin-tab-group" open><summary>Safety & records</summary><button class="admin-tab" onclick="app.switchAdminTab('suspicious')">Suspicious</button><button class="admin-tab" onclick="app.switchAdminTab('logs')">Activity logs</button><button class="admin-tab" onclick="app.switchAdminTab('posts')">Community posts</button></details>
+            <details class="admin-tab-group" open><summary>Safety & records</summary><button class="admin-tab" onclick="app.switchAdminTab('referrals')">Referral payouts</button><button class="admin-tab" onclick="app.switchAdminTab('suspicious')">Suspicious</button><button class="admin-tab" onclick="app.switchAdminTab('logs')">Activity logs</button><button class="admin-tab" onclick="app.switchAdminTab('posts')">Community posts</button></details>
         </div>
     </details>
     <div class="admin-content">
+        <div class="admin-tab-content" id="adminReferrals">
+            <div class="admin-section-heading"><div><span class="admin-kicker">REFERRAL PROGRAM</span><h3>Withdrawal requests</h3><p>Review payout details, send M-Pesa or airtime manually, then mark each request paid. Rejections return the amount to the member's referral balance.</p></div><button type="button" class="referral-refresh-btn" onclick="app.loadAdminReferralWithdrawals()">Refresh</button></div>
+            <div class="referral-admin-summary" id="adminReferralSummary"></div>
+            <div class="referral-admin-list" id="adminReferralWithdrawals"><div class="referral-admin-empty">Withdrawal requests will appear here.</div></div>
+        </div>
         <!-- Dashboard -->
         <div class="admin-tab-content active" id="adminDashboard">
             <div class="admin-stat-grid">
@@ -821,8 +865,8 @@
                 <div class="admin-stat"><div class="admin-stat-value" id="adminPostCount">0</div><div class="admin-stat-label">Posts</div></div>
                 <div class="admin-stat"><div class="admin-stat-value" id="adminSignupCount">0</div><div class="admin-stat-label">Today's Signups</div></div>
                 <div class="admin-stat"><div class="admin-stat-value" id="adminBannedCount">0</div><div class="admin-stat-label">Banned Users</div></div>
-                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalEarned">0</div><div class="admin-stat-label">💰 Coins Earned</div></div>
-                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalSpent">0</div><div class="admin-stat-label">🎁 Coins Spent</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalEarned">0</div><div class="admin-stat-label"> Coins Earned</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalSpent">0</div><div class="admin-stat-label"> Coins Spent</div></div>
             </div>
             <div id="adminPostConsents" style="margin-top:20px;background:white;border-radius:12px;padding:16px;"></div>
         </div>
@@ -865,12 +909,12 @@
         <!-- Admin Access Management -->
         <div class="admin-tab-content" id="adminAdmins">
             <div style="margin-bottom: 24px; padding: 16px; background: #f0f7ff; border-radius: 12px; border: 1px solid #bfdbfe;">
-                <h3 style="margin-top: 0; color: #1e40af;">👑 Manage Admin Access</h3>
+                <h3 style="margin-top: 0; color: #1e40af;"> Manage Admin Access</h3>
                 <p style="font-size: 12px; color: #64748b; margin-bottom: 16px;">Add or remove administrators from CHICHI. Only existing admins can modify this list.</p>
                 
                 <div style="display: flex; gap: 8px; margin-bottom: 16px;">
                     <input type="email" id="newAdminEmail" placeholder="Enter email to add as admin..." style="flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
-                    <button onclick="if(typeof app !== 'undefined' && app.addAdmin) app.addAdmin()" style="padding: 10px 16px; background: #0088cc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">➕ Add Admin</button>
+                    <button onclick="if(typeof app !== 'undefined' && app.addAdmin) app.addAdmin()" style="padding: 10px 16px; background: #0088cc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;"> Add Admin</button>
                 </div>
             </div>
             
@@ -878,7 +922,7 @@
             <div id="adminAccessList" style="display: flex; flex-direction: column; gap: 10px;"></div>
             
             <div style="margin-top: 24px; padding: 12px; background: #fef2f2; border-radius: 8px; font-size: 12px; color: #7c2d12;">
-                <strong>⚠️ Default Admins:</strong> support-chichi@gmail.com, onchari.dev@gmail.com
+                <strong> Default Admins:</strong> support-chichi@gmail.com, onchari.dev@gmail.com
             </div>
         </div>
         
@@ -983,10 +1027,10 @@
 
         <div class="admin-tab-content" id="adminEmail">
             <div style="padding: 20px; background: #f9fafb; border-radius: 12px;">
-                <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #1a202c;">📧 Send Email to Users</h3>
+                <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #1a202c;"> Send Email to Users</h3>
                 
                 <div style="margin-bottom: 20px;">
-                    <label style="display:block;font-weight:600;font-size:14px;color:#1a202c;margin-bottom:8px;">📥 Send To:</label>
+                    <label style="display:block;font-weight:600;font-size:14px;color:#1a202c;margin-bottom:8px;"> Send To:</label>
                     <select id="emailRecipientType" onchange="app.updateEmailRecipients()" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;">
                         <option value="all">All Users</option>
                         <option value="followers">Followers Only</option>
@@ -995,21 +1039,21 @@
                 </div>
 
                 <div id="emailSpecificUserDiv" style="display:none;margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;font-size:14px;color:#1a202c;margin-bottom:8px;">👤 User:</label>
+                    <label style="display:block;font-weight:600;font-size:14px;color:#1a202c;margin-bottom:8px;"> User:</label>
                     <input type="text" id="emailUserSearch" placeholder="Search user..." oninput="app.searchUsersForEmail(this.value)" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:8px;box-sizing:border-box;">
                     <div id="emailUserResults" style="max-height:200px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;display:none;background:white;"></div>
                     <input type="hidden" id="selectedEmailUserId">
                 </div>
 
                 <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;font-size:14px;color:#1a202c;margin-bottom:8px;">📌 Subject:</label>
+                    <label style="display:block;font-weight:600;font-size:14px;color:#1a202c;margin-bottom:8px;"> Subject:</label>
                     <input type="text" id="emailSubject" placeholder="Email subject line" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
                 </div>
 
                 <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:600;font-size:14px;color:#1a202c;margin-bottom:8px;">✍️ Message:</label>
+                    <label style="display:block;font-weight:600;font-size:14px;color:#1a202c;margin-bottom:8px;"> Message:</label>
                     <textarea id="emailContent" placeholder="Write your message here... (will use CHICHI template)" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;min-height:150px;resize:vertical;font-family:inherit;box-sizing:border-box;"></textarea>
-                    <div style="font-size:12px;color:#6b7280;margin-top:6px;">💡 Use {{USER_NAME}} to insert recipient's name</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:6px;"> Use {{USER_NAME}} to insert recipient's name</div>
                 </div>
 
                 <div style="margin-bottom:20px;">
@@ -1025,8 +1069,8 @@
                 </div>
 
                 <div style="display:flex;gap:10px;">
-                    <button onclick="app.previewEmail()" style="flex:1;padding:10px;background:#f0f7ff;color:#2E5BFF;border:1px solid #2E5BFF;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">👁️ Preview Email</button>
-                    <button onclick="app.sendBulkEmail()" style="flex:1;padding:10px;background:#2E5BFF;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">📧 Send Email</button>
+                    <button onclick="app.previewEmail()" style="flex:1;padding:10px;background:#f0f7ff;color:#2E5BFF;border:1px solid #2E5BFF;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;"> Preview Email</button>
+                    <button onclick="app.sendBulkEmail()" style="flex:1;padding:10px;background:#2E5BFF;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;"> Send Email</button>
                 </div>
             </div>
         </div>
@@ -1036,7 +1080,7 @@
 <!-- EDIT PROFILE MODAL -->
 <div class="modal-overlay" id="editProfileModal" style="display: none;">
     <div class="modal" style="max-width: 500px;">
-        <div class="modal-close"><button onclick="app.closeProfileSettings()">✕</button></div>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeProfileSettings()"></button></div>
         <h2 style="font-weight: 700; margin-bottom: 20px;">Edit Profile</h2>
 
         <div class="profile-image-set">
@@ -1078,46 +1122,46 @@
 <!-- DEVELOPER INFO MODAL -->
 <div class="modal-overlay" id="developerModal" style="display:none;">
     <div class="modal dev-modal">
-        <div class="modal-close"><button onclick="app.closeDeveloperInfo()">✕</button></div>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeDeveloperInfo()"></button></div>
         <div style="text-align:center;margin-bottom:20px;">
-            <div style="width:100px;height:100px;border-radius:50%;background:url('https://res.cloudinary.com/u1uilb6f/image/upload/v1784291624/1768467745366_1_lu01jr.jpg');background-size:cover;background-position:center;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:40px;border:3px solid #0088cc;"></div>
+            <div style="width:100px;height:100px;border-radius:50%;background:url('https://res.cloudinary.com/u1uilb6f/image/upload/v1784291624/1768467745366_1_lu01jr.jpg');background-size:cover;background-position:center;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;border:3px solid #0088cc;"></div>
             <h2 style="margin:0 0 4px 0;font-weight:700;font-size:22px;">Anthony Onchari</h2>
-            <p style="margin:0;color:#999;font-size:13px;font-weight:600;">👨‍💻 Developer & Digital Media Specialist</p>
+            <p style="margin:0;color:#999;font-size:13px;font-weight:600;">Developer & Digital Media Specialist</p>
         </div>
         
         <div style="background:#f7fafc;padding:16px;border-radius:12px;margin-bottom:16px;border:1px solid #e2e8f0;">
             <p style="margin:0;font-size:13px;line-height:1.7;color:#2d3748;">
-                Hey there! 👋 I'm <strong style="color:#0088cc;">Anthony</strong>, a Developer and Digital Media Specialist who loves building things that bring people and community together. I created <strong style="color:#0088cc;">CHICHI</strong> because I believe social media should feel like home — warm, real, and human.
+                <strong style="color:#0088cc;">Anthony Onchari</strong> is a developer and digital media specialist focused on building tools that bring people and communities together.
             </p>
             <p style="margin-top:10px;margin-bottom:0;font-size:12px;color:#4a5568;border-top:1px solid #e2e8f0;padding-top:10px;">
-                This is <strong>Version V02A.01 + WhatsApp Features</strong> — the beginning of something beautiful. More features, more love, and more connection coming soon!
+                CHICHI is designed and developed by Anthony Onchari of Onchari Group.
             </p>
         </div>
         
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
             <div style="background:#ebf8ff;padding:12px 8px;border-radius:12px;text-align:center;">
-                <div style="font-size:24px;margin-bottom:4px;">💻</div>
+                <div style="font-size:11px;font-weight:700;margin-bottom:4px;">WEB</div>
                 <div style="font-size:11px;color:#2b6cb0;font-weight:600;">Web Developer</div>
             </div>
             <div style="background:#f0fff4;padding:12px 8px;border-radius:12px;text-align:center;">
-                <div style="font-size:24px;margin-bottom:4px;">📱</div>
+                <div style="font-size:11px;font-weight:700;margin-bottom:4px;">MEDIA</div>
                 <div style="font-size:11px;color:#276749;font-weight:600;">Digital Media</div>
             </div>
             <div style="background:#faf5ff;padding:12px 8px;border-radius:12px;text-align:center;">
-                <div style="font-size:24px;margin-bottom:4px;">🤝</div>
+                <div style="font-size:11px;font-weight:700;margin-bottom:4px;">COMMUNITY</div>
                 <div style="font-size:11px;color:#6b46c1;font-weight:600;">Community Builder</div>
             </div>
         </div>
         
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-            <a href="https://wa.me/254701807001" target="_blank" style="flex:1;padding:10px;background:#25D366;color:white;text-align:center;border-radius:10px;text-decoration:none;font-size:12px;font-weight:600;min-width:80px;transition:0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">💬 WhatsApp</a>
-            <a href="https://www.facebook.com/profile.php?id=100088002065441" target="_blank" style="flex:1;padding:10px;background:#1877F2;color:white;text-align:center;border-radius:10px;text-decoration:none;font-size:12px;font-weight:600;min-width:80px;transition:0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">📘 Facebook</a>
-            <a href="https://www.linkedin.com/in/anthony-onchari-a3b87b270/" target="_blank" style="flex:1;padding:10px;background:#0A66C2;color:white;text-align:center;border-radius:10px;text-decoration:none;font-size:12px;font-weight:600;min-width:80px;transition:0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">💼 LinkedIn</a>
+            <a href="https://wa.me/254701807001" target="_blank" style="flex:1;padding:10px;background:#25D366;color:white;text-align:center;border-radius:10px;text-decoration:none;font-size:12px;font-weight:600;min-width:80px;transition:0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"> WhatsApp</a>
+            <a href="https://www.facebook.com/profile.php?id=100088002065441" target="_blank" style="flex:1;padding:10px;background:#1877F2;color:white;text-align:center;border-radius:10px;text-decoration:none;font-size:12px;font-weight:600;min-width:80px;transition:0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"> Facebook</a>
+            <a href="https://www.linkedin.com/in/anthony-onchari-a3b87b270/" target="_blank" style="flex:1;padding:10px;background:#0A66C2;color:white;text-align:center;border-radius:10px;text-decoration:none;font-size:12px;font-weight:600;min-width:80px;transition:0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"> LinkedIn</a>
         </div>
         
         <div style="background:#f9fafb;padding:12px;border-radius:10px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280;text-align:center;margin-bottom:12px;">
             <p style="margin:0 0 6px 0;"><strong>CHICHI App + WhatsApp Features</strong></p>
-            <p style="margin:0;">© 2026 Onchari Group • Version V02A.01 + WhatsApp</p>
+            <p style="margin:0;"> 2026 Onchari Group • Version V02A.01 + WhatsApp</p>
         </div>
     </div>
 </div>
@@ -1126,8 +1170,8 @@
 <!-- EMAIL PREVIEW MODAL -->
 <div class="modal-overlay" id="emailPreviewModal" style="display: none;">
     <div class="modal" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
-        <div class="modal-close"><button onclick="app.closeEmailPreview()">✕</button></div>
-        <h2 style="font-weight: 700; margin-bottom: 20px; color: #1a202c;">📧 Email Preview</h2>
+        <div class="modal-close"><button aria-label="Close" onclick="app.closeEmailPreview()"></button></div>
+        <h2 style="font-weight: 700; margin-bottom: 20px; color: #1a202c;"> Email Preview</h2>
         
         <iframe id="emailPreviewFrame" style="width: 100%; height: 500px; border: 1px solid #e5e7eb; border-radius: 8px;"></iframe>
         
@@ -1141,7 +1185,7 @@
 <div id="toastContainer"></div>
 
 <!-- APP JS -->
-<script src="js/app.js"></script>
+<script defer src="js/app.js"></script>
 
 <!-- ============================================================ -->
 <!-- ============ COMPLETE SCRIPT WITH PWA + NOTIFICATIONS ======== -->
@@ -1162,17 +1206,17 @@
     
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
-            console.log('✅ Firebase ready, starting app...');
+            console.log(' Firebase ready, starting app...');
             if (typeof app !== 'undefined' && app.init) {
                 app.init(); 
                 hideSplash();
             }
         } else {
-            console.log('⏳ Waiting for Firebase...');
+            console.log(' Waiting for Firebase...');
             var checkFirebase = setInterval(function() {
                 if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
                     clearInterval(checkFirebase);
-                    console.log('✅ Firebase loaded, starting app...');
+                    console.log(' Firebase loaded, starting app...');
                     if (typeof app !== 'undefined' && app.init) {
                         app.init(); 
                         hideSplash();
@@ -1182,7 +1226,7 @@
             
             setTimeout(function() {
                 clearInterval(checkFirebase);
-                console.warn('⚠️ Firebase timeout, trying anyway...');
+                console.warn(' Firebase timeout, trying anyway...');
                 if (typeof app !== 'undefined' && app.init) {
                     app.init(); 
                     hideSplash();
@@ -1198,10 +1242,10 @@
                 navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
                     .then((registration) => {
                         window.chichiServiceWorkerRegistration = registration;
-                        console.log('✅ ChiChi Service Worker registered');
+                        console.log(' ChiChi Service Worker registered');
                         return registration;
                     })
-          .catch((err) => console.log('❌ ChiChi Service Worker error:', err));
+          .catch((err) => console.log(' ChiChi Service Worker error:', err));
     }
 
     // ============================================
@@ -1220,47 +1264,47 @@
     if ('Notification' in window) {
         // Check if permission is already granted
         if (Notification.permission === 'granted') {
-            console.log('✅ Notification permission already granted for ChiChi');
+            console.log(' Notification permission already granted for ChiChi');
             
             // Get FCM token if Firebase messaging is available
             if (typeof firebase !== 'undefined' && firebase.messaging) {
                 getChichiFcmToken()
                     .then(token => {
-                        console.log('📱 FCM Token:', token);
+                        console.log(' FCM Token:', token);
                         // You can send this token to your server here
                         // Example: fetch('/api/save-token', { method: 'POST', body: JSON.stringify({ token: token }) });
                     })
                     .catch(err => {
-                        console.log('❌ Error getting FCM token:', err);
+                        console.log(' Error getting FCM token:', err);
                     });
             }
         } else if (Notification.permission !== 'denied') {
             // Request permission if not granted or denied
             Notification.requestPermission().then(permission => {
                 if (permission === 'granted') {
-                    console.log('✅ Notification permission granted for ChiChi');
+                    console.log(' Notification permission granted for ChiChi');
                     
                     // Get FCM token if Firebase messaging is available
                     if (typeof firebase !== 'undefined' && firebase.messaging) {
                         getChichiFcmToken()
                             .then(token => {
-                                console.log('📱 FCM Token:', token);
+                                console.log(' FCM Token:', token);
                                 // You can send this token to your server here
                                 // Example: fetch('/api/save-token', { method: 'POST', body: JSON.stringify({ token: token }) });
                             })
                             .catch(err => {
-                                console.log('❌ Error getting FCM token:', err);
+                                console.log(' Error getting FCM token:', err);
                             });
                     }
                 } else {
-                    console.log('❌ Notification permission denied for ChiChi');
+                    console.log(' Notification permission denied for ChiChi');
                 }
             });
         } else {
-            console.log('❌ Notification permission previously denied');
+            console.log(' Notification permission previously denied');
         }
     } else {
-        console.log('⚠️ Notification API not supported in this browser');
+        console.log(' Notification API not supported in this browser');
     }
 </script>
 

@@ -11,7 +11,7 @@ function initFirebase() {
     if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
         auth = firebase.auth();
         db = firebase.database();
-        console.log('✅ Firebase ready in app.js');
+        console.log(' Firebase ready in app.js');
         return true;
     }
     return false;
@@ -25,7 +25,7 @@ if (!initFirebase()) {
         if (initFirebase() || retryCount > 20) {
             clearInterval(firebaseRetry);
             if (retryCount > 20) {
-                console.error('❌ Firebase failed to initialize after 20 retries');
+                console.error(' Firebase failed to initialize after 20 retries');
             }
         }
     }, 500);
@@ -40,6 +40,7 @@ var app = {
     profile: {},
     posts: [],
     users: {},
+    usersLoaded: false,
     balance: 0,
     currentChat: null,
     following: {},
@@ -51,7 +52,7 @@ var app = {
     unreadTrackingActive: false,
     chatMessages: {},
     notifiedMessages: {},
-    currentView: 'feed',
+    currentView: 'messages',
     planSupportPresenceListener: null,
     planSupportPresenceKey: null,
     activePlanSupport: false,
@@ -96,7 +97,6 @@ var app = {
     phoneRecaptchaVerifier: null,
     phoneRecaptchaRenderPromise: null,
     phoneUsingNativeBridge: false,
-    _showLoginWelcome: false,
 
     // ============================================
     // INIT
@@ -109,6 +109,17 @@ var app = {
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() { self.init(); });
             return;
+        }
+        var referralField = document.getElementById('signupReferralCode');
+        if (referralField) {
+            try {
+                var referralFromUrl = new URLSearchParams(window.location.search).get('ref');
+                if (referralFromUrl && /^[a-zA-Z0-9]{5,40}$/.test(referralFromUrl)) {
+                    referralField.value = referralFromUrl.toUpperCase();
+                }
+            } catch (error) {
+                console.error('Unable to read signup referral link:', error);
+            }
         }
 
         if (!this.modalBackdropHandlerAttached) {
@@ -131,14 +142,14 @@ var app = {
         }
 
         if (!auth || !db) {
-            console.log('⏳ Waiting for Firebase...');
+            console.log(' Waiting for Firebase...');
             // Show app skeleton to let guests browse the Feed while Firebase initializes
             if (!self._guestViewShown) {
                 self._guestViewShown = true;
                 self.isGuest = true;
                 try { self.updateHeaderMenu(); } catch (e) {}
                 try { self.showApp(); } catch (e) { console.error('Early showApp error:', e); }
-                try { self.switchView('feed'); } catch (e) { console.error('Early switchView error:', e); }
+                try { self.switchView('messages'); } catch (e) { console.error('Early switchView error:', e); }
             }
 
             // ----- FALLBACK: Force hide splash after 3 seconds as a safety net -----
@@ -158,11 +169,12 @@ var app = {
         this.chatMessages = {};
         this.unreadMessages = {};
         this.notifiedMessages = {};
+        this.setupChatViewportTracking();
 
         var interactionHandler = function() {
             if (!self.userHasInteracted) {
                 self.userHasInteracted = true;
-                console.log('👆 User interaction detected');
+                console.log(' User interaction detected');
                 document.removeEventListener('click', interactionHandler);
                 document.removeEventListener('touch', interactionHandler);
                 document.removeEventListener('keydown', interactionHandler);
@@ -200,7 +212,6 @@ var app = {
                 db.ref('bannedUsers/' + u.uid).once('value', function(snapshot) {
                     if (snapshot.exists()) {
                         var banData = snapshot.val();
-                        self._showLoginWelcome = false;
                         self.showBannedScreen(banData);
                         auth.signOut();
                         return;
@@ -257,13 +268,12 @@ var app = {
                     self.setupUserNotifications();
                     self.checkAndShowUsernameSetup();
                     self.showApp();
-                    if (self._showLoginWelcome) {
-                        self._showLoginWelcome = false;
-                        self.showLoginWelcomePopup();
-                    }
+                    setTimeout(function() {
+                        if (typeof self.maybePromptReferralEnrollment === 'function') self.maybePromptReferralEnrollment();
+                    }, 800);
                     // CRITICAL: Always show feed as default view on login
                     setTimeout(function() {
-                        self.switchView('feed');
+                        self.switchView('messages');
                     }, 100);
                     self.setOnlineStatus();
                     self.startTriviaTimer();
@@ -276,9 +286,10 @@ var app = {
                             mainApp.style.display = 'flex';
                             mainApp.classList.add('active');
                         }
+                        self.syncGuestChrome();
                         var nav = document.querySelector('.bottom-nav');
                         if (nav) nav.style.display = 'flex';
-                        self.switchView('feed');
+                        self.switchView('messages');
                         if (self.currentView === 'messages') {
                             self.loadMessages();
                         }
@@ -292,7 +303,7 @@ var app = {
                 self.profile = { name: 'Guest', balance: 0, triviaAnswered: [], tier: 'free' };
                 self.updateHeaderMenu(); // <-- NEW: Update menu for guest
                 self.showApp(); // <-- CHANGED: Show app instead of login page
-                self.switchView('feed'); // ensure feed renders once Firebase is fully ready
+                self.switchView('messages');
 
                 // Hide auth page
                 var authPage = document.getElementById('authPage');
@@ -313,8 +324,6 @@ var app = {
             }
         });
 
-        document.getElementById('photoInput').addEventListener('change', function(e) { this.previewPhoto(e); }.bind(this));
-
         setTimeout(function() {
             var chatInput = document.getElementById('chatMessageInput');
             if (chatInput) {
@@ -329,7 +338,7 @@ var app = {
                     setTimeout(function() {
                         var chatMessages = document.getElementById('chatMessages');
                         if (chatMessages) {
-                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                            chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
                         }
                     }, 100);
                 });
@@ -478,7 +487,7 @@ var app = {
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
         modal.innerHTML = `<div class="modal" style="max-width:400px;">
-            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()"></button></div>
             <h2 style="margin-bottom:16px;font-weight:700;">Cookie & Consent Settings</h2>
 
             <div style="margin-bottom:16px;">
@@ -540,19 +549,19 @@ var app = {
         if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission().then(function(permission) {
                 if (permission === 'granted') {
-                    console.log('✅ Notification permission granted');
+                    console.log(' Notification permission granted');
                 } else {
-                    console.log('⚠️ Notification permission denied by user');
+                    console.log(' Notification permission denied by user');
                 }
             });
         } else if ('Notification' in window && Notification.permission === 'granted') {
-            console.log('✅ Notifications already have permission');
+            console.log(' Notifications already have permission');
         }
 
         var self = this;
         setTimeout(function() {
             self.trackUnreadMessages();
-            console.log('✅ Notifications configured and tracking started');
+            console.log(' Notifications configured and tracking started');
         }, 500);
     },
 
@@ -560,8 +569,8 @@ var app = {
         if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission().then(function(permission) {
                 if (permission === 'granted') {
-                    console.log('✅ Notifications enabled!');
-                    this.toast('Notifications enabled! 🔔', 'success');
+                    console.log(' Notifications enabled!');
+                    this.toast('Notifications enabled! ', 'success');
                 }
             }.bind(this));
         }
@@ -572,41 +581,26 @@ var app = {
         modal.className = 'modal-overlay active';
         var notifSettings = localStorage.getItem('notificationSettings') ? JSON.parse(localStorage.getItem('notificationSettings')) : {
             messages: true,
-            followers: true,
-            likes: true,
-            comments: true,
-            posts: true
+            followers: true
         };
 
         modal.innerHTML = `<div class="modal" style="max-width:400px;">
-            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-            <h2 style="margin-bottom:16px;font-weight:700;">🔔 Notification Preferences</h2>
+            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()"></button></div>
+            <h2 style="margin-bottom:16px;font-weight:700;"> Notification Preferences</h2>
 
             <div style="margin-bottom:16px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <div style="font-weight:600;">💬 New Messages</div>
+                    <div style="font-weight:600;"> New Messages</div>
                     <input type="checkbox" id="notif-messages" ${notifSettings.messages ? 'checked' : ''} onchange="app.updateNotificationSettings()">
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <div style="font-weight:600;">👥 New Followers</div>
+                    <div style="font-weight:600;"> New Followers</div>
                     <input type="checkbox" id="notif-followers" ${notifSettings.followers ? 'checked' : ''} onchange="app.updateNotificationSettings()">
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <div style="font-weight:600;">❤️ Likes</div>
-                    <input type="checkbox" id="notif-likes" ${notifSettings.likes ? 'checked' : ''} onchange="app.updateNotificationSettings()">
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <div style="font-weight:600;">💬 Comments</div>
-                    <input type="checkbox" id="notif-comments" ${notifSettings.comments ? 'checked' : ''} onchange="app.updateNotificationSettings()">
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <div style="font-weight:600;">📝 New Posts</div>
-                    <input type="checkbox" id="notif-posts" ${notifSettings.posts ? 'checked' : ''} onchange="app.updateNotificationSettings()">
                 </div>
             </div>
 
             <div style="background:rgba(0,212,170,0.05);padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.85rem;color:var(--text-light);">
-                ✓ Notifications enabled! You will receive updates for your selected preferences.
+                 Notifications enabled! You will receive updates for your selected preferences.
             </div>
 
             <button class="btn-submit" style="width:100%;" onclick="this.closest('.modal-overlay').remove()">Close</button>
@@ -617,13 +611,10 @@ var app = {
     updateNotificationSettings: function() {
         var settings = {
             messages: document.getElementById('notif-messages').checked,
-            followers: document.getElementById('notif-followers').checked,
-            likes: document.getElementById('notif-likes').checked,
-            comments: document.getElementById('notif-comments').checked,
-            posts: document.getElementById('notif-posts').checked
+            followers: document.getElementById('notif-followers').checked
         };
         localStorage.setItem('notificationSettings', JSON.stringify(settings));
-        this.toast('Notification preferences updated ✓', 'success');
+        this.toast('Notification preferences updated ', 'success');
     },
 
     notifyNewMessage: function(senderName, messageText, senderUid) {
@@ -631,15 +622,15 @@ var app = {
     var chatView = document.getElementById('chatView');
     var chatIsVisible = chatView && (chatView.classList.contains('active') || chatView.style.display === 'flex');
     if (chatIsVisible && this.currentChat && this.currentChat.uid === senderUid) {
-        console.log('🔕 In chat, suppressing notification');
+        console.log(' In chat, suppressing notification');
         return;
     }
 
-    var cleanMessage = messageText ? messageText.substring(0, 150) : '📷 Image';
+    var cleanMessage = messageText ? messageText.substring(0, 150) : ' Image';
 
     // System notification (for background)
     if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('💬 ' + senderName.toUpperCase(), {
+        new Notification(' ' + senderName.toUpperCase(), {
             body: cleanMessage,
             icon: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png',
             tag: 'chichi-message-' + senderName,
@@ -657,7 +648,7 @@ var app = {
         try {
             navigator.vibrate([200, 100, 200]);
         } catch (e) {
-            console.log('⏸️ Vibration blocked:', e.message);
+            console.log(' Vibration blocked:', e.message);
         }
     }
 },
@@ -793,7 +784,7 @@ var app = {
             transition: 0.2s;
             flex-shrink: 0;
         " onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#a0aec0'">
-            ✕
+            
         </button>
     `;
 
@@ -849,7 +840,7 @@ var app = {
 
     playNotificationSound: function() {
         if (!this.userHasInteracted) {
-            console.log('⏸️ Audio disabled (no user interaction yet)');
+            console.log(' Audio disabled (no user interaction yet)');
             return;
         }
 
@@ -858,7 +849,7 @@ var app = {
 
             if (audioContext.state === 'suspended') {
                 audioContext.resume().catch(function(e) {
-                    console.log('⏸️ AudioContext suspended - user must interact first');
+                    console.log(' AudioContext suspended - user must interact first');
                 });
             }
 
@@ -875,9 +866,9 @@ var app = {
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + 0.5);
 
-            console.log('🔊 Notification sound played');
+            console.log(' Notification sound played');
         } catch (e) {
-            console.log('⏸️ Audio notification skipped:', e.message);
+            console.log(' Audio notification skipped:', e.message);
         }
     },
 
@@ -895,7 +886,7 @@ var app = {
         }.bind(this));
 
         if (totalUnread > 0) {
-            document.title = '💬 (' + totalUnread + ') CHICHI';
+            document.title = ' (' + totalUnread + ') CHICHI';
         } else {
             document.title = 'CHICHI';
         }
@@ -905,12 +896,12 @@ var app = {
     var self = this;
 
     if (!this.user || this.isGuest) {
-        console.log('ℹ️ Guest mode - skipping message tracking');
+        console.log('Guest mode - skipping message tracking');
         return;
     }
 
     if (self.unreadTrackingActive) {
-        console.log('ℹ️ Unread tracking already running - skipping');
+        console.log('Unread tracking already running - skipping');
         return;
     }
     self.unreadTrackingActive = true;
@@ -921,10 +912,10 @@ var app = {
     if (!this.notifiedMessages) this.notifiedMessages = {};
     if (!this.messageCountTracker) this.messageCountTracker = {};
 
-    console.log('📊 Setting up message tracking for ' + userIds.length + ' users');
+    console.log(' Setting up message tracking for ' + userIds.length + ' users');
 
     if (userIds.length === 0) {
-        console.log('⚠️ No users to track! Skipping setup...');
+        console.log(' No users to track! Skipping setup...');
         self.unreadTrackingActive = false;
         return;
     }
@@ -945,7 +936,7 @@ var app = {
                     }
                 });
                 self.messageCountTracker[key] = count;
-                console.log('📊 ' + userName + ': ' + count + ' messages (baseline)');
+                console.log(' ' + userName + ': ' + count + ' messages (baseline)');
                 messagesRef.orderByChild('timestamp').on('child_added', function(childSnap) {
                     var m = childSnap.val();
                     if (!m) return;
@@ -954,9 +945,9 @@ var app = {
                         var notifyKey = key + '_' + childSnap.key;
 
                         if (!self.notifiedMessages[notifyKey]) {
-                            console.log('🔔 [REAL-TIME] NEW MESSAGE from ' + userName + ': ' + (m.text || '📷 Image'));
+                            console.log(' [REAL-TIME] NEW MESSAGE from ' + userName + ': ' + (m.text || ' Image'));
                             self.notifiedMessages[notifyKey] = true;
-                            self.notifyNewMessage(userName, m.text || '📷 Image', m.sender);
+                            self.notifyNewMessage(userName, m.text || ' Image', m.sender);
                         }
                     }
                 });
@@ -1005,7 +996,7 @@ var app = {
         var html = `
             <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0f172a;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;">
                 <div style="background:white;border-radius:24px;max-width:400px;width:100%;padding:32px;text-align:center;">
-                    <div style="font-size:64px;margin-bottom:16px;">🚫</div>
+                    <div style="font-size:64px;margin-bottom:16px;"></div>
                     <h2 style="color:#ef4444;margin-bottom:8px;">Account Suspended</h2>
                     <p style="color:#6b7280;margin-bottom:16px;">Your account has been permanently banned from CHICHI.</p>
                     <div style="background:#fef2f2;padding:12px;border-radius:8px;margin-bottom:16px;text-align:left;">
@@ -1060,7 +1051,7 @@ var app = {
             self.logUserActivity('session_end', 'Time spent: ' + timeSpent + ' seconds');
         });
 
-        console.log('📊 Activity tracking initialized');
+        console.log(' Activity tracking initialized');
     },
 
     trackPageView: function() {
@@ -1092,7 +1083,7 @@ var app = {
             time: new Date().toLocaleString('en-KE'),
             isAdmin: this.isAdmin || false
         }).catch(function(err) {
-            console.log('⚠️ Failed to log activity:', err.message);
+            console.log(' Failed to log activity:', err.message);
         });
 
         this.checkForSuspiciousActivity(action, details);
@@ -1119,7 +1110,7 @@ var app = {
 
         modal.innerHTML = `
             <div style="background: white; border-radius: 20px; padding: 32px 28px; max-width: 440px; width: 95%; text-align: center; animation: slideUp 0.4s ease; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);">
-                <div style="font-size: 40px; margin-bottom: 16px;">👤</div>
+                <div style="font-size: 40px; margin-bottom: 16px;"></div>
                 <h2 id="usernameSetupTitle" style="font-size: 22px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0;">Create Your Username</h2>
                 <p style="font-size: 14px; color: #64748b; margin: 0 0 24px 0; line-height: 1.6;">Set a unique username to finish signing in and continue using CHICHI.</p>
 
@@ -1190,6 +1181,7 @@ var app = {
                 var setupModal = document.getElementById('usernameSetupModal');
                 if (setupModal) setupModal.remove();
                 if (self.currentView === 'profile') self.renderProfile();
+                if (typeof self.maybePromptReferralEnrollment === 'function') self.maybePromptReferralEnrollment();
             })
             .catch(function(err) {
                 if (continueButton && continueButton.isConnected) {
@@ -1206,7 +1198,7 @@ var app = {
 
     initSuspiciousActivityDetection: function() {
         this.actionTimestamps = {};
-        console.log('🛡️ Suspicious activity detection initialized');
+        console.log(' Suspicious activity detection initialized');
     },
 
     checkForSuspiciousActivity: function(action, details) {
@@ -1237,7 +1229,7 @@ var app = {
         if (this.suspiciousActivityDetected) return;
         this.suspiciousActivityDetected = true;
 
-        console.log('🚨 SUSPICIOUS ACTIVITY DETECTED:', reason);
+        console.log(' SUSPICIOUS ACTIVITY DETECTED:', reason);
 
         var self = this;
         var userId = this.user ? this.user.uid : 'unknown';
@@ -1256,7 +1248,7 @@ var app = {
         });
 
         if (this.isAdmin) {
-            this.toast('🚨 Suspicious activity detected: ' + reason, 'error');
+            this.toast(' Suspicious activity detected: ' + reason, 'error');
         }
 
         setTimeout(function() {
@@ -1285,7 +1277,7 @@ var app = {
             this.openAdminPortal();
             this.logUserActivity('admin_login', 'Admin logged in');
         } else {
-            this.toast('❌ Wrong password', 'error');
+            this.toast(' Wrong password', 'error');
             this.logUserActivity('admin_login_failed', 'Failed admin login attempt');
             document.getElementById('adminPassword').value = '';
             document.getElementById('adminPassword').focus();
@@ -1368,6 +1360,7 @@ var app = {
 
         var contentMap = {
             'dashboard': 'adminDashboard',
+            'referrals': 'adminReferrals',
             'users': 'adminUsers',
             'chats': 'adminChats',
             'incomplete': 'adminIncomplete',
@@ -1388,6 +1381,7 @@ var app = {
         }
 
         if (tab === 'users') this.loadAdminUsers();
+        if (tab === 'referrals') this.loadAdminReferralWithdrawals();
         if (tab === 'chats') this.loadAdminChats();
         if (tab === 'incomplete') this.loadIncompleteUsers();
         if (tab === 'posts') this.loadAdminPosts();
@@ -1515,13 +1509,13 @@ var app = {
             db.ref('users/' + uid).update({
                 email: self.user.email
             }).then(function() {
-                self.toast('✅ Email synced for ' + userName, 'success');
+                self.toast(' Email synced for ' + userName, 'success');
                 self.loadAdminUsers();  // Refresh the list
             }).catch(function(err) {
-                self.toast('❌ Error syncing email: ' + err.message, 'error');
+                self.toast(' Error syncing email: ' + err.message, 'error');
             });
         } else {
-            self.toast('ℹ️ User must login to sync their email (server limitation)', 'info');
+            self.toast('User must login to sync their email (server limitation)', 'info');
         }
     },
 
@@ -1553,7 +1547,7 @@ var app = {
                 html += `
                     <div style="background: #fef3c7; border: 1.5px solid #fbbf24; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
                         <div style="display: flex; gap: 12px; align-items: flex-start;">
-                            <div style="font-size: 24px;">⚠️</div>
+                            <div style="font-size: 24px;"></div>
                             <div>
                                 <div style="font-weight: 700; color: #92400e; margin-bottom: 8px;">${usersWithoutUsername.length} User${usersWithoutUsername.length > 1 ? 's' : ''} Without Username</div>
                             <div id="wallpaperAppearanceSettings" style="display:${savedWallpaper && savedWallpaper !== 'small-bubbles' ? 'block' : 'none'};margin-top:16px;padding:12px;background:#f1f7f5;border-radius:10px;">
@@ -1590,7 +1584,7 @@ var app = {
 
                         var isBanned = bannedUsers[u.uid] ? true : false;
                         var banData = bannedUsers[u.uid] || {};
-                        var usernameDisplay = fixedUser.username ? `<div style="font-size: 0.75rem; color: #3b82f6; margin-top: 2px;">@${fixedUser.username}</div>` : '<div style="font-size: 0.75rem; color: #ef4444; margin-top: 2px;">❌ NO USERNAME</div>';
+                        var usernameDisplay = fixedUser.username ? `<div style="font-size: 0.75rem; color: #3b82f6; margin-top: 2px;">@${fixedUser.username}</div>` : '<div style="font-size: 0.75rem; color: #ef4444; margin-top: 2px;"> NO USERNAME</div>';
 
                         // Safe data extraction with fallbacks
                         var userEmail = fixedUser.email || '(email not set)';
@@ -1601,28 +1595,28 @@ var app = {
                         html += `
                             <div class="admin-user-row" data-user-search="${String((fixedUser.name || '') + ' ' + (fixedUser.email || '') + ' ' + (fixedUser.username || '')).toLowerCase()}" style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; ${isBanned ? 'background: #fef2f2;' : ''}">
                                 <div>
-                                    <div style="font-weight: 600; font-size: 0.95rem;">${fixedUser.name || 'Unknown User'} ${isBanned ? '🚫' : ''}</div>
+                                    <div style="font-weight: 600; font-size: 0.95rem;">${fixedUser.name || 'Unknown User'} ${isBanned ? '' : ''}</div>
                                     <div style="font-size: 0.8rem; color: var(--text-light);">${userEmail}</div>
                                     ${usernameDisplay}
-                                    <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">📅 ${userCreatedAt}</div>
-                                    <div style="font-size: 0.75rem; color: var(--primary);">💰 ${userBalance} Coins</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;"> ${userCreatedAt}</div>
+                                    <div style="font-size: 0.75rem; color: var(--primary);"> ${userBalance} Coins</div>
                                     ${isBanned ? `<div style="font-size: 0.7rem; color: #ef4444;">Banned: ${banData.reason || 'No reason'}</div>` : ''}
                                 </div>
                                 <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                                    <span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">👥 ${userFollowers}</span>
+                                    <span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;"> ${userFollowers}</span>
                                     ${!fixedUser.email || fixedUser.email === '(email not set)' ? `
-                                        <button onclick="app.syncUserEmail('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">📧 Sync Email</button>
+                                        <button onclick="app.syncUserEmail('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;"> Sync Email</button>
                                     ` : ''}
                                     ${!fixedUser.username ? `
                                         <button onclick="app.fixUserUsername('${u.uid}', '${fixedUser.name || 'User'}', '${userEmail}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Fix Username</button>
                                     ` : ''}
-                                    <button onclick="app.showBalanceEditor('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">💰 Balance</button>
+                                    <button onclick="app.showBalanceEditor('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;"> Balance</button>
                                     ${isBanned ? `
                                         <button onclick="app.unbanUser('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Unban</button>
                                     ` : `
-                                        <button onclick="app.banUserFromAdmin('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🚫 Ban</button>
+                                        <button onclick="app.banUserFromAdmin('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;"> Ban</button>
                                     `}
-                                    <button onclick="app.deleteUserByAdmin('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🗑️</button>
+                                    <button onclick="app.deleteUserByAdmin('${u.uid}', '${fixedUser.name || 'User'}')" style="padding: 6px 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Delete</button>
                                 </div>
                             </div>
                         `;
@@ -1699,7 +1693,7 @@ var app = {
                 }
 
                 db.ref('users/' + uid + '/username').set(username);
-                self.toast('✅ Username set to @' + username + ' for ' + name, 'success');
+                self.toast(' Username set to @' + username + ' for ' + name, 'success');
                 self.logUserActivity('admin_fix_username', 'Admin set username to ' + username + ' for user ' + name);
                 document.getElementById('fixUsernameModal').remove();
                 self.loadAdminUsers();
@@ -1735,7 +1729,7 @@ var app = {
             }
 
             if (incomplete.length === 0) {
-                html = '<div style="text-align: center; color: #22c55e; padding: 20px;"><div style="font-size: 30px;">✅</div>All users have complete profiles!</div>';
+                html = '<div style="text-align: center; color: #22c55e; padding: 20px;"><div style="font-size: 30px;"></div>All users have complete profiles!</div>';
             } else {
                 html = '<div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">';
 
@@ -1749,12 +1743,12 @@ var app = {
                         <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fffbeb;">
                             <div>
                                 <div style="font-weight: 600; font-size: 0.95rem;">
-                                    ${u.missingName ? '❌ NO NAME' : u.name}
+                                    ${u.missingName ? ' NO NAME' : u.name}
                                 </div>
                                 <div style="font-size: 0.8rem; color: var(--text-light);">
-                                    ${u.missingEmail ? '❌ NO EMAIL' : u.email}
+                                    ${u.missingEmail ? ' NO EMAIL' : u.email}
                                 </div>
-                                ${u.missingUsername ? '<div style="font-size: 0.8rem; color: #ef4444; font-weight: 600;">❌ NO USERNAME</div>' : '<div style="font-size: 0.8rem; color: #3b82f6;">@' + u.username + '</div>'}
+                                ${u.missingUsername ? '<div style="font-size: 0.8rem; color: #ef4444; font-weight: 600;"> NO USERNAME</div>' : '<div style="font-size: 0.8rem; color: #3b82f6;">@' + u.username + '</div>'}
                                 <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 4px;">
                                     Auth UID: ${u.uid.substring(0, 12)}...
                                 </div>
@@ -1769,8 +1763,8 @@ var app = {
                                 ${u.missingUsername ? `
                                     <button onclick="app.fixUserUsername('${u.uid}', '${u.name || 'User'}', '${u.email}')" style="padding: 8px 14px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem; white-space: nowrap;">Fix Username</button>
                                 ` : ''}
-                                <button onclick="app.sendAdminMessage('${u.uid}', '${u.email}', '${u.name || 'User'}')" style="padding: 8px 14px; background: #0088cc; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem; white-space: nowrap;">💬 Message</button>
-                                <button onclick="app.deleteUserByAdmin('${u.uid}', '${u.name || u.email}')" style="padding: 8px 14px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">🗑️ Delete</button>
+                                <button onclick="app.sendAdminMessage('${u.uid}', '${u.email}', '${u.name || 'User'}')" style="padding: 8px 14px; background: #0088cc; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem; white-space: nowrap;"> Message</button>
+                                <button onclick="app.deleteUserByAdmin('${u.uid}', '${u.name || u.email}')" style="padding: 8px 14px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;"> Delete</button>
                             </div>
                         </div>
                     `;
@@ -1792,7 +1786,7 @@ var app = {
         }
 
         if (!this.user || !this.user.uid) {
-            this.toast('❌ You must be logged in as admin', 'error');
+            this.toast(' You must be logged in as admin', 'error');
             return;
         }
 
@@ -1808,20 +1802,20 @@ var app = {
         };
 
         db.ref('chats/' + chatKey + '/messages').push(messageData).then(function() {
-            self.toast('✅ Message sent to ' + toName, 'success');
+            self.toast(' Message sent to ' + toName, 'success');
         }).catch(function(err) {
-            self.toast('❌ Error sending message: ' + err.message, 'error');
+            self.toast(' Error sending message: ' + err.message, 'error');
         });
     },
 
     banUserFromAdmin: function(uid, userName) {
         var reason = prompt('Enter reason for banning ' + userName + ':');
         if (!reason || reason.trim() === '') {
-            this.toast('⚠️ Please provide a reason', 'error');
+            this.toast(' Please provide a reason', 'error');
             return;
         }
 
-        if (!confirm('⚠️ Ban user "' + userName + '"?\n\nReason: ' + reason)) {
+        if (!confirm(' Ban user "' + userName + '"?\n\nReason: ' + reason)) {
             return;
         }
 
@@ -1831,11 +1825,11 @@ var app = {
             bannedAt: new Date().toLocaleString('en-KE'),
             bannedBy: self.user ? self.user.email : 'Admin'
         }).then(function() {
-            self.toast('✅ User "' + userName + '" has been banned', 'success');
+            self.toast(' User "' + userName + '" has been banned', 'success');
             self.loadAdminUsers();
             self.logUserActivity('admin_ban', 'Banned user: ' + userName + ' for: ' + reason);
         }).catch(function(err) {
-            self.toast('❌ Error banning user: ' + err.message, 'error');
+            self.toast(' Error banning user: ' + err.message, 'error');
         });
     },
 
@@ -1844,24 +1838,24 @@ var app = {
 
         var self = this;
         db.ref('bannedUsers/' + uid).remove().then(function() {
-            self.toast('✅ User "' + userName + '" has been unbanned', 'success');
+            self.toast(' User "' + userName + '" has been unbanned', 'success');
             self.loadAdminUsers();
             self.logUserActivity('admin_unban', 'Unbanned user: ' + userName);
         }).catch(function(err) {
-            self.toast('❌ Error unbanning user: ' + err.message, 'error');
+            self.toast(' Error unbanning user: ' + err.message, 'error');
         });
     },
 
     deleteUserByAdmin: function(uid, userName) {
-        if (!confirm('⚠️ PERMANENTLY delete user "' + userName + '"? This cannot be undone!')) return;
+        if (!confirm(' PERMANENTLY delete user "' + userName + '"? This cannot be undone!')) return;
 
         var self = this;
         db.ref('users/' + uid).remove().then(function() {
-            self.toast('✅ User "' + userName + '" deleted', 'success');
+            self.toast(' User "' + userName + '" deleted', 'success');
             self.loadAdminUsers();
             self.logUserActivity('admin_delete_user', 'Deleted user: ' + userName);
         }).catch(function(err) {
-            self.toast('❌ Error deleting user: ' + err.message, 'error');
+            self.toast(' Error deleting user: ' + err.message, 'error');
         });
     },
 
@@ -1886,8 +1880,8 @@ var app = {
                         </div>
                         <div style="font-size: 0.9rem; margin-bottom: 8px; color: var(--text-light);">${p.caption.substring(0, 100)}${p.caption.length > 100 ? '...' : ''}</div>
                         <div style="display: flex; gap: 12px; align-items: center;">
-                            <span style="font-size: 0.75rem; color: var(--text-light);">❤️ ${likes}</span>
-                            <span style="font-size: 0.75rem; color: var(--text-light);">💬 ${comments}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-light);"> ${likes}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-light);"> ${comments}</span>
                             <button onclick="app.editAdminPost('${p.id}')" style="margin-left: auto; padding: 6px 12px; background: #0f766e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Edit</button>
                             <button onclick="app.adminDeletePost('${p.id}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.75rem;">Delete</button>
                         </div>
@@ -1932,7 +1926,7 @@ var app = {
                     var text = message.text || (message.image ? 'Photo message' : 'Voice message');
                     var senderName = message.senderName || (users[message.sender] && (users[message.sender].name || users[message.sender].username)) || 'Unknown user';
                     var recipientNames = chat.names.filter(function(name) { return name !== senderName; });
-                    var verifiedMark = message.isAutoReply || senderName === 'CHICHI Admin' ? '<span class="verified-tick" title="Verified CHICHI admin">✓</span>' : '';
+                    var verifiedMark = message.isAutoReply || senderName === 'CHICHI Admin' ? '<span class="verified-tick" title="Verified CHICHI admin"></span>' : '';
                     return '<div class="admin-chat-message"><div class="admin-chat-message-person"><span class="admin-chat-message-avatar">' + senderName.charAt(0).toUpperCase() + '</span><div><strong>Sent by ' + senderName + verifiedMark + '</strong><small>To ' + (recipientNames.join(', ') || 'conversation participant') + '</small></div></div><span class="admin-chat-message-text">' + text + '</span><time>' + (message.createdAt || '') + '</time></div>';
                 }).join('');
                 var latestText = chat.latest.text || (chat.latest.image ? 'Photo message' : 'Voice message');
@@ -2512,7 +2506,7 @@ var app = {
         var modal = document.createElement('div');
         modal.id = 'adminEditPostModal';
         modal.className = 'modal-overlay active';
-        modal.innerHTML = '<div class="modal admin-edit-post-modal"><div class="modal-close"><button type="button" aria-label="Close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2>Edit post</h2><p>Changes update this post in place; they will not create a duplicate.</p><label for="adminEditPostCaption">Post text / caption</label><textarea id="adminEditPostCaption" rows="6"></textarea><label for="adminEditPostImageUrl">Image URL</label><input id="adminEditPostImageUrl" type="url" placeholder="Paste a new image URL or leave blank to remove the image"><label for="adminEditPostImageFile">Or upload a replacement image</label><input id="adminEditPostImageFile" type="file" accept="image/*"><div class="admin-edit-post-actions"><button type="button" class="admin-edit-post-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button><button type="button" class="admin-edit-post-save" onclick="app.saveAdminPostEdits(\'' + id + '\')">Save post</button></div></div>';
+        modal.innerHTML = '<div class="modal admin-edit-post-modal"><div class="modal-close"><button type="button" aria-label="Close" onclick="this.closest(\'.modal-overlay\').remove()"></button></div><h2>Edit post</h2><p>Changes update this post in place; they will not create a duplicate.</p><label for="adminEditPostCaption">Post text / caption</label><textarea id="adminEditPostCaption" rows="6"></textarea><label for="adminEditPostImageUrl">Image URL</label><input id="adminEditPostImageUrl" type="url" placeholder="Paste a new image URL or leave blank to remove the image"><label for="adminEditPostImageFile">Or upload a replacement image</label><input id="adminEditPostImageFile" type="file" accept="image/*"><div class="admin-edit-post-actions"><button type="button" class="admin-edit-post-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button><button type="button" class="admin-edit-post-save" onclick="app.saveAdminPostEdits(\'' + id + '\')">Save post</button></div></div>';
         document.body.appendChild(modal);
         modal.querySelector('#adminEditPostCaption').value = post.caption || '';
         modal.querySelector('#adminEditPostImageUrl').value = post.photoUrl || '';
@@ -2583,7 +2577,7 @@ var app = {
         if (!confirm('Delete this post?')) return;
 
         db.ref('posts/' + id).remove();
-        this.toast('✅ Post deleted', 'success');
+        this.toast(' Post deleted', 'success');
         this.loadAdminPosts();
         this.loadPosts();
         this.logUserActivity('admin_delete_post', 'Admin deleted post: ' + id);
@@ -2607,7 +2601,7 @@ var app = {
                 <div class="modal" style="max-width: 450px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 style="font-weight: 700; margin: 0;">Edit Balance</h2>
-                        <button onclick="document.getElementById('balanceEditModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                        <button onclick="document.getElementById('balanceEditModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;"></button>
                     </div>
 
                     <div style="background: #f0f7ff; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
@@ -2624,12 +2618,12 @@ var app = {
                     <div class="form-group">
                         <label class="form-label">New Balance (Coins)</label>
                         <input type="number" id="newBalanceInput" step="0.01" value="${currentBalance}" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px;" placeholder="0.00">
-                        <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">💡 Enter the exact balance you want (not a change amount)</div>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 8px;"> Enter the exact balance you want (not a change amount)</div>
                     </div>
 
                     <div style="display: flex; gap: 8px; margin-top: 24px;">
                         <button onclick="document.getElementById('balanceEditModal').remove()" style="flex: 1; padding: 12px; background: #e5e7eb; color: #1a202c; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Cancel</button>
-                        <button onclick="app.updateUserBalance('${uid}', document.getElementById('newBalanceInput').value, '${userName}')" style="flex: 1; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">✅ Save Balance</button>
+                        <button onclick="app.updateUserBalance('${uid}', document.getElementById('newBalanceInput').value, '${userName}')" style="flex: 1; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;"> Save Balance</button>
                     </div>
                 </div>
             `;
@@ -2643,15 +2637,15 @@ var app = {
         var balance = parseFloat(newBalance);
 
         if (isNaN(balance) || balance < 0) {
-            this.toast('❌ Invalid balance amount', 'error');
+            this.toast(' Invalid balance amount', 'error');
             return;
         }
 
         db.ref('users/' + uid + '/balance').set(balance, function(err) {
             if (err) {
-                this.toast('❌ Error: ' + err.message, 'error');
+                this.toast(' Error: ' + err.message, 'error');
             } else {
-                this.toast('✅ Balance updated to ' + balance.toFixed(2) + ' Coins', 'success');
+                this.toast(' Balance updated to ' + balance.toFixed(2) + ' Coins', 'success');
                 document.getElementById('balanceEditModal').remove();
                 this.loadAdminUsers();
             }
@@ -2708,7 +2702,7 @@ var app = {
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
                     <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                        <div style="font-weight: 600; margin-bottom: 12px;">📈 Earnings Breakdown</div>
+                        <div style="font-weight: 600; margin-bottom: 12px;"> Earnings Breakdown</div>
                         ${Object.keys(earnedByType).length === 0 ? '<div style="color: #6b7280; font-size: 13px;">No earnings data</div>' :
                             Object.keys(earnedByType).map(function(key) {
                                 return `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
@@ -2719,7 +2713,7 @@ var app = {
                         }
                     </div>
                     <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                        <div style="font-weight: 600; margin-bottom: 12px;">🛍️ Spending Breakdown</div>
+                        <div style="font-weight: 600; margin-bottom: 12px;"> Spending Breakdown</div>
                         ${Object.keys(spentByType).length === 0 ? '<div style="color: #6b7280; font-size: 13px;">No spending data</div>' :
                             Object.keys(spentByType).map(function(key) {
                                 return `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
@@ -2744,7 +2738,7 @@ var app = {
     loadAdminGifts: function() {
         var html = `
             <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                <h3 style="margin: 0 0 16px 0;">🎁 Gift Catalog Management</h3>
+                <h3 style="margin: 0 0 16px 0;"> Gift Catalog Management</h3>
                 <div style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
                     Manage the gifts available for users to redeem with their Chichi Coins.
                 </div>
@@ -2754,13 +2748,13 @@ var app = {
                         return `
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb;">
                                 <div>
-                                    <div style="font-weight: 600; font-size: 14px;">${gift.image} ${gift.name}</div>
+                                    <div style="font-weight: 600; font-size: 14px;">${gift.name}</div>
                                     <div style="font-size: 12px; color: #6b7280;">${gift.description}</div>
                                     <div style="font-size: 12px; color: #3b82f6; font-weight: 600;">${gift.cost} Coins</div>
                                 </div>
                                 <div>
-                                    <button onclick="app.editGift('${gift.id}')" style="padding: 4px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 4px;">✏️</button>
-                                    <button onclick="app.deleteGift('${gift.id}')" style="padding: 4px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+                                    <button onclick="app.editGift('${gift.id}')" style="padding: 4px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 4px;">Edit</button>
+                                    <button onclick="app.deleteGift('${gift.id}')" style="padding: 4px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Delete</button>
                                 </div>
                             </div>
                         `;
@@ -2783,7 +2777,7 @@ var app = {
             <div class="modal" style="max-width: 450px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 style="font-weight: 700; margin: 0;">Add New Gift</h2>
-                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;"></button>
                 </div>
 
                 <div class="form-group">
@@ -2793,10 +2787,6 @@ var app = {
                 <div class="form-group">
                     <label class="form-label">Description</label>
                     <input type="text" id="newGiftDescription" class="form-input" placeholder="e.g., $10 Gaming Gift Card">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Emoji/Icon</label>
-                    <input type="text" id="newGiftEmoji" class="form-input" placeholder="🎮" maxlength="2">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cost (Coins)</label>
@@ -2816,7 +2806,6 @@ var app = {
     saveNewGift: function() {
         var name = document.getElementById('newGiftName').value.trim();
         var description = document.getElementById('newGiftDescription').value.trim();
-        var emoji = document.getElementById('newGiftEmoji').value.trim();
         var cost = parseInt(document.getElementById('newGiftCost').value);
         var category = document.getElementById('newGiftCategory').value.trim();
 
@@ -2831,13 +2820,13 @@ var app = {
             id: 'gift_' + Date.now(),
             name: name,
             description: description,
-            image: emoji || '🎁',
+            image: '',
             cost: cost,
             category: category
         };
 
         window.GIFT_CATALOG.push(newGift);
-        this.toast('✅ Gift added successfully!', 'success');
+        this.toast(' Gift added successfully!', 'success');
         document.querySelector('.modal-overlay').remove();
         this.loadAdminGifts();
     },
@@ -2856,7 +2845,7 @@ var app = {
             <div class="modal" style="max-width: 450px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 style="font-weight: 700; margin: 0;">Edit Gift</h2>
-                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;"></button>
                 </div>
 
                 <div class="form-group">
@@ -2866,10 +2855,6 @@ var app = {
                 <div class="form-group">
                     <label class="form-label">Description</label>
                     <input type="text" id="editGiftDescription" class="form-input" value="${gift.description}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Emoji/Icon</label>
-                    <input type="text" id="editGiftEmoji" class="form-input" value="${gift.image}" maxlength="2">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Cost (Coins)</label>
@@ -2895,11 +2880,11 @@ var app = {
 
         gift.name = document.getElementById('editGiftName').value.trim();
         gift.description = document.getElementById('editGiftDescription').value.trim();
-        gift.image = document.getElementById('editGiftEmoji').value.trim() || '🎁';
+        gift.image = '';
         gift.cost = parseInt(document.getElementById('editGiftCost').value);
         gift.category = document.getElementById('editGiftCategory').value.trim();
 
-        this.toast('✅ Gift updated!', 'success');
+        this.toast(' Gift updated!', 'success');
         document.querySelector('.modal-overlay').remove();
         this.loadAdminGifts();
     },
@@ -2919,10 +2904,10 @@ var app = {
 
         // Delete from Firebase permanently
         db.ref('gifts/' + id).remove().then(function() {
-            self.toast('✅ Gift permanently deleted', 'success');
+            self.toast(' Gift permanently deleted', 'success');
             self.loadAdminGifts();
         }).catch(function(err) {
-            self.toast('❌ Error deleting gift: ' + err.message, 'error');
+            self.toast(' Error deleting gift: ' + err.message, 'error');
         });
     },
 
@@ -2946,7 +2931,7 @@ var app = {
             activities.reverse();
 
             if (activities.length === 0) {
-                html = '<div style="text-align: center; color: #22c55e; padding: 20px;">✅ No suspicious activity detected</div>';
+                html = '<div style="text-align: center; color: #22c55e; padding: 20px;"> No suspicious activity detected</div>';
             } else {
                 activities.forEach(function(act) {
                     var severityColor = act.severity === 'critical' ? '#dc2626' :
@@ -2959,13 +2944,13 @@ var app = {
                                 <div>
                                     <div style="font-weight: 600; font-size: 0.9rem;">${act.userName || 'Unknown'}</div>
                                     <div style="font-size: 0.8rem; color: var(--text-light);">${act.reason || 'No reason'}</div>
-                                    <div style="font-size: 0.7rem; color: var(--text-light);">${act.time || 'N/A'} ${act.status === 'resolved' ? '✅ Resolved' : ''}</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-light);">${act.time || 'N/A'} ${act.status === 'resolved' ? ' Resolved' : ''}</div>
                                 </div>
                                 <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
                                     <span style="padding: 2px 8px; border-radius: 8px; background: ${severityColor}20; color: ${severityColor}; font-size: 0.7rem; font-weight: 600;">${(act.severity || 'medium').toUpperCase()}</span>
                                     ${act.userId && act.userId !== 'unknown' && act.status !== 'resolved' ? `
-                                        <button onclick="app.banUserFromAdmin('${act.userId}', '${act.userName || 'User'}')" style="padding: 4px 10px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: 600;">🚫 Ban</button>
-                                        <button onclick="app.resolveSuspiciousActivity('${act.id}')" style="padding: 4px 10px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: 600;">✅ Resolve</button>
+                                        <button onclick="app.banUserFromAdmin('${act.userId}', '${act.userName || 'User'}')" style="padding: 4px 10px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: 600;"> Ban</button>
+                                        <button onclick="app.resolveSuspiciousActivity('${act.id}')" style="padding: 4px 10px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: 600;"> Resolve</button>
                                     ` : ''}
                                 </div>
                             </div>
@@ -2983,11 +2968,11 @@ var app = {
 
         var self = this;
         db.ref('suspiciousActivity/' + activityId + '/status').set('resolved').then(function() {
-            self.toast('✅ Activity marked as resolved', 'success');
+            self.toast(' Activity marked as resolved', 'success');
             self.loadSuspiciousActivity();
             self.logUserActivity('admin_resolve_activity', 'Resolved suspicious activity: ' + activityId);
         }).catch(function(err) {
-            self.toast('❌ Error: ' + err.message, 'error');
+            self.toast(' Error: ' + err.message, 'error');
         });
     },
 
@@ -3001,7 +2986,7 @@ var app = {
         var notifContainer = document.getElementById('adminNotificationsList');
 
         if (!notifContainer) {
-            console.error('❌ Notifications container not found');
+            console.error(' Notifications container not found');
             return;
         }
 
@@ -3017,7 +3002,7 @@ var app = {
             });
         }
 
-        notifContainer.innerHTML = '<div style="padding: 20px; text-align: center;">⏳ Loading notifications...</div>';
+        notifContainer.innerHTML = '<div style="padding: 20px; text-align: center;"> Loading notifications...</div>';
 
         db.ref('adminNotifications').limitToLast(50).once('value', function(snapshot) {
             try {
@@ -3034,7 +3019,7 @@ var app = {
                 });
 
                 if (notifications.length === 0) {
-                    html = '<div style="text-align: center; color: #6b7280; padding: 32px 20px;"><div style="font-size: 40px; margin-bottom: 12px;">📬</div><div>No notifications yet</div></div>';
+                    html = '<div style="text-align: center; color: #6b7280; padding: 32px 20px;"><div style="font-size: 40px; margin-bottom: 12px;"></div><div>No notifications yet</div></div>';
                 } else {
                     notifications.forEach(function(notif) {
                         var severityColor = notif.severity === 'critical' ? '#dc2626' :
@@ -3052,7 +3037,7 @@ var app = {
                                     </div>
                                     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                                         <span style="padding: 4px 10px; border-radius: 8px; background: ${severityColor}20; color: ${severityColor}; font-size: 0.7rem; font-weight: 600; white-space: nowrap;">${(notif.severity || 'medium').toUpperCase()}</span>
-                                        ${!notif.read ? `<span style="padding: 4px 10px; border-radius: 8px; background: #dcfce7; color: #22c55e; font-size: 0.7rem; font-weight: 600;">🔔 NEW</span>` : ''}
+                                        ${!notif.read ? `<span style="padding: 4px 10px; border-radius: 8px; background: #dcfce7; color: #22c55e; font-size: 0.7rem; font-weight: 600;"> NEW</span>` : ''}
                                     </div>
                                 </div>
                             </div>
@@ -3062,12 +3047,12 @@ var app = {
 
                 notifContainer.innerHTML = html;
             } catch (err) {
-                console.error('❌ Error loading notifications:', err);
-                notifContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">❌ Error: ' + err.message + '</div>';
+                console.error(' Error loading notifications:', err);
+                notifContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;"> Error: ' + err.message + '</div>';
             }
         }, function(err) {
-            console.error('❌ Firebase error:', err);
-            notifContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">❌ Firebase Error: ' + err.message + '</div>';
+            console.error(' Firebase error:', err);
+            notifContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;"> Firebase Error: ' + err.message + '</div>';
         });
     },
 
@@ -3131,7 +3116,7 @@ var app = {
         modal.id = 'publicSubscribersModal';
         modal.className = 'modal-overlay active';
         modal.style.zIndex = '10060';
-        modal.innerHTML = '<div class="modal" style="max-width:430px;width:94%;"><div class="modal-close"><button type="button" onclick="document.getElementById(\'publicSubscribersModal\').remove()">✕</button></div><div class="admin-kicker">PUBLIC UPDATES</div><h2 style="margin:4px 0 6px;">Subscribed customers</h2><p style="margin:0 0 16px;color:#64748b;font-size:12px;line-height:1.4;">Add a customer to the public Updates list with their name, profile, and live countdown.</p><select id="publicSubscriberUser" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:10px;font:inherit;"><option value="">Select customer...</option></select><input id="publicSubscriberProfile" type="text" placeholder="Assigned profile, e.g. Profile 1" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:10px;box-sizing:border-box;font:inherit;"><label style="display:block;margin-bottom:5px;color:#475569;font-size:12px;font-weight:700;">Access expires on</label><input id="publicSubscriberExpiry" type="date" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;box-sizing:border-box;font:inherit;"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;background:#f8fbfb;border:1px solid #dbe8e3;border-radius:8px;color:#526b78;font-size:11px;line-height:1.35;"><input id="publicSubscriberConsent" type="checkbox" style="margin-top:2px;"><span>I confirm this customer has agreed to public marketing display of their name, profile, and countdown.</span></label><button type="button" onclick="app.addPublicSubscriber()" style="width:100%;padding:11px;margin-top:12px;background:#0f766e;color:#fff;border:0;border-radius:8px;font:inherit;font-weight:800;cursor:pointer;">Add to Updates</button><div id="publicSubscribersList" style="margin-top:18px;"></div></div>';
+        modal.innerHTML = '<div class="modal" style="max-width:430px;width:94%;"><div class="modal-close"><button type="button" onclick="document.getElementById(\'publicSubscribersModal\').remove()"></button></div><div class="admin-kicker">PUBLIC UPDATES</div><h2 style="margin:4px 0 6px;">Subscribed customers</h2><p style="margin:0 0 16px;color:#64748b;font-size:12px;line-height:1.4;">Add a customer to the public Updates list with their name, profile, and live countdown.</p><select id="publicSubscriberUser" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:10px;font:inherit;"><option value="">Select customer...</option></select><input id="publicSubscriberProfile" type="text" placeholder="Assigned profile, e.g. Profile 1" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:10px;box-sizing:border-box;font:inherit;"><label style="display:block;margin-bottom:5px;color:#475569;font-size:12px;font-weight:700;">Access expires on</label><input id="publicSubscriberExpiry" type="date" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:12px;box-sizing:border-box;font:inherit;"><label style="display:flex;gap:8px;align-items:flex-start;padding:10px;background:#f8fbfb;border:1px solid #dbe8e3;border-radius:8px;color:#526b78;font-size:11px;line-height:1.35;"><input id="publicSubscriberConsent" type="checkbox" style="margin-top:2px;"><span>I confirm this customer has agreed to public marketing display of their name, profile, and countdown.</span></label><button type="button" onclick="app.addPublicSubscriber()" style="width:100%;padding:11px;margin-top:12px;background:#0f766e;color:#fff;border:0;border-radius:8px;font:inherit;font-weight:800;cursor:pointer;">Add to Updates</button><div id="publicSubscribersList" style="margin-top:18px;"></div></div>';
         document.body.appendChild(modal);
         var self = this;
         var select = document.getElementById('publicSubscriberUser');
@@ -3200,11 +3185,11 @@ var app = {
         var logContainer = document.getElementById('activityLogList');
 
         if (!logContainer) {
-            console.error('❌ Activity log container not found');
+            console.error(' Activity log container not found');
             return;
         }
 
-        logContainer.innerHTML = '<div style="padding: 20px; text-align: center;">⏳ Loading activity logs...</div>';
+        logContainer.innerHTML = '<div style="padding: 20px; text-align: center;"> Loading activity logs...</div>';
 
         db.ref('activityLogs').limitToLast(100).once('value', function(snapshot) {
             try {
@@ -3221,19 +3206,19 @@ var app = {
                 });
 
                 if (activities.length === 0) {
-                    html = '<div style="text-align: center; color: #6b7280; padding: 20px;">📭 No activity logged yet</div>';
+                    html = '<div style="text-align: center; color: #6b7280; padding: 20px;"> No activity logged yet</div>';
                 } else {
                     activities.forEach(function(act) {
                         var actionIcon = {
-                            'login': '🔐', 'login_success': '✅', 'login_failed': '❌',
-                            'signup': '📝', 'google_signup': '📝', 'google_login': '🔐',
-                            'click': '👆', 'scroll': '📜', 'session_end': '⏱️',
-                            'create_post': '📄', 'delete_post': '🗑️', 'like_post': '❤️',
-                            'comment': '💬', 'follow': '👥', 'unfollow': '👥',
-                            'admin_login': '⚙️', 'admin_ban': '🚫', 'admin_unban': '✅',
-                            'admin_delete_post': '🗑️', 'admin_resolve_activity': '✅',
-                            'send_coins': '💰'
-                        }[act.action] || '📌';
+                            'login': '', 'login_success': '', 'login_failed': '',
+                            'signup': '', 'google_signup': '', 'google_login': '',
+                            'click': '', 'scroll': '', 'session_end': '',
+                            'create_post': '', 'delete_post': '', 'like_post': '',
+                            'comment': '', 'follow': '', 'unfollow': '',
+                            'admin_login': '', 'admin_ban': '', 'admin_unban': '',
+                            'admin_delete_post': '', 'admin_resolve_activity': '',
+                            'send_coins': ''
+                        }[act.action] || '';
 
                         var timestamp = new Date(act.timestamp || 0).toLocaleString();
 
@@ -3243,12 +3228,12 @@ var app = {
                                     <div style="flex: 1;">
                                         <div style="font-weight: 600; font-size: 0.9rem; color: #1a202c;">${actionIcon} ${act.userName || 'System'}</div>
                                         <div style="font-size: 0.85rem; color: #6b7280; margin-top: 4px;">${act.action.toUpperCase().replace(/_/g, ' ')}</div>
-                                        ${act.details ? `<div style="font-size: 0.8rem; color: #6b7280; margin-top: 2px;">📝 ${act.details}</div>` : ''}
-                                        ${act.userEmail ? `<div style="font-size: 0.75rem; color: #9ca3af; margin-top: 2px;">📧 ${act.userEmail}</div>` : ''}
+                                        ${act.details ? `<div style="font-size: 0.8rem; color: #6b7280; margin-top: 2px;"> ${act.details}</div>` : ''}
+                                        ${act.userEmail ? `<div style="font-size: 0.75rem; color: #9ca3af; margin-top: 2px;"> ${act.userEmail}</div>` : ''}
                                     </div>
                                     <div style="text-align: right; font-size: 0.75rem; color: #9ca3af; white-space: nowrap;">
                                         <div>${timestamp}</div>
-                                        ${act.isAdmin ? '<span style="background: #0088cc; color: white; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block;">👑 Admin</span>' : ''}
+                                        ${act.isAdmin ? '<span style="background: #0088cc; color: white; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block;"> Admin</span>' : ''}
                                     </div>
                                 </div>
                             </div>
@@ -3258,12 +3243,12 @@ var app = {
 
                 logContainer.innerHTML = html;
             } catch (err) {
-                console.error('❌ Error loading activity logs:', err);
-                logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">❌ Error loading logs: ' + err.message + '</div>';
+                console.error(' Error loading activity logs:', err);
+                logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;"> Error loading logs: ' + err.message + '</div>';
             }
         }, function(err) {
-            console.error('❌ Firebase error loading logs:', err);
-            logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;">❌ Firebase error: ' + err.message + '</div>';
+            console.error(' Firebase error loading logs:', err);
+            logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #ef4444;"> Firebase error: ' + err.message + '</div>';
         });
     },
 
@@ -3273,7 +3258,7 @@ var app = {
 
     showGiftCatalog: function() {
         if (!this.user || this.isGuest) {
-            this.toast('🔐 Sign up to redeem gifts', 'info');
+            this.toast(' Sign up to redeem gifts', 'info');
             this.showLoginPage();
             return;
         }
@@ -3291,10 +3276,10 @@ var app = {
             <div style="background: white; border-radius: 24px 24px 0 0; padding: 24px 20px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; margin: 0 auto;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <div>
-                        <h2 style="font-weight: 700; margin: 0; font-size: 22px;">🎁 Gift Catalog</h2>
+                        <h2 style="font-weight: 700; margin: 0; font-size: 22px;"> Gift Catalog</h2>
                         <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">Redeem your Chichi Coins for awesome rewards!</div>
                     </div>
-                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;"></button>
                 </div>
 
                 <div style="background: linear-gradient(135deg, #f0f7ff, #e8f0fe); border-radius: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid #bfdbfe;">
@@ -3317,7 +3302,7 @@ var app = {
                         var canAfford = self.balance >= gift.cost;
                         return `
                             <div style="background: white; border-radius: 14px; padding: 16px; border: 2px solid ${canAfford ? '#22c55e' : '#e5e7eb'}; text-align: center; transition: 0.3s; ${canAfford ? 'box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);' : ''}">
-                                <div style="font-size: 40px; margin-bottom: 8px;">${gift.image}</div>
+                                <div style="width:40px;height:40px;margin:0 auto 8px;border-radius:50%;display:grid;place-items:center;background:#f1f5f9;color:#475569;font-size:16px;font-weight:700;">${gift.name.charAt(0).toUpperCase()}</div>
                                 <div style="font-weight: 700; font-size: 14px; color: #1e293b;">${gift.name}</div>
                                 <div style="font-size: 11px; color: #6b7280; margin: 4px 0;">${gift.description}</div>
                                 <div style="font-size: 13px; font-weight: 700; color: ${canAfford ? '#22c55e' : '#ef4444'}; margin: 8px 0;">
@@ -3325,7 +3310,7 @@ var app = {
                                     ${!canAfford ? '<span style="font-size: 10px; color: #ef4444; display: block;">Need ' + (gift.cost - self.balance).toFixed(0) + ' more</span>' : ''}
                                 </div>
                                 <button onclick="app.redeemGift('${gift.id}')" style="width: 100%; padding: 10px; background: ${canAfford ? '#22c55e' : '#e5e7eb'}; color: ${canAfford ? 'white' : '#9ca3af'}; border: none; border-radius: 8px; cursor: ${canAfford ? 'pointer' : 'not-allowed'}; font-weight: 600; font-size: 13px; transition: 0.3s;" ${!canAfford ? 'disabled' : ''} onmouseover="if(${canAfford}){this.style.transform='scale(1.02)'}" onmouseout="if(${canAfford}){this.style.transform='scale(1)'}">
-                                    ${canAfford ? '🎁 Redeem' : '🔒 Locked'}
+                                    ${canAfford ? ' Redeem' : ' Locked'}
                                 </button>
                             </div>
                         `;
@@ -3333,7 +3318,7 @@ var app = {
                 </div>
 
                 <div style="margin-top: 16px; padding: 12px; background: #f8fafc; border-radius: 10px; font-size: 12px; color: #6b7280; text-align: center;">
-                    💡 Gifts are digital vouchers. Contact support for redemption details.
+                     Gifts are digital vouchers. Contact support for redemption details.
                 </div>
             </div>
         `;
@@ -3383,7 +3368,7 @@ var app = {
             }).join('');
             var modal = document.createElement('div');
             modal.className = 'modal-overlay active';
-            modal.innerHTML = '<div class="modal" style="max-width:380px;"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2 style="margin-bottom:8px;">Redeem ' + gift.name + '</h2><p style="margin-bottom:18px;color:#6b7280;font-size:14px;">Send a withdrawal request for ' + gift.cost + ' Chichi Coins to an administrator.</p><label class="form-label" for="withdrawalAdmin">Administrator</label><select class="form-input" id="withdrawalAdmin">' + options + '</select><button class="btn-submit" style="margin-top:16px;" onclick="app.confirmGiftRedemption(\'' + gift.id + '\', document.getElementById(\'withdrawalAdmin\').value)">Submit withdrawal</button></div>';
+            modal.innerHTML = '<div class="modal" style="max-width:380px;"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()"></button></div><h2 style="margin-bottom:8px;">Redeem ' + gift.name + '</h2><p style="margin-bottom:18px;color:#6b7280;font-size:14px;">Send a withdrawal request for ' + gift.cost + ' Chichi Coins to an administrator.</p><label class="form-label" for="withdrawalAdmin">Administrator</label><select class="form-input" id="withdrawalAdmin">' + options + '</select><button class="btn-submit" style="margin-top:16px;" onclick="app.confirmGiftRedemption(\'' + gift.id + '\', document.getElementById(\'withdrawalAdmin\').value)">Submit withdrawal</button></div>';
             document.body.appendChild(modal);
         }).catch(function() {
             self.toast('Unable to load administrators', 'error');
@@ -3449,13 +3434,13 @@ var app = {
 
     showSendMoneyModal: function() {
         if (!this.user || this.isGuest) {
-            this.toast('🔐 Please login to send coins', 'info');
+            this.toast(' Please login to send coins', 'info');
             this.showLoginPage();
             return;
         }
 
         if (this.balance < 1) {
-            this.toast('⚠️ Insufficient balance to send', 'error');
+            this.toast(' Insufficient balance to send', 'error');
             return;
         }
 
@@ -3468,8 +3453,8 @@ var app = {
         modal.innerHTML = `
             <div style="background: white; border-radius: 20px; padding: 24px; max-width: 400px; width: 95%; animation: slideUp 0.3s ease; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="font-size: 18px; font-weight: 700; color: #1e293b; margin: 0;">📤 Send Coins</h2>
-                    <button onclick="document.getElementById('sendMoneyModal').remove()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #64748b;">✕</button>
+                    <h2 style="font-size: 18px; font-weight: 700; color: #1e293b; margin: 0;"> Send Coins</h2>
+                    <button onclick="document.getElementById('sendMoneyModal').remove()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #64748b;"></button>
                 </div>
 
                 <div style="margin-bottom: 16px;">
@@ -3488,7 +3473,7 @@ var app = {
                 </div>
 
                 <div id="selectedRecipientBox" style="display: none; background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; align-items: center; gap: 12px;">
-                    <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #2563eb); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0;" id="selectedRecipientAvatar">👤</div>
+                    <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #2563eb); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0;" id="selectedRecipientAvatar"></div>
                     <div>
                         <div style="font-weight: 600; color: #1e293b; font-size: 14px;" id="selectedRecipientName"></div>
                         <div style="font-size: 12px; color: #64748b;" id="selectedRecipientUsername"></div>
@@ -3540,7 +3525,7 @@ var app = {
                     transition: all 0.3s;
                     margin-bottom: 8px;
                 " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 8px 20px rgba(59,130,246,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                    💸 Send Coins
+                     Send Coins
                 </button>
                 <button onclick="document.getElementById('sendMoneyModal').remove()" style="
                     width: 100%;
@@ -3648,24 +3633,24 @@ var app = {
         var self = this;
 
         if (!username) {
-            this.toast('⚠️ Enter recipient username', 'error');
+            this.toast(' Enter recipient username', 'error');
             return;
         }
 
         if (isNaN(amount) || amount < 1) {
-            this.toast('⚠️ Enter a valid amount', 'error');
+            this.toast(' Enter a valid amount', 'error');
             return;
         }
 
         if (amount > this.balance) {
-            this.toast('⚠️ Insufficient balance', 'error');
+            this.toast(' Insufficient balance', 'error');
             return;
         }
 
         db.ref('users').orderByChild('username').equalTo(username).once('value')
             .then(function(snapshot) {
                 if (!snapshot.exists()) {
-                    self.toast('❌ User not found', 'error');
+                    self.toast(' User not found', 'error');
                     return;
                 }
 
@@ -3700,7 +3685,7 @@ var app = {
                     from: self.profile.name,
                     fromUsername: self.profile.username,
                     amount: amount,
-                    message: '💰 You received ' + amount + ' Chichi Coins from ' + self.profile.name + ' (@' + self.profile.username + ')',
+                    message: ' You received ' + amount + ' Chichi Coins from ' + self.profile.name + ' (@' + self.profile.username + ')',
                     userId: recipientUid,
                     read: false,
                     createdAt: new Date().toLocaleString('en-KE'),
@@ -3711,7 +3696,7 @@ var app = {
 
                 var chatKey = [self.user.uid, recipientUid].sort().join('_');
                 var chatMessage = {
-                    text: '💰 Sent you ' + amount + ' Chichi Coins!',
+                    text: ' Sent you ' + amount + ' Chichi Coins!',
                     sender: self.user.uid,
                     senderName: self.profile.name,
                     timestamp: firebase.database.ServerValue.TIMESTAMP,
@@ -3722,14 +3707,14 @@ var app = {
                 db.ref('chats/' + chatKey + '/messages').push(chatMessage);
 
                 self.updateBalanceDisplays();
-                self.toast('✅ Sent ' + amount + ' Coins to @' + username + '!', 'success');
+                self.toast(' Sent ' + amount + ' Coins to @' + username + '!', 'success');
                 self.logUserActivity('send_coins', 'Sent ' + amount + ' coins to ' + username);
 
                 document.getElementById('sendMoneyModal').remove();
             })
             .catch(function(err) {
                 console.error('Error:', err);
-                self.toast('❌ Error processing transfer', 'error');
+                self.toast(' Error processing transfer', 'error');
             });
     },
 
@@ -3782,7 +3767,7 @@ var app = {
             setTimeout(function() { self.loadUsers(); }, 300);
             return;
         }
-        console.log('📥 loadUsers() called');
+        console.log(' loadUsers() called');
         db.ref('users').on('value', function(s) {
             var allUsers = s.val() || {};
             self.users = {};
@@ -3792,7 +3777,11 @@ var app = {
                     self.users[uid] = u;
                 }
             }
-            console.log('✅ Users loaded: ' + Object.keys(self.users).length);
+            console.log(' Users loaded: ' + Object.keys(self.users).length);
+            if (!self.usersLoaded && self.currentView === 'messages' && self.user) {
+                self.loadMessages();
+            }
+            self.usersLoaded = true;
             if (!self.unreadTrackingStarted && Object.keys(self.users).length > 0) {
                 self.unreadTrackingStarted = true;
                 setTimeout(function() { self.trackUnreadMessages(); }, 100);
@@ -3816,7 +3805,6 @@ var app = {
         db.ref('users/' + this.user.uid + '/following').once('value', function(s) {
             var savedFollowing = s.val();
             self.following = savedFollowing && typeof savedFollowing === 'object' ? savedFollowing : {};
-            self.loadStories();
             if (self.currentView === 'profile') self.renderProfile();
         });
     },
@@ -3835,12 +3823,12 @@ var app = {
         if (!resultsContainer) return;
 
         if (!query || query.trim() === '') {
-            resultsContainer.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">🔍 Search by name, email, username</div>';
+            resultsContainer.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;"> Search by name, email, username</div>';
             return;
         }
 
         var searchQuery = query.toLowerCase().trim();
-        console.log('🔍 Searching for:', searchQuery);
+        console.log(' Searching for:', searchQuery);
 
         var results = [];
         var self = this;
@@ -3872,13 +3860,13 @@ var app = {
             return (b.user.followers || 0) - (a.user.followers || 0);
         });
 
-        console.log('✅ Found', results.length, 'results');
+        console.log(' Found', results.length, 'results');
 
         var html = '';
         if (results.length === 0) {
-            html = '<div style="text-align:center;color:#9ca3af;padding:32px 20px;"><div style="font-size:40px;margin-bottom:12px;">😞</div><div>No users found matching "' + query + '"</div></div>';
+            html = '<div style="text-align:center;color:#9ca3af;padding:32px 20px;"><div style="font-size:40px;margin-bottom:12px;"></div><div>No users found matching "' + query + '"</div></div>';
         } else {
-            html += '<div style="padding:12px 16px;background:linear-gradient(135deg,#f0f7ff,#f5f0ff);border-radius:8px;margin-bottom:12px;font-size:13px;color:#0088cc;font-weight:600;">✅ Found ' + results.length + ' ' + (results.length === 1 ? 'user' : 'users') + '</div>';
+            html += '<div style="padding:12px 16px;background:linear-gradient(135deg,#f0f7ff,#f5f0ff);border-radius:8px;margin-bottom:12px;font-size:13px;color:#0088cc;font-weight:600;"> Found ' + results.length + ' ' + (results.length === 1 ? 'user' : 'users') + '</div>';
 
             results.forEach(function(r) {
                 var isFollowing = self.following[r.uid] || false;
@@ -3889,11 +3877,11 @@ var app = {
                 html += '<div class="search-user-avatar" style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:20px;flex-shrink:0;background-image:url(' + (r.user.profilePhoto || '') + ');background-size:cover;background-position:center;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.08);">' + (!r.user.profilePhoto ? r.user.name.charAt(0).toUpperCase() : '') + '</div>';
                 html += '<div class="search-user-info" style="flex:1;min-width:0;" onclick="app.viewUserProfile(\'' + r.uid + '\')" style="cursor:pointer;">';
                 html += '<div class="search-user-name" style="font-weight:600;font-size:15px;color:#1a202c;">' + r.user.name + '</div>';
-                html += '<div class="search-user-email" style="font-size:12px;color:#6b7280;margin-top:2px;">📧 ' + r.user.email + '</div>';
-                html += '<div class="search-user-followers" style="font-size:11px;color:#9ca3af;margin-top:4px;">👥 ' + (r.user.followers || 0) + ' followers</div></div>';
+                html += '<div class="search-user-email" style="font-size:12px;color:#6b7280;margin-top:2px;"> ' + r.user.email + '</div>';
+                html += '<div class="search-user-followers" style="font-size:11px;color:#9ca3af;margin-top:4px;"> ' + (r.user.followers || 0) + ' followers</div></div>';
                 html += '<div class="search-user-actions" style="display:flex;gap:6px;flex-shrink:0;">';
-                html += '<button class="search-msg-btn" onclick="app.openChatFromSearch(\'' + r.uid + '\', \'' + r.user.name + '\')" style="padding:8px 12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;position:relative;white-space:nowrap;">💬 ' + msgBadge + '</button>';
-                html += '<button class="search-view-btn" onclick="app.viewUserProfile(\'' + r.uid + '\')" style="padding:8px 12px;background:' + (isFollowing ? '#ef4444' : 'var(--primary)') + ';color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">' + (isFollowing ? '✓ Follow' : '+ Follow') + '</button>';
+                html += '<button class="search-msg-btn" onclick="app.openChatFromSearch(\'' + r.uid + '\', \'' + r.user.name + '\')" style="padding:8px 12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;position:relative;white-space:nowrap;"> ' + msgBadge + '</button>';
+                html += '<button class="search-view-btn" onclick="app.viewUserProfile(\'' + r.uid + '\')" style="padding:8px 12px;background:' + (isFollowing ? '#ef4444' : 'var(--primary)') + ';color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">' + (isFollowing ? ' Follow' : '+ Follow') + '</button>';
                 html += '</div></div>';
             });
         }
@@ -3956,7 +3944,7 @@ var app = {
         if (postsSection) postsSection.style.display = 'none';
 
         var searchQuery = query.toLowerCase().trim();
-        console.log('🔍 Explore Search for:', searchQuery);
+        console.log(' Explore Search for:', searchQuery);
 
         var results = [];
         var self = this;
@@ -3990,22 +3978,22 @@ var app = {
 
         var html = '';
         if (results.length === 0) {
-            html = '<div style="text-align:center;color:#9ca3af;padding:32px 20px;"><div style="font-size:18px;margin-bottom:12px;">😔 No users found</div></div>';
+            html = '<div style="text-align:center;color:#9ca3af;padding:32px 20px;"><div style="font-size:18px;margin-bottom:12px;"> No users found</div></div>';
         } else {
             html += '<div style="padding:12px 16px;background:linear-gradient(135deg,#f0f7ff,#f5f0ff);border-radius:8px;margin-bottom:12px;font-size:13px;color:#0088cc;font-weight:600;">Found ' + results.length + ' user' + (results.length === 1 ? '' : 's') + '</div>';
 
             results.forEach(function(r, resultIndex) {
                 var isFollowing = self.following[r.uid] || false;
                 var displayName = self.isGuest ? 'Member ' + String(resultIndex + 1).padStart(2, '0') : r.user.name;
-                var displayMeta = self.isGuest ? 'Private member' : '📧 ' + r.user.email;
+                var displayMeta = self.isGuest ? 'Private member' : ' ' + r.user.email;
 
                 html += '<div style="display:flex;align-items:center;padding:12px;border-bottom:1px solid #e5e7eb;gap:12px;border-radius:8px;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'">';
                 html += '<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;flex-shrink:0;background-image:url(' + (r.user.profilePhoto || '') + ');background-size:cover;background-position:center;border:2px solid white;">' + (!r.user.profilePhoto ? r.user.name.charAt(0).toUpperCase() : '') + '</div>';
                 html += '<div style="flex:1;cursor:pointer;" onclick="app.viewUserProfile(\'' + r.uid + '\')">';
                 html += '<div class="' + (self.isGuest ? 'guest-explore-name' : '') + '" style="font-weight:600;font-size:14px;">' + displayName + '</div>';
-                html += '<div class="' + (self.isGuest ? 'guest-explore-meta' : '') + '" style="font-size:11px;color:#6b7280;">' + displayMeta + ' • 👥 ' + (r.user.followers || 0) + '</div></div>';
-                html += '<button onclick="app.openChatFromSearch(\'' + r.uid + '\', \'' + r.user.name + '\')" style="padding:6px 12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;">💬 Msg</button>';
-                html += '<button onclick="app.viewUserProfile(\'' + r.uid + '\')" style="padding:6px 12px;background:' + (isFollowing ? '#ef4444' : 'var(--primary)') + ';color:white;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;">' + (isFollowing ? '✓ Follow' : '+ Follow') + '</button>';
+                html += '<div class="' + (self.isGuest ? 'guest-explore-meta' : '') + '" style="font-size:11px;color:#6b7280;">' + displayMeta + ' •  ' + (r.user.followers || 0) + '</div></div>';
+                html += '<button onclick="app.openChatFromSearch(\'' + r.uid + '\', \'' + r.user.name + '\')" style="padding:6px 12px;background:#0088cc;color:white;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;"> Msg</button>';
+                html += '<button onclick="app.viewUserProfile(\'' + r.uid + '\')" style="padding:6px 12px;background:' + (isFollowing ? '#ef4444' : 'var(--primary)') + ';color:white;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;">' + (isFollowing ? ' Follow' : '+ Follow') + '</button>';
                 html += '</div>';
             });
         }
@@ -4069,8 +4057,6 @@ var app = {
     filterMessages: function(filter) {
         document.querySelectorAll('.message-filter-tab').forEach(function(tab) {
             tab.classList.remove('active');
-            tab.style.background = '#f3f4f6';
-            tab.style.color = '#666';
         });
 
         this.activeMessageFilter = filter;
@@ -4087,8 +4073,6 @@ var app = {
         var index = tabMap[filter];
         if (index !== undefined && tabs[index]) {
             tabs[index].classList.add('active');
-            tabs[index].style.background = '#0088cc';
-            tabs[index].style.color = 'white';
         }
 
         // Filter the message items (.msg-item-wrapper)
@@ -4142,23 +4126,55 @@ var app = {
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
         modal.style.zIndex = '10050';
+        modal.setAttribute('role', 'presentation');
+        var panel = document.createElement('section');
+        panel.className = 'notifications-panel';
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-modal', 'true');
+        panel.setAttribute('aria-labelledby', 'notificationsTitle');
 
-        modal.innerHTML = `
-            <div style="background: white; border-radius: 20px; padding: 24px; max-width: 500px; width: 95%; max-height: 80vh; overflow-y: auto;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="font-size: 20px; font-weight: 700; margin: 0;">🔔 Notifications</h2>
-                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
-                </div>
-                <div id="notificationsList" style="max-height: 500px; overflow-y: auto;">
-                    <div style="text-align: center; color: #9ca3af; padding: 40px;">Loading notifications...</div>
-                </div>
-            </div>
-        `;
+        var header = document.createElement('header');
+        header.className = 'notifications-panel-header';
+        var heading = document.createElement('div');
+        var title = document.createElement('h2');
+        title.id = 'notificationsTitle';
+        title.textContent = 'Notifications';
+        var subtitle = document.createElement('p');
+        subtitle.textContent = 'Updates and account activity';
+        heading.append(title, subtitle);
 
+        var closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'notifications-close';
+        closeButton.setAttribute('aria-label', 'Close notifications');
+        closeButton.innerHTML = '&times;';
+        var closeModal = function() {
+            modal.remove();
+            document.removeEventListener('keydown', onKeyDown);
+        };
+        var onKeyDown = function(event) {
+            if (event.key === 'Escape') closeModal();
+        };
+        closeButton.addEventListener('click', closeModal);
+        header.append(heading, closeButton);
+        panel.appendChild(header);
+
+        var list = document.createElement('div');
+        list.className = 'notifications-list';
+        var loading = document.createElement('p');
+        loading.className = 'notifications-state';
+        loading.textContent = 'Loading notifications...';
+        list.appendChild(loading);
+        panel.appendChild(list);
+        modal.appendChild(panel);
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) closeModal();
+        });
+        document.addEventListener('keydown', onKeyDown);
         document.body.appendChild(modal);
 
         if (!this.user || this.isGuest) {
-            document.getElementById('notificationsList').innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 40px;">Login to see notifications</div>';
+            loading.textContent = 'Sign in to view notifications.';
             return;
         }
 
@@ -4173,29 +4189,64 @@ var app = {
             });
 
             notifications.reverse();
-
-            var html = '';
+            list.replaceChildren();
             if (notifications.length === 0) {
-                html = '<div style="text-align: center; color: #9ca3af; padding: 40px;">No notifications yet</div>';
+                var empty = document.createElement('p');
+                empty.className = 'notifications-state';
+                empty.textContent = 'No notifications yet.';
+                list.appendChild(empty);
             } else {
                 notifications.forEach(function(notif) {
-                    var icon = notif.type === 'coin_received' ? '💰' : '🔔';
-                    html += `
-                        <div style="padding: 12px; border-bottom: 1px solid #f0f0f0; background: ${notif.read ? 'white' : '#f0f7ff'}; border-radius: 8px; margin-bottom: 4px;">
-                            <div style="display: flex; gap: 10px; align-items: start;">
-                                <div style="font-size: 24px;">${icon}</div>
-                                <div style="flex: 1;">
-                                    <div style="font-weight: 600; font-size: 14px; color: #1a202c;">${notif.message || 'New notification'}</div>
-                                    <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">${notif.createdAt || 'Just now'}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    var item = document.createElement('article');
+                    item.className = 'notification-entry' + (notif.read ? '' : ' unread');
+
+                    var badge = document.createElement('span');
+                    badge.className = 'notification-entry-type';
+                    badge.textContent = notif.type === 'coin_received' ? 'COINS' : 'UPDATE';
+                    badge.setAttribute('aria-hidden', 'true');
+
+                    var content = document.createElement('div');
+                    content.className = 'notification-entry-content';
+                    var itemTitle = document.createElement('h3');
+                    var description = document.createElement('p');
+                    var timestamp = document.createElement('time');
+                    var date = Number(notif.timestamp) > 0
+                        ? new Date(Number(notif.timestamp))
+                        : (notif.createdAt ? new Date(notif.createdAt) : null);
+                    var dateIsValid = date && !Number.isNaN(date.getTime());
+
+                    if (notif.type === 'coin_received') {
+                        itemTitle.textContent = 'Coins received';
+                        var amount = Number(notif.amount);
+                        description.textContent = 'You received ' +
+                            (Number.isFinite(amount) ? amount.toLocaleString() : '') +
+                            ' CHICHI Coins' +
+                            (notif.from ? ' from ' + notif.from : '') +
+                            (notif.fromUsername ? ' (@' + notif.fromUsername + ')' : '');
+                    } else {
+                        itemTitle.textContent = notif.type === 'access_update' ? 'Account update' : 'New update';
+                        description.textContent = String(notif.message || 'You have a new notification.')
+                            .replace(/^\s*[^\p{L}\p{N}]+/u, '')
+                            .trim();
+                    }
+
+                    timestamp.textContent = dateIsValid
+                        ? date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+                        : (notif.createdAt || 'Just now');
+                    if (dateIsValid) timestamp.dateTime = date.toISOString();
+                    content.append(itemTitle, description, timestamp);
+                    item.append(badge, content);
+                    list.appendChild(item);
                 });
             }
-
-            var list = document.getElementById('notificationsList');
-            if (list) list.innerHTML = html;
+        }, function(error) {
+            console.error('Failed to load notifications:', error);
+            if (!modal.isConnected) return;
+            list.replaceChildren();
+            var errorMessage = document.createElement('p');
+            errorMessage.className = 'notifications-state error';
+            errorMessage.textContent = 'Could not load notifications. Please try again.';
+            list.appendChild(errorMessage);
         });
     },
 
@@ -4219,16 +4270,6 @@ var app = {
     // CHECK AND SHOW HASHTAG POPUP
     // ============================================
 
-    checkAndShowHashtagPopup: function() {
-        if (!this.user) return;
-
-        var userHashtags = this.profile.hashtags || [];
-        if (userHashtags.length === 0) {
-            console.log('⚠️ User has no hashtags - showing popup');
-            this.showMandatoryHashtagSelection();
-        }
-    },
-
     showDailyPostPrompt: function() {
         return;
 
@@ -4241,7 +4282,7 @@ var app = {
             if (snapshot.exists() || document.querySelector('.modal-overlay.active')) return;
             var modal = document.createElement('div');
             modal.className = 'modal-overlay active';
-            modal.innerHTML = '<div class="modal" style="max-width:360px;text-align:center;"><div style="font-size:34px;margin-bottom:10px;">✦</div><h2 style="margin-bottom:8px;">Today\'s post reward</h2><p style="margin:0;color:#6b7280;font-size:14px;line-height:1.5;">Post a photo with a caption to win 10 redeemable CHICHI Coins today. You can redeem them instantly.</p><button class="btn-submit" style="margin-top:18px;" onclick="this.closest(\'.modal-overlay\').remove();app.showCreateModal();">Create today\'s post</button><button style="margin-top:10px;border:0;background:none;color:#6b7280;font:inherit;font-size:13px;cursor:pointer;" onclick="this.closest(\'.modal-overlay\').remove()">Not now</button></div>';
+            modal.innerHTML = '<div class="modal" style="max-width:360px;text-align:center;"><div style="font-size:34px;margin-bottom:10px;"></div><h2 style="margin-bottom:8px;">Today\'s post reward</h2><p style="margin:0;color:#6b7280;font-size:14px;line-height:1.5;">Post a photo with a caption to win 10 redeemable CHICHI Coins today. You can redeem them instantly.</p><button class="btn-submit" style="margin-top:18px;" onclick="this.closest(\'.modal-overlay\').remove();app.showCreateModal();">Create today\'s post</button><button style="margin-top:10px;border:0;background:none;color:#6b7280;font:inherit;font-size:13px;cursor:pointer;" onclick="this.closest(\'.modal-overlay\').remove()">Not now</button></div>';
             document.body.appendChild(modal);
         });
         return;
@@ -4257,10 +4298,10 @@ var app = {
 
         if (darkMode === 'enabled') {
             document.documentElement.classList.add('dark-mode');
-            if (toggle) toggle.textContent = '☀️';
+            if (toggle) toggle.textContent = '';
         } else {
             document.documentElement.classList.remove('dark-mode');
-            if (toggle) toggle.textContent = '🌙';
+            if (toggle) toggle.textContent = '';
         }
     },
 
@@ -4273,14 +4314,14 @@ var app = {
             // Switch to light mode
             root.classList.remove('dark-mode');
             localStorage.setItem('chichi-dark-mode', 'disabled');
-            if (toggle) toggle.textContent = '🌙';
-            this.toast('☀️ Light mode enabled', 'success');
+            if (toggle) toggle.textContent = '';
+            this.toast(' Light mode enabled', 'success');
         } else {
             // Switch to dark mode
             root.classList.add('dark-mode');
             localStorage.setItem('chichi-dark-mode', 'enabled');
-            if (toggle) toggle.textContent = '☀️';
-            this.toast('🌙 Dark mode enabled', 'success');
+            if (toggle) toggle.textContent = '';
+            this.toast(' Dark mode enabled', 'success');
         }
     },
 
@@ -4289,6 +4330,8 @@ var app = {
     // ============================================
 
     toast: function(msg, type) {
+        var toastType = ['success', 'error', 'info'].indexOf(type) !== -1 ? type : 'info';
+        var toastMessage = String(msg == null ? '' : msg).trim();
         var stack = document.getElementById('toastStack');
         if (!stack) {
             stack = document.createElement('div');
@@ -4303,17 +4346,33 @@ var app = {
         }
 
         var el = document.createElement('div');
-        el.className = 'toast ' + type;
-        el.setAttribute('role', type === 'error' ? 'alert' : 'status');
-        var icon = type === 'success' ? '✓' : (type === 'error' ? '!' : 'i');
+        el.className = 'toast ' + toastType;
+        if (toastMessage.indexOf('Onchari Group is preparing') === 0) {
+            el.classList.add('onchari-notice');
+        }
+        el.setAttribute('role', toastType === 'error' ? 'alert' : 'status');
         var iconEl = document.createElement('span');
         iconEl.className = 'toast-icon';
-        iconEl.textContent = icon;
+        iconEl.setAttribute('aria-hidden', 'true');
+        iconEl.innerHTML = toastType === 'success'
+            ? '<svg viewBox="0 0 20 20"><path d="m5 10 3.2 3.2L15.5 6"></path></svg>'
+            : (toastType === 'error'
+                ? '<svg viewBox="0 0 20 20"><path d="m6 6 8 8M14 6l-8 8"></path></svg>'
+                : '<svg viewBox="0 0 20 20"><path d="M10 9v5M10 6.2v.1"></path><circle cx="10" cy="10" r="7.2"></circle></svg>');
+        var content = document.createElement('span');
+        content.className = 'toast-content';
+        var titleEl = document.createElement('span');
+        titleEl.className = 'toast-title';
+        titleEl.textContent = toastType === 'success'
+            ? 'Completed'
+            : (toastType === 'error' ? 'Could not complete' : 'Notice');
         var messageEl = document.createElement('span');
         messageEl.className = 'toast-message';
-        messageEl.textContent = msg;
+        messageEl.textContent = toastMessage;
+        content.appendChild(titleEl);
+        content.appendChild(messageEl);
         el.appendChild(iconEl);
-        el.appendChild(messageEl);
+        el.appendChild(content);
         stack.appendChild(el);
         setTimeout(function() {
             el.classList.add('toast-leaving');
@@ -4343,7 +4402,7 @@ var app = {
             math: [
                 { question: 'What is 12 × 8?', options: ['86', '96', '108', '88'], correct: 1 },
                 { question: 'What is the square root of 144?', options: ['10', '11', '12', '14'], correct: 2 },
-                { question: 'A triangle has angles of 50° and 60°. What is the third angle?', options: ['60°', '70°', '80°', '90°'], correct: 1 },
+                { question: 'A triangle has angles of 50 and 60. What is the third angle?', options: ['60', '70', '80', '90'], correct: 1 },
                 { question: 'What is 25% of 200?', options: ['25', '40', '50', '75'], correct: 2 },
                 { question: 'What is the next prime number after 19?', options: ['20', '21', '23', '29'], correct: 2 }
             ],
@@ -4437,19 +4496,19 @@ var app = {
             earnContainer.innerHTML = `
                 <div style="padding: 60px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #fff9e6 0%, #ffe0b3 50%, #ffd9a3 100%); position: relative; overflow: hidden;">
                     <!-- Animated coins in background -->
-                    <div style="position: absolute; top: 10%; left: 8%; font-size: 40px; opacity: 0.15; animation: float 3s ease-in-out infinite;">🪙</div>
-                    <div style="position: absolute; bottom: 15%; right: 10%; font-size: 50px; opacity: 0.12; animation: float 4s ease-in-out infinite 0.5s;">💰</div>
-                    <div style="position: absolute; top: 25%; right: 5%; font-size: 35px; opacity: 0.1; animation: float 3.5s ease-in-out infinite 1s;">💵</div>
+                    <div style="position: absolute; top: 10%; left: 8%; font-size: 40px; opacity: 0.15; animation: float 3s ease-in-out infinite;"></div>
+                    <div style="position: absolute; bottom: 15%; right: 10%; font-size: 50px; opacity: 0.12; animation: float 4s ease-in-out infinite 0.5s;"></div>
+                    <div style="position: absolute; top: 25%; right: 5%; font-size: 35px; opacity: 0.1; animation: float 3.5s ease-in-out infinite 1s;"></div>
                     
                     <div style="position: relative; z-index: 10;">
-                        <div style="font-size: 80px; margin-bottom: 20px; animation: bounce 2s infinite; filter: drop-shadow(0 4px 8px rgba(255, 152, 0, 0.3));">💎</div>
+                        <div style="font-size: 80px; margin-bottom: 20px; animation: bounce 2s infinite; filter: drop-shadow(0 4px 8px rgba(255, 152, 0, 0.3));"></div>
                         <h2 style="font-size: 28px; font-weight: 900; margin-bottom: 12px; color: #d97706; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Unlock Rewards</h2>
                         <p style="font-size: 15px; color: #92400e; margin-bottom: 28px; line-height: 1.6; max-width: 320px; font-weight: 500;">Answer trivia questions, complete challenges, and earn Chichi Coins to unlock exclusive rewards!</p>
                         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-                            <button onclick="app.showLoginPage('login')" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 14px 28px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(217, 119, 6, 0.6)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(217, 119, 6, 0.4)'">🔐 Sign In</button>
-                            <button onclick="app.showLoginPage('signup')" style="background: white; color: #d97706; border: 2px solid #f59e0b; padding: 12px 28px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; transition: all 0.3s;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background='white'">✨ Create Account</button>
+                            <button onclick="app.showLoginPage('login')" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 14px 28px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(217, 119, 6, 0.6)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(217, 119, 6, 0.4)'"> Sign In</button>
+                            <button onclick="app.showLoginPage('signup')" style="background: white; color: #d97706; border: 2px solid #f59e0b; padding: 12px 28px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 14px; transition: all 0.3s;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background='white'"> Create Account</button>
                         </div>
-                        <p style="font-size: 12px; color: #9a6108; margin-top: 20px; font-weight: 500;">🎁 Join now and get 100 bonus coins!</p>
+                        <p style="font-size: 12px; color: #9a6108; margin-top: 20px; font-weight: 500;"> Join now and get 100 bonus coins!</p>
                     </div>
                 </div>
             `;
@@ -4485,19 +4544,19 @@ var app = {
                     <div style="position: relative; z-index: 2;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                             <div>
-                                <h2 style="margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.5px;">Welcome Back, ${this.profile.name || 'User'}! 🌟</h2>
+                                <h2 style="margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.5px;">Welcome Back, ${this.profile.name || 'User'}! </h2>
                                 <p style="margin: 4px 0 0 0; font-size: 13px; color: rgba(255,255,255,0.8);">Keep earning rewards today</p>
                             </div>
                             <div style="text-align: right;">
                                 <div style="font-size: 32px; font-weight: 900; background: linear-gradient(135deg, #FFD700, #FFA500); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1;">${userBalance.toFixed(2)}</div>
-                                <div style="font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; margin-top: 2px;">💎 Coins</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; margin-top: 2px;"> Coins</div>
                             </div>
                         </div>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
                             <div style="background: rgba(255,255,255,0.12); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.15);">
                                 <div style="font-size: 11px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Today's Streak</div>
-                                <div style="font-size: 24px; font-weight: 900; color: #FFD700; margin-top: 4px; display: flex; align-items: center; gap: 6px;">🔥${streakCount}</div>
+                                <div style="font-size: 24px; font-weight: 900; color: #FFD700; margin-top: 4px; display: flex; align-items: center; gap: 6px;">${streakCount}</div>
                             </div>
                             <div style="background: rgba(255,255,255,0.12); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.15);">
                                 <div style="font-size: 11px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Questions Left</div>
@@ -4527,13 +4586,13 @@ var app = {
                     gap: 8px;
                     margin-bottom: 24px;
                 " ${remaining <= 0 ? 'disabled' : ''} onmouseover="if(${remaining > 0}) { this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(16,185,129,0.45)'; }" onmouseout="if(${remaining > 0}) { this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(16,185,129,0.35)'; }">
-                    <span style="font-size: 20px;">⏱️</span>
+                    <span style="font-size: 20px;"></span>
                     ${remaining > 0 ? 'Start Daily Trivia' : 'All Questions Completed Today!'}
                 </button>
 
                 <!-- STATS CARDS -->
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; margin-bottom: 20px;">
-                    <h3 style="margin: 0 0 14px 0; font-size: 14px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">📈 Your Statistics</h3>
+                    <h3 style="margin: 0 0 14px 0; font-size: 14px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;"> Your Statistics</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 14px; border: 1px solid #fcd34d;">
                             <div style="font-size: 11px; color: #92400e; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;">Total Answered</div>
@@ -4564,14 +4623,14 @@ var app = {
                             box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
                         "></div>
                     </div>
-                    <p style="margin: 0; font-size: 12px; color: #6b7280; line-height: 1.5;">Complete all ${tierData.questionsPerDay} daily questions to maximize your earnings! 🎯</p>
+                    <p style="margin: 0; font-size: 12px; color: #6b7280; line-height: 1.5;">Complete all ${tierData.questionsPerDay} daily questions to maximize your earnings! </p>
                 </div>
 
                 <!-- REWARDS SECTION -->
                 <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                        <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #1e293b;">🎁 Redeem Rewards</h3>
-                        <button onclick="app.showGiftCatalog()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-weight: 600; font-size: 11px; padding: 4px 8px;">View All →</button>
+                        <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #1e293b;"> Redeem Rewards</h3>
+                        <button onclick="app.showGiftCatalog()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-weight: 600; font-size: 11px; padding: 4px 8px;">View All</button>
                     </div>
                     <div style="display: flex; gap: 12px; overflow-x: auto; padding: 8px 0; -webkit-overflow-scrolling: touch;">
                         ${catalog.map(function(gift) {
@@ -4587,9 +4646,9 @@ var app = {
                                     border: 1.5px solid #e5e7eb;
                                     position: relative;
                                 " onmouseover="this.style.background='linear-gradient(135deg, #f0f4f8 0%, #e8eef5 100%)'; this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.1)'; this.style.borderColor='#d1d5db';" onmouseout="this.style.background='linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'; this.style.transform='translateY(0)'; this.style.boxShadow='none'; this.style.borderColor='#e5e7eb';" onclick="app.showGiftCatalog()">
-                                    <div style="font-size: 32px; line-height: 1;">${gift.image}</div>
+                                    <div style="font-size: 20px;line-height:1;font-weight:700;color:#475569;">${gift.name.charAt(0).toUpperCase()}</div>
                                     <div style="font-size: 11px; font-weight: 700; color: #1e293b; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${gift.name}</div>
-                                    <div style="font-size: 10px; color: #6b7280; margin-top: 4px; font-weight: 600;">${gift.cost} 💎</div>
+                                    <div style="font-size: 10px; color: #6b7280; margin-top: 4px; font-weight: 600;">${gift.cost} </div>
                                 </div>
                             `;
                         }).join('')}
@@ -4601,7 +4660,7 @@ var app = {
                                 font-weight: 800;
                                 color: #1a1a2e;
                                 box-shadow: 0 2px 10px rgba(255,215,0,0.25);
-                            ">💳</div>
+                            "></div>
                             <div style="font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 600; letter-spacing: 0.5px;">CHICHI</div>
                         </div>
                         <div style="
@@ -4676,7 +4735,7 @@ var app = {
                             justify-content: center;
                             gap: 4px;
                         " onmouseover="this.style.background='rgba(255,215,0,0.2)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='rgba(255,215,0,0.12)'; this.style.transform='translateY(0)'">
-                            🎁 Gifts
+                             Gifts
                         </button>
                         <button onclick="app.showSendMoneyModal()" style="
                             flex: 1;
@@ -4695,7 +4754,7 @@ var app = {
                             justify-content: center;
                             gap: 4px;
                         " onmouseover="this.style.background='rgba(59,130,246,0.25)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'; this.style.transform='translateY(0)'">
-                            📤 Send
+                             Send
                         </button>
                         <button onclick="app.showTransactionHistory()" style="
                             flex: 1;
@@ -4714,7 +4773,7 @@ var app = {
                             justify-content: center;
                             gap: 4px;
                         " onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.transform='translateY(0)'">
-                            📋 History
+                             History
                         </button>
                     </div>
                 </div>
@@ -4735,7 +4794,7 @@ var app = {
                 <div style="background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e8ecf0;">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
                         <div>
-                            <div style="font-size: 14px; font-weight: 700; color: #15803d;">🧠 Trivia</div>
+                            <div style="font-size: 14px; font-weight: 700; color: #15803d;"> Trivia</div>
                             <div style="font-size: 11px; color: #64748b;">Earn coins answering questions</div>
                         </div>
                         <div style="background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; white-space: nowrap;">+${tierData.rewardPerQuestion}</div>
@@ -4745,7 +4804,7 @@ var app = {
                         <div style="font-size: 11px; color: #64748b;">
                             <span style="font-weight: 600; color: #1e293b;">${remaining}</span> left today
                         </div>
-                        <div style="font-size: 10px; color: #94a3b8;">⏱️ ${tierData.timerSeconds}s</div>
+                        <div style="font-size: 10px; color: #94a3b8;"> ${tierData.timerSeconds}s</div>
                     </div>
 
                     <button onclick="app.showTriviaReadyScreen()" style="
@@ -4761,15 +4820,15 @@ var app = {
                         transition: all 0.3s;
                         opacity: ${remaining <= 0 ? '0.6' : '1'};
                     " ${remaining <= 0 ? 'disabled' : ''} onmouseover="if(${remaining > 0}) { this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 15px rgba(34,197,94,0.3)'; }" onmouseout="if(${remaining > 0}) { this.style.transform='translateY(0)'; this.style.boxShadow='none'; }">
-                        ${remaining > 0 ? '⏱️ Start Trivia' : '⏳ Done for today'}
+                        ${remaining > 0 ? ' Start Trivia' : ' Done for today'}
                     </button>
                 </div>
 
                 <!-- GIFT CATALOG PREVIEW (Horizontal Scroll) -->
                 <div style="background: white; border-radius: 14px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e8ecf0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #1e293b;">🎁 Gifts</h3>
-                        <button onclick="app.showGiftCatalog()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-weight: 600; font-size: 11px;">See All →</button>
+                        <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #1e293b;"> Gifts</h3>
+                        <button onclick="app.showGiftCatalog()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-weight: 600; font-size: 11px;">See All</button>
                     </div>
                     <div style="display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 8px 0; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;">
                         ${catalog.map(function(gift) {
@@ -4785,7 +4844,7 @@ var app = {
                                     scroll-snap-align: start;
                                     border: 1px solid #e5e7eb;
                                 " onmouseover="this.style.background='#f1f5f9'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#f8fafc'; this.style.transform='translateY(0)'" onclick="app.showGiftCatalog()">
-                                    <div style="font-size: 28px;">${gift.image}</div>
+                                    <div style="font-size: 20px;font-weight:700;color:#475569;">${gift.name.charAt(0).toUpperCase()}</div>
                                     <div style="font-size: 10px; font-weight: 600; color: #1e293b; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${gift.name}</div>
                                     <div style="font-size: 9px; color: #6b7280;">${gift.cost} Coins</div>
                                 </div>
@@ -4830,7 +4889,7 @@ var app = {
         }
 
         if (!questionData) {
-            console.error('❌ No question data provided');
+            console.error(' No question data provided');
             return;
         }
 
@@ -4894,7 +4953,7 @@ var app = {
                                 font-weight: 800;
                                 color: #1a1a2e;
                                 box-shadow: 0 2px 10px rgba(255,215,0,0.25);
-                            ">💳</div>
+                            "></div>
                             <div style="font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 600; letter-spacing: 0.5px;">CHICHI</div>
                         </div>
                         <div style="
@@ -4969,7 +5028,7 @@ var app = {
                             justify-content: center;
                             gap: 4px;
                         " onmouseover="this.style.background='rgba(255,215,0,0.2)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='rgba(255,215,0,0.12)'; this.style.transform='translateY(0)'">
-                            🎁 Gifts
+                             Gifts
                         </button>
                         <button onclick="app.showSendMoneyModal()" style="
                             flex: 1;
@@ -4988,7 +5047,7 @@ var app = {
                             justify-content: center;
                             gap: 4px;
                         " onmouseover="this.style.background='rgba(59,130,246,0.25)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'; this.style.transform='translateY(0)'">
-                            📤 Send
+                             Send
                         </button>
                         <button onclick="app.showTransactionHistory()" style="
                             flex: 1;
@@ -5007,7 +5066,7 @@ var app = {
                             justify-content: center;
                             gap: 4px;
                         " onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.transform='translateY(0)'">
-                            📋 History
+                             History
                         </button>
                     </div>
                 </div>
@@ -5020,7 +5079,7 @@ var app = {
                     
                     <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="font-size: 28px;">🧠</div>
+                            <div style="font-size: 28px;"></div>
                             <div>
                                 <div style="font-size: 16px; font-weight: 700; color: white; letter-spacing: 0.5px;">Daily Trivia</div>
                                 <div style="font-size: 11px; color: rgba(255,255,255,0.85); margin-top: 2px;">Earn ${tierData.rewardPerQuestion} coins per question</div>
@@ -5050,7 +5109,7 @@ var app = {
                             justify-content: center;
                             gap: 8px;
                         " ${remaining <= 0 ? 'disabled' : ''} onmouseover="if(${remaining > 0}) { this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(16, 185, 129, 0.4)'; }" onmouseout="if(${remaining > 0}) { this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)'; }">
-                            <span>${remaining > 0 ? '▶' : '✓'}</span> ${remaining > 0 ? 'Start Quiz' : 'Done Today'}
+                            <span>${remaining > 0 ? '' : ''}</span> ${remaining > 0 ? 'Start Quiz' : 'Done Today'}
                         </button>
                         <button onclick="app.showGiftCatalog()" style="
                             width: 50px;
@@ -5068,7 +5127,7 @@ var app = {
                             justify-content: center;
                             backdrop-filter: blur(10px);
                         " title="View Rewards" onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'; this.style.transform='scale(1)'">
-                            🎁
+                            
                         </button>
                     </div>
                     
@@ -5078,14 +5137,14 @@ var app = {
                 <!-- GIFT CATALOG PREVIEW (Horizontal Scroll) -->
                 <div style="background: white; border-radius: 14px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e8ecf0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #1e293b;">🎁 Gifts</h3>
-                        <button onclick="app.showGiftCatalog()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-weight: 600; font-size: 11px;">See All →</button>
+                        <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #1e293b;"> Gifts</h3>
+                        <button onclick="app.showGiftCatalog()" style="background: none; border: none; color: #3b82f6; cursor: pointer; font-weight: 600; font-size: 11px;">See All</button>
                     </div>
                     <div style="display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 8px 0; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;">
                         ${catalog.map(function(gift) {
                             return `
                                 <div style="flex: 0 0 100px; background: #f8fafc; border-radius: 12px; padding: 12px; text-align: center; transition: 0.3s; cursor: pointer; scroll-snap-align: start; border: 1px solid #e5e7eb;" onmouseover="this.style.background='#f1f5f9'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#f8fafc'; this.style.transform='translateY(0)'" onclick="app.showGiftCatalog()">
-                                    <div style="font-size: 28px;">${gift.image}</div>
+                                    <div style="font-size: 20px;font-weight:700;color:#475569;">${gift.name.charAt(0).toUpperCase()}</div>
                                     <div style="font-size: 10px; font-weight: 600; color: #1e293b; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${gift.name}</div>
                                     <div style="font-size: 9px; color: #6b7280;">${gift.cost} Coins</div>
                                 </div>
@@ -5155,9 +5214,9 @@ var app = {
                         resultArea.style.display = 'block';
                         var correctAnswer = (self.currentTrivia.options && self.currentTrivia.correct !== undefined) ? self.currentTrivia.options[self.currentTrivia.correct] : 'Unknown';
                         resultArea.innerHTML = `
-                            <div style="color: #ef4444; font-weight: 700; font-size: 18px; margin-bottom: 8px;">⏰ Time's Up!</div>
+                            <div style="color: #ef4444; font-weight: 700; font-size: 18px; margin-bottom: 8px;"> Time's Up!</div>
                             <div style="color: #6b7280; font-size: 14px; margin-bottom: 12px;">The correct answer was: <strong>${correctAnswer}</strong></div>
-                            <button onclick="app.loadNextTriviaQuestion();" style="width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">📝 Next Question</button>
+                            <button onclick="app.loadNextTriviaQuestion();" style="width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;"> Next Question</button>
                         `;
                         resultArea.style.background = '#fee2e2';
                     }
@@ -5169,7 +5228,7 @@ var app = {
     },
 
     answerTriviaFromEarn: function(selectedIndex) {
-        console.log('🎯 Answer submitted:', selectedIndex);
+        console.log(' Answer submitted:', selectedIndex);
 
         if (this.triviaAnswered) {
             return;
@@ -5222,7 +5281,7 @@ var app = {
             var newBalance = oldBalance + earnedAmount;
 
             resultArea.innerHTML = `
-                <div style="color: #22c55e; font-weight: 700; font-size: 20px; margin-bottom: 8px;">✅ ${userName}, Good Job!</div>
+                <div style="color: #22c55e; font-weight: 700; font-size: 20px; margin-bottom: 8px;"> ${userName}, Good Job!</div>
                 <div style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">You've earned some Chichi Points</div>
 
                 <!-- BALANCE ANIMATION -->
@@ -5233,7 +5292,7 @@ var app = {
                     <div style="font-size: 24px; font-weight: 700; color: #3b82f6; text-align: center;" id="animatedBalance">${oldBalance.toFixed(2)}</div>
                 </div>
 
-                <button onclick="app.loadNextTriviaQuestion();" id="nextBtn" style="width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; display: none;">📝 Next Question</button>
+                <button onclick="app.loadNextTriviaQuestion();" id="nextBtn" style="width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; display: none;"> Next Question</button>
             `;
             resultArea.style.background = '#dcfce7';
 
@@ -5276,16 +5335,16 @@ var app = {
                 balanceDisplay.textContent = this.balance.toFixed(2) + ' Coins';
             }
 
-            this.toast('🎉 Correct! +' + earnedAmount.toFixed(2) + ' Coins', 'success');
+            this.toast(' Correct! +' + earnedAmount.toFixed(2) + ' Coins', 'success');
             this.incrementQuestionCount();
         } else {
             resultArea.innerHTML = `
-                <div style="color: #ef4444; font-weight: 700; font-size: 18px;">❌ Wrong answer</div>
+                <div style="color: #ef4444; font-weight: 700; font-size: 18px;"> Wrong answer</div>
                 <div style="color: #6b7280; font-size: 14px; margin-top: 8px;">The correct answer was: <strong>${this.currentTrivia.options[this.currentTrivia.correct]}</strong></div>
-                <button onclick="app.loadNextTriviaQuestion();" style="width: 100%; margin-top: 12px; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">📝 Next Question</button>
+                <button onclick="app.loadNextTriviaQuestion();" style="width: 100%; margin-top: 12px; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;"> Next Question</button>
             `;
             resultArea.style.background = '#fee2e2';
-            this.toast('❌ Wrong answer! Try again.', 'error');
+            this.toast(' Wrong answer! Try again.', 'error');
         }
 
         var answeredData = {
@@ -5309,7 +5368,7 @@ var app = {
                 if (resultArea) {
                     resultArea.innerHTML += `
                         <button onclick="app.loadNextTriviaQuestion();" style="margin-top: 12px; padding: 10px 24px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
-                            📝 Next Question (${remaining} left)
+                             Next Question (${remaining} left)
                         </button>
                     `;
                 }
@@ -5318,7 +5377,7 @@ var app = {
                 if (resultArea) {
                     resultArea.innerHTML += `
                         <div style="margin-top: 12px; padding: 12px; background: #fef3c7; border-radius: 8px; color: #92400e;">
-                            ✅ You've answered all questions for today! Come back tomorrow.
+                             You've answered all questions for today! Come back tomorrow.
                         </div>
                     `;
                 }
@@ -5366,7 +5425,7 @@ var app = {
 
     loadNextTriviaQuestion: function(continueQuiz) {
         var self = this;
-        console.log('📝 Loading next trivia question...');
+        console.log(' Loading next trivia question...');
 
         this.triviaAnswered = false;
         this.currentTrivia = null;
@@ -5383,13 +5442,13 @@ var app = {
 
     generateTriviaQuestion: function(callback) {
         if (!this.user || this.isGuest) {
-            this.toast('⚠️ Please log in to answer trivia', 'error');
+            this.toast(' Please log in to answer trivia', 'error');
             return;
         }
 
         var remaining = this.getQuestionsRemaining();
         if (remaining <= 0) {
-            this.toast('✅ All questions answered for today! Come back tomorrow.', 'info');
+            this.toast(' All questions answered for today! Come back tomorrow.', 'info');
             return;
         }
 
@@ -5441,7 +5500,7 @@ var app = {
 
                 db.ref('users/' + userId + '/pendingTrivia').set(pendingData, function(err) {
                     if (err) {
-                        console.error('❌ Error saving trivia:', err);
+                        console.error(' Error saving trivia:', err);
                         self.toast('Error loading question. Try again.', 'error');
                     } else {
                         self.displayTriviaInEarn(pendingData);
@@ -5449,23 +5508,23 @@ var app = {
                     }
                 });
             }, function(err) {
-                console.error('❌ Error reading answered questions:', err);
+                console.error(' Error reading answered questions:', err);
                 self.toast('Error loading trivia. Try again.', 'error');
             });
         }, function(err) {
-            console.error('❌ Error reading pending trivia:', err);
+            console.error(' Error reading pending trivia:', err);
             self.toast('Error loading trivia. Try again.', 'error');
         });
     },
 
     displayTriviaInEarn: function(questionData) {
         if (!this.user || this.isGuest) {
-            console.error('❌ User not authenticated for trivia display');
+            console.error(' User not authenticated for trivia display');
             return;
         }
 
         if (!questionData || !questionData.question) {
-            console.error('❌ Invalid question data:', questionData);
+            console.error(' Invalid question data:', questionData);
             this.toast('Error loading question. Try again.', 'error');
             return;
         }
@@ -5475,7 +5534,7 @@ var app = {
 
         var earnView = document.getElementById('earnView');
         if (!earnView) {
-            console.warn('⚠️ Earn view missing, creating it...');
+            console.warn(' Earn view missing, creating it...');
             var mainApp = document.getElementById('mainApp');
             if (mainApp) {
                 earnView = document.createElement('div');
@@ -5504,7 +5563,7 @@ var app = {
         }).join('');
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
-        modal.innerHTML = '<div class="modal" style="max-width:420px;"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><p class="eyebrow">Daily quiz</p><h2 style="margin:0 0 12px;">' + questionData.question + '</h2><div id="triviaResultArea"></div>' + options + '</div>';
+        modal.innerHTML = '<div class="modal" style="max-width:420px;"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()"></button></div><p class="eyebrow">Daily quiz</p><h2 style="margin:0 0 12px;">' + questionData.question + '</h2><div id="triviaResultArea"></div>' + options + '</div>';
         document.body.appendChild(modal);
     },
 
@@ -5514,9 +5573,9 @@ var app = {
         if (existing) existing.remove();
 
         var genres = [
-            { id: 'general', icon: '🌍', title: 'General', subtitle: 'Culture, places and everyday knowledge', color: '#0284c7' },
+            { id: 'general', icon: '', title: 'General', subtitle: 'Culture, places and everyday knowledge', color: '#0284c7' },
             { id: 'math', icon: '∑', title: 'Math', subtitle: 'Patterns, numbers and quick thinking', color: '#7c3aed' },
-            { id: 'science', icon: '⚗', title: 'Science', subtitle: 'Nature, space and the human body', color: '#059669' }
+            { id: 'science', icon: '', title: 'Science', subtitle: 'Nature, space and the human body', color: '#059669' }
         ];
         var choices = genres.map(function(genre) {
             return '<button data-genre="' + genre.id + '" style="width:100%;display:flex;align-items:center;gap:14px;padding:14px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;text-align:left;font:inherit;"><span style="width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:' + genre.color + ';color:#fff;font-size:20px;font-weight:800;">' + genre.icon + '</span><span><strong style="display:block;color:#172033;font-size:14px;">' + genre.title + '</strong><small style="color:#64748b;font-size:12px;">' + genre.subtitle + '</small></span></button>';
@@ -5562,7 +5621,7 @@ var app = {
 
     showTriviaQuestion: function() {
         if (!this.currentTrivia) {
-            this.toast('❌ No question loaded', 'error');
+            this.toast(' No question loaded', 'error');
             return;
         }
 
@@ -5645,13 +5704,13 @@ var app = {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                " onmouseover="this.style.color='#ef4444'; this.style.background='#fee2e2';" onmouseout="this.style.color='#9ca3af'; this.style.background='none';">✕</button>
+                " onmouseover="this.style.color='#ef4444'; this.style.background='#fee2e2';" onmouseout="this.style.color='#9ca3af'; this.style.background='none';"></button>
 
                 <!-- Question Header -->
                 <div style="margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <div style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Quick Quiz</div>
-                        <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;">⏱️ ${tierData.timerSeconds}s</div>
+                        <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;"> ${tierData.timerSeconds}s</div>
                     </div>
                     <p style="font-size: 18px; font-weight: 700; color: #1a202c; margin: 0; line-height: 1.6; margin-bottom: 16px;">${questionData.question}</p>
                     <div style="height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden;">
@@ -5682,7 +5741,7 @@ var app = {
                     transition: all 0.3s;
                     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)'">
-                    📝 Next Question
+                     Next Question
                 </button>
 
                 <style>
@@ -5755,7 +5814,7 @@ var app = {
                 var isCorrect = selectedIndex === questionData.correct;
 
                 if (isCorrect) {
-                    resultArea.innerHTML = '✅ Correct! You earned ' + tierData.rewardPerQuestion + ' coins!';
+                    resultArea.innerHTML = ' Correct! You earned ' + tierData.rewardPerQuestion + ' coins!';
                     resultArea.style.background = '#dcfce7';
                     resultArea.style.color = '#15803d';
                     
@@ -5764,7 +5823,7 @@ var app = {
                     self.updateBalanceDisplays();
                 } else {
                     var correctAnswer = questionData.options[questionData.correct];
-                    resultArea.innerHTML = '❌ Wrong! Correct answer: <strong>' + correctAnswer + '</strong>';
+                    resultArea.innerHTML = ' Wrong! Correct answer: <strong>' + correctAnswer + '</strong>';
                     resultArea.style.background = '#fee2e2';
                     resultArea.style.color = '#dc2626';
                 }
@@ -5791,7 +5850,7 @@ var app = {
                 // Update balance if correct
                 if (isCorrect) {
                     db.ref('users/' + userId + '/balance').set(self.balance).catch(function(err) {
-                        console.error('❌ Error saving balance:', err);
+                        console.error(' Error saving balance:', err);
                     });
                 }
 
@@ -5817,9 +5876,9 @@ var app = {
         if (self.triviaTimer) clearInterval(self.triviaTimer);
         self.triviaTimer = setInterval(function() {
             timeLeft--;
-            var timerBadge = overlay.querySelector('[style*="⏱️"]');
+            var timerBadge = overlay.querySelector('[style*=""]');
             if (timerBadge) {
-                timerBadge.textContent = '⏱️ ' + timeLeft + 's';
+                timerBadge.textContent = ' ' + timeLeft + 's';
                 if (timeLeft <= 3) {
                     timerBadge.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
                 }
@@ -5838,7 +5897,7 @@ var app = {
                     });
                     var resultArea = overlay.querySelector('#quizResult');
                     var correctAnswer = questionData.options[questionData.correct];
-                    resultArea.innerHTML = '⏰ Time\'s up! Correct answer: <strong>' + correctAnswer + '</strong>';
+                    resultArea.innerHTML = ' Time\'s up! Correct answer: <strong>' + correctAnswer + '</strong>';
                     resultArea.style.background = '#fef3c7';
                     resultArea.style.color = '#92400e';
                     resultArea.style.display = 'block';
@@ -5970,7 +6029,7 @@ var app = {
         if (!this.unreadMessages) this.unreadMessages = {};
         if (!this.notifiedMessages) this.notifiedMessages = {};
         if (!this.navigationHistory) this.navigationHistory = [];
-        if (!this.currentView) this.currentView = 'feed';
+        if (!this.currentView || this.currentView === 'feed' || this.currentView === 'home') this.currentView = 'messages';
 
         var loading = document.getElementById('loadingScreen');
         if (loading) {
@@ -5996,6 +6055,7 @@ var app = {
             mainApp.style.display = 'flex';
             mainApp.classList.add('active');
         }
+        this.syncGuestChrome();
 
         var admin = document.getElementById('adminPortal');
         if (admin) {
@@ -6065,25 +6125,16 @@ var app = {
         var nav = document.querySelector('.bottom-nav');
         if (nav) nav.style.display = 'flex';
 
-        // Hide FAB for guests
-        var fab = document.querySelector('.fab-button-nav');
-        if (fab) {
-            fab.style.display = 'flex';
-        }
-
         var self = this;
         setTimeout(function() {
             self.requestNotificationPermission();
         }, 1500);
 
-        self.loadPosts();
-        self.loadStories();
         self.loadUsers();
         self.loadFollowing();
         self.loadGroups();
         self.checkAdminStatus();
         self.setupTypingCleanup();
-        self.calculateTrendingHashtags();
         if (!self.isGuest && typeof self.setupPresence === 'function') {
             self.setupPresence();
             self.listenToAllPresence();
@@ -6091,7 +6142,7 @@ var app = {
 
         setTimeout(function() {
             if (!self.unreadTrackingActive) {
-                console.log('⚠️ WARNING: Unread tracking not active yet!');
+                console.log(' WARNING: Unread tracking not active yet!');
             }
         }, 100);
 
@@ -6142,7 +6193,6 @@ var app = {
                     navProfileAvatar.textContent = profilePhoto ? '' : (self.profile.name || self.user.email || 'U').charAt(0).toUpperCase();
                 }
 
-                self.checkAndShowHashtagPopup();
                 self.renderProfile();
                 self.updateAccessCountdown();
                 self.syncOwnFollowerCount();
@@ -6230,7 +6280,7 @@ var app = {
         notice.id = 'accessUpdateNotice';
         notice.type = 'button';
         notice.className = 'access-update-notice';
-        notice.innerHTML = '<span class="access-update-icon">✓</span><span><strong>Access update received</strong><small>' + (notification.message || 'Your streaming access has been updated.') + '</small></span><span class="access-update-arrow">›</span>';
+        notice.innerHTML = '<span class="access-update-icon"></span><span><strong>Access update received</strong><small>' + (notification.message || 'Your streaming access has been updated.') + '</small></span>';
         notice.onclick = function() {
             notice.remove();
             self.markAccessNotificationsRead();
@@ -6348,18 +6398,18 @@ var app = {
     // ============================================
 
     renderProfile: function() {
-        console.log('🔄 Rendering profile...');
+        console.log(' Rendering profile...');
 
         // ===== CRITICAL GUARD: Only render if profile view is active =====
         var profileView = document.getElementById('profileView');
         if (!profileView || !profileView.classList.contains('active')) {
-            console.log('⚠️ Profile view not active, skipping render');
+            console.log(' Profile view not active, skipping render');
             return;
         }
 
         // ========== 1. ENSURE DOM ELEMENTS EXIST ==========
         if (!profileView) {
-            console.warn('⚠️ profileView not found, creating...');
+            console.warn(' profileView not found, creating...');
             profileView = document.createElement('div');
             profileView.id = 'profileView';
             profileView.className = 'view';
@@ -6367,14 +6417,14 @@ var app = {
             if (mainApp) {
                 mainApp.appendChild(profileView);
             } else {
-                console.error('❌ mainApp not found!');
+                console.error(' mainApp not found!');
                 return;
             }
         }
 
         var profileContent = document.getElementById('profileContent');
         if (!profileContent) {
-            console.warn('⚠️ profileContent not found, creating...');
+            console.warn(' profileContent not found, creating...');
             profileContent = document.createElement('div');
             profileContent.id = 'profileContent';
             profileView.appendChild(profileContent);
@@ -6389,12 +6439,16 @@ var app = {
         if (!this.user || this.isGuest) {
             profileContent.innerHTML = `
                 <div class="guest-profile">
-                    <div class="guest-profile-mark"><img src="icon-192.png" alt="CHICHI"></div>
-                    <p class="guest-earn-kicker">YOUR SPACE</p>
-                    <h2>Create your profile</h2>
-                    <p>Sign in to add your photo, follow people, and make CHICHI yours.</p>
-                    <button onclick="app.showGuestPostPrompt('set up your profile')">Sign in to continue</button>
-                    <button class="guest-profile-secondary" onclick="app.showGuestPostPrompt('set up your profile')">Create an account</button>
+                    <div class="guest-profile-panel">
+                        <div class="guest-profile-art" aria-hidden="true">
+                            <img class="guest-profile-photo" src="Assets/003.jpg" alt="">
+                            <span class="guest-profile-photo-caption">So glad you're here</span>
+                        </div>
+                        <p class="guest-earn-kicker">WELCOME TO CHICHI</p>
+                        <h2>There’s room for you here.</h2>
+                        <button onclick="app.showLoginPage('signup')">Join the community</button>
+                        <button class="guest-profile-secondary" onclick="app.showLoginPage('login')">Already a member? Log in</button>
+                    </div>
                 </div>
             `;
             return;
@@ -6404,7 +6458,7 @@ var app = {
         if (!this.profile || !this.profile.name) {
             profileContent.innerHTML = `
                 <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:60px 20px;text-align:center;">
-                    <div style="font-size:40px;margin-bottom:16px;">⏳</div>
+                    <div style="font-size:40px;margin-bottom:16px;"></div>
                     <div style="font-size:18px;font-weight:600;color:#1a202c;">Loading profile...</div>
                     <div style="font-size:13px;color:#6b7280;margin-top:8px;">Please wait a moment</div>
                 </div>
@@ -6423,7 +6477,7 @@ var app = {
                         // Still no profile data - show error
                         profileContent.innerHTML = `
                             <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:60px 20px;text-align:center;">
-                                <div style="font-size:40px;margin-bottom:16px;">😕</div>
+                                <div style="font-size:40px;margin-bottom:16px;"></div>
                                 <div style="font-size:18px;font-weight:600;color:#1a202c;">Could not load profile</div>
                                 <div style="font-size:13px;color:#6b7280;margin-top:8px;">Please try refreshing the page</div>
                                 <button onclick="location.reload()" style="margin-top:16px;background:#0088cc;color:white;border:none;padding:10px 24px;border-radius:8px;font-weight:600;cursor:pointer;">Refresh</button>
@@ -6439,7 +6493,6 @@ var app = {
         var username = this.profile.username || 'user';
         var interests = this.profile.interests || [];
         var bio = this.profile.bio || '';
-        var userPosts = (this.posts || []).filter(function(p) { return p.userId === this.user.uid; }.bind(this));
         var followers = this.profile.followers || 0;
         var following = Object.keys(this.following || {}).length;
         var hasFollowedAdmin = Object.keys(this.following || {}).some(function(uid) {
@@ -6448,33 +6501,6 @@ var app = {
         var isVerified = !!this.profile.phone && hasFollowedAdmin;
         var profileIdentityClass = username.toLowerCase() === 'chichi_support' ? 'support-profile-identity' : '';
         var profileDisplayName = profileIdentityClass ? 'Chichi Support (Mr. Onchari)' : (this.profile.name || 'User');
-
-        // Generate posts grid HTML
-        var postsHtml = '';
-        if (userPosts.length === 0) {
-            postsHtml = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px; color: #9ca3af; background: white; border-radius: 8px;">
-                    <div style="font-size: 40px; margin-bottom: 8px;">📸</div>
-                    <div style="font-size: 14px; font-weight: 500;">No posts yet</div>
-                    <div style="font-size: 12px; margin-top: 4px;">Create your first post!</div>
-                </div>
-            `;
-        } else {
-            var recentPosts = userPosts.slice(0, 9);
-            postsHtml = recentPosts.map(function(p) {
-                var likes = (p.likes && Object.keys(p.likes).length) || 0;
-                var comments = (p.comments && p.comments.length) || 0;
-                return `
-                    <div style="position: relative; aspect-ratio: 1; background: #e5e7eb; overflow: hidden; cursor: pointer; border-radius: 4px;" onclick="app.viewPostDetail('${p.id}')">
-                        ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:24px;">📸</div>`}
-                        <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:white;padding:4px 8px;font-size:10px;display:flex;justify-content:space-between;align-items:center;">
-                            <span>❤️ ${likes}</span>
-                            <span>💬 ${comments}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
 
         var html = `
             <div class="profile-redesign" style="padding: 0; background: #f5f5f5; min-height: 100vh;">
@@ -6512,7 +6538,7 @@ var app = {
                     <div style="padding-left: 14px; display: flex; flex-direction: column; justify-content: center;">
                         <div class="${profileIdentityClass}" style="font-size: 18px; font-weight: 700; color: #ffffff !important; display: flex; align-items: center; gap: 6px;">
                             ${profileDisplayName}
-                            ${isVerified ? '<span class="verified-badge" title="Phone added and admin followed">✓</span>' : ''}
+                            ${isVerified ? '<span class="verified-badge" title="Phone added and admin followed"></span>' : ''}
                         </div>
                         <div style="font-size: 13px; color: #ffffff !important; margin-bottom: 6px;">@${username}</div>
 
@@ -6524,18 +6550,14 @@ var app = {
                 </div>
 
                 <!-- STATS ROW -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; background: white; padding: 12px 16px; border-bottom: 1px solid #f0f0f0;">
-                    <div style="text-align: center; padding: 4px 0; border-right: 1px solid #f0f0f0;">
-                        <div style="font-weight: 700; color: #1a1a1a; font-size: 18px;">${userPosts.length}</div>
-                        <div style="font-size: 11px; color: #9ca3af;">Posts</div>
+                <div class="profile-connection-stats">
+                    <div class="profile-connection-stat">
+                        <div class="profile-connection-count">${Number(followers) || 0}</div>
+                        <div class="profile-connection-label">Followers</div>
                     </div>
-                    <div style="text-align: center; padding: 4px 0; border-right: 1px solid #f0f0f0;">
-                        <div style="font-weight: 700; color: #1a1a1a; font-size: 18px;">${followers}</div>
-                        <div style="font-size: 11px; color: #9ca3af;">Followers</div>
-                    </div>
-                    <div style="text-align: center; padding: 4px 0; cursor: pointer;" onclick="app.showFollowing()">
-                        <div style="font-weight: 700; color: #1a1a1a; font-size: 18px;">${following}</div>
-                        <div style="font-size: 11px; color: #9ca3af;">Following</div>
+                    <div class="profile-connection-stat profile-connection-stat-following" role="button" tabindex="0" onclick="app.showFollowing()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();app.showFollowing();}">
+                        <div class="profile-connection-count">${following}</div>
+                        <div class="profile-connection-label">Following</div>
                     </div>
                 </div>
 
@@ -6546,17 +6568,17 @@ var app = {
                 </div>
 
                 <!-- ABOUT & BIO SECTION -->
-                <div style="background: white; padding: 14px 16px; border-bottom: 1px solid #f0f0f0;">
+                <div class="profile-contact-card" style="background: white; padding: 14px 16px; border-bottom: 1px solid #f0f0f0;">
                     <!-- Email -->
                     <div style="margin-bottom: 10px;">
-                        <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Contact</div>
-                        <div style="font-size: 13px; color: #475569; word-break: break-all;">📧 ${this.user.email || 'No email'}</div>
+                        <div class="profile-field-label" style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Contact</div>
+                        <div class="profile-contact-value" style="font-size: 13px; color: #475569; word-break: break-all;"> ${this.user.email || 'No email'}</div>
                     </div>
 
                     <!-- Bio -->
                     <div>
-                        <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Bio</div>
-                        <div style="font-size: 13px; color: #4b5563; line-height: 1.5;">${bio || 'No bio yet. Tap edit to add one!'}</div>
+                        <div class="profile-field-label" style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Bio</div>
+                        <div class="profile-bio-value" style="font-size: 13px; color: #4b5563; line-height: 1.5;">${bio || 'No bio yet. Tap edit to add one!'}</div>
                     </div>
 
                     <!-- Interests -->
@@ -6565,13 +6587,7 @@ var app = {
                             <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Interests</div>
                             <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                                 ${interests.map(function(interest) {
-                                    var emojis = {
-                                        'music': '🎵', 'sports': '⚽', 'travel': '✈️', 'art': '🎨', 'tech': '💻',
-                                        'food': '🍔', 'fitness': '💪', 'books': '📚', 'movies': '🎬', 'nature': '🌿',
-                                        'gaming': '🎮', 'photography': '📸', 'writing': '✍️', 'cooking': '👨‍🍳', 'yoga': '🧘'
-                                    };
-                                    var emoji = emojis[interest.toLowerCase()] || '✨';
-                                    return `<span style="background: #f1f5f9; padding: 4px 12px; border-radius: 12px; font-size: 12px; color: #4b5563;">${emoji} ${interest}</span>`;
+                                    return `<span style="background: #f1f5f9; padding: 4px 12px; border-radius: 12px; font-size: 12px; color: #4b5563;">${interest}</span>`;
                                 }).join('')}
                             </div>
                         </div>
@@ -6583,21 +6599,11 @@ var app = {
                     <div class="profile-action-grid">
                         <button onclick="app.showProfileSettings()"><span class="profile-action-icon">Edit</span><strong>Profile details</strong><small>Update your identity</small></button>
                         <button onclick="app.showGiftCatalog()"><span class="profile-action-icon">Gifts</span><strong>Rewards</strong><small>Open your shelf</small></button>
+                        <button onclick="app.showReferralDashboard()"><span class="profile-action-icon">Invite</span><strong>Refer &amp; earn</strong><small>Earn KSh 10 per signup</small></button>
                         <button onclick="app.showFollowing()"><span class="profile-action-icon">Follow</span><strong>Following</strong><small>${following} connections</small></button>
                         <button onclick="app.showTransactionHistory()"><span class="profile-action-icon">Coins</span><strong>Activity</strong><small>View your wallet</small></button>
                     </div>
                 </section>
-
-                <!-- POSTS GRID (3 columns) -->
-                <div style="padding: 12px 12px 80px 12px;">
-                    <div style="font-weight: 700; color: #1a1a1a; margin-bottom: 10px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                        📸 Posts
-                        <span style="font-size: 12px; color: #9ca3af; font-weight: 400;">(${userPosts.length})</span>
-                    </div>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
-                        ${postsHtml}
-                    </div>
-                </div>
 
                 <div style="height: 20px;"></div>
             </div>
@@ -6605,7 +6611,7 @@ var app = {
 
         profileContent.innerHTML = html;
         this.updateAccessCountdown();
-        console.log('✅ Profile rendered successfully!');
+        console.log(' Profile rendered successfully!');
     },
 
     // ============================================
@@ -6631,14 +6637,14 @@ var app = {
 
         var html = `
             <div style="margin-bottom: 20px;">
-                <div style="font-size: 24px; margin-bottom: 8px;">🖼️</div>
+                <div style="font-size: 24px; margin-bottom: 8px;"></div>
                 <h2 style="margin: 0; font-size: 20px; color: #1a1a1a;">Upload Cover Image</h2>
                 <p style="color: #6b7280; margin: 8px 0 0 0; font-size: 14px;">Choose a beautiful cover photo for your profile</p>
             </div>
 
             <div style="margin-bottom: 20px;">
                 <input type="file" id="coverImageInput" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
-                <label id="coverChooseBtn" for="coverImageInput" role="button" tabindex="0" style="display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;background:#3b82f6;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;font-weight:600;margin-bottom:8px;"><span class="cover-upload-label">📤 Choose Image</span><span class="cover-upload-spinner" aria-hidden="true"></span></label>
+                <label id="coverChooseBtn" for="coverImageInput" role="button" tabindex="0" style="display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;background:#3b82f6;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;font-weight:600;margin-bottom:8px;"><span class="cover-upload-label"> Choose Image</span><span class="cover-upload-spinner" aria-hidden="true"></span></label>
                 <p style="color: #9ca3af; font-size: 12px; margin: 0;">JPG, PNG, or WebP • Recommended: 1200x400px</p>
             </div>
 
@@ -6676,27 +6682,27 @@ var app = {
                     if (data.secure_url) {
                         db.ref('users/' + self.user.uid + '/coverImage').set(data.secure_url, function(err) {
                             if (!err) {
-                                self.toast('✅ Cover image updated!', 'success');
+                                self.toast(' Cover image updated!', 'success');
                                 self.profile.coverImage = data.secure_url;
                                 self.renderProfile();
                                 modal.remove();
                             } else {
-                                self.toast('❌ Error saving cover image', 'error');
+                                self.toast(' Error saving cover image', 'error');
                                 if (coverChooseBtn) coverChooseBtn.classList.remove('is-loading');
                                 if (coverChooseBtn) coverChooseBtn.disabled = false;
                                 if (coverChooseBtn) coverChooseBtn.removeAttribute('aria-busy');
-                                if (coverUploadLabel) coverUploadLabel.textContent = '📤 Choose Image';
+                                if (coverUploadLabel) coverUploadLabel.textContent = ' Choose Image';
                             }
                         });
                     }
                 })
                 .catch(err => {
                     console.error('Upload error:', err);
-                    self.toast('❌ Upload failed', 'error');
+                    self.toast(' Upload failed', 'error');
                     if (coverChooseBtn) coverChooseBtn.classList.remove('is-loading');
                     if (coverChooseBtn) coverChooseBtn.disabled = false;
                     if (coverChooseBtn) coverChooseBtn.removeAttribute('aria-busy');
-                    if (coverUploadLabel) coverUploadLabel.textContent = '📤 Choose Image';
+                    if (coverUploadLabel) coverUploadLabel.textContent = ' Choose Image';
                 });
             }
         };
@@ -6770,7 +6776,7 @@ var app = {
                         cursor: pointer;
                         transition: all 0.3s;
                     " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(59,130,246,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                        📷 Change Photo
+                         Change Photo
                     </button>
                     <button onclick="document.querySelector('.modal-overlay').remove()" style="
                         flex: 1;
@@ -6811,7 +6817,7 @@ var app = {
         input.onchange = function(e) {
             var file = e.target.files[0];
             if (file) {
-                self.toast('📤 Uploading photo...', 'info');
+                self.toast(' Uploading photo...', 'info');
                 var formData = new FormData();
                 formData.append('file', file);
                 formData.append('upload_preset', UPLOAD_PRESET);
@@ -6825,13 +6831,13 @@ var app = {
                     db.ref('users/' + self.user.uid + '/profilePhoto').set(data.secure_url);
                     self.claimAirtimeReward('profilePhoto');
                     self.claimProfilePhotoReward();
-                    self.toast('✅ Photo updated!', 'success');
+                    self.toast(' Photo updated!', 'success');
                     self.renderProfile();
                     self.loadMessages();
                     self.logUserActivity('update_profile_photo', 'Updated profile photo');
                 })
                 .catch(function(err) {
-                    self.toast('❌ Upload failed: ' + err.message, 'error');
+                    self.toast(' Upload failed: ' + err.message, 'error');
                 });
             }
         };
@@ -6846,7 +6852,7 @@ var app = {
         var self = this;
 
         if (!this.user || this.isGuest) {
-            this.toast('🔐 Sign up to discover similar users', 'info');
+            this.toast(' Sign up to discover similar users', 'info');
             this.showLoginPage();
             return;
         }
@@ -6854,12 +6860,12 @@ var app = {
         var userInterests = this.profile.interests || [];
 
         if (userInterests.length === 0) {
-            this.toast('📝 Add interests to your profile first', 'info');
+            this.toast(' Add interests to your profile first', 'info');
             var modal = document.createElement('div');
             modal.className = 'modal-overlay active';
             modal.innerHTML = `
                 <div style="background: white; border-radius: 20px; padding: 32px; max-width: 400px; width: 95%; text-align: center;">
-                    <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
+                    <div style="font-size: 48px; margin-bottom: 16px;"></div>
                     <h2 style="font-weight: 700; color: #1e293b; margin-bottom: 8px;">Add Interests First</h2>
                     <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">Go to your profile settings to add interests. Then you'll find people who share your passions!</p>
                     <button onclick="this.closest('.modal-overlay').remove(); app.showProfileSettings();" style="background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-weight: 600;">Go to Settings</button>
@@ -6883,12 +6889,12 @@ var app = {
 
         var html = `
             <div class="modal" style="max-height: 80vh; overflow-y: auto;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <h2 style="font-weight: 700; margin-bottom: 20px; color: #1e293b;">🤝 People with Similar Interests</h2>
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()"></button></div>
+                <h2 style="font-weight: 700; margin-bottom: 20px; color: #1e293b;"> People with Similar Interests</h2>
 
                 ${similarUsers.length === 0 ? `
                     <div style="text-align: center; color: #6b7280; padding: 40px 20px;">
-                        <div style="font-size: 48px; margin-bottom: 12px;">😊</div>
+                        <div style="font-size: 48px; margin-bottom: 12px;"></div>
                         <div style="font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">No matches yet</div>
                         <div style="font-size: 13px; color: #64748b;">Try adding more interests to your profile!</div>
                     </div>
@@ -6908,7 +6914,7 @@ var app = {
                                         </div>
                                     </div>
                                     <button onclick="app.followUser('${user.uid}', '${user.name || 'User'}'); setTimeout(function() { app.showSimilarInterestsModal(); }, 300);" style="background: ${isFollowing ? '#e5e7eb' : '#3b82f6'}; color: ${isFollowing ? '#1e293b' : 'white'}; border: none; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap; transition: 0.3s;" onmouseover="if(!${isFollowing}){this.style.background='#2563eb'}" onmouseout="if(!${isFollowing}){this.style.background='#3b82f6'}">
-                                        ${isFollowing ? '✓ Following' : 'Follow'}
+                                        ${isFollowing ? ' Following' : 'Follow'}
                                     </button>
                                 </div>
                             `;
@@ -6939,8 +6945,8 @@ var app = {
 
         var html = `
             <div class="modal" style="max-height: 80vh; overflow-y: auto;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <h2 style="font-weight: 700; margin-bottom: 20px; color: #1e293b;">⭐ Featured Users</h2>
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()"></button></div>
+                <h2 style="font-weight: 700; margin-bottom: 20px; color: #1e293b;"> Featured Users</h2>
 
                 ${usersArray.length === 0 ? `
                     <div style="text-align: center; color: #6b7280; padding: 40px 20px;">No users to discover</div>
@@ -6957,7 +6963,7 @@ var app = {
                                     <div style="font-weight: 700; color: #1e293b; margin-bottom: 4px; font-size: 14px;">${user.name}</div>
                                     <div style="font-size: 12px; color: #6b7280; margin-bottom: 10px;">${followers} followers</div>
                                     <button onclick="app.followUser('${user.uid}', '${user.name}'); setTimeout(function() { app.showFeaturedUsersModal(); }, 300);" style="width: 100%; background: ${isFollowing ? '#e2e8f0' : 'var(--primary)'}; color: ${isFollowing ? '#1e293b' : 'white'}; border: none; padding: 8px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px; transition: 0.3s;">
-                                        ${isFollowing ? '✓ Following' : '+ Follow'}
+                                        ${isFollowing ? ' Following' : '+ Follow'}
                                     </button>
                                 </div>
                             `;
@@ -6990,8 +6996,8 @@ var app = {
 
         var html = `
             <div class="modal" style="max-height: 80vh; overflow-y: auto;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <h2 style="font-weight: 700; margin-bottom: 20px; color: #1e293b;">👑 Top Creators</h2>
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()"></button></div>
+                <h2 style="font-weight: 700; margin-bottom: 20px; color: #1e293b;"> Top Creators</h2>
 
                 ${creators.length === 0 ? `
                     <div style="text-align: center; color: #6b7280; padding: 40px 20px;">No creators yet</div>
@@ -6999,7 +7005,7 @@ var app = {
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                         ${creators.map(function(creator, index) {
                             var isFollowing = self.following && self.following[creator.uid];
-                            var medal = ['🥇', '🥈', '🥉'][index] || '';
+                            var medal = ['', '', ''][index] || '';
                             return `
                                 <div style="background: white; border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'; this.style.transform='translateX(4px)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)'; this.style.transform='translateX(0)'">
                                     <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
@@ -7013,7 +7019,7 @@ var app = {
                                         </div>
                                     </div>
                                     <button onclick="app.followUser('${creator.uid}', '${creator.name}'); setTimeout(function() { app.showTopCreatorsModal(); }, 300);" style="background: ${isFollowing ? '#e2e8f0' : 'var(--primary)'}; color: ${isFollowing ? '#1e293b' : 'white'}; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap;">
-                                        ${isFollowing ? '✓ Following' : 'Follow'}
+                                        ${isFollowing ? ' Following' : 'Follow'}
                                     </button>
                                 </div>
                             `;
@@ -7039,13 +7045,13 @@ var app = {
 
         if (this.trendingHashtags.length === 0) {
             if (this.postsLoading) {
-                container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">⏳ Loading trending...</div>';
+                container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;"> Loading trending...</div>';
                 return;
             }
             this.calculateTrendingHashtags();
             if (this.trendingHashtags.length === 0) {
                 if (this.isGuest) {
-                    container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">\n                        <div style="font-size:28px;margin-bottom:6px;">🔥</div>\n                        <div style="font-weight:700;margin-bottom:6px;">Sign in to see trending hashtags</div>\n                        <div style="color:#9ca3af;margin-bottom:10px;">Sign up or log in to see what people are talking about.</div>\n                        <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;">🔐 Sign In / Sign Up</button>\n                    </div>';
+                    container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">\n                        <div style="font-size:28px;margin-bottom:6px;"></div>\n                        <div style="font-weight:700;margin-bottom:6px;">Sign in to see trending hashtags</div>\n                        <div style="color:#9ca3af;margin-bottom:10px;">Sign up or log in to see what people are talking about.</div>\n                        <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;"> Sign In / Sign Up</button>\n                    </div>';
                     return;
                 }
                 container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">No trending hashtags yet</div>';
@@ -7076,7 +7082,7 @@ var app = {
         if (!container) return;
 
         if (this.postsLoading) {
-            container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">⏳ Loading posts...</div>';
+            container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;"> Loading posts...</div>';
             return;
         }
 
@@ -7090,7 +7096,7 @@ var app = {
 
         if (trendingPosts.length === 0) {
             if (this.isGuest) {
-                container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:40px 16px;">\n                    <div style="font-size:28px;margin-bottom:8px;">📱</div>\n                    <div style="font-weight:700;margin-bottom:6px;">Sign in to explore popular posts</div>\n                    <div style="color:#9ca3af;margin-bottom:12px;">Create an account to like, comment and follow creators.</div>\n                    <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;">🔐 Sign In / Sign Up</button>\n                </div>';
+                container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:40px 16px;">\n                    <div style="font-size:28px;margin-bottom:8px;"></div>\n                    <div style="font-weight:700;margin-bottom:6px;">Sign in to explore popular posts</div>\n                    <div style="color:#9ca3af;margin-bottom:12px;">Create an account to like, comment and follow creators.</div>\n                    <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;"> Sign In / Sign Up</button>\n                </div>';
                 return;
             }
             container.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 60px 20px; grid-column: 1/-1;">No posts yet. Create one!</div>';
@@ -7106,8 +7112,8 @@ var app = {
                 <div style="position: relative; aspect-ratio: 1/1; background: #f0f0f0; cursor: pointer; overflow: hidden;" onclick="app.viewPostDetail('${post.id}')">
                     <img src="${post.photoUrl}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
                     <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0); display: flex; align-items: center; justify-content: center; gap: 16px; transition: all 0.3s ease; opacity: 0;" onmouseover="this.style.background='rgba(0,0,0,0.6)'; this.style.opacity='1';" onmouseout="this.style.background='rgba(0,0,0,0)'; this.style.opacity='0';">
-                        <div style="color: white; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;">❤️ ${likes}</div>
-                        <div style="color: white; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;">💬 ${comments}</div>
+                        <div style="color: white; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;"> ${likes}</div>
+                        <div style="color: white; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;"> ${comments}</div>
                     </div>
                 </div>
             `;
@@ -7122,7 +7128,7 @@ var app = {
 
     followUser: function(uid, name) {
         if (!this.user || this.isGuest) {
-            this.toast('🔐 Sign up to follow users', 'info');
+            this.toast(' Sign up to follow users', 'info');
             this.showLoginPage();
             return;
         }
@@ -7133,10 +7139,10 @@ var app = {
 
         if (this.following[uid]) {
             delete this.following[uid];
-            this.toast('✓ Unfollowed ' + name, 'info');
+            this.toast(' Unfollowed ' + name, 'info');
         } else {
             this.following[uid] = true;
-            this.toast('✓ Followed ' + name, 'success');
+            this.toast(' Followed ' + name, 'success');
         }
 
         db.ref('users/' + this.user.uid + '/following').set(this.following);
@@ -7167,7 +7173,7 @@ var app = {
 
         var self = this;
         var html = '';
-        html += '<div class="story-item" onclick="app.showCreateStoryModal()"><div class="create-story-avatar">➕</div><div class="create-story-name">My Story</div></div>';
+        html += '<div class="story-item" onclick="app.showCreateStoryModal()"><div class="create-story-avatar"></div><div class="create-story-name">My Story</div></div>';
 
         db.ref('stories').once('value', function(snapshot) {
             var allStories = [];
@@ -7225,7 +7231,7 @@ var app = {
         var existing = document.getElementById('storyModalOverlay');
         if (existing) existing.remove();
 
-        var html = '<div class="story-modal-overlay" id="storyModalOverlay"><div class="story-modal"><div class="story-modal-header"><h2>📖 Create Story</h2><button class="story-modal-close" onclick="document.getElementById(\'storyModalOverlay\').remove()">✕</button></div><div class="story-modal-content"><div class="story-form-group"><label class="story-form-label">Story Images (Select multiple) *</label><input type="file" id="storyImageInput" accept="image/*" multiple class="story-file-input"><div style="font-size:12px;color:#6b7280;margin-top:4px;">You can select multiple images at once</div></div><div class="story-form-group"><label class="story-form-label">🎵 Music Name</label><input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" class="story-form-input"></div><div class="story-form-group"><label class="story-form-label">Caption</label><textarea id="storyCaptionInput" placeholder="Add a caption..." class="story-form-textarea"></textarea></div></div><div class="story-modal-footer"><button class="story-btn-cancel" onclick="document.getElementById(\'storyModalOverlay\').remove()">Cancel</button><button class="story-btn-upload" id="storyUploadBtn" onclick="app.uploadStory()"><span class="story-btn-text">📤 Upload Stories</span><div class="story-spinner"></div></button></div></div></div>';
+        var html = '<div class="story-modal-overlay" id="storyModalOverlay"><div class="story-modal"><div class="story-modal-header"><h2> Create Story</h2><button class="story-modal-close" onclick="document.getElementById(\'storyModalOverlay\').remove()"></button></div><div class="story-modal-content"><div class="story-form-group"><label class="story-form-label">Story Images (Select multiple) *</label><input type="file" id="storyImageInput" accept="image/*" multiple class="story-file-input"><div style="font-size:12px;color:#6b7280;margin-top:4px;">You can select multiple images at once</div></div><div class="story-form-group"><label class="story-form-label"> Music Name</label><input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" class="story-form-input"></div><div class="story-form-group"><label class="story-form-label">Caption</label><textarea id="storyCaptionInput" placeholder="Add a caption..." class="story-form-textarea"></textarea></div></div><div class="story-modal-footer"><button class="story-btn-cancel" onclick="document.getElementById(\'storyModalOverlay\').remove()">Cancel</button><button class="story-btn-upload" id="storyUploadBtn" onclick="app.uploadStory()"><span class="story-btn-text"> Upload Stories</span><div class="story-spinner"></div></button></div></div></div>';
         document.body.insertAdjacentHTML('beforeend', html);
         document.getElementById('storyModalOverlay').classList.add('active');
         document.getElementById('storyModalOverlay').addEventListener('click', function(e) {
@@ -7245,16 +7251,16 @@ var app = {
         var uploadBtn = document.getElementById('storyUploadBtn');
 
         if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
-            this.toast('⚠️ Please select at least one image', 'error');
+            this.toast(' Please select at least one image', 'error');
             return;
         }
         if (!this.user || !this.user.uid) {
-            this.toast('⚠️ Please login first', 'error');
+            this.toast(' Please login first', 'error');
             return;
         }
 
         if (uploadBtn) uploadBtn.classList.add('loading');
-        this.toast('📤 Uploading stories...', 'info');
+        this.toast(' Uploading stories...', 'info');
 
         var files = imageInput.files;
         var uploadPromises = [];
@@ -7299,7 +7305,7 @@ var app = {
             });
             return Promise.all(savePromises);
         }).then(function() {
-            self.toast('✅ Stories uploaded successfully!', 'success');
+            self.toast(' Stories uploaded successfully!', 'success');
             self.logUserActivity('story_upload', 'Uploaded stories');
             setTimeout(function() {
                 var modal = document.getElementById('storyModalOverlay');
@@ -7308,7 +7314,7 @@ var app = {
             }, 500);
         }).catch(function(err) {
             console.error('Upload error:', err);
-            self.toast('❌ Upload failed: ' + err.message, 'error');
+            self.toast(' Upload failed: ' + err.message, 'error');
             if (uploadBtn) uploadBtn.classList.remove('loading');
         });
     },
@@ -7332,7 +7338,7 @@ var app = {
             var viewer = document.createElement('div');
             viewer.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;animation:smoothFadeIn 0.3s ease;';
 
-            var deleteBtn = isOwnStory ? '<button onclick="event.stopPropagation(); app.deleteStory(\'' + storyId + '\', \'' + userId + '\')" style="position:absolute;top:70px;right:16px;z-index:10;background:rgba(239,68,68,0.9);color:white;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>' : '';
+            var deleteBtn = isOwnStory ? '<button aria-label="Delete story" onclick="event.stopPropagation(); app.deleteStory(\'' + storyId + '\', \'' + userId + '\')" style="position:absolute;top:70px;right:16px;z-index:10;background:rgba(239,68,68,0.9);color:white;border:none;border-radius:18px;min-width:58px;height:36px;padding:0 8px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;">Delete</button>' : '';
 
             viewer.innerHTML = '<div style="position:absolute;top:16px;left:16px;right:16px;z-index:10;display:flex;gap:4px;"><div style="flex:1;height:3px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden;"><div id="storyProgressBar" style="height:100%;width:0%;background:white;border-radius:2px;transition:width 0.1s linear;"></div></div></div><div style="position:absolute;top:24px;left:16px;right:16px;z-index:10;display:flex;align-items:center;gap:12px;"><div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;overflow:hidden;border:2px solid rgba(255,255,255,0.3);">' + (story.userPhoto ? '<img src="' + story.userPhoto + '" style="width:100%;height:100%;object-fit:cover;">' : (story.userName || 'U').charAt(0).toUpperCase()) + '</div><div><div style="color:white;font-weight:600;font-size:14px;">' + (story.userName || 'User') + '</div><div style="color:rgba(255,255,255,0.6);font-size:11px;">' + (story.musicName || 'No music') + '</div></div></div>' + deleteBtn + '<div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;width:100%;"><img src="' + story.image + '" style="max-width:100%;max-height:70vh;border-radius:12px;object-fit:contain;box-shadow:0 8px 32px rgba(0,0,0,0.5);"></div>' + (story.caption ? '<div style="position:absolute;bottom:80px;left:16px;right:16px;z-index:10;color:white;text-align:center;font-size:14px;background:rgba(0,0,0,0.4);padding:12px 16px;border-radius:12px;">' + story.caption + '</div>' : '') + '<div style="position:absolute;bottom:30px;left:0;right:0;z-index:10;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;">Tap to close</div>';
 
@@ -7348,7 +7354,7 @@ var app = {
                 if (progress >= 100) {
                     clearInterval(progressInterval);
                     viewer.remove();
-                    self.toast('Story viewed 📖', 'info');
+                    self.toast('Story viewed ', 'info');
                 }
             }, 50);
 
@@ -7364,10 +7370,10 @@ var app = {
         if (!confirm('Delete this story?')) return;
         var self = this;
         db.ref('stories/' + userId + '/' + storyId).remove().then(function() {
-            self.toast('✅ Story deleted', 'success');
+            self.toast(' Story deleted', 'success');
             self.loadStories();
         }).catch(function(err) {
-            self.toast('❌ Error deleting story: ' + err.message, 'error');
+            self.toast(' Error deleting story: ' + err.message, 'error');
         });
     },
 
@@ -7377,14 +7383,14 @@ var app = {
 
     showMandatoryHashtagSelection: function() {
         var hashtagCategories = {
-            '🎬 Entertainment': ['Movies', 'Music', 'Comedy', 'Gaming', 'Animation'],
-            '🎨 Creative': ['Photography', 'Art', 'Design', 'Fashion', 'Illustration'],
-            '⚽ Sports': ['Football', 'Basketball', 'Tennis', 'Fitness', 'Yoga'],
-            '🍔 Lifestyle': ['Food', 'Travel', 'Health', 'Beauty', 'DIY'],
-            '💻 Tech': ['Programming', 'AI', 'Web Dev', 'Apps', 'Gadgets'],
-            '📚 Education': ['Learning', 'Science', 'History', 'Language', 'Books'],
-            '💰 Business': ['Entrepreneurship', 'Marketing', 'Investing', 'Startups', 'Finance'],
-            '🌍 Social': ['Environment', 'Charity', 'Community', 'Activism', 'Culture']
+            ' Entertainment': ['Movies', 'Music', 'Comedy', 'Gaming', 'Animation'],
+            ' Creative': ['Photography', 'Art', 'Design', 'Fashion', 'Illustration'],
+            ' Sports': ['Football', 'Basketball', 'Tennis', 'Fitness', 'Yoga'],
+            ' Lifestyle': ['Food', 'Travel', 'Health', 'Beauty', 'DIY'],
+            ' Tech': ['Programming', 'AI', 'Web Dev', 'Apps', 'Gadgets'],
+            ' Education': ['Learning', 'Science', 'History', 'Language', 'Books'],
+            ' Business': ['Entrepreneurship', 'Marketing', 'Investing', 'Startups', 'Finance'],
+            ' Social': ['Environment', 'Charity', 'Community', 'Activism', 'Culture']
         };
 
         var htmlOptions = '';
@@ -7396,7 +7402,7 @@ var app = {
             htmlOptions += '</div></div>';
         }
 
-        var modalHTML = '<div class="modal-overlay" id="mandatoryHashtagModal" style="display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:10001;backdrop-filter:blur(4px);"><div style="background:white;border-radius:24px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:smoothFadeIn 0.3s ease;"><div style="text-align:center;margin-bottom:16px;"><div style="font-size:36px;margin-bottom:4px;">🏷️</div><h2 style="margin-bottom:2px;font-weight:700;color:#1a202c;font-size:20px;">Choose Your Interests</h2><p style="color:#6b7280;font-size:13px;margin-bottom:4px;">Select at least <strong style="color:#0088cc;">3</strong> topics you care about</p><p style="color:#ef4444;font-size:11px;font-weight:600;min-height:18px;" id="hashtagError"></p></div><div style="margin-bottom:16px;max-height:50vh;overflow-y:auto;padding-right:4px;">' + htmlOptions + '</div><div style="display:flex;gap:10px;border-top:1px solid #e5e7eb;padding-top:14px;"><button onclick="app.saveMandatoryHashtags()" id="saveHashtagBtn" style="flex:1;padding:12px;background:linear-gradient(135deg,#0088cc,#006fa3);color:white;border:none;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;transition:0.3s;" onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'">✅ Save & Continue</button></div></div></div>';
+        var modalHTML = '<div class="modal-overlay" id="mandatoryHashtagModal" style="display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:10001;backdrop-filter:blur(4px);"><div style="background:white;border-radius:24px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:smoothFadeIn 0.3s ease;"><div style="text-align:center;margin-bottom:16px;"><div style="font-size:36px;margin-bottom:4px;"></div><h2 style="margin-bottom:2px;font-weight:700;color:#1a202c;font-size:20px;">Choose Your Interests</h2><p style="color:#6b7280;font-size:13px;margin-bottom:4px;">Select at least <strong style="color:#0088cc;">3</strong> topics you care about</p><p style="color:#ef4444;font-size:11px;font-weight:600;min-height:18px;" id="hashtagError"></p></div><div style="margin-bottom:16px;max-height:50vh;overflow-y:auto;padding-right:4px;">' + htmlOptions + '</div><div style="display:flex;gap:10px;border-top:1px solid #e5e7eb;padding-top:14px;"><button onclick="app.saveMandatoryHashtags()" id="saveHashtagBtn" style="flex:1;padding:12px;background:linear-gradient(135deg,#0088cc,#006fa3);color:white;border:none;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;transition:0.3s;" onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'"> Save & Continue</button></div></div></div>';
 
         var existing = document.getElementById('mandatoryHashtagModal');
         if (existing) existing.remove();
@@ -7410,12 +7416,12 @@ var app = {
         var errorEl = document.getElementById('hashtagError');
 
         if (selected.length < 3) {
-            if (errorEl) errorEl.textContent = '⚠️ Please select at least 3 interests';
+            if (errorEl) errorEl.textContent = ' Please select at least 3 interests';
             this.toast('Select at least 3 interests', 'error');
             return;
         }
         if (selected.length > 5) {
-            if (errorEl) errorEl.textContent = '⚠️ Maximum 5 interests allowed';
+            if (errorEl) errorEl.textContent = ' Maximum 5 interests allowed';
             this.toast('Maximum 5 interests allowed', 'error');
             return;
         }
@@ -7429,12 +7435,12 @@ var app = {
         }
 
         var btn = document.getElementById('saveHashtagBtn');
-        if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving...'; }
+        if (btn) { btn.disabled = true; btn.textContent = ' Saving...'; }
 
         db.ref('users/' + uid + '/hashtags').set(selected).then(function() {
             self.profile.interests = selected;
             self.profile.hashtags = selected;
-            self.toast('✅ Interests saved!', 'success');
+            self.toast(' Interests saved!', 'success');
             var modal = document.getElementById('mandatoryHashtagModal');
             if (modal) modal.remove();
             setTimeout(function() {
@@ -7442,8 +7448,8 @@ var app = {
                 self.loadExplore();
             }, 500);
         }).catch(function(err) {
-            self.toast('❌ Error saving interests: ' + err.message, 'error');
-            if (btn) { btn.disabled = false; btn.textContent = '✅ Save & Continue'; }
+            self.toast(' Error saving interests: ' + err.message, 'error');
+            if (btn) { btn.disabled = false; btn.textContent = ' Save & Continue'; }
         });
     },
 
@@ -7582,8 +7588,8 @@ var app = {
         modal.innerHTML = `
             <div style="background: white; border-radius: 20px; padding: 28px; max-width: 500px; width: 95%; animation: slideUp 0.3s ease; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); max-height: 80vh; overflow-y: auto;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                    <h2 style="font-size: 20px; font-weight: 700; color: #1e293b; margin: 0;">📋 Transaction History</h2>
-                    <button onclick="document.getElementById('transactionHistoryModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">✕</button>
+                    <h2 style="font-size: 20px; font-weight: 700; color: #1e293b; margin: 0;"> Transaction History</h2>
+                    <button onclick="document.getElementById('transactionHistoryModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;"></button>
                 </div>
 
                 <div id="transactionsList" style="max-height: 600px; overflow-y: auto;">
@@ -7613,7 +7619,7 @@ var app = {
             } else {
                 transactions.forEach(function(tx) {
                     var isEarned = tx.type === 'earned';
-                    var icon = isEarned ? '📈' : '🛍️';
+                    var icon = isEarned ? '' : '';
                     var color = isEarned ? '#22c55e' : '#ef4444';
                     var sign = isEarned ? '+' : '-';
 
@@ -7674,7 +7680,7 @@ var app = {
             var modal = document.createElement('div');
             modal.className = 'modal-overlay active';
             modal.id = 'postCropModal';
-            modal.innerHTML = '<div class="modal" style="max-width:420px;"><div class="modal-close"><button onclick="app.cancelPostCrop()">✕</button></div><h2 style="margin:0 0 6px;">Fit your photo</h2><p style="margin:0 0 14px;color:#6b7280;font-size:13px;">Adjust the image for the feed frame.</p><canvas id="postCropCanvas" width="1080" height="1350" style="display:block;width:100%;aspect-ratio:4/5;background:#111827;border-radius:8px;"></canvas><label class="form-label" for="postCropZoom" style="margin-top:14px;">Zoom</label><input id="postCropZoom" type="range" min="1" max="2.5" value="1" step="0.01" style="width:100%;" oninput="app.updatePostCropPreview()"><label class="form-label" for="postCropX" style="margin-top:10px;">Horizontal position</label><input id="postCropX" type="range" min="-100" max="100" value="0" style="width:100%;" oninput="app.updatePostCropPreview()"><label class="form-label" for="postCropY" style="margin-top:10px;">Vertical position</label><input id="postCropY" type="range" min="-100" max="100" value="0" style="width:100%;" oninput="app.updatePostCropPreview()"><button class="btn-submit" style="margin-top:16px;" onclick="app.applyPostCrop()">Use this photo</button><button style="width:100%;margin-top:10px;padding:10px;border:0;background:none;color:#6b7280;font:inherit;cursor:pointer;" onclick="app.cancelPostCrop()">Use original photo</button></div>';
+            modal.innerHTML = '<div class="modal" style="max-width:420px;"><div class="modal-close"><button onclick="app.cancelPostCrop()"></button></div><h2 style="margin:0 0 6px;">Fit your photo</h2><p style="margin:0 0 14px;color:#6b7280;font-size:13px;">Adjust the image for the feed frame.</p><canvas id="postCropCanvas" width="1080" height="1350" style="display:block;width:100%;aspect-ratio:4/5;background:#111827;border-radius:8px;"></canvas><label class="form-label" for="postCropZoom" style="margin-top:14px;">Zoom</label><input id="postCropZoom" type="range" min="1" max="2.5" value="1" step="0.01" style="width:100%;" oninput="app.updatePostCropPreview()"><label class="form-label" for="postCropX" style="margin-top:10px;">Horizontal position</label><input id="postCropX" type="range" min="-100" max="100" value="0" style="width:100%;" oninput="app.updatePostCropPreview()"><label class="form-label" for="postCropY" style="margin-top:10px;">Vertical position</label><input id="postCropY" type="range" min="-100" max="100" value="0" style="width:100%;" oninput="app.updatePostCropPreview()"><button class="btn-submit" style="margin-top:16px;" onclick="app.applyPostCrop()">Use this photo</button><button style="width:100%;margin-top:10px;padding:10px;border:0;background:none;color:#6b7280;font:inherit;cursor:pointer;" onclick="app.cancelPostCrop()">Use original photo</button></div>';
             document.body.appendChild(modal);
             var cropCanvas = document.getElementById('postCropCanvas');
             var cropWidth = 1080;
@@ -7737,7 +7743,7 @@ var app = {
         return;
 
         if (!this.user || this.isGuest) {
-            this.showGuestPostPrompt();
+            this.showLoginPage('signup');
             return;
         }
         var modal = document.getElementById('createModal');
@@ -7860,7 +7866,7 @@ var app = {
                 if (shareText) shareText.style.display = 'inline';
                 if (sharePostBtn) sharePostBtn.disabled = false;
                 self.closeCreateModal();
-                self.switchView('feed');
+                self.switchView('messages');
             });
         }.bind(this)).catch(function(err) {
             this.toast('Upload failed: ' + err.message, 'error');
@@ -7879,11 +7885,11 @@ var app = {
         if (isArchived) {
             localStorage.removeItem('archived_' + uid);
             this.activeMessageFilter = 'all';
-            this.toast('📦 Unarchived', 'success');
+            this.toast(' Unarchived', 'success');
         } else {
             localStorage.setItem('archived_' + uid, 'true');
             this.activeMessageFilter = 'archived';
-            this.toast('📦 Archived', 'success');
+            this.toast(' Archived', 'success');
         }
         this.loadMessages();
     },
@@ -7896,10 +7902,10 @@ var app = {
         
         // Delete the conversation
         db.ref('chats/' + chatKey).remove().then(function() {
-            self.toast('✓ Conversation deleted', 'success');
+            self.toast(' Conversation deleted', 'success');
             self.loadMessages();
         }).catch(function(err) {
-            self.toast('❌ Error deleting conversation', 'error');
+            self.toast(' Error deleting conversation', 'error');
         });
     },
 
@@ -7907,10 +7913,10 @@ var app = {
         var isFavorite = localStorage.getItem('fav_' + uid) === 'true';
         if (isFavorite) {
             localStorage.removeItem('fav_' + uid);
-            this.toast('❤️ Removed from favorites', 'info');
+            this.toast(' Removed from favorites', 'info');
         } else {
             localStorage.setItem('fav_' + uid, 'true');
-            this.toast('❤️ Added to favorites', 'info');
+            this.toast(' Added to favorites', 'info');
         }
         this.loadMessages();
     },
@@ -7959,8 +7965,10 @@ loadMessages: function() {
     var self = this;
     var isGuestView = !this.user || this.isGuest || !this.user.uid;
     var container = document.getElementById('messageList');
+    var newChatButton = document.getElementById('messagesNewChatButton');
 
     if (!container) return;
+    if (newChatButton) newChatButton.style.display = isGuestView ? 'none' : 'inline-flex';
 
     // Hide/show controls based on guest status
     var messagesControls = document.getElementById('messagesControls');
@@ -7979,16 +7987,76 @@ loadMessages: function() {
 
     // Guest View
     if (isGuestView) {
+        if (this.guestMessagesCarouselTimer) {
+            clearInterval(this.guestMessagesCarouselTimer);
+            this.guestMessagesCarouselTimer = null;
+        }
         container.innerHTML = `
             <div class="guest-messages">
-                <div class="guest-messages-mark"><img src="icon-192.png" alt="CHICHI"></div>
-                <p class="guest-earn-kicker">PRIVATE CONVERSATIONS</p>
-                <h3>Sign in to see your messages</h3>
-                <p>Connect with friends and keep every conversation in one place.</p>
-                <button onclick="app.showGuestPostPrompt('send a message')">Sign in to continue</button>
+                <section class="guest-messages-hero">
+                    <div class="guest-messages-copy">
+                        <span class="guest-messages-kicker">A LITTLE MORE CONNECTED</span>
+                        <h3>Good conversations<br><em>start somewhere.</em></h3>
+                        <p>Meet people, share a thought, and keep the people you like close. Your next chat is one hello away.</p>
+                        <div class="guest-messages-actions">
+                            <button class="guest-messages-primary" onclick="app.showLoginPage('signup')">Create your free account</button>
+                            <button class="guest-messages-login" onclick="app.showLoginPage('login')">I already have an account</button>
+                        </div>
+                    </div>
+                    <div class="guest-preview-carousel" aria-label="A glimpse of conversations on CHICHI">
+                        <div class="guest-preview-track">
+                            <article class="guest-preview-slide">
+                                <div class="guest-conversation-photo"><img src="Assets/001.jpg" alt="Friends sharing a moment together"><span>GOOD THINGS START WITH HELLO</span></div>
+                                <div class="guest-preview-top"><div class="guest-preview-avatar">C</div><div><strong>Your next connection</strong><small>Conversation preview</small></div></div>
+                                <div class="guest-preview-date">A GOOD PLACE TO BEGIN</div>
+                                <div class="guest-preview-bubble guest-preview-incoming">Hey, what have you been listening to lately?</div>
+                                <div class="guest-preview-bubble guest-preview-outgoing">A bit of everything. Send me a recommendation.</div>
+                                <div class="guest-preview-bubble guest-preview-incoming guest-preview-short">I’ve got just the one.</div>
+                            </article>
+                            <article class="guest-preview-slide">
+                                <div class="guest-conversation-photo"><img src="Assets/002.jpg" alt="Two friends sharing something on a phone"><span>YOUR NEXT FAVOURITE PERSON</span></div>
+                                <div class="guest-preview-top"><div class="guest-preview-avatar guest-preview-avatar-gold">M</div><div><strong>A new friend</strong><small>Conversation preview</small></div></div>
+                                <div class="guest-preview-date">A LITTLE HELLO GOES A LONG WAY</div>
+                                <div class="guest-preview-bubble guest-preview-incoming">I’m always looking for new music.</div>
+                                <div class="guest-preview-bubble guest-preview-outgoing">Then I’ve got a whole playlist for you.</div>
+                                <div class="guest-preview-bubble guest-preview-incoming guest-preview-short">You’re already my kind of person.</div>
+                            </article>
+                            <article class="guest-preview-slide">
+                                <div class="guest-conversation-photo"><img src="Assets/003.jpg" alt="Friends smiling together"><span>MAKE ROOM FOR GOOD PEOPLE</span></div>
+                                <div class="guest-preview-top"><div class="guest-preview-avatar guest-preview-avatar-blue">A</div><div><strong>People who get you</strong><small>Conversation preview</small></div></div>
+                                <div class="guest-preview-date">YOUR PEOPLE ARE OUT THERE</div>
+                                <div class="guest-preview-bubble guest-preview-incoming">What do you like doing on weekends?</div>
+                                <div class="guest-preview-bubble guest-preview-outgoing">Finding good food and better company.</div>
+                                <div class="guest-preview-bubble guest-preview-incoming guest-preview-short">Sounds like we’ll get along.</div>
+                            </article>
+                        </div>
+                        <div class="guest-preview-indicators" aria-hidden="true"><span class="active"></span><span></span><span></span></div>
+                    </div>
+                </section>
             </div>
         `;
+        var carouselTrack = container.querySelector('.guest-preview-track');
+        var carouselIndicators = container.querySelectorAll('.guest-preview-indicators span');
+        var activeSlide = 0;
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            this.guestMessagesCarouselTimer = setInterval(function() {
+                if (!carouselTrack || !carouselTrack.isConnected) {
+                    clearInterval(self.guestMessagesCarouselTimer);
+                    self.guestMessagesCarouselTimer = null;
+                    return;
+                }
+                activeSlide = (activeSlide + 1) % 3;
+                carouselTrack.style.setProperty('--guest-slide-index', activeSlide);
+                carouselIndicators.forEach(function(indicator, index) {
+                    indicator.classList.toggle('active', index === activeSlide);
+                });
+            }, 3000);
+        }
         return;
+    }
+    if (this.guestMessagesCarouselTimer) {
+        clearInterval(this.guestMessagesCarouselTimer);
+        this.guestMessagesCarouselTimer = null;
     }
 
     this.loadBlockedUsers();
@@ -8019,21 +8087,21 @@ loadMessages: function() {
                                 
                                 // SMART PREVIEW - Check message type
                                 if (msg.voiceUrl) {
-                                    lastMessage = '🎤 Voice message';
+                                    lastMessage = 'Voice message';
                                 } else if (msg.image && !msg.text) {
-                                    lastMessage = '📷 Photo';
+                                    lastMessage = 'Photo';
                                 } else if (msg.isCoinTransfer) {
-                                    lastMessage = '💰 Sent ' + (msg.amount || '') + ' Coins';
+                                    lastMessage = 'Sent ' + (msg.amount || '') + ' Coins';
                                 } else if (msg.text) {
                                     // Truncate long messages to 35 characters
                                     var preview = msg.text.length > 35 ? msg.text.substring(0, 35) + '...' : msg.text;
-                                    // If it's a reply, add a reply icon
+                                    // Mark reply previews without adding decorative symbols.
                                     if (msg.replyTo) {
-                                        preview = '↩️ ' + preview;
+                                        preview = 'Reply: ' + preview;
                                     }
                                     lastMessage = preview;
                                 } else {
-                                    lastMessage = '📷 Image';
+                                    lastMessage = ' Image';
                                 }
                                 
                                 lastTimestamp = msg.timestamp || 0;
@@ -8076,24 +8144,26 @@ loadMessages: function() {
                 var avatarStyle = conv.user.profilePhoto ? 'background-image: url(\'' + conv.user.profilePhoto + '\');' : '';
                 var initials = conv.user.name ? conv.user.name.charAt(0).toUpperCase() : '?';
                 var isFavorite = localStorage.getItem('fav_' + conv.uid) === 'true';
-                var favoriteBtn = '<button class="action-btn favorite" onclick="app.toggleFavoriteConversation(\'' + conv.uid + '\')" style="color: ' + (isFavorite ? '#ef4444' : '#9ca3af') + ';">❤️</button>';
+                var isArchived = localStorage.getItem('archived_' + conv.uid) === 'true';
+                var favoriteBtn = '<button class="action-btn favorite' + (isFavorite ? ' is-favorite' : '') + '" aria-label="' + (isFavorite ? 'Remove favorite' : 'Add favorite') + '" title="' + (isFavorite ? 'Remove favorite' : 'Add favorite') + '" onclick="app.toggleFavoriteConversation(\'' + conv.uid + '\')" style="color: ' + (isFavorite ? '#e53935' : '#667781') + ';"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.75 5.58 6.16.9-4.46 4.35 1.05 6.14L12 17.07l-5.5 2.9 1.05-6.14L3.1 9.48l6.16-.9L12 3Z"></path></svg></button>';
+                var archiveLabel = isArchived ? 'Unarchive conversation' : 'Archive conversation';
+                var archiveBtn = '<button class="action-btn archive' + (isArchived ? ' is-archived' : '') + '" aria-label="' + archiveLabel + '" title="' + archiveLabel + '" onclick="app.archiveConversation(\'' + conv.uid + '\')" style="color: ' + (isArchived ? '#e53935' : '#667781') + ';"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v4H4z"></path><path d="M5 9v10h14V9M10 13h4"></path></svg></button>';
                 var presence = self.presenceStatus && self.presenceStatus[conv.uid];
                 var lastSeenValue = (presence && presence.lastSeen) || conv.user.lastSeen;
-                var isOnline = !!(presence && presence.online);
-                var presenceLabel = isOnline ? 'Online' : (lastSeenValue ? 'Not online right now 🙂 I was at ' + self.formatPresenceTime(new Date(lastSeenValue)) : 'Not online right now 🙂');
-                
-                // Online status (optional – you can set this dynamically)
-                var onlineDot = '<div class="online-dot' + (isOnline ? ' active' : '') + '"></div>';
+                var presenceState = self.getPresenceIndicatorState(presence, conv.user);
+                var presenceLabel = presenceState === 'online' ? 'Online' :
+                    (lastSeenValue ? 'Last seen ' + self.formatPresenceTime(new Date(lastSeenValue)) : 'Offline');
+                var onlineDot = '<div class="online-dot ' + presenceState + '" title="' + presenceLabel + '" aria-label="' + presenceLabel + '"></div>';
                 
                 html += `
                     <div class="msg-item-wrapper${conv.unreadCount > 0 ? ' has-unread' : ''}" data-uid="${conv.uid}">
                         <div class="msg-item-actions">
                             ${favoriteBtn}
-                            <button class="action-btn archive" onclick="app.archiveConversation('${conv.uid}')">📦</button>
-                            <button class="action-btn delete" onclick="app.deleteConversation('${conv.uid}')">🗑️</button>
+                            ${archiveBtn}
+                            <button class="action-btn delete" aria-label="Delete conversation" title="Delete conversation" onclick="app.deleteConversation('${conv.uid}')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"></path></svg></button>
                         </div>
                         <div class="msg-item" onclick="app.openChat('${conv.uid}', '${conv.user.name}')">
-                            <div class="msg-item-avatar" style="${avatarStyle} background: ${!conv.user.profilePhoto ? 'linear-gradient(135deg, #667eea, #764ba2)' : ''};">
+                            <div class="msg-item-avatar" style="${avatarStyle} background: ${!conv.user.profilePhoto ? '#dce9e5' : ''};">
                                 ${!conv.user.profilePhoto ? initials : ''}
                                 ${onlineDot}
                             </div>
@@ -8139,7 +8209,7 @@ loadMessages: function() {
 
     openChat: function(uid, name) {
     if (!this.user || this.isGuest) {
-        this.toast('🔐 Sign up to message users', 'info');
+        this.toast(' Sign up to message users', 'info');
         this.showLoginPage();
         return;
     }
@@ -8175,6 +8245,16 @@ loadMessages: function() {
         chatView.style.display = 'flex';
         chatView.style.zIndex = '2000';
         chatView.style.position = 'fixed';
+        this.chatViewportWasAtBottom = true;
+        this.syncChatViewport();
+        chatView.classList.remove('chat-enter');
+        void chatView.offsetWidth;
+        chatView.classList.add('chat-enter');
+        var clearChatTransition = function() {
+            chatView.classList.remove('chat-enter');
+        };
+        chatView.addEventListener('animationend', clearChatTransition, { once: true });
+        setTimeout(clearChatTransition, 240);
     }
 
     this.currentChat = { uid: uid, name: name };
@@ -8242,6 +8322,16 @@ loadMessages: function() {
     var savedWallpaper = localStorage.getItem(wallpaperKey) || DEFAULT_CHAT_WALLPAPER;
     var savedWallpaperBlur = localStorage.getItem(wallpaperKey + '_blur');
     var savedWallpaperDim = localStorage.getItem(wallpaperKey + '_dim');
+    var wallpaperDefaultsMigrationKey = wallpaperKey + '_soft_defaults_v1';
+    if (localStorage.getItem(wallpaperDefaultsMigrationKey) === null) {
+        if (savedWallpaper === DEFAULT_CHAT_WALLPAPER && savedWallpaperBlur === '0' && savedWallpaperDim === '0') {
+            savedWallpaperBlur = String(DEFAULT_CHAT_WALLPAPER_BLUR);
+            savedWallpaperDim = String(DEFAULT_CHAT_WALLPAPER_DIM);
+            localStorage.setItem(wallpaperKey + '_blur', savedWallpaperBlur);
+            localStorage.setItem(wallpaperKey + '_dim', savedWallpaperDim);
+        }
+        localStorage.setItem(wallpaperDefaultsMigrationKey, '1');
+    }
     this.applyChatWallpaper(
         savedWallpaper,
         savedWallpaperBlur === null ? DEFAULT_CHAT_WALLPAPER_BLUR : savedWallpaperBlur,
@@ -8255,7 +8345,9 @@ loadMessages: function() {
     var self = this;
     setTimeout(function() {
         self.loadChatMessages();
-        document.getElementById('chatMessageInput').focus();
+        if (window.innerWidth > 768) {
+            document.getElementById('chatMessageInput').focus();
+        }
     }, 100);
 },
 
@@ -8296,12 +8388,7 @@ loadMessages: function() {
             this.toast('No active chat', 'info');
             return;
         }
-        this.toast('📞 Initiating call with ' + this.currentChat.name + '...', 'info');
-        var callModal = document.getElementById('callModal');
-        if (callModal) {
-            callModal.style.display = 'flex';
-            document.getElementById('callName').textContent = this.currentChat.name;
-        }
+        this.toast('Onchari Group is preparing calls. Coming soon.', 'info');
     },
 
     // ============================================
@@ -8309,26 +8396,72 @@ loadMessages: function() {
     // ============================================
 
     openEmojiPicker: function() {
-        var emojis = ['😊', '😂', '😍', '🔥', '👍', '🎉', '😭', '🤔', '💯', '✨', '😎', '🤣', '😘', '🙌', '🚀', '❤️'];
+        if (document.querySelector('.emoji-menu')) {
+            this.closeEmojiPicker();
+            return;
+        }
+        var emojis = [
+            { label: 'Smile', value: String.fromCodePoint(0x1F60A) },
+            { label: 'Laugh', value: String.fromCodePoint(0x1F602) },
+            { label: 'Love', value: String.fromCodePoint(0x1F60D) },
+            { label: 'Fire', value: String.fromCodePoint(0x1F525) },
+            { label: 'Like', value: String.fromCodePoint(0x1F44D) },
+            { label: 'Celebrate', value: String.fromCodePoint(0x1F389) },
+            { label: 'Cry', value: String.fromCodePoint(0x1F62D) },
+            { label: 'Thinking', value: String.fromCodePoint(0x1F914) },
+            { label: 'Hundred', value: String.fromCodePoint(0x1F4AF) },
+            { label: 'Sparkles', value: String.fromCodePoint(0x2728) },
+            { label: 'Cool', value: String.fromCodePoint(0x1F60E) },
+            { label: 'Laughing', value: String.fromCodePoint(0x1F923) },
+            { label: 'Kiss', value: String.fromCodePoint(0x1F618) },
+            { label: 'Praise', value: String.fromCodePoint(0x1F64C) },
+            { label: 'Rocket', value: String.fromCodePoint(0x1F680) },
+            { label: 'Heart', value: String.fromCodePoint(0x2764, 0xFE0F) }
+        ];
         var emojiMenu = document.createElement('div');
         emojiMenu.className = 'emoji-menu';
+        emojiMenu.setAttribute('role', 'group');
+        emojiMenu.setAttribute('aria-label', 'Insert an emoji');
+        var self = this;
         
-        emojis.forEach(function(emoji) {
+        emojis.forEach(function(item) {
             var btn = document.createElement('button');
-            btn.textContent = emoji;
-            btn.style.cssText = 'background:none;border:none;font-size:20px;cursor:pointer;padding:8px;border-radius:8px;transition:all 0.2s;';
+            btn.type = 'button';
+            btn.textContent = item.value;
+            btn.setAttribute('aria-label', 'Insert ' + item.label);
+            btn.title = item.label;
             btn.onmouseover = function() { this.style.background = '#f0f0f0'; };
             btn.onmouseout = function() { this.style.background = 'none'; };
             btn.onclick = function() {
                 var input = document.getElementById('chatMessageInput');
-                input.value += emoji;
-                input.focus();
-                emojiMenu.remove();
+                if (input) {
+                    input.value += item.value;
+                    input.focus();
+                }
+                self.closeEmojiPicker();
             };
             emojiMenu.appendChild(btn);
         });
         
         document.body.appendChild(emojiMenu);
+        this.emojiMenuOutsidePointerHandler = function(event) {
+            if (!emojiMenu.contains(event.target)) self.closeEmojiPicker();
+        };
+        document.addEventListener('pointerdown', this.emojiMenuOutsidePointerHandler);
+    },
+
+    closeEmojiPicker: function() {
+        var emojiMenu = document.querySelector('.emoji-menu');
+        if (emojiMenu) emojiMenu.remove();
+        if (this.emojiMenuOutsidePointerHandler) {
+            document.removeEventListener('pointerdown', this.emojiMenuOutsidePointerHandler);
+            this.emojiMenuOutsidePointerHandler = null;
+        }
+        var modal = document.getElementById('emojiPickerModal');
+        if (modal) {
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+        }
     },
 
     // ============================================
@@ -8340,18 +8473,64 @@ loadMessages: function() {
             this.toast('No active chat', 'info');
             return;
         }
-        this.toast('🎤 Voice recording feature coming soon!', 'info');
+        this.toast('Onchari Group is preparing voice messages. Coming soon.', 'info');
     },
 
     // ============================================
     // CLOSE CHAT
     // ============================================
 
+    setupChatViewportTracking: function() {
+        if (this.chatViewportTrackingReady) return;
+        var viewport = window.visualViewport;
+        if (!viewport) return;
+
+        var self = this;
+        this.chatViewportTrackingReady = true;
+        this.chatViewportSyncHandler = function() {
+            self.syncChatViewport();
+        };
+        viewport.addEventListener('resize', this.chatViewportSyncHandler);
+        viewport.addEventListener('scroll', this.chatViewportSyncHandler);
+        window.addEventListener('resize', this.chatViewportSyncHandler);
+
+        var chatMessages = document.getElementById('chatMessages');
+        if (chatMessages && !this.chatViewportScrollHandlerAttached) {
+            chatMessages.addEventListener('scroll', function() {
+                self.chatViewportWasAtBottom =
+                    chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 80;
+            }, { passive: true });
+            this.chatViewportScrollHandlerAttached = true;
+        }
+    },
+
+    syncChatViewport: function() {
+        var chatView = document.getElementById('chatView');
+        var viewport = window.visualViewport;
+        if (!chatView || !viewport || !chatView.classList.contains('active') || window.innerWidth > 768) return;
+
+        chatView.style.top = viewport.offsetTop + 'px';
+        chatView.style.height = viewport.height + 'px';
+        chatView.style.bottom = 'auto';
+
+        if (this.chatViewportWasAtBottom) {
+            var chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                requestAnimationFrame(function() {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                });
+            }
+        }
+    },
+
     closeChatView: function() {
         var chatView = document.getElementById('chatView');
         if (chatView) {
             chatView.classList.remove('active');
             chatView.style.display = 'none';
+            chatView.style.top = '';
+            chatView.style.height = '';
+            chatView.style.bottom = '';
         }
         this.stopTypingIndicator();
         if (this.activePlanSupport && this.currentChat) this.setPlanSupportPresence(this.currentChat.uid, false);
@@ -8485,17 +8664,27 @@ loadMessages: function() {
 
             self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
                 var m = snap.val();
-                if (self.currentChat && [self.user.uid, self.currentChat.uid].sort().join('_') === key && m && (m.text || m.image) && m.sender !== self.user.uid) {
+                if (self.currentChat && [self.user.uid, self.currentChat.uid].sort().join('_') === key && m && (m.text || m.image)) {
                     m.id = snap.key;
                     var currentMessages = self.chatMessages[key] || [];
-                    var alreadyVisible = currentMessages.some(function(item) { return item.id === m.id; });
-                    if (!alreadyVisible) {
+                    var existingMessage = currentMessages.find(function(item) { return item.id === m.id; });
+                    var shouldRender = false;
+                    if (existingMessage) {
+                        if (existingMessage.pending) {
+                            Object.keys(m).forEach(function(property) { existingMessage[property] = m[property]; });
+                            existingMessage.pending = false;
+                            shouldRender = true;
+                        }
+                    } else {
                         currentMessages.push(m);
+                        shouldRender = true;
+                    }
+                    if (shouldRender) {
                         currentMessages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
                         self.chatMessages[key] = currentMessages;
                         self.displayChatMessages(currentMessages, key);
                     }
-                    self.markAsRead(self.currentChat.uid);
+                    if (m.sender !== self.user.uid) self.markAsRead(self.currentChat.uid);
                 }
             });
             self.chatMessagesChangedListener = db.ref('chats/' + key + '/messages').on('child_changed', function(snap) {
@@ -8518,7 +8707,7 @@ loadMessages: function() {
                     var status = cachedMessage.read ? 'read' : (cachedMessage.delivered ? 'delivered' : 'sent');
                     readStatus.classList.remove('read', 'delivered', 'sent');
                     readStatus.classList.add(status);
-                    readStatus.textContent = cachedMessage.read || cachedMessage.delivered ? '✓✓' : '✓';
+                    readStatus.textContent = cachedMessage.read || cachedMessage.delivered ? '' : '';
                     readStatus.setAttribute('aria-label', status.charAt(0).toUpperCase() + status.slice(1));
                 }
             });
@@ -8537,7 +8726,7 @@ loadMessages: function() {
         if (!messages || messages.length === 0) {
             var chatMessagesView = document.getElementById('chatMessages');
             if (chatMessagesView) {
-                chatMessagesView.innerHTML = '<div style="text-align:center;color:#999;padding:40px 16px;font-size:14px;">No messages yet. Say hello! 👋</div>';
+                chatMessagesView.innerHTML = '<div style="text-align:center;color:#999;padding:40px 16px;font-size:14px;">No messages yet. Say hello! </div>';
             }
             return;
         }
@@ -8606,7 +8795,7 @@ loadMessages: function() {
             var deliveryStatus = '';
             if (side === 'own') {
                 var deliveryClass = m.read ? 'read' : (m.delivered ? 'delivered' : 'sent');
-                var deliveryTicks = m.read || m.delivered ? '✓✓' : '✓';
+                var deliveryTicks = m.read || m.delivered ? '' : '';
                 deliveryStatus = '<span class="message-read-status ' + deliveryClass + '" aria-label="' + (m.read ? 'Read' : (m.delivered ? 'Delivered' : 'Sent')) + '">' + deliveryTicks + '</span>';
             }
             html += '<div class="message-meta"><span>' + timestamp + '</span>' + deliveryStatus + actionMenu + '</div>';
@@ -8914,7 +9103,7 @@ loadMessages: function() {
             var modal = document.createElement('div');
             modal.id = 'reviewPlanPaymentModal';
             modal.className = 'modal-overlay active';
-            modal.innerHTML = '<div class="modal admin-verify-payment-modal"><div class="modal-close"><button type="button" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><span class="admin-kicker">MANUAL PAYMENT CHECK</span><h2>Verify M-Pesa &amp; send access</h2><p>First confirm this receipt in your M-Pesa transaction history. Pasted text alone is not proof of payment.</p><div class="admin-payment-receipt-preview"><strong>Customer receipt</strong><pre id="reviewPlanPaymentReceipt"></pre></div><label>Verified amount (KSh)<input id="verifiedPlanPaymentAmount" type="number" min="1" step="1" value="' + self.escapeAdminPaymentHtml(order.claimedAmountKsh || order.expectedAmountKsh || 200) + '"></label><label>Access duration (days, based on verified amount)<input id="verifiedPlanDurationDays" type="number" min="1" max="365" step="1" placeholder="Enter the duration for this payment"></label><label>Netflix profile<input id="verifiedNetflixProfile" type="text" value="Premium4K + HDR"></label><label>Netflix login credentials<textarea id="verifiedNetflixCredentials" rows="4" placeholder="Paste the verified login details for this customer"></textarea></label><p>The access countdown starts from the moment you confirm payment and send the credentials.</p><div class="admin-verify-payment-actions"><button type="button" class="admin-verify-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button><button type="button" class="admin-verify-confirm" onclick="app.verifyPlanPaymentAndSendAccess(\'' + orderId + '\')">Confirm payment &amp; send credentials</button></div></div>';
+            modal.innerHTML = '<div class="modal admin-verify-payment-modal"><div class="modal-close"><button type="button" onclick="this.closest(\'.modal-overlay\').remove()"></button></div><span class="admin-kicker">MANUAL PAYMENT CHECK</span><h2>Verify M-Pesa &amp; send access</h2><p>First confirm this receipt in your M-Pesa transaction history. Pasted text alone is not proof of payment.</p><div class="admin-payment-receipt-preview"><strong>Customer receipt</strong><pre id="reviewPlanPaymentReceipt"></pre></div><label>Verified amount (KSh)<input id="verifiedPlanPaymentAmount" type="number" min="1" step="1" value="' + self.escapeAdminPaymentHtml(order.claimedAmountKsh || order.expectedAmountKsh || 200) + '"></label><label>Access duration (days, based on verified amount)<input id="verifiedPlanDurationDays" type="number" min="1" max="365" step="1" placeholder="Enter the duration for this payment"></label><label>Netflix profile<input id="verifiedNetflixProfile" type="text" value="Premium4K + HDR"></label><label>Netflix login credentials<textarea id="verifiedNetflixCredentials" rows="4" placeholder="Paste the verified login details for this customer"></textarea></label><p>The access countdown starts from the moment you confirm payment and send the credentials.</p><div class="admin-verify-payment-actions"><button type="button" class="admin-verify-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button><button type="button" class="admin-verify-confirm" onclick="app.verifyPlanPaymentAndSendAccess(\'' + orderId + '\')">Confirm payment &amp; send credentials</button></div></div>';
             document.body.appendChild(modal);
             modal.querySelector('#reviewPlanPaymentReceipt').textContent = order.receiptMessage || 'No receipt supplied';
             modal.dataset.orderUserId = order.userId || '';
@@ -9046,10 +9235,13 @@ loadMessages: function() {
 
         var self = this;
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+        var recipientId = self.currentChat.uid;
         var now = new Date().getTime();
         if (!this.chatMessages[key]) this.chatMessages[key] = [];
 
+        var messageRef = db.ref('messages/' + key).push();
         var tempMessage = {
+            id: messageRef.key,
             sender: self.user.uid,
             text: text,
             timestamp: now,
@@ -9060,7 +9252,6 @@ loadMessages: function() {
         if (input) input.value = '';
         if (input) input.focus();
 
-        var messageRef = db.ref('messages/' + key).push();
         messageRef.set({
             text: text,
             sender: self.user.uid,
@@ -9133,7 +9324,7 @@ loadMessages: function() {
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
         modal.style.zIndex = '2000';
-        modal.innerHTML = '<div style="position:relative;width:90%;max-width:500px;"><img src="' + imageUrl + '" style="width:100%;border-radius:12px;"><button onclick="this.closest(\'.modal-overlay\').remove()" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);color:white;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;">✕</button></div>';
+        modal.innerHTML = '<div style="position:relative;width:90%;max-width:500px;"><img src="' + imageUrl + '" style="width:100%;border-radius:12px;"><button onclick="this.closest(\'.modal-overlay\').remove()" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);color:white;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;"></button></div>';
         document.body.appendChild(modal);
     },
 
@@ -9173,7 +9364,7 @@ loadMessages: function() {
         modal.style.justifyContent = 'center';
         modal.innerHTML = `
             <div class="modal" style="max-width:420px;border-radius:20px;padding:24px;max-height:90vh;overflow-y:auto;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">✕</button></div>
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;"></button></div>
 
                 <div style="text-align:center;padding:4px 0;">
                     <div style="width:100px;height:100px;border-radius:50%;margin:0 auto 12px;overflow:hidden;border:3px solid #0088cc;box-shadow:0 4px 16px rgba(0,136,204,0.3);">
@@ -9183,12 +9374,12 @@ loadMessages: function() {
                     <h2 style="margin-bottom:2px;font-weight:800;font-size:22px;color:#1a202c;">Anthony Onchari</h2>
                     <p style="color:#0088cc;font-size:13px;font-weight:600;margin-bottom:4px;">Developer & Digital Media Specialist</p>
                     <p style="color:#6b7280;font-size:11px;background:#f0f0f0;display:inline-block;padding:2px 12px;border-radius:12px;margin-bottom:16px;">
-                        📱 Version V1.0
+                         Version V1.0
                     </p>
 
                     <div style="background:#f7fafc;padding:16px 18px;border-radius:16px;text-align:left;border:1px solid #e2e8f0;margin-bottom:16px;">
                         <p style="font-size:14px;line-height:1.8;color:#2d3748;margin:0;">
-                            Hey there! 👋 I'm <strong style="color:#0088cc;">Anthony</strong>,
+                            Hey there!  I'm <strong style="color:#0088cc;">Anthony</strong>,
                             a Developer and Digital Media Specialist who loves building things that bring people and community together.
                             I created <strong style="color:#0088cc;">CHICHI</strong> because I believe
                             social media should feel like home — warm, real, and human.
@@ -9201,33 +9392,33 @@ loadMessages: function() {
 
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
                         <div style="background:#ebf8ff;padding:10px 6px;border-radius:12px;">
-                            <div style="font-size:20px;">💻</div>
+                            <div style="font-size:20px;"></div>
                             <div style="font-size:11px;color:#2b6cb0;font-weight:600;">Web Developer</div>
                         </div>
                         <div style="background:#f0fff4;padding:10px 6px;border-radius:12px;">
-                            <div style="font-size:20px;">📱</div>
+                            <div style="font-size:20px;"></div>
                             <div style="font-size:11px;color:#276749;font-weight:600;">Digital Media</div>
                         </div>
                         <div style="background:#faf5ff;padding:10px 6px;border-radius:12px;">
-                            <div style="font-size:20px;">🤝</div>
+                            <div style="font-size:20px;"></div>
                             <div style="font-size:11px;color:#6b46c1;font-weight:600;">Community Builder</div>
                         </div>
                     </div>
 
                     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
                         <button onclick="window.open('https://wa.me/254701807001', '_blank')" style="padding:10px 18px;background:#25D366;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;transition:0.3s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            💬 WhatsApp
+                             WhatsApp
                         </button>
                         <button onclick="window.open('https://www.facebook.com/profile.php?id=100088002065441', '_blank')" style="padding:10px 18px;background:#1877F2;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;transition:0.3s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            📘 Facebook
+                             Facebook
                         </button>
                         <button onclick="window.open('https://www.linkedin.com/in/anthony-onchari-a3b87b270/', '_blank')" style="padding:10px 18px;background:#0A66C2;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;transition:0.3s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            💼 LinkedIn
+                             LinkedIn
                         </button>
                     </div>
 
                     <div style="margin-top:14px;font-size:11px;color:#a0aec0;border-top:1px solid #e2e8f0;padding-top:12px;">
-                        <span>© 2026 Onchari Group • CHICHI V1.0</span>
+                        <span> 2026 Onchari Group • CHICHI V1.0</span>
                     </div>
                 </div>
             </div>
@@ -9247,15 +9438,43 @@ loadMessages: function() {
 
     showHeaderMenu: function() {
         var menu = document.getElementById('headerMenu');
-        if (menu) {
-            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        if (!menu) return;
+        if (menu.style.display !== 'none') {
+            this.closeHeaderMenu();
+            return;
         }
+        menu.style.display = 'block';
+        var triggerButton = document.getElementById('headerMenuBtn');
+        if (triggerButton) triggerButton.setAttribute('aria-expanded', 'true');
+        var self = this;
+        this.headerMenuOutsidePointerHandler = function(event) {
+            var trigger = document.getElementById('headerMenuBtn');
+            if (!menu.contains(event.target) && !(trigger && trigger.contains(event.target))) {
+                self.closeHeaderMenu();
+            }
+        };
+        this.headerMenuEscapeHandler = function(event) {
+            if (event.key === 'Escape') {
+                self.closeHeaderMenu();
+                if (triggerButton) triggerButton.focus();
+            }
+        };
+        document.addEventListener('pointerdown', this.headerMenuOutsidePointerHandler);
+        document.addEventListener('keydown', this.headerMenuEscapeHandler);
     },
 
     closeHeaderMenu: function() {
         var menu = document.getElementById('headerMenu');
-        if (menu) {
-            menu.style.display = 'none';
+        if (menu) menu.style.display = 'none';
+        var trigger = document.getElementById('headerMenuBtn');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        if (this.headerMenuOutsidePointerHandler) {
+            document.removeEventListener('pointerdown', this.headerMenuOutsidePointerHandler);
+            this.headerMenuOutsidePointerHandler = null;
+        }
+        if (this.headerMenuEscapeHandler) {
+            document.removeEventListener('keydown', this.headerMenuEscapeHandler);
+            this.headerMenuEscapeHandler = null;
         }
     },
 
@@ -9275,13 +9494,13 @@ loadMessages: function() {
         modal.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                 <h2 style="margin:0;font-weight:700;">Edit Your Profile</h2>
-                <button onclick="this.closest('div').closest('div').parentElement.parentElement.remove()" style="background:none;border:none;font-size:24px;cursor:pointer;">✕</button>
+                <button onclick="this.closest('div').closest('div').parentElement.parentElement.remove()" style="background:none;border:none;font-size:24px;cursor:pointer;"></button>
             </div>
 
             <div style="text-align:center;margin-bottom:24px;">
                 <div id="editProfilePhotoPreview" style="background-image:url(${this.profile.profilePhoto || ''});background-size:cover;background-position:center;width:120px;height:120px;border-radius:50%;margin:0 auto;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;color:white;background-color:var(--primary);" onclick="document.getElementById('editProfilePhotoInput').click()">
                     ${!this.profile.profilePhoto ? this.user.email.charAt(0).toUpperCase() : ''}
-                    <div style="position:absolute;bottom:0;right:0;background:var(--primary);color:white;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:3px solid white;">📷</div>
+                    <div style="position:absolute;bottom:0;right:0;background:var(--primary);color:white;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:3px solid white;"></div>
                 </div>
                 <input type="file" id="editProfilePhotoInput" accept="image/*" style="display:none;" onchange="app.previewEditProfilePhoto(event)">
                 <div style="font-size:0.8rem;color:var(--text-light);margin-top:8px;">Tap avatar to change photo</div>
@@ -9441,14 +9660,14 @@ loadMessages: function() {
         // Keep existing interests (don't change them)
         var interests = this.profile.interests || [];
 
-        this.toast('⏳ Saving profile...', 'info');
+        this.toast(' Saving profile...', 'info');
 
         if (username !== this.profile.username) {
             db.ref('users').orderByChild('username').equalTo(username).once('value', function(snapshot) {
                 if (snapshot.exists()) {
                     var existingUid = Object.keys(snapshot.val())[0];
                     if (existingUid !== self.user.uid) {
-                        self.toast('❌ This username is already taken', 'error');
+                        self.toast(' This username is already taken', 'error');
                         return;
                     }
                 }
@@ -9497,14 +9716,14 @@ loadMessages: function() {
         var self = this;
         db.ref('users/' + this.user.uid).update(updateData, function(err) {
             if (err) {
-                self.toast('❌ Error updating profile', 'error');
+                self.toast(' Error updating profile', 'error');
             } else {
                 self.profile = { ...self.profile, ...updateData };
                 if (updateData.profilePhoto) {
                     self.claimAirtimeReward('profilePhoto');
                     self.claimProfilePhotoReward();
                 }
-                self.toast('✅ Profile updated successfully!', 'success');
+                self.toast(' Profile updated successfully!', 'success');
                 self.editProfilePhoto = null;
 
                 // Close edit profile modal
@@ -9539,40 +9758,141 @@ loadMessages: function() {
     // ============================================
 
     showFollowing: function() {
-        var html = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>';
-        html += '<h2 style="margin-bottom:16px;">Following (' + Object.keys(this.following).length + ')</h2>';
-        if (Object.keys(this.following).length === 0) {
-            html += '<div style="text-align:center;color:#6b7280;padding:20px;">Not following anyone yet</div>';
-        } else {
-            html += '<div class="following-list">';
-            for (var uid in this.following) {
-                if (this.users[uid]) {
-                    var u = this.users[uid];
-                    var unreadCount = this.getUnreadCountForUser(uid);
-                    var msgBadge = unreadCount > 0 ? '<span style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;background:#ef4444;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;border:2px solid white;box-shadow:0 2px 6px rgba(239,68,68,0.4);">' + unreadCount + '</span>' : '';
-
-                    html += `
-                        <div class="following-item" style="display:flex;align-items:center;padding:10px;border-bottom:1px solid #f0f0f0;gap:12px;">
-                            <div class="following-avatar" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;background-image:url(${u.profilePhoto || ''});background-size:cover;background-position:center;">${!u.profilePhoto ? u.name.charAt(0).toUpperCase() : ''}</div>
-                            <div class="following-name" style="flex:1;font-weight:600;">${u.name}</div>
-                            <div style="display:flex;gap:6px;">
-                                <button class="following-unfollow" onclick="app.openChatFromSearch('${uid}', '${u.name}')" style="background:var(--primary);color:white;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.75rem;font-weight:600;transition:0.3s;position:relative;">
-                                    💬
-                                    ${msgBadge}
-                                </button>
-                                <button class="following-unfollow" onclick="app.unfollowUser('${uid}', '${u.name}')" style="background:#ef4444;color:white;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.75rem;font-weight:600;">Unfollow</button>
-                            </div>
-                        </div>
-                    `;
-                }
-            }
-            html += '</div>';
-        }
-        html += '</div>';
-
+        var self = this;
+        var followingIds = Object.keys(this.following || {});
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
-        modal.innerHTML = html;
+        modal.setAttribute('role', 'presentation');
+
+        var dialog = document.createElement('section');
+        dialog.className = 'modal following-dialog';
+        dialog.id = 'followingDialog';
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
+        dialog.setAttribute('aria-labelledby', 'followingDialogTitle');
+
+        var header = document.createElement('header');
+        header.className = 'following-dialog-header';
+        var headingGroup = document.createElement('div');
+        var title = document.createElement('h2');
+        title.className = 'following-dialog-title';
+        title.id = 'followingDialogTitle';
+        title.textContent = 'Following';
+        var subtitle = document.createElement('p');
+        subtitle.className = 'following-dialog-subtitle';
+        subtitle.textContent = followingIds.length
+            ? 'People you follow on CHICHI'
+            : 'People you follow will appear here';
+        headingGroup.append(title, subtitle);
+
+        var count = document.createElement('span');
+        count.className = 'following-count';
+        count.textContent = String(followingIds.length);
+        count.setAttribute('aria-label', followingIds.length + ' following');
+
+        var closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'following-dialog-close';
+        closeButton.setAttribute('aria-label', 'Close following list');
+        closeButton.innerHTML = '&times;';
+        var onKeyDown = function(event) {
+            if (event.key !== 'Escape') return;
+            closeModal();
+        };
+        var closeModal = function() {
+            modal.remove();
+            document.removeEventListener('keydown', onKeyDown);
+        };
+        closeButton.addEventListener('click', closeModal);
+        header.append(headingGroup, count, closeButton);
+        dialog.appendChild(header);
+
+        var list = document.createElement('div');
+        list.className = 'following-list';
+        var renderedCount = 0;
+        followingIds.forEach(function(uid) {
+            var user = self.users && self.users[uid];
+            if (!user) return;
+            renderedCount++;
+            var displayName = user.name || 'CHICHI user';
+            var row = document.createElement('article');
+            row.className = 'following-item';
+
+            var avatar = document.createElement('div');
+            avatar.className = 'following-avatar';
+            avatar.setAttribute('aria-hidden', 'true');
+            if (user.profilePhoto) {
+                var photo = document.createElement('img');
+                photo.src = user.profilePhoto;
+                photo.alt = '';
+                photo.addEventListener('error', function() {
+                    photo.remove();
+                    avatar.textContent = displayName.charAt(0).toUpperCase();
+                }, { once: true });
+                avatar.appendChild(photo);
+            } else {
+                avatar.textContent = displayName.charAt(0).toUpperCase();
+            }
+
+            var identity = document.createElement('div');
+            identity.className = 'following-identity';
+            var name = document.createElement('div');
+            name.className = 'following-name';
+            name.textContent = displayName;
+            identity.appendChild(name);
+            if (user.username) {
+                var username = document.createElement('div');
+                username.className = 'following-username';
+                username.textContent = '@' + user.username;
+                identity.appendChild(username);
+            }
+
+            var actions = document.createElement('div');
+            actions.className = 'following-actions';
+            var messageButton = document.createElement('button');
+            messageButton.type = 'button';
+            messageButton.className = 'following-message';
+            messageButton.textContent = 'Message';
+            messageButton.addEventListener('click', function() {
+                closeModal();
+                self.openChatFromSearch(uid, displayName);
+            });
+
+            var unfollowButton = document.createElement('button');
+            unfollowButton.type = 'button';
+            unfollowButton.className = 'following-unfollow';
+            unfollowButton.textContent = 'Unfollow';
+            unfollowButton.addEventListener('click', function() {
+                self.unfollowUser(uid, displayName);
+                row.remove();
+                followingIds = followingIds.filter(function(id) { return id !== uid; });
+                count.textContent = String(followingIds.length);
+                count.setAttribute('aria-label', followingIds.length + ' following');
+                if (!list.querySelector('.following-item')) {
+                    var empty = document.createElement('p');
+                    empty.className = 'following-empty';
+                    empty.textContent = 'You are not following anyone yet.';
+                    list.appendChild(empty);
+                    subtitle.textContent = 'People you follow will appear here';
+                }
+            });
+            actions.append(messageButton, unfollowButton);
+            row.append(avatar, identity, actions);
+            list.appendChild(row);
+        });
+
+        if (!renderedCount) {
+            var empty = document.createElement('p');
+            empty.className = 'following-empty';
+            empty.textContent = 'You are not following anyone yet.';
+            list.appendChild(empty);
+        }
+        dialog.appendChild(list);
+        modal.appendChild(dialog);
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) closeModal();
+        });
+        document.addEventListener('keydown', onKeyDown);
         document.body.appendChild(modal);
     },
 
@@ -9592,19 +9912,53 @@ loadMessages: function() {
         var authPage = document.getElementById('authPage');
         var mainApp = document.getElementById('mainApp');
         if (authPage && mainApp) {
-            mainApp.style.display = 'none';
+            this.authModalPreviousFocus = document.activeElement;
+            mainApp.style.display = 'flex';
+            mainApp.classList.add('active');
             authPage.classList.add('show');
             authPage.classList.remove('hidden');
+            authPage.classList.add('auth-modal-open');
             authPage.style.display = 'flex';
             authPage.style.visibility = 'visible';
             authPage.style.opacity = '1';
-            authPage.style.zIndex = '9998';
+            authPage.style.zIndex = '100200';
+            authPage.setAttribute('aria-modal', 'true');
         }
 
         var nav = document.querySelector('.bottom-nav');
-        if (nav) nav.style.display = 'none';
+        if (nav) nav.style.display = 'flex';
 
         this.switchTab(tab || 'login');
+        var self = this;
+        if (!this.authModalCloseHandlersAttached && authPage) {
+            this.authModalCloseHandlersAttached = true;
+            authPage.addEventListener('click', function(event) {
+                if (event.target === authPage) self.closeAuthModal();
+            });
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && authPage.classList.contains('auth-modal-open')) {
+                    self.closeAuthModal();
+                }
+            });
+        }
+        var firstInput = document.querySelector('#' + (tab === 'signup' ? 'signup' : 'login') + 'Tab input');
+        if (firstInput) setTimeout(function() { firstInput.focus(); }, 50);
+    },
+
+    closeAuthModal: function() {
+        var authPage = document.getElementById('authPage');
+        if (!authPage || !authPage.classList.contains('auth-modal-open')) return;
+        authPage.classList.remove('auth-modal-open', 'show');
+        authPage.classList.add('hidden');
+        authPage.style.display = 'none';
+        authPage.style.visibility = 'hidden';
+        authPage.style.opacity = '0';
+        authPage.removeAttribute('aria-modal');
+        var previousFocus = this.authModalPreviousFocus;
+        this.authModalPreviousFocus = null;
+        if (previousFocus && typeof previousFocus.focus === 'function' && previousFocus.isConnected) {
+            previousFocus.focus();
+        }
     },
 
     // ============================================
@@ -9617,12 +9971,12 @@ loadMessages: function() {
         modal.style.zIndex = '99999';
         modal.innerHTML = `
             <div class="modal" style="max-width:420px;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <h2 style="margin-bottom:12px;font-weight:800;">🔐 Welcome to CHICHI</h2>
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()"></button></div>
+                <h2 style="margin-bottom:12px;font-weight:800;"> Welcome to CHICHI</h2>
                 <p style="color:var(--text-light);margin-bottom:18px;line-height:1.45;">You can browse the Feed as a guest, but ${context || 'this feature'} requires an account. Sign up or log in to unlock Messaging, Earn, and Profile.</p>
                 <div style="display:flex;gap:10px;margin-bottom:12px;">
-                    <button onclick="app.showLoginPage('login'); this.closest('.modal-overlay').remove();" style="flex:1;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;padding:12px;border-radius:10px;font-weight:700;">🔐 Log In</button>
-                    <button onclick="app.showLoginPage('signup'); this.closest('.modal-overlay').remove();" style="flex:1;background:#f3f4f6;color:#1a1a1a;border:none;padding:12px;border-radius:10px;font-weight:700;">📝 Sign Up</button>
+                    <button onclick="app.showLoginPage('login'); this.closest('.modal-overlay').remove();" style="flex:1;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;padding:12px;border-radius:10px;font-weight:700;"> Log In</button>
+                    <button onclick="app.showLoginPage('signup'); this.closest('.modal-overlay').remove();" style="flex:1;background:#f3f4f6;color:#1a1a1a;border:none;padding:12px;border-radius:10px;font-weight:700;"> Sign Up</button>
                 </div>
                 <button onclick="app.continueAsGuest(); this.closest('.modal-overlay').remove();" style="width:100%;background:white;border:1px solid #e5e7eb;padding:10px;border-radius:10px;font-weight:700;">Continue Browsing Feed</button>
             </div>
@@ -9630,185 +9984,15 @@ loadMessages: function() {
         document.body.appendChild(modal);
     },
 
-    showLoginWelcomePopup: function() {
-        if (document.getElementById('loginWelcomeModal')) return;
-        var modal = document.createElement('div');
-        modal.id = 'loginWelcomeModal';
-        modal.className = 'modal-overlay active';
-        modal.style.zIndex = '100000';
-        var card = document.createElement('div');
-        card.className = 'modal';
-        card.style.maxWidth = '380px';
-        card.setAttribute('role', 'dialog');
-        card.setAttribute('aria-modal', 'true');
-        card.setAttribute('aria-labelledby', 'loginWelcomeTitle');
-        var close = document.createElement('div');
-        close.className = 'modal-close';
-        var closeButton = document.createElement('button');
-        closeButton.type = 'button';
-        closeButton.setAttribute('aria-label', 'Close welcome message');
-        closeButton.textContent = '✕';
-        closeButton.addEventListener('click', function() { modal.remove(); });
-        close.appendChild(closeButton);
-        var title = document.createElement('h2');
-        title.id = 'loginWelcomeTitle';
-        title.style.marginBottom = '8px';
-        title.textContent = 'Welcome back, ' + ((this.profile && this.profile.name) || 'Guest');
-        var subtitle = document.createElement('p');
-        subtitle.style.color = 'var(--text-light)';
-        subtitle.style.margin = '0';
-        subtitle.textContent = 'Your Chichi space';
-        card.appendChild(close);
-        card.appendChild(title);
-        card.appendChild(subtitle);
-        modal.appendChild(card);
-        document.body.appendChild(modal);
-    },
-
-    showGuestPostPrompt: function(context) {
-        context = context || 'share your first post';
-        this.pendingGuestPostContext = context;
-        var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
-        modal.style.zIndex = '99999';
-        modal.innerHTML = `
-            <div class="modal guest-post-chat" style="max-width:400px;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <div class="guest-post-chat-bubble guest-post-chat-support"><strong>Chat Support · CHICHI 👋</strong><span>Hi! I can help you ${context}. What name would you like to go by?</span></div>
-                <input id="guestPostName" class="form-input" type="text" maxlength="60" placeholder="e.g. Tonnie" autocomplete="name">
-                <div class="guest-post-chat-start-options">
-                    <button type="button" onclick="app.continueGuestPostName()">Let’s continue</button>
-                    <button type="button" onclick="app.skipGuestSupport()">Skip for now</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        setTimeout(function() {
-            var input = document.getElementById('guestPostName');
-            if (input) input.focus();
-        }, 50);
-    },
-
-    continueGuestPostName: function() {
-        var input = document.getElementById('guestPostName');
-        var name = input ? input.value.trim() : '';
-        if (!name) {
-            this.toast('Please enter your name first', 'error');
-            if (input) input.focus();
-            return;
-        }
-
-        this.pendingGuestPostName = name;
-        var context = this.pendingGuestPostContext || 'sharing your post';
-        var jokes = [
-            'Why did the post bring a ladder? It wanted to reach the top of the feed. 😄',
-            'Why was the caption so calm? It had already found its inner post. 🧘',
-            'What did the photo say to the caption? “You complete me.” 📸',
-            'Why did the hashtag go to school? It wanted to become a trending topic. 🎓',
-            'Why did the phone take a nap? It needed to recharge its social battery. 🔋',
-            'What is a post’s favorite exercise? Scrolling and squatting. 😂'
-        ];
-        var joke = jokes[Math.floor(Math.random() * jokes.length)];
-        var modal = input.closest('.modal-overlay');
-        var content = modal ? modal.querySelector('.guest-post-chat') : null;
-        if (!content) return;
-        content.innerHTML = `
-            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-            <div class="guest-post-chat-bubble guest-post-chat-support"><strong>Chat Support · CHICHI 😊</strong><span>Nice to meet you, ${name}! Quick joke: ${joke}<br><br>Was that funny?</span></div>
-            <div class="guest-post-chat-options">
-                <button type="button" onclick="app.guestPostJokeResponse('funny')">Yes, that was funny 😄</button>
-                <button type="button" onclick="app.guestPostJokeResponse('tell')">Not really — I have one</button>
-            </div>
-            <button type="button" onclick="app.skipGuestSupport()" style="width:100%;margin-top:8px;background:none;color:#64748b;border:0;padding:8px;border-radius:8px;font-weight:600;cursor:pointer;">Skip for now</button>
-        `;
-    },
-
-    guestPostJokeResponse: function(response) {
-        var modal = document.querySelector('.guest-post-chat')?.closest('.modal-overlay');
-        var content = modal ? modal.querySelector('.guest-post-chat') : null;
-        if (!content) return;
-
-        if (response === 'tell') {
-            content.innerHTML = `
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-                <div class="guest-post-chat-bubble guest-post-chat-support"><strong>Chat Support · CHICHI 😂</strong><span>Okay, I’m ready! Tell me your joke.</span></div>
-                <textarea id="guestPostJoke" class="form-input" maxlength="500" placeholder="Tell me something funny..."></textarea>
-                <button type="button" onclick="app.submitGuestPostJoke()" style="width:100%;margin-top:10px;background:#0f766e;color:white;border:0;padding:12px;border-radius:10px;font-weight:700;cursor:pointer;">Tell the joke</button>
-                <button type="button" onclick="app.skipGuestSupport()" style="width:100%;margin-top:8px;background:none;color:#64748b;border:0;padding:8px;border-radius:8px;font-weight:600;cursor:pointer;">Skip for now</button>
-            `;
-            var jokeInput = document.getElementById('guestPostJoke');
-            if (jokeInput) jokeInput.focus();
-            return;
-        }
-
-        this.showGuestPostAccountQuestion('Glad it made you smile! 😄');
-    },
-
-    submitGuestPostJoke: function() {
-        var jokeInput = document.getElementById('guestPostJoke');
-        if (!jokeInput || !jokeInput.value.trim()) {
-            this.toast('Tell me your joke first', 'error');
-            if (jokeInput) jokeInput.focus();
-            return;
-        }
-        this.showGuestPostAccountQuestion('😂 Hahaha, that was great! How could I have not seen that one coming?');
-    },
-
-    showGuestPostAccountQuestion: function(reply) {
-        var modal = document.querySelector('.guest-post-chat')?.closest('.modal-overlay');
-        var content = modal ? modal.querySelector('.guest-post-chat') : null;
-        if (!content) return;
-        var context = this.pendingGuestPostContext || 'sharing your post';
-        content.innerHTML = `
-            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-            <div class="guest-post-chat-bubble guest-post-chat-support"><strong>Chat Support · CHICHI 😊</strong><span>${reply}<br><br>You’re ready to start ${context}. Do you already have a CHICHI account?</span></div>
-            <div class="guest-post-chat-options">
-                <button type="button" onclick="app.continueGuestPostAuth('login')">Yes, take me to Log in</button>
-                <button type="button" onclick="app.continueGuestPostAuth('signup')">Not yet, create account</button>
-            </div>
-        `;
-    },
-
-    skipGuestSupport: function() {
-        this.showGuestPostAccountQuestion('No problem — we can keep it simple.');
-    },
-
-    continueGuestPostAuth: function(tab) {
-        var name = this.pendingGuestPostName || '';
-        if (!name) {
-            if (tab === 'login') {
-                var loginModal = document.querySelector('.guest-post-chat')?.closest('.modal-overlay');
-                if (loginModal) loginModal.remove();
-                this.showLoginPage('login');
-            } else {
-                this.showGuestPostPrompt('create your account');
-            }
-            return;
-        }
-
-        var modal = document.querySelector('.guest-post-chat')?.closest('.modal-overlay');
-        if (modal) modal.remove();
-        this.showLoginPage(tab);
-
-        if (tab === 'signup') {
-            var signupName = document.getElementById('signupName');
-            if (signupName) {
-                signupName.value = name;
-                signupName.focus();
-            }
-        }
-    },
-
     continueAsGuest: function() {
         this.user = null;
         this.isGuest = true;
         this.isAdmin = false;
         this.profile = { name: 'Guest', balance: 0, triviaAnswered: [], tier: 'free' };
-        this.toast('📱 Browsing as Guest - Sign up to unlock all features!', 'info');
+        this.toast(' Browsing as Guest - Sign up to unlock all features!', 'info');
         this.updateHeaderMenu();
         this.showApp();
-        this.switchView('feed');
-        this.loadPosts();
+        this.switchView('messages');
         this.logUserActivity('guest_access', 'User browsing as guest');
     },
 
@@ -9841,13 +10025,12 @@ loadMessages: function() {
     checkConnectionAndRetry: function() {
         if (navigator.onLine) {
             this.hideOfflineOverlay();
-            this.toast('✅ Back online!', 'success');
+            this.toast(' Back online!', 'success');
             // Reload critical data
-            this.loadPosts();
             this.loadUsers();
             this.loadMessages();
         } else {
-            this.toast('📡 Still offline. Please check your connection.', 'error');
+            this.toast(' Still offline. Please check your connection.', 'error');
         }
     },
 
@@ -9863,15 +10046,14 @@ loadMessages: function() {
 
         window.addEventListener('online', function() {
             self.hideOfflineOverlay();
-            self.toast('✅ Back online!', 'success');
-            self.loadPosts();
+            self.toast(' Back online!', 'success');
             self.loadUsers();
             self.loadMessages();
         });
 
         window.addEventListener('offline', function() {
             self.showOfflineOverlay();
-            self.toast('📡 You are offline', 'error');
+            self.toast(' You are offline', 'error');
         });
     },
 
@@ -9890,8 +10072,36 @@ loadMessages: function() {
     // SWITCH VIEW
     // ============================================
 
+    syncGuestChrome: function() {
+        var mainApp = document.getElementById('mainApp');
+        var headerActions = document.querySelector('.header-actions');
+        var guestActions = document.querySelector('.guest-nav-actions');
+        if (!mainApp || !headerActions || !guestActions) return;
+
+        var guestMode = !this.user || this.isGuest;
+        mainApp.classList.toggle('guest-mode', guestMode);
+        if (guestMode) {
+            if (!this.guestHeaderActionsParent) {
+                this.guestHeaderActionsParent = headerActions.parentNode;
+                this.guestHeaderActionsNextSibling = headerActions.nextSibling;
+            }
+            if (headerActions.parentNode !== guestActions) guestActions.appendChild(headerActions);
+            return;
+        }
+
+        if (this.guestHeaderActionsParent && headerActions.parentNode !== this.guestHeaderActionsParent) {
+            var reference = this.guestHeaderActionsNextSibling;
+            if (reference && reference.parentNode !== this.guestHeaderActionsParent) reference = null;
+            this.guestHeaderActionsParent.insertBefore(headerActions, reference);
+        }
+    },
+
     switchView: function(view) {
         var app = this;
+        this.syncGuestChrome();
+        if (view === 'feed' || view === 'home') {
+            view = 'messages';
+        }
         if (this.activePlanSupport && this.currentChat && view !== 'chat') {
             this.setPlanSupportPresence(this.currentChat.uid, false);
             this.activePlanSupport = false;
@@ -9913,7 +10123,7 @@ loadMessages: function() {
         }
 
         if (!this.navigationHistory) this.navigationHistory = [];
-        if (!this.currentView) this.currentView = 'feed';
+        if (!this.currentView || this.currentView === 'feed' || this.currentView === 'home') this.currentView = 'messages';
 
         var previousView = this.currentView;
         if (this.currentView !== view) {
@@ -9950,6 +10160,21 @@ loadMessages: function() {
         if (viewElement) {
             viewElement.classList.add('active');
             viewElement.classList.remove('view-enter');
+            void viewElement.offsetWidth;
+            viewElement.classList.add('view-enter');
+            var clearViewTransition = function() {
+                viewElement.classList.remove('view-enter');
+            };
+            viewElement.addEventListener('animationend', clearViewTransition, { once: true });
+            setTimeout(clearViewTransition, 240);
+        } else {
+            view = 'messages';
+            this.currentView = view;
+            try {
+                localStorage.setItem('chichiCurrentView', view);
+            } catch (e) {}
+            var messagesView = document.getElementById('messagesView');
+            if (messagesView) messagesView.classList.add('active');
         }
 
         if (view === 'profile') {
@@ -9964,16 +10189,6 @@ loadMessages: function() {
             setTimeout(function() {
                 self.renderProfile();
             }, 50);
-        } else if (view === 'feed') {
-            var feedContainer = document.getElementById('feedContainer');
-            if (!this.postsListenerRef) {
-                this.loadPosts();
-            } else if (this.postsViewNeedsRender) {
-                this.postsViewNeedsRender = false;
-                if (!feedContainer || !feedContainer.innerHTML.trim()) this.renderFeed();
-                else this.loadHomeAdminOffers();
-            }
-            if (previousView !== 'feed') this.loadStories();
         } else if (view === 'messages') {
             this.loadMessages();
             this.clearUnreadBadge();
@@ -9984,11 +10199,15 @@ loadMessages: function() {
         }
 
         var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
-        if (view === 'feed' && navItems[0]) navItems[0].classList.add('active');
+        if (view === 'messages' && navItems[0]) navItems[0].classList.add('active');
         else if (view === 'explore' && navItems[1]) navItems[1].classList.add('active');
-        else if (view === 'messages' && navItems[2]) navItems[2].classList.add('active');
-        else if (view === 'earn' && navItems[3]) navItems[3].classList.add('active');
-        else if (view === 'profile' && navItems[4]) navItems[4].classList.add('active');
+        else if (view === 'profile' && navItems[2]) navItems[2].classList.add('active');
+        document.querySelectorAll('.guest-nav-link').forEach(function(link) {
+            var active = link.getAttribute('data-guest-view') === view;
+            link.classList.toggle('active', active);
+            if (active) link.setAttribute('aria-current', 'page');
+            else link.removeAttribute('aria-current');
+        });
 
     },
     showDeveloperInfo: function() {
@@ -10012,17 +10231,8 @@ loadMessages: function() {
     // ============================================
 
     switchFeedTab: function(tab) {
-        var self = this;
-        this.currentFeedTab = tab;
-        
-        // Update tab UI
-        document.querySelectorAll('.feed-tab').forEach(function(t) {
-            t.classList.remove('active');
-        });
-        document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
-        
-        // Re-render feed with the new filter
-        this.renderFeed();
+        // Feed/home views are intentionally disabled in the messaging-first app.
+        this.switchView('messages');
     },
 
     // ============================================
@@ -10036,10 +10246,10 @@ loadMessages: function() {
         }
 
         var currentView = this.getCurrentView();
-        var isOnHome = currentView === 'feed' || !currentView;
+        var isOnHome = currentView === 'messages' || !currentView;
 
         if (!isOnHome) {
-            this.switchView('feed');
+            this.switchView('messages');
             this.backPressCount = 0;
             return;
         }
@@ -10060,7 +10270,7 @@ loadMessages: function() {
             location.reload();
 
         } else if (this.backPressCount === 3) {
-            if (confirm('🚪 Exit CHICHI App?')) {
+            if (confirm(' Exit CHICHI App?')) {
                 if (navigator.app && navigator.app.exitApp) {
                     navigator.app.exitApp();
                 } else {
@@ -10080,14 +10290,13 @@ loadMessages: function() {
         for (var i = 0; i < views.length; i++) {
             if (views[i].classList.contains('active')) {
                 var viewId = views[i].id;
-                if (viewId === 'feedView') return 'feed';
                 if (viewId === 'exploreView') return 'explore';
                 if (viewId === 'messagesView') return 'messages';
                 if (viewId === 'profileView') return 'profile';
                 if (viewId === 'earnView') return 'earn';
             }
         }
-        return 'feed';
+        return 'messages';
     },
 
     // ============================================
@@ -10105,8 +10314,7 @@ loadMessages: function() {
             }, 500);
             return;
         }
-        this.loadStories();
-        console.log('📥 loadPosts() - attaching listener to /posts');
+        console.log(' loadPosts() - attaching listener to /posts');
 
         if (this.postsListenerRef) {
             this.postsListenerRef.off('value');
@@ -10125,7 +10333,7 @@ loadMessages: function() {
                 }
             });
             self.posts = p;
-            console.log('✅ posts loaded:', self.posts.length);
+            console.log(' posts loaded:', self.posts.length);
             self.postsLoading = false;
             var homeAnnouncementSignature = JSON.stringify(p.filter(function(post) {
                 return post.source === 'CHICHI Admin Offer' || post.source === 'CHICHI Admin Update' || post.posterType === 'offer' || post.posterType === 'update';
@@ -10149,7 +10357,7 @@ loadMessages: function() {
                 self.postsViewNeedsRender = true;
             }
         }, function(err) {
-            console.error('❌ Error loading posts:', err.message);
+            console.error(' Error loading posts:', err.message);
             self.posts = [];
             self.postsLoading = false;
             var currentFeed = document.getElementById('feedContainer');
@@ -10163,41 +10371,9 @@ loadMessages: function() {
     // ============================================
 
     renderFeed: function() {
-        var feedContainer = document.getElementById('feedContainer');
-        if (!feedContainer) return;
-
-        // Keep feed controls visible so guests can see the Post entry point.
-        var feedTabsContainer = document.getElementById('feedTabsContainer');
-        if (feedTabsContainer) {
-            if (this.isGuest) {
-                this.currentFeedTab = 'forYou'; // Always show all posts for guests
-            }
-            feedTabsContainer.style.display = 'flex';
-        }
-
-        if (!this.posts) this.posts = [];
-
-        // Home is now the storefront; community chat remains available in Inbox.
-        var userName = this.profile && this.profile.name ? this.profile.name.split(' ')[0] : 'there';
-        var isUpdatesView = this.currentFeedTab === 'following';
-        var updatesCard = '<div class="post home-updates-summary" style="margin-top:12px;display:' + (isUpdatesView ? 'block' : 'none') + ';">' +
-            '<div class="post-header"><div><div class="post-name">' + userName + ' · ' + ((this.profile && this.profile.accessProfile) || 'Assigned profile') + '</div><div class="post-time">Netflix access countdown</div></div><span class="verified-tick" title="Verified CHICHI update">✓</span></div>' +
-            '<div class="updates-fintech-metric"><span class="updates-metric-label">TIME REMAINING</span><div id="homeAccessExpiryCountdown" class="updates-metric-value">' + (this.profile && Number(this.profile.accessExpiry) > 0 ? 'Checking...' : 'No personal subscription') + '</div><span class="updates-metric-note">Your private membership</span></div><div id="homePublicSubscriptions"></div></div>';
-        feedContainer.innerHTML = updatesCard + '<div id="homeOffersHero" class="post" style="margin-top:12px;display:' + (isUpdatesView ? 'none' : 'block') + ';">' +
-            '<div class="post-header"><div class="post-user"><div class="post-avatar chichi-offer-avatar"><img src="icon-192.png" alt="CHICHI logo"></div><div><div class="post-name"><span id="homeOfferAccountName">CHICHI Offers</span> <span class="verified-tick" title="Verified CHICHI offer">✓</span></div><div class="post-time" id="homeOfferAccountSubtitle">Available now</div></div></div><span id="homeOfferVerifiedLabel" class="home-offer-verified">VERIFIED</span></div>' +
-            '<div class="home-offer-copy"><div id="homeOfferCloudsBackground" class="home-offer-clouds-background" aria-hidden="true"></div><div id="homeOfferEyebrow" class="home-offer-eyebrow">NETFLIX · PREMIUM 4K + HDR</div><div id="homeOfferTitle" class="home-offer-title">Premium4K + HDR</div><div id="homeOfferDescription" class="home-offer-description">KES 200 offer</div><div class="home-offer-standard-price"><del>KES 1,100</del> / month standard</div><button id="homeOfferButtonLabel" type="button" onclick="app.askAboutPlans()" class="home-offer-cta">Get access</button></div>' +
-            '<div class="home-offer-tiles">' +
-            '<div class="home-offer-tile"><img id="homeOfferTile1Image" src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=500&q=80" alt="Movie nights"><span id="homeOfferTile1Label">Movie nights</span></div>' +
-            '<div class="home-offer-tile"><img id="homeOfferTile2Image" src="https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=500&q=80" alt="Series picks"><span id="homeOfferTile2Label">Series picks</span></div>' +
-            '<div class="home-offer-tile"><img id="homeOfferTile3Image" src="https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?auto=format&fit=crop&w=500&q=80" alt="Family time"><span id="homeOfferTile3Label">Family time</span></div>' +
-            '</div>' +
-            '<div class="home-offer-benefits"><div><strong id="homeOfferBenefit1Title">Fast</strong><span id="homeOfferBenefit1Detail">Up Time</span></div><div><strong id="homeOfferBenefit2Title">Fair</strong><span id="homeOfferBenefit2Detail">Rates</span></div><div><strong id="homeOfferBenefit3Title">Live</strong><span id="homeOfferBenefit3Detail">Support 24/7</span></div></div></div>' +
-            '<div id="homeOfferTrailers" class="post home-trailers-post"></div>' +
-            '<div id="homeAdminOffers"></div>';
-        this.loadHomeAdminOffers();
-        this.loadHomeOfferSettings();
-        this.updateHomeAccessCountdown();
-        this.loadPublicSubscriptions();
+        // Home/feed has been removed from the CHICHI experience; keep the app focused on messaging.
+        this.currentView = 'messages';
+        this.switchView('messages');
         return;
 
         var html = '';
@@ -10216,9 +10392,9 @@ loadMessages: function() {
             
             if (filteredPosts.length === 0) {
                 if (this.isGuest) {
-                    html = '<div style="text-align:center;color:#6b7280;padding:40px 16px;">\n                    <div style="font-size:36px;margin-bottom:8px;">🙋</div>\n                    <div style="font-weight:700;margin-bottom:6px;">Sign in to view the full Feed</div>\n                    <div style="color:#9ca3af;margin-bottom:12px;">Create an account to follow people and see personalized posts.</div>\n                    <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;">🔐 Sign In / Sign Up</button>\n                </div>';
+                    html = '<div style="text-align:center;color:#6b7280;padding:40px 16px;">\n                    <div style="font-size:36px;margin-bottom:8px;"></div>\n                    <div style="font-weight:700;margin-bottom:6px;">Sign in to view the full Feed</div>\n                    <div style="color:#9ca3af;margin-bottom:12px;">Create an account to follow people and see personalized posts.</div>\n                    <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;"> Sign In / Sign Up</button>\n                </div>';
                 } else if (this.currentFeedTab === 'following') {
-                    html = '<div style="text-align:center;color:#6b7280;padding:40px 16px;"><div style="font-size:36px;margin-bottom:8px;">👥</div><div style="font-weight:700;margin-bottom:6px;">No posts yet</div><div style="color:#9ca3af;margin-bottom:12px;">Posts from people you follow will appear here.</div></div>';
+                    html = '<div style="text-align:center;color:#6b7280;padding:40px 16px;"><div style="font-size:36px;margin-bottom:8px;"></div><div style="font-weight:700;margin-bottom:6px;">No posts yet</div><div style="color:#9ca3af;margin-bottom:12px;">Posts from people you follow will appear here.</div></div>';
                 } else {
                     html = '<div style="text-align:center;color:#6b7280;padding:40px 16px;">No posts yet. Start creating!</div>';
                 }
@@ -10339,7 +10515,7 @@ loadMessages: function() {
             }
             if (!offers.length) {
                 var emptyMarkup = isUpdatesView
-                    ? '<section class="home-announcements"><div class="home-announcements-heading"><span>CHICHI announcements</span><small>News and service notices</small></div><div class="home-empty-updates"><span class="home-empty-updates-icon" aria-hidden="true">✓</span><strong>You’re all caught up</strong><span>There are no new announcements right now. Membership countdowns above are status details, not updates.</span></div></section>'
+                    ? '<section class="home-announcements"><div class="home-announcements-heading"><span>CHICHI announcements</span><small>News and service notices</small></div><div class="home-empty-updates"><span class="home-empty-updates-icon" aria-hidden="true"></span><strong>You’re all caught up</strong><span>There are no new announcements right now. Membership countdowns above are status details, not updates.</span></div></section>'
                     : '<div class="home-empty-updates"><strong>No offers available</strong><span>Check back soon for new offers.</span></div>';
                 if (container.dataset.homeMarkup !== emptyMarkup) {
                     container.innerHTML = emptyMarkup;
@@ -10353,7 +10529,7 @@ loadMessages: function() {
                 var parts = String(offer.caption || '').split('\n\n');
                 var isUpdate = offer.source === 'CHICHI Admin Update' || offer.posterType === 'update';
                 var image = offer.photoUrl ? '<div class="home-offer-image-wrap"><img src="' + offer.photoUrl + '" alt="Offer poster" class="home-offer-image"></div>' : '';
-                return '<article class="post chichi-offer-post" style="margin-bottom:10px;"><div class="post-header"><div class="post-user"><div class="post-avatar chichi-offer-avatar"><img src="icon-192.png" alt="CHICHI logo"></div><div><div class="post-name">CHICHI ' + (isUpdate ? 'Updates' : 'Offers') + ' <span class="verified-tick" title="Verified CHICHI poster">✓</span></div><div class="post-time">' + (offer.createdAt || 'Available now') + '</div></div></div><span style="font-size:10px;color:#0f766e;font-weight:800;">VERIFIED</span></div>' + image + '<div class="post-caption"><strong>' + (parts[0] || (isUpdate ? 'New update' : 'New offer')) + '</strong>' + (parts[1] ? '<br>' + parts[1] : '') + '</div><div style="padding:0 12px 12px;"><button type="button" onclick="app.' + (isUpdate ? 'switchView(\'messages\')' : 'askAboutPlans()') + '" style="padding:9px 13px;border:1px solid #dbe8e3;border-radius:8px;background:#f8fbfa;color:#0f766e;font:inherit;font-size:12px;font-weight:700;cursor:pointer;">' + (isUpdate ? 'Message CHICHI' : 'Ask about this offer') + '</button></div></article>';
+                return '<article class="post chichi-offer-post" style="margin-bottom:10px;"><div class="post-header"><div class="post-user"><div class="post-avatar chichi-offer-avatar"><img src="icon-192.png" alt="CHICHI logo"></div><div><div class="post-name">CHICHI ' + (isUpdate ? 'Updates' : 'Offers') + ' <span class="verified-tick" title="Verified CHICHI poster"></span></div><div class="post-time">' + (offer.createdAt || 'Available now') + '</div></div></div><span style="font-size:10px;color:#0f766e;font-weight:800;">VERIFIED</span></div>' + image + '<div class="post-caption"><strong>' + (parts[0] || (isUpdate ? 'New update' : 'New offer')) + '</strong>' + (parts[1] ? '<br>' + parts[1] : '') + '</div><div style="padding:0 12px 12px;"><button type="button" onclick="app.' + (isUpdate ? 'switchView(\'messages\')' : 'askAboutPlans()') + '" style="padding:9px 13px;border:1px solid #dbe8e3;border-radius:8px;background:#f8fbfa;color:#0f766e;font:inherit;font-size:12px;font-weight:700;cursor:pointer;">' + (isUpdate ? 'Message CHICHI' : 'Ask about this offer') + '</button></div></article>';
             }).join('') + '</section>';
             if (container.dataset.homeMarkup !== offersMarkup) {
                 container.innerHTML = offersMarkup;
@@ -10459,7 +10635,7 @@ loadMessages: function() {
         } else {
             var text = shareText + '\n' + shareUrl;
             navigator.clipboard.writeText(text).then(function() {
-                this.toast('Post link copied to clipboard! 📋', 'success');
+                this.toast('Post link copied to clipboard! ', 'success');
                 this.logUserActivity('share_post', 'Shared post: ' + id);
             }.bind(this)).catch(function(err) {
                 this.toast('Share link: ' + shareUrl, 'info');
@@ -10478,8 +10654,8 @@ loadMessages: function() {
 
         var menu = document.createElement('div');
         menu.className = 'post-options-menu';
-        menu.innerHTML = '<button type="button" onclick="app.editPostCaption(\'' + id + '\'); this.closest(\'.post-options-menu\').remove();">✏️ Edit caption</button>' +
-            '<button type="button" class="danger" onclick="app.deletePost(\'' + id + '\'); this.closest(\'.post-options-menu\').remove();">🗑️ Delete post</button>';
+        menu.innerHTML = '<button type="button" onclick="app.editPostCaption(\'' + id + '\'); this.closest(\'.post-options-menu\').remove();"> Edit caption</button>' +
+            '<button type="button" class="danger" onclick="app.deletePost(\'' + id + '\'); this.closest(\'.post-options-menu\').remove();"> Delete post</button>';
         document.body.appendChild(menu);
 
         var rect = event.currentTarget.getBoundingClientRect();
@@ -10498,7 +10674,7 @@ loadMessages: function() {
         var self = this;
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
-        modal.innerHTML = '<div class="modal post-caption-editor"><div class="modal-close"><button type="button" aria-label="Close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2>Edit caption</h2><textarea id="postCaptionEditor" maxlength="1000" placeholder="Write a caption..."></textarea><div class="post-caption-editor-actions"><button type="button" class="post-caption-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button><button type="button" class="post-caption-save" onclick="app.savePostCaption(\'' + id + '\')">Save</button></div></div>';
+        modal.innerHTML = '<div class="modal post-caption-editor"><div class="modal-close"><button type="button" aria-label="Close" onclick="this.closest(\'.modal-overlay\').remove()"></button></div><h2>Edit caption</h2><textarea id="postCaptionEditor" maxlength="1000" placeholder="Write a caption..."></textarea><div class="post-caption-editor-actions"><button type="button" class="post-caption-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button><button type="button" class="post-caption-save" onclick="app.savePostCaption(\'' + id + '\')">Save</button></div></div>';
         document.body.appendChild(modal);
         modal.querySelector('#postCaptionEditor').value = post.caption || '';
         modal.querySelector('#postCaptionEditor').focus();
@@ -10562,11 +10738,11 @@ loadMessages: function() {
                 });
             }
 
-            html += '<div style="border-top:1px solid var(--border);padding-top:12px;display:flex;gap:8px;"><input type="text" id="commentInput" placeholder="Add comment..." style="flex:1;border:1px solid var(--border);border-radius:20px;padding:10px 12px;"><button onclick="app.submitComment(\'' + id + '\')" style="background:' + (userCommented ? '#d1d5db' : 'var(--primary)') + ';color:' + (userCommented ? 'var(--text-light)' : 'white') + ';border:none;border-radius:20px;padding:10px 16px;cursor:pointer;font-weight:600;' + (userCommented ? 'cursor:not-allowed;' : '') + '">' + (userCommented ? '✓ Earned' : 'Post') + '</button></div>';
+            html += '<div style="border-top:1px solid var(--border);padding-top:12px;display:flex;gap:8px;"><input type="text" id="commentInput" placeholder="Add comment..." style="flex:1;border:1px solid var(--border);border-radius:20px;padding:10px 12px;"><button onclick="app.submitComment(\'' + id + '\')" style="background:' + (userCommented ? '#d1d5db' : 'var(--primary)') + ';color:' + (userCommented ? 'var(--text-light)' : 'white') + ';border:none;border-radius:20px;padding:10px 16px;cursor:pointer;font-weight:600;' + (userCommented ? 'cursor:not-allowed;' : '') + '">' + (userCommented ? ' Earned' : 'Post') + '</button></div>';
 
             var modal = document.createElement('div');
             modal.className = 'modal-overlay active';
-            modal.innerHTML = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2 style="font-weight:700;margin-bottom:16px;">Comments</h2><div style="max-height:400px;overflow-y:auto;margin-bottom:16px;">' + html + '</div></div>';
+            modal.innerHTML = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()"></button></div><h2 style="font-weight:700;margin-bottom:16px;">Comments</h2><div style="max-height:400px;overflow-y:auto;margin-bottom:16px;">' + html + '</div></div>';
             document.body.appendChild(modal);
         }.bind(this));
     },
@@ -10641,11 +10817,11 @@ loadMessages: function() {
                     var unreadCount = this.getUnreadCountForUser(uid);
                     var msgBadge = unreadCount > 0 ? '<span style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;background:#ef4444;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;border:2px solid white;box-shadow:0 2px 6px rgba(239,68,68,0.4);">' + unreadCount + '</span>' : '';
 
-                    var html = '<div class="profile-header"><div class="profile-top"><div class="profile-avatar-large" style="background-image:url(' + (user.profilePhoto || '') + ');">' + (!user.profilePhoto ? user.name.charAt(0).toUpperCase() : '') + '</div><div class="profile-info"><div class="profile-name ' + supportClass + '" style="color:#ffffff !important;">' + displayName + (isVerified ? ' <span class="verified-badge" title="Phone added and admin followed">✓</span>' : '') + '</div><div class="profile-email" style="color:rgba(255,255,255,.8) !important;">@' + (user.username || 'user') + '<br>' + user.email + '</div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-value">-</div><div class="profile-stat-label">Posts</div></div><div class="profile-stat"><div class="profile-stat-value">' + (user.followers || 0) + '</div><div class="profile-stat-label">Followers</div></div></div></div></div><div style="display:flex;gap:8px;margin-top:12px;"><button class="follow-btn" onclick="app.toggleFollow(\'' + uid + '\', \'' + user.name + '\')" style="background:' + (isFollowing ? '#ff4444' : 'var(--primary)') + ';color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;">' + (isFollowing ? '✕ Unfollow' : '✓ Follow') + '</button><button class="follow-btn" onclick="app.openChatFromSearch(\'' + uid + '\', \'' + user.name + '\')" style="background:#2E5BFF;color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;position:relative;">💬 Message ' + msgBadge + '</button></div></div>';
+                    var html = '<div class="profile-header"><div class="profile-top"><div class="profile-avatar-large" style="background-image:url(' + (user.profilePhoto || '') + ');">' + (!user.profilePhoto ? user.name.charAt(0).toUpperCase() : '') + '</div><div class="profile-info"><div class="profile-name ' + supportClass + '" style="color:#ffffff !important;">' + displayName + (isVerified ? ' <span class="verified-badge" title="Phone added and admin followed"></span>' : '') + '</div><div class="profile-email" style="color:rgba(255,255,255,.8) !important;">@' + (user.username || 'user') + '<br>' + user.email + '</div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-value">' + (user.followers || 0) + '</div><div class="profile-stat-label">Followers</div></div></div></div></div><div style="display:flex;gap:8px;margin-top:12px;"><button class="follow-btn" onclick="app.toggleFollow(\'' + uid + '\', \'' + user.name + '\')" style="background:' + (isFollowing ? '#ff4444' : 'var(--primary)') + ';color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;">' + (isFollowing ? ' Unfollow' : ' Follow') + '</button><button class="follow-btn" onclick="app.openChatFromSearch(\'' + uid + '\', \'' + user.name + '\')" style="background:#2E5BFF;color:white;border:none;padding:10px 20px;border-radius:20px;cursor:pointer;font-weight:600;transition:0.3s;flex:1;position:relative;"> Message ' + msgBadge + '</button></div></div>';
 
                     var modal = document.createElement('div');
                     modal.className = 'modal-overlay active';
-                    modal.innerHTML = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>' + html + '</div>';
+                    modal.innerHTML = '<div class="modal"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()"></button></div>' + html + '</div>';
                     document.body.appendChild(modal);
                 }
             }.bind(this));
@@ -10659,7 +10835,7 @@ loadMessages: function() {
 
     toggleFollow: function(uid, name) {
         if (!this.user || this.isGuest) {
-            this.toast('🔐 Sign up to follow users', 'info');
+            this.toast(' Sign up to follow users', 'info');
             this.showLoginPage();
             return;
         }
@@ -10733,7 +10909,7 @@ loadMessages: function() {
     deleteAccountPermanently: function() {
         var self = this;
 
-        if (!confirm('⚠️ WARNING: This will PERMANENTLY DELETE your account and all your data!\n\nAll posts, messages, and profile info will be removed.\nThis CANNOT be undone.\n\nAre you absolutely sure?')) {
+        if (!confirm(' WARNING: This will PERMANENTLY DELETE your account and all your data!\n\nAll posts, messages, and profile info will be removed.\nThis CANNOT be undone.\n\nAre you absolutely sure?')) {
             return;
         }
 
@@ -10801,7 +10977,7 @@ loadMessages: function() {
 
     requireAuth: function(action) {
         if (this.isGuest || !this.user) {
-            this.toast('🔐 Sign up to ' + (action || 'access this'), 'info');
+            this.toast(' Sign up to ' + (action || 'access this'), 'info');
             // Show friendly guest modal instead of forcing the login page
             this.showGuestModal(action || 'access this');
             return false;
@@ -10826,7 +11002,7 @@ loadMessages: function() {
         var userTypingRef = db.ref('.info/connected');
         userTypingRef.on('value', function(snapshot) {
             if (snapshot.val() === false) {
-                console.log('⚠️ User going offline');
+                console.log(' User going offline');
             }
         });
     },
@@ -10869,8 +11045,6 @@ loadMessages: function() {
 
     loadExplore: function() {
         var self = this;
-        var storiesSection = document.querySelector('.explore-stories-section');
-        if (storiesSection) storiesSection.style.display = this.isGuest ? 'none' : 'block';
 
         if (!this.users || Object.keys(this.users).length === 0) {
             db.ref('users').once('value', function(snapshot) {
@@ -10878,13 +11052,30 @@ loadMessages: function() {
             });
         }
 
+        this.renderGuestExploreWelcome();
         setTimeout(function() {
-            self.renderTrendingHashtagsExplore();
-            self.renderTrendingPosts();
-            // Load people to follow
             if (typeof app.loadExplorePeople === 'function') app.loadExplorePeople();
-            self.calculateTrendingHashtags();
         }, 100);
+    },
+
+    renderGuestExploreWelcome: function() {
+        var container = document.getElementById('exploreContainer');
+        if (!container) return;
+        var banner = document.getElementById('guestExploreWelcome');
+        if (!this.isGuest || this.user) {
+            if (banner) banner.remove();
+            return;
+        }
+        if (!banner) {
+            banner = document.createElement('section');
+            banner.id = 'guestExploreWelcome';
+            banner.className = 'guest-explore-welcome';
+            banner.innerHTML = '<div class="guest-explore-welcome-copy"><h2>Find your people.</h2><button type="button">Join CHICHI</button></div><div class="guest-explore-welcome-art"><img src="Assets/004.jpg" alt="Friends spending time together"><span class="guest-explore-image-tag">CHICHI COMMUNITY</span></div>';
+            banner.querySelector('button').addEventListener('click', function() { app.showLoginPage('signup'); });
+            var heading = container.querySelector('.explore-page-heading');
+            if (heading && heading.nextSibling) container.insertBefore(banner, heading.nextSibling);
+            else container.prepend(banner);
+        }
     },
 
     // ============================================
@@ -10899,7 +11090,7 @@ loadMessages: function() {
             this.calculateTrendingHashtags();
             if (this.trendingHashtags.length === 0) {
                 if (this.isGuest) {
-                    container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">\n                        <div style="font-size:28px;margin-bottom:6px;">🔥</div>\n                        <div style="font-weight:700;margin-bottom:6px;">Sign in to see trending hashtags</div>\n                        <div style="color:#9ca3af;margin-bottom:10px;">Sign up or log in to see what people are talking about.</div>\n                        <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;">🔐 Sign In / Sign Up</button>\n                    </div>';
+                    container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">\n                        <div style="font-size:28px;margin-bottom:6px;"></div>\n                        <div style="font-weight:700;margin-bottom:6px;">Sign in to see trending hashtags</div>\n                        <div style="color:#9ca3af;margin-bottom:10px;">Sign up or log in to see what people are talking about.</div>\n                        <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;"> Sign In / Sign Up</button>\n                    </div>';
                     return;
                 }
                 container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">No trending hashtags yet</div>';
@@ -10939,7 +11130,7 @@ loadMessages: function() {
 
         if (trendingPosts.length === 0) {
             if (this.isGuest) {
-                container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:40px 16px;">\n                    <div style="font-size:28px;margin-bottom:8px;">📱</div>\n                    <div style="font-weight:700;margin-bottom:6px;">Sign in to explore popular posts</div>\n                    <div style="color:#9ca3af;margin-bottom:12px;">Create an account to like, comment and follow creators.</div>\n                    <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;">🔐 Sign In / Sign Up</button>\n                </div>';
+                container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:40px 16px;">\n                    <div style="font-size:28px;margin-bottom:8px;"></div>\n                    <div style="font-weight:700;margin-bottom:6px;">Sign in to explore popular posts</div>\n                    <div style="color:#9ca3af;margin-bottom:12px;">Create an account to like, comment and follow creators.</div>\n                    <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;"> Sign In / Sign Up</button>\n                </div>';
                 return;
             }
             container.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 60px 20px; grid-column: 1/-1;">No posts yet. Create one!</div>';
@@ -10955,8 +11146,8 @@ loadMessages: function() {
                 <div style="position: relative; aspect-ratio: 1/1; background: #f0f0f0; cursor: pointer; overflow: hidden;" onclick="app.viewPostDetail('${post.id}')">
                     <img src="${post.photoUrl}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
                     <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0); display: flex; align-items: center; justify-content: center; gap: 16px; transition: all 0.3s ease; opacity: 0;" onmouseover="this.style.background='rgba(0,0,0,0.6)'; this.style.opacity='1';" onmouseout="this.style.background='rgba(0,0,0,0)'; this.style.opacity='0';">
-                        <div style="color: white; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;">❤️ ${likes}</div>
-                        <div style="color: white; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;">💬 ${comments}</div>
+                        <div style="color: white; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;"> ${likes}</div>
+                        <div style="color: white; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;"> ${comments}</div>
                     </div>
                 </div>
             `;
@@ -10971,7 +11162,7 @@ loadMessages: function() {
 
     followUser: function(uid, name) {
         if (!this.user || this.isGuest) {
-            this.toast('🔐 Sign up to follow users', 'info');
+            this.toast(' Sign up to follow users', 'info');
             this.showLoginPage();
             return;
         }
@@ -10982,10 +11173,10 @@ loadMessages: function() {
 
         if (this.following[uid]) {
             delete this.following[uid];
-            this.toast('✓ Unfollowed ' + name, 'info');
+            this.toast(' Unfollowed ' + name, 'info');
         } else {
             this.following[uid] = true;
-            this.toast('✓ Followed ' + name, 'success');
+            this.toast(' Followed ' + name, 'success');
         }
 
         db.ref('users/' + this.user.uid + '/following').set(this.following);
@@ -11017,7 +11208,7 @@ loadMessages: function() {
 
         var self = this;
         var html = '';
-        html += '<div class="story-item" onclick="app.showCreateStoryModal()"><div class="create-story-avatar">➕</div><div class="create-story-name">My Story</div></div>';
+        html += '<div class="story-item" onclick="app.showCreateStoryModal()"><div class="create-story-avatar"></div><div class="create-story-name">My Story</div></div>';
 
         db.ref('stories').once('value', function(snapshot) {
             var allStories = [];
@@ -11075,7 +11266,7 @@ loadMessages: function() {
         var existing = document.getElementById('storyModalOverlay');
         if (existing) existing.remove();
 
-        var html = '<div class="story-modal-overlay" id="storyModalOverlay"><div class="story-modal"><div class="story-modal-header"><h2>📖 Create Story</h2><button class="story-modal-close" onclick="document.getElementById(\'storyModalOverlay\').remove()">✕</button></div><div class="story-modal-content"><div class="story-form-group"><label class="story-form-label">Story Images (Select multiple) *</label><input type="file" id="storyImageInput" accept="image/*" multiple class="story-file-input"><div style="font-size:12px;color:#6b7280;margin-top:4px;">You can select multiple images at once</div></div><div class="story-form-group"><label class="story-form-label">🎵 Music Name</label><input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" class="story-form-input"></div><div class="story-form-group"><label class="story-form-label">Caption</label><textarea id="storyCaptionInput" placeholder="Add a caption..." class="story-form-textarea"></textarea></div></div><div class="story-modal-footer"><button class="story-btn-cancel" onclick="document.getElementById(\'storyModalOverlay\').remove()">Cancel</button><button class="story-btn-upload" id="storyUploadBtn" onclick="app.uploadStory()"><span class="story-btn-text">📤 Upload Stories</span><div class="story-spinner"></div></button></div></div></div>';
+        var html = '<div class="story-modal-overlay" id="storyModalOverlay"><div class="story-modal"><div class="story-modal-header"><h2> Create Story</h2><button class="story-modal-close" onclick="document.getElementById(\'storyModalOverlay\').remove()"></button></div><div class="story-modal-content"><div class="story-form-group"><label class="story-form-label">Story Images (Select multiple) *</label><input type="file" id="storyImageInput" accept="image/*" multiple class="story-file-input"><div style="font-size:12px;color:#6b7280;margin-top:4px;">You can select multiple images at once</div></div><div class="story-form-group"><label class="story-form-label"> Music Name</label><input type="text" id="storyMusicNameInput" placeholder="e.g., Jazz Background" class="story-form-input"></div><div class="story-form-group"><label class="story-form-label">Caption</label><textarea id="storyCaptionInput" placeholder="Add a caption..." class="story-form-textarea"></textarea></div></div><div class="story-modal-footer"><button class="story-btn-cancel" onclick="document.getElementById(\'storyModalOverlay\').remove()">Cancel</button><button class="story-btn-upload" id="storyUploadBtn" onclick="app.uploadStory()"><span class="story-btn-text"> Upload Stories</span><div class="story-spinner"></div></button></div></div></div>';
         document.body.insertAdjacentHTML('beforeend', html);
         document.getElementById('storyModalOverlay').classList.add('active');
         document.getElementById('storyModalOverlay').addEventListener('click', function(e) {
@@ -11095,16 +11286,16 @@ loadMessages: function() {
         var uploadBtn = document.getElementById('storyUploadBtn');
 
         if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
-            this.toast('⚠️ Please select at least one image', 'error');
+            this.toast(' Please select at least one image', 'error');
             return;
         }
         if (!this.user || !this.user.uid) {
-            this.toast('⚠️ Please login first', 'error');
+            this.toast(' Please login first', 'error');
             return;
         }
 
         if (uploadBtn) uploadBtn.classList.add('loading');
-        this.toast('📤 Uploading stories...', 'info');
+        this.toast(' Uploading stories...', 'info');
 
         var files = imageInput.files;
         var uploadPromises = [];
@@ -11149,7 +11340,7 @@ loadMessages: function() {
             });
             return Promise.all(savePromises);
         }).then(function() {
-            self.toast('✅ Stories uploaded successfully!', 'success');
+            self.toast(' Stories uploaded successfully!', 'success');
             self.logUserActivity('story_upload', 'Uploaded stories');
             setTimeout(function() {
                 var modal = document.getElementById('storyModalOverlay');
@@ -11158,7 +11349,7 @@ loadMessages: function() {
             }, 500);
         }).catch(function(err) {
             console.error('Upload error:', err);
-            self.toast('❌ Upload failed: ' + err.message, 'error');
+            self.toast(' Upload failed: ' + err.message, 'error');
             if (uploadBtn) uploadBtn.classList.remove('loading');
         });
     },
@@ -11182,7 +11373,7 @@ loadMessages: function() {
             var viewer = document.createElement('div');
             viewer.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;animation:smoothFadeIn 0.3s ease;';
 
-            var deleteBtn = isOwnStory ? '<button onclick="event.stopPropagation(); app.deleteStory(\'' + storyId + '\', \'' + userId + '\')" style="position:absolute;top:70px;right:16px;z-index:10;background:rgba(239,68,68,0.9);color:white;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>' : '';
+            var deleteBtn = isOwnStory ? '<button aria-label="Delete story" onclick="event.stopPropagation(); app.deleteStory(\'' + storyId + '\', \'' + userId + '\')" style="position:absolute;top:70px;right:16px;z-index:10;background:rgba(239,68,68,0.9);color:white;border:none;border-radius:18px;min-width:58px;height:36px;padding:0 8px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;">Delete</button>' : '';
 
             viewer.innerHTML = '<div style="position:absolute;top:16px;left:16px;right:16px;z-index:10;display:flex;gap:4px;"><div style="flex:1;height:3px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden;"><div id="storyProgressBar" style="height:100%;width:0%;background:white;border-radius:2px;transition:width 0.1s linear;"></div></div></div><div style="position:absolute;top:24px;left:16px;right:16px;z-index:10;display:flex;align-items:center;gap:12px;"><div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;overflow:hidden;border:2px solid rgba(255,255,255,0.3);">' + (story.userPhoto ? '<img src="' + story.userPhoto + '" style="width:100%;height:100%;object-fit:cover;">' : (story.userName || 'U').charAt(0).toUpperCase()) + '</div><div><div style="color:white;font-weight:600;font-size:14px;">' + (story.userName || 'User') + '</div><div style="color:rgba(255,255,255,0.6);font-size:11px;">' + (story.musicName || 'No music') + '</div></div></div>' + deleteBtn + '<div style="flex:1;display:flex;align-items:center;justify-content:center;padding:20px;width:100%;"><img src="' + story.image + '" style="max-width:100%;max-height:70vh;border-radius:12px;object-fit:contain;box-shadow:0 8px 32px rgba(0,0,0,0.5);"></div>' + (story.caption ? '<div style="position:absolute;bottom:80px;left:16px;right:16px;z-index:10;color:white;text-align:center;font-size:14px;background:rgba(0,0,0,0.4);padding:12px 16px;border-radius:12px;">' + story.caption + '</div>' : '') + '<div style="position:absolute;bottom:30px;left:0;right:0;z-index:10;text-align:center;color:rgba(255,255,255,0.4);font-size:12px;">Tap to close</div>';
 
@@ -11198,7 +11389,7 @@ loadMessages: function() {
                 if (progress >= 100) {
                     clearInterval(progressInterval);
                     viewer.remove();
-                    self.toast('Story viewed 📖', 'info');
+                    self.toast('Story viewed ', 'info');
                 }
             }, 50);
 
@@ -11214,10 +11405,10 @@ loadMessages: function() {
         if (!confirm('Delete this story?')) return;
         var self = this;
         db.ref('stories/' + userId + '/' + storyId).remove().then(function() {
-            self.toast('✅ Story deleted', 'success');
+            self.toast(' Story deleted', 'success');
             self.loadStories();
         }).catch(function(err) {
-            self.toast('❌ Error deleting story: ' + err.message, 'error');
+            self.toast(' Error deleting story: ' + err.message, 'error');
         });
     },
 
@@ -11227,14 +11418,14 @@ loadMessages: function() {
 
     showMandatoryHashtagSelection: function() {
         var hashtagCategories = {
-            '🎬 Entertainment': ['Movies', 'Music', 'Comedy', 'Gaming', 'Animation'],
-            '🎨 Creative': ['Photography', 'Art', 'Design', 'Fashion', 'Illustration'],
-            '⚽ Sports': ['Football', 'Basketball', 'Tennis', 'Fitness', 'Yoga'],
-            '🍔 Lifestyle': ['Food', 'Travel', 'Health', 'Beauty', 'DIY'],
-            '💻 Tech': ['Programming', 'AI', 'Web Dev', 'Apps', 'Gadgets'],
-            '📚 Education': ['Learning', 'Science', 'History', 'Language', 'Books'],
-            '💰 Business': ['Entrepreneurship', 'Marketing', 'Investing', 'Startups', 'Finance'],
-            '🌍 Social': ['Environment', 'Charity', 'Community', 'Activism', 'Culture']
+            ' Entertainment': ['Movies', 'Music', 'Comedy', 'Gaming', 'Animation'],
+            ' Creative': ['Photography', 'Art', 'Design', 'Fashion', 'Illustration'],
+            ' Sports': ['Football', 'Basketball', 'Tennis', 'Fitness', 'Yoga'],
+            ' Lifestyle': ['Food', 'Travel', 'Health', 'Beauty', 'DIY'],
+            ' Tech': ['Programming', 'AI', 'Web Dev', 'Apps', 'Gadgets'],
+            ' Education': ['Learning', 'Science', 'History', 'Language', 'Books'],
+            ' Business': ['Entrepreneurship', 'Marketing', 'Investing', 'Startups', 'Finance'],
+            ' Social': ['Environment', 'Charity', 'Community', 'Activism', 'Culture']
         };
 
         var htmlOptions = '';
@@ -11246,7 +11437,7 @@ loadMessages: function() {
             htmlOptions += '</div></div>';
         }
 
-        var modalHTML = '<div class="modal-overlay" id="mandatoryHashtagModal" style="display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:10001;backdrop-filter:blur(4px);"><div style="background:white;border-radius:24px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:smoothFadeIn 0.3s ease;"><div style="text-align:center;margin-bottom:16px;"><div style="font-size:36px;margin-bottom:4px;">🏷️</div><h2 style="margin-bottom:2px;font-weight:700;color:#1a202c;font-size:20px;">Choose Your Interests</h2><p style="color:#6b7280;font-size:13px;margin-bottom:4px;">Select at least <strong style="color:#0088cc;">3</strong> topics you care about</p><p style="color:#ef4444;font-size:11px;font-weight:600;min-height:18px;" id="hashtagError"></p></div><div style="margin-bottom:16px;max-height:50vh;overflow-y:auto;padding-right:4px;">' + htmlOptions + '</div><div style="display:flex;gap:10px;border-top:1px solid #e5e7eb;padding-top:14px;"><button onclick="app.saveMandatoryHashtags()" id="saveHashtagBtn" style="flex:1;padding:12px;background:linear-gradient(135deg,#0088cc,#006fa3);color:white;border:none;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;transition:0.3s;" onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'">✅ Save & Continue</button></div></div></div>';
+        var modalHTML = '<div class="modal-overlay" id="mandatoryHashtagModal" style="display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:10001;backdrop-filter:blur(4px);"><div style="background:white;border-radius:24px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:smoothFadeIn 0.3s ease;"><div style="text-align:center;margin-bottom:16px;"><div style="font-size:36px;margin-bottom:4px;"></div><h2 style="margin-bottom:2px;font-weight:700;color:#1a202c;font-size:20px;">Choose Your Interests</h2><p style="color:#6b7280;font-size:13px;margin-bottom:4px;">Select at least <strong style="color:#0088cc;">3</strong> topics you care about</p><p style="color:#ef4444;font-size:11px;font-weight:600;min-height:18px;" id="hashtagError"></p></div><div style="margin-bottom:16px;max-height:50vh;overflow-y:auto;padding-right:4px;">' + htmlOptions + '</div><div style="display:flex;gap:10px;border-top:1px solid #e5e7eb;padding-top:14px;"><button onclick="app.saveMandatoryHashtags()" id="saveHashtagBtn" style="flex:1;padding:12px;background:linear-gradient(135deg,#0088cc,#006fa3);color:white;border:none;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;transition:0.3s;" onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'"> Save & Continue</button></div></div></div>';
 
         var existing = document.getElementById('mandatoryHashtagModal');
         if (existing) existing.remove();
@@ -11260,12 +11451,12 @@ loadMessages: function() {
         var errorEl = document.getElementById('hashtagError');
 
         if (selected.length < 3) {
-            if (errorEl) errorEl.textContent = '⚠️ Please select at least 3 interests';
+            if (errorEl) errorEl.textContent = ' Please select at least 3 interests';
             this.toast('Select at least 3 interests', 'error');
             return;
         }
         if (selected.length > 5) {
-            if (errorEl) errorEl.textContent = '⚠️ Maximum 5 interests allowed';
+            if (errorEl) errorEl.textContent = ' Maximum 5 interests allowed';
             this.toast('Maximum 5 interests allowed', 'error');
             return;
         }
@@ -11279,12 +11470,12 @@ loadMessages: function() {
         }
 
         var btn = document.getElementById('saveHashtagBtn');
-        if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving...'; }
+        if (btn) { btn.disabled = true; btn.textContent = ' Saving...'; }
 
         db.ref('users/' + uid + '/hashtags').set(selected).then(function() {
             self.profile.interests = selected;
             self.profile.hashtags = selected;
-            self.toast('✅ Interests saved!', 'success');
+            self.toast(' Interests saved!', 'success');
             var modal = document.getElementById('mandatoryHashtagModal');
             if (modal) modal.remove();
             setTimeout(function() {
@@ -11292,8 +11483,8 @@ loadMessages: function() {
                 self.loadExplore();
             }, 500);
         }).catch(function(err) {
-            self.toast('❌ Error saving interests: ' + err.message, 'error');
-            if (btn) { btn.disabled = false; btn.textContent = '✅ Save & Continue'; }
+            self.toast(' Error saving interests: ' + err.message, 'error');
+            if (btn) { btn.disabled = false; btn.textContent = ' Save & Continue'; }
         });
     },
 
@@ -11432,8 +11623,8 @@ loadMessages: function() {
         modal.innerHTML = `
             <div style="background: white; border-radius: 20px; padding: 28px; max-width: 500px; width: 95%; animation: slideUp 0.3s ease; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); max-height: 80vh; overflow-y: auto;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                    <h2 style="font-size: 20px; font-weight: 700; color: #1e293b; margin: 0;">📋 Transaction History</h2>
-                    <button onclick="document.getElementById('transactionHistoryModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">✕</button>
+                    <h2 style="font-size: 20px; font-weight: 700; color: #1e293b; margin: 0;"> Transaction History</h2>
+                    <button onclick="document.getElementById('transactionHistoryModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;"></button>
                 </div>
 
                 <div id="transactionsList" style="max-height: 600px; overflow-y: auto;">
@@ -11463,7 +11654,7 @@ loadMessages: function() {
             } else {
                 transactions.forEach(function(tx) {
                     var isEarned = tx.type === 'earned';
-                    var icon = isEarned ? '📈' : '🛍️';
+                    var icon = isEarned ? '' : '';
                     var color = isEarned ? '#22c55e' : '#ef4444';
                     var sign = isEarned ? '+' : '-';
 
@@ -11529,12 +11720,12 @@ loadMessages: function() {
         modal.className = 'modal-overlay active';
         modal.style.display = 'flex';
         modal.style.zIndex = '9999';
-        modal.innerHTML = '<div class="modal modal-animate" style="max-width:380px;"><div class="modal-close"><button type="button" onclick="document.getElementById(\'chichiQuickActions\').remove()" style="background:none;border:0;color:#6b7280;font-size:22px;cursor:pointer;">✕</button></div><div style="font-size:12px;color:#0f766e;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">CHICHI QUICK ACTIONS</div><h2 style="margin:6px 0 4px;">What would you like to do?</h2><p style="margin:0 0 16px;color:#64748b;font-size:13px;">Choose an action or message someone directly.</p><div style="display:grid;gap:10px;"><button type="button" onclick="app.switchView(\'messages\');document.getElementById(\'chichiQuickActions\').remove();" style="padding:13px 14px;border:1px solid #dbe8e3;border-radius:10px;background:#f8fbfa;text-align:left;color:#0f766e;font:inherit;font-weight:700;cursor:pointer;">💬 Message someone<span style="display:block;color:#64748b;font-size:12px;font-weight:400;margin-top:3px;">Chat with the community or ask about an offer</span></button><button type="button" onclick="app.toast(\'Plan requests are coming soon. Message us to get started.\',\'info\');document.getElementById(\'chichiQuickActions\').remove();" style="padding:13px 14px;border:1px solid #dbe8e3;border-radius:10px;background:#f8fbfa;text-align:left;color:#0f766e;font:inherit;font-weight:700;cursor:pointer;">🎬 Ask about available plans<span style="display:block;color:#64748b;font-size:12px;font-weight:400;margin-top:3px;">See current rates and availability</span></button><button type="button" onclick="app.toast(\'Renewal support is available through Inbox.\',\'info\');app.switchView(\'messages\');document.getElementById(\'chichiQuickActions\').remove();" style="padding:13px 14px;border:1px solid #dbe8e3;border-radius:10px;background:#f8fbfa;text-align:left;color:#0f766e;font:inherit;font-weight:700;cursor:pointer;">🔄 Get renewal support<span style="display:block;color:#64748b;font-size:12px;font-weight:400;margin-top:3px;">Continue an existing conversation</span></button></div></div>';
+        modal.innerHTML = '<div class="modal modal-animate" style="max-width:380px;"><div class="modal-close"><button type="button" onclick="document.getElementById(\'chichiQuickActions\').remove()" style="background:none;border:0;color:#6b7280;font-size:22px;cursor:pointer;"></button></div><div style="font-size:12px;color:#0f766e;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">CHICHI QUICK ACTIONS</div><h2 style="margin:6px 0 4px;">What would you like to do?</h2><p style="margin:0 0 16px;color:#64748b;font-size:13px;">Choose an action or message someone directly.</p><div style="display:grid;gap:10px;"><button type="button" onclick="app.switchView(\'messages\');document.getElementById(\'chichiQuickActions\').remove();" style="padding:13px 14px;border:1px solid #dbe8e3;border-radius:10px;background:#f8fbfa;text-align:left;color:#0f766e;font:inherit;font-weight:700;cursor:pointer;"> Message someone<span style="display:block;color:#64748b;font-size:12px;font-weight:400;margin-top:3px;">Chat with the community or ask about an offer</span></button><button type="button" onclick="app.toast(\'Plan requests are coming soon. Message us to get started.\',\'info\');document.getElementById(\'chichiQuickActions\').remove();" style="padding:13px 14px;border:1px solid #dbe8e3;border-radius:10px;background:#f8fbfa;text-align:left;color:#0f766e;font:inherit;font-weight:700;cursor:pointer;"> Ask about available plans<span style="display:block;color:#64748b;font-size:12px;font-weight:400;margin-top:3px;">See current rates and availability</span></button><button type="button" onclick="app.toast(\'Renewal support is available through Inbox.\',\'info\');app.switchView(\'messages\');document.getElementById(\'chichiQuickActions\').remove();" style="padding:13px 14px;border:1px solid #dbe8e3;border-radius:10px;background:#f8fbfa;text-align:left;color:#0f766e;font:inherit;font-weight:700;cursor:pointer;"> Get renewal support<span style="display:block;color:#64748b;font-size:12px;font-weight:400;margin-top:3px;">Continue an existing conversation</span></button></div></div>';
         document.body.appendChild(modal);
         return;
 
         if (!this.user || this.isGuest) {
-            this.showGuestPostPrompt();
+            this.showLoginPage('signup');
             return;
         }
         var modal = document.getElementById('createModal');
@@ -11617,7 +11808,7 @@ loadMessages: function() {
                 if (shareText) shareText.style.display = 'inline';
                 if (sharePostBtn) sharePostBtn.disabled = false;
                 self.closeCreateModal();
-                self.switchView('feed');
+                self.switchView('messages');
             });
         }.bind(this)).catch(function(err) {
             this.toast('Upload failed: ' + err.message, 'error');
@@ -11681,17 +11872,27 @@ loadMessages: function() {
 
             self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
                 var m = snap.val();
-                if (self.currentChat && [self.user.uid, self.currentChat.uid].sort().join('_') === key && m && (m.text || m.image) && m.sender !== self.user.uid) {
+                if (self.currentChat && [self.user.uid, self.currentChat.uid].sort().join('_') === key && m && (m.text || m.image)) {
                     m.id = snap.key;
                     var currentMessages = self.chatMessages[key] || [];
-                    var alreadyVisible = currentMessages.some(function(item) { return item.id === m.id; });
-                    if (!alreadyVisible) {
+                    var existingMessage = currentMessages.find(function(item) { return item.id === m.id; });
+                    var shouldRender = false;
+                    if (existingMessage) {
+                        if (existingMessage.pending) {
+                            Object.keys(m).forEach(function(property) { existingMessage[property] = m[property]; });
+                            existingMessage.pending = false;
+                            shouldRender = true;
+                        }
+                    } else {
                         currentMessages.push(m);
+                        shouldRender = true;
+                    }
+                    if (shouldRender) {
                         currentMessages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
                         self.chatMessages[key] = currentMessages;
                         self.displayChatMessages(currentMessages, key);
                     }
-                    self.markAsRead(self.currentChat.uid);
+                    if (m.sender !== self.user.uid) self.markAsRead(self.currentChat.uid);
                 }
             });
             self.chatMessagesChangedListener = db.ref('chats/' + key + '/messages').on('child_changed', function(snap) {
@@ -11714,7 +11915,7 @@ loadMessages: function() {
                     var status = cachedMessage.read ? 'read' : (cachedMessage.delivered ? 'delivered' : 'sent');
                     readStatus.classList.remove('read', 'delivered', 'sent');
                     readStatus.classList.add(status);
-                    readStatus.textContent = cachedMessage.read || cachedMessage.delivered ? '✓✓' : '✓';
+                    readStatus.textContent = cachedMessage.read || cachedMessage.delivered ? '' : '';
                     readStatus.setAttribute('aria-label', status.charAt(0).toUpperCase() + status.slice(1));
                 }
             });
@@ -11733,7 +11934,7 @@ loadMessages: function() {
         if (!messages || messages.length === 0) {
             var chatMessagesView = document.getElementById('chatMessages');
             if (chatMessagesView) {
-                chatMessagesView.innerHTML = '<div style="text-align:center;color:#999;padding:40px 16px;font-size:14px;">No messages yet. Say hello! 👋</div>';
+                chatMessagesView.innerHTML = '<div style="text-align:center;color:#999;padding:40px 16px;font-size:14px;">No messages yet. Say hello! </div>';
             }
             return;
         }
@@ -11800,7 +12001,7 @@ loadMessages: function() {
             var deliveryStatus = '';
             if (side === 'own') {
                 var deliveryClass = m.read ? 'read' : (m.delivered ? 'delivered' : 'sent');
-                var deliveryTicks = m.read || m.delivered ? '✓✓' : '✓';
+                var deliveryTicks = m.read || m.delivered ? '' : '';
                 deliveryStatus = '<span class="message-read-status ' + deliveryClass + '" aria-label="' + (m.read ? 'Read' : (m.delivered ? 'Delivered' : 'Sent')) + '">' + deliveryTicks + '</span>';
             }
             html += '<div class="message-meta"><span>' + timestamp + '</span>' + deliveryStatus + actionMenu + '</div>';
@@ -11827,10 +12028,13 @@ loadMessages: function() {
 
         var self = this;
         var key = [self.user.uid, self.currentChat.uid].sort().join('_');
+        var recipientId = self.currentChat.uid;
         var now = new Date().getTime();
         if (!this.chatMessages[key]) this.chatMessages[key] = [];
 
+        var messageRef = db.ref('messages/' + key).push();
         var tempMessage = {
+            id: messageRef.key,
             sender: self.user.uid,
             text: text,
             timestamp: now,
@@ -11841,7 +12045,6 @@ loadMessages: function() {
         if (input) input.value = '';
         if (input) input.focus();
 
-        var messageRef = db.ref('messages/' + key).push();
         messageRef.set({
             text: text,
             sender: self.user.uid,
@@ -11856,8 +12059,11 @@ loadMessages: function() {
             });
         }).then(function() {
             tempMessage.pending = false;
-            self.displayChatMessages(self.chatMessages[key], key);
-            return self.sendPlanAssistantWelcomeIfNeeded(key, self.planSupportAdminId || (self.currentChat && self.currentChat.uid)).catch(function(error) {
+            if (self.currentChat && [self.user.uid, self.currentChat.uid].sort().join('_') === key) {
+                self.displayChatMessages(self.chatMessages[key], key);
+            }
+            self.loadMessages();
+            return self.sendPlanAssistantWelcomeIfNeeded(key, self.planSupportAdminId || recipientId).catch(function(error) {
                 console.error('Plan assistant welcome failed:', error);
                 self.toast('Your message was sent, but the assistant could not reply just now.', 'error');
                 return false;
@@ -11869,7 +12075,9 @@ loadMessages: function() {
             var idx = self.chatMessages[key].indexOf(tempMessage);
             if (idx > -1) {
                 self.chatMessages[key].splice(idx, 1);
-                self.displayChatMessages(self.chatMessages[key], key);
+                if (self.currentChat && [self.user.uid, self.currentChat.uid].sort().join('_') === key) {
+                    self.displayChatMessages(self.chatMessages[key], key);
+                }
             }
         });
     },
@@ -11879,7 +12087,7 @@ loadMessages: function() {
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
         modal.style.zIndex = '2000';
-        modal.innerHTML = '<div style="position:relative;width:90%;max-width:500px;"><img src="' + imageUrl + '" style="width:100%;border-radius:12px;"><button onclick="this.closest(\'.modal-overlay\').remove()" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);color:white;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;">✕</button></div>';
+        modal.innerHTML = '<div style="position:relative;width:90%;max-width:500px;"><img src="' + imageUrl + '" style="width:100%;border-radius:12px;"><button onclick="this.closest(\'.modal-overlay\').remove()" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);color:white;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;"></button></div>';
         document.body.appendChild(modal);
     },
 
@@ -11919,7 +12127,7 @@ loadMessages: function() {
         modal.style.justifyContent = 'center';
         modal.innerHTML = `
             <div class="modal" style="max-width:420px;border-radius:20px;padding:24px;max-height:90vh;overflow-y:auto;">
-                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">✕</button></div>
+                <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;"></button></div>
 
                 <div style="text-align:center;padding:4px 0;">
                     <div style="width:100px;height:100px;border-radius:50%;margin:0 auto 12px;overflow:hidden;border:3px solid #0088cc;box-shadow:0 4px 16px rgba(0,136,204,0.3);">
@@ -11927,14 +12135,14 @@ loadMessages: function() {
                     </div>
 
                     <h2 style="margin-bottom:2px;font-weight:800;font-size:22px;color:#1a202c;">Anthony Onchari</h2>
-                    <p style="color:#0088cc;font-size:13px;font-weight:600;margin-bottom:4px;">👨‍💻 Developer & Digital Media Specialist</p>
+                    <p style="color:#0088cc;font-size:13px;font-weight:600;margin-bottom:4px;"> Developer & Digital Media Specialist</p>
                     <p style="color:#6b7280;font-size:11px;background:#f0f0f0;display:inline-block;padding:2px 12px;border-radius:12px;margin-bottom:16px;">
-                        📱 Version V02A.01
+                         Version V02A.01
                     </p>
 
                     <div style="background:#f7fafc;padding:16px 18px;border-radius:16px;text-align:left;border:1px solid #e2e8f0;margin-bottom:16px;">
                         <p style="font-size:14px;line-height:1.8;color:#2d3748;margin:0;">
-                            Hey there! 👋 I'm <strong style="color:#0088cc;">Anthony</strong>,
+                            Hey there!  I'm <strong style="color:#0088cc;">Anthony</strong>,
                             a Developer and Digital Media Specialist who loves building things that bring people and community together.
                             I created <strong style="color:#0088cc;">CHICHI</strong> because I believe
                             social media should feel like home — warm, real, and human.
@@ -11947,33 +12155,33 @@ loadMessages: function() {
 
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
                         <div style="background:#ebf8ff;padding:10px 6px;border-radius:12px;">
-                            <div style="font-size:20px;">💻</div>
+                            <div style="font-size:20px;"></div>
                             <div style="font-size:11px;color:#2b6cb0;font-weight:600;">Web Developer</div>
                         </div>
                         <div style="background:#f0fff4;padding:10px 6px;border-radius:12px;">
-                            <div style="font-size:20px;">📱</div>
+                            <div style="font-size:20px;"></div>
                             <div style="font-size:11px;color:#276749;font-weight:600;">Digital Media</div>
                         </div>
                         <div style="background:#faf5ff;padding:10px 6px;border-radius:12px;">
-                            <div style="font-size:20px;">🤝</div>
+                            <div style="font-size:20px;"></div>
                             <div style="font-size:11px;color:#6b46c1;font-weight:600;">Community Builder</div>
                         </div>
                     </div>
 
                     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
                         <button onclick="window.open('https://wa.me/254701807001', '_blank')" style="padding:10px 18px;background:#25D366;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;transition:0.3s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            💬 WhatsApp
+                             WhatsApp
                         </button>
                         <button onclick="window.open('https://www.facebook.com/profile.php?id=100088002065441', '_blank')" style="padding:10px 18px;background:#1877F2;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;transition:0.3s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            📘 Facebook
+                             Facebook
                         </button>
                         <button onclick="window.open('https://www.linkedin.com/in/anthony-onchari-a3b87b270/', '_blank')" style="padding:10px 18px;background:#0A66C2;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;transition:0.3s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            💼 LinkedIn
+                             LinkedIn
                         </button>
                     </div>
 
                     <div style="margin-top:14px;font-size:11px;color:#a0aec0;border-top:1px solid #e2e8f0;padding-top:12px;">
-                        <span>© 2026 Onchari Group • CHICHI V02A.01</span>
+                        <span> 2026 Onchari Group • CHICHI V02A.01</span>
                     </div>
                 </div>
             </div>
@@ -11993,15 +12201,43 @@ loadMessages: function() {
 
     showHeaderMenu: function() {
         var menu = document.getElementById('headerMenu');
-        if (menu) {
-            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        if (!menu) return;
+        if (menu.style.display !== 'none') {
+            this.closeHeaderMenu();
+            return;
         }
+        menu.style.display = 'block';
+        var triggerButton = document.getElementById('headerMenuBtn');
+        if (triggerButton) triggerButton.setAttribute('aria-expanded', 'true');
+        var self = this;
+        this.headerMenuOutsidePointerHandler = function(event) {
+            var trigger = document.getElementById('headerMenuBtn');
+            if (!menu.contains(event.target) && !(trigger && trigger.contains(event.target))) {
+                self.closeHeaderMenu();
+            }
+        };
+        this.headerMenuEscapeHandler = function(event) {
+            if (event.key === 'Escape') {
+                self.closeHeaderMenu();
+                if (triggerButton) triggerButton.focus();
+            }
+        };
+        document.addEventListener('pointerdown', this.headerMenuOutsidePointerHandler);
+        document.addEventListener('keydown', this.headerMenuEscapeHandler);
     },
 
     closeHeaderMenu: function() {
         var menu = document.getElementById('headerMenu');
-        if (menu) {
-            menu.style.display = 'none';
+        if (menu) menu.style.display = 'none';
+        var trigger = document.getElementById('headerMenuBtn');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        if (this.headerMenuOutsidePointerHandler) {
+            document.removeEventListener('pointerdown', this.headerMenuOutsidePointerHandler);
+            this.headerMenuOutsidePointerHandler = null;
+        }
+        if (this.headerMenuEscapeHandler) {
+            document.removeEventListener('keydown', this.headerMenuEscapeHandler);
+            this.headerMenuEscapeHandler = null;
         }
     },
 
@@ -12389,19 +12625,17 @@ loadMessages: function() {
 
     _performLogin: function(email, password, loginBtn, loginSpinner, loginText) {
         var self = this;
-        self._showLoginWelcome = true;
         auth.signInWithEmailAndPassword(email, password)
             .then(function(result) {
-                self.toast('✅ Login successful!', 'success');
+                self.toast(' Login successful!', 'success');
                 self.logUserActivity('login_success', 'User logged in: ' + email);
             })
             .catch(function(err) {
-                self._showLoginWelcome = false;
                 if (loginSpinner) loginSpinner.style.display = 'none';
                 if (loginText) loginText.style.display = 'inline';
                 if (loginBtn) loginBtn.disabled = false;
                 if (loginBtn) loginBtn.classList.remove('is-loading');
-                self.toast('❌ ' + err.message, 'error');
+                self.toast(' ' + err.message, 'error');
                 self.logUserActivity('login_failed', 'Failed login attempt: ' + email + ' - ' + err.message);
             });
     },
@@ -12413,6 +12647,7 @@ loadMessages: function() {
         var username = document.getElementById('signupUsername').value;
         var email = document.getElementById('signupEmail').value;
         var pass = document.getElementById('signupPassword').value;
+        var referralCode = (document.getElementById('signupReferralCode').value || '').trim().toUpperCase();
         var signupBtn = document.getElementById('signupBtn');
         var signupSpinner = document.querySelector('.signup-spinner');
         var signupText = document.querySelector('.signup-btn-text');
@@ -12438,6 +12673,13 @@ loadMessages: function() {
         }
 
         var self = this;
+        if (referralCode) {
+            try {
+                localStorage.setItem('chichiPendingReferralCode', referralCode);
+            } catch (storageError) {
+                console.error('Unable to save pending referral code:', storageError);
+            }
+        }
         auth.createUserWithEmailAndPassword(email, pass)
             .then(function(r) {
                 var userData = {
@@ -12457,16 +12699,31 @@ loadMessages: function() {
                     createdAt: new Date().toLocaleString('en-KE'),
                     lastSeen: firebase.database.ServerValue.TIMESTAMP
                 };
-                return db.ref('users/' + r.user.uid).set(userData);
+                return db.ref('users/' + r.user.uid).set(userData).then(function() {
+                    return self.callReferralApi('register', { referralCode: referralCode }).then(function(result) {
+                        try { localStorage.removeItem('chichiPendingReferralCode'); } catch (storageError) { console.error('Unable to clear pending referral code:', storageError); }
+                        if (referralCode && result.referralAwarded) self.pendingSignupReferralNotice = { message: 'Your friend earned KSh 10 for your referral.', type: 'success' };
+                        else if (referralCode && result.referralMessage) self.pendingSignupReferralNotice = { message: result.referralMessage, type: 'info' };
+                    }).catch(function(referralError) {
+                        console.error('Referral registration failed:', referralError);
+                        self.pendingSignupReferralNotice = {
+                            message: 'Referral setup could not finish. Open Refer & Earn to retry. ' + referralError.message,
+                            type: 'error'
+                        };
+                        if (/referral code (was not found|is not valid)|cannot use your own referral code/i.test(referralError.message)) {
+                            try { localStorage.removeItem('chichiPendingReferralCode'); } catch (storageError) { console.error('Unable to clear invalid referral code:', storageError); }
+                        }
+                    });
+                });
             })
             .then(function() {
                 self.toast('Account created! Your 10 redeemable CHICHI Coins are ready.', 'success');
+                if (self.pendingSignupReferralNotice) {
+                    var referralNotice = self.pendingSignupReferralNotice;
+                    self.pendingSignupReferralNotice = null;
+                    setTimeout(function() { self.toast(referralNotice.message, referralNotice.type); }, 1800);
+                }
                 self.logUserActivity('signup', 'New user signed up: ' + email);
-                setTimeout(function() {
-                    if (self.showMandatoryHashtagSelection) {
-                        self.showMandatoryHashtagSelection();
-                    }
-                }, 500);
                 if (signupSpinner) signupSpinner.style.display = 'none';
                 if (signupText) signupText.style.display = 'inline';
                 if (signupBtn) signupBtn.disabled = false;
@@ -12484,32 +12741,38 @@ loadMessages: function() {
 
     // ============== EDITED: Google Sign-In (Native bridge + fallback) ==============
     signInWithGoogle: function(forceWebFallback) {
-    // First, try to call the native Android bridge (if available)
-    if (!forceWebFallback && window.Android && typeof window.Android.signInWithGoogle === 'function') {
-        console.log('📱 Using native Google Sign-In');
-        window.Android.signInWithGoogle();
-        return;
-    }
-    // Fallback: use redirect (works in browsers, and as backup when native OAuth is misconfigured)
-    console.log('⚠️ Using Google redirect fallback');
-    var self = this;
-    var provider = new firebase.auth.GoogleAuthProvider();
-    
-    // ✅ ADD THESE TWO LINES:
-    provider.addScope('email');
-    provider.addScope('profile');
-    
-    // ✅ CHANGE THESE PARAMETERS:
-    provider.setCustomParameters({
-        'prompt': 'select_account',
-        'include_granted_scopes': 'true'
-    });
-    auth.signInWithRedirect(provider);
-},
+        if (!forceWebFallback && window.Android && typeof window.Android.signInWithGoogle === 'function') {
+            console.log(' Using native Google Sign-In');
+            window.Android.signInWithGoogle();
+            return;
+        }
+
+        if (!this.supportsWebGoogleSignIn()) {
+            this.toast('Google sign-in requires a supported browser or the CHICHI Android app.', 'error');
+            return;
+        }
+
+        console.log(' Using Google redirect fallback');
+        var provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope('email');
+        provider.addScope('profile');
+        provider.setCustomParameters({
+            'prompt': 'select_account',
+            'include_granted_scopes': 'true'
+        });
+        auth.signInWithRedirect(provider).catch(function(error) {
+            console.error(' Google redirect sign-in error:', error);
+            this.toast('Google sign-in failed: ' + error.message, 'error');
+        }.bind(this));
+    },
+
+    supportsWebGoogleSignIn: function() {
+        return ['http:', 'https:', 'chrome-extension:'].indexOf(window.location.protocol) !== -1;
+    },
 
     // ============== NEW: Called from native Android after successful sign-in ==============
     onNativeSignIn: function(userData) {
-        console.log('✅ Native sign-in success:', userData);
+        console.log(' Native sign-in success:', userData);
         // The userData is a JSON object with uid, email, displayName, photoURL, idToken, etc.
         // The Firebase auth state listener will already be triggered because the native sign-in
         // also signs in to Firebase. However, we can manually update the app state if needed.
@@ -12532,7 +12795,7 @@ loadMessages: function() {
 
     // ============== NEW: Called from native Android if sign-in fails ==============
     googleSignInFailed: function(error) {
-        console.error('❌ Native sign-in failed:', error);
+        console.error(' Native sign-in failed:', error);
         this.toast('Google sign-in failed: ' + (error || 'Unknown error'), 'error');
         // Reset any loading states
         var signupBtn = document.getElementById('signupBtn');
@@ -12546,14 +12809,16 @@ loadMessages: function() {
 
     // ============== Handle redirect result (fallback) ==============
     handleRedirectResult: function() {
+        if (!this.supportsWebGoogleSignIn()) return;
+
         var self = this;
         auth.getRedirectResult().then(function(result) {
             if (result.user) {
-                console.log('✅ Google redirect sign-in successful:', result.user);
+                console.log(' Google redirect sign-in successful:', result.user);
                 // The onAuthStateChanged listener will handle the rest
             }
         }).catch(function(error) {
-            console.error('❌ Google redirect sign-in error:', error);
+            console.error(' Google redirect sign-in error:', error);
             self.toast('Google sign-in failed: ' + error.message, 'error');
         });
     },
@@ -12569,7 +12834,7 @@ loadMessages: function() {
 
         modal.innerHTML = `
             <div style="background: white; border-radius: 20px; padding: 32px 28px; max-width: 440px; width: 95%; text-align: center; animation: slideUp 0.4s ease; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);">
-                <div style="font-size: 40px; margin-bottom: 16px;">🎉</div>
+                <div style="font-size: 40px; margin-bottom: 16px;"></div>
                 <h2 style="font-size: 22px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0;">Customize Your Username</h2>
                 <p style="font-size: 14px; color: #64748b; margin: 0 0 24px 0; line-height: 1.6;">You can change your auto-generated username to something you prefer.</p>
 
@@ -12712,8 +12977,6 @@ loadMessages: function() {
     filterMessages: function(filter) {
         document.querySelectorAll('.message-filter-tab').forEach(function(tab) {
             tab.classList.remove('active');
-            tab.style.background = '#f3f4f6';
-            tab.style.color = '#666';
         });
         this.activeMessageFilter = filter;
         this.applyMessageListFilters();
@@ -12729,27 +12992,58 @@ loadMessages: function() {
     // ============================================
 
     showNotificationsTab: function() {
-        var self = this;
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
         modal.style.zIndex = '10050';
+        modal.setAttribute('role', 'presentation');
+        var panel = document.createElement('section');
+        panel.className = 'notifications-panel';
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-modal', 'true');
+        panel.setAttribute('aria-labelledby', 'notificationsTitle');
 
-        modal.innerHTML = `
-            <div style="background: white; border-radius: 20px; padding: 24px; max-width: 500px; width: 95%; max-height: 80vh; overflow-y: auto;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="font-size: 20px; font-weight: 700; margin: 0;">🔔 Notifications</h2>
-                    <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
-                </div>
-                <div id="notificationsList" style="max-height: 500px; overflow-y: auto;">
-                    <div style="text-align: center; color: #9ca3af; padding: 40px;">Loading notifications...</div>
-                </div>
-            </div>
-        `;
+        var header = document.createElement('header');
+        header.className = 'notifications-panel-header';
+        var heading = document.createElement('div');
+        var title = document.createElement('h2');
+        title.id = 'notificationsTitle';
+        title.textContent = 'Notifications';
+        var subtitle = document.createElement('p');
+        subtitle.textContent = 'Updates and account activity';
+        heading.append(title, subtitle);
 
+        var closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'notifications-close';
+        closeButton.setAttribute('aria-label', 'Close notifications');
+        closeButton.innerHTML = '&times;';
+        var closeModal = function() {
+            modal.remove();
+            document.removeEventListener('keydown', onKeyDown);
+        };
+        var onKeyDown = function(event) {
+            if (event.key === 'Escape') closeModal();
+        };
+        closeButton.addEventListener('click', closeModal);
+        header.append(heading, closeButton);
+        panel.appendChild(header);
+
+        var list = document.createElement('div');
+        list.className = 'notifications-list';
+        var loading = document.createElement('p');
+        loading.className = 'notifications-state';
+        loading.textContent = 'Loading notifications...';
+        list.appendChild(loading);
+        panel.appendChild(list);
+        modal.appendChild(panel);
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) closeModal();
+        });
+        document.addEventListener('keydown', onKeyDown);
         document.body.appendChild(modal);
 
         if (!this.user || this.isGuest) {
-            document.getElementById('notificationsList').innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 40px;">Login to see notifications</div>';
+            loading.textContent = 'Sign in to view notifications.';
             return;
         }
 
@@ -12764,29 +13058,63 @@ loadMessages: function() {
             });
 
             notifications.reverse();
-
-            var html = '';
+            list.replaceChildren();
             if (notifications.length === 0) {
-                html = '<div style="text-align: center; color: #9ca3af; padding: 40px;">No notifications yet</div>';
+                var empty = document.createElement('p');
+                empty.className = 'notifications-state';
+                empty.textContent = 'No notifications yet.';
+                list.appendChild(empty);
             } else {
                 notifications.forEach(function(notif) {
-                    var icon = notif.type === 'coin_received' ? '💰' : '🔔';
-                    html += `
-                        <div style="padding: 12px; border-bottom: 1px solid #f0f0f0; background: ${notif.read ? 'white' : '#f0f7ff'}; border-radius: 8px; margin-bottom: 4px;">
-                            <div style="display: flex; gap: 10px; align-items: start;">
-                                <div style="font-size: 24px;">${icon}</div>
-                                <div style="flex: 1;">
-                                    <div style="font-weight: 600; font-size: 14px; color: #1a202c;">${notif.message || 'New notification'}</div>
-                                    <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">${notif.createdAt || 'Just now'}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    var item = document.createElement('article');
+                    item.className = 'notification-entry' + (notif.read ? '' : ' unread');
+                    var badge = document.createElement('span');
+                    badge.className = 'notification-entry-type';
+                    badge.textContent = notif.type === 'coin_received' ? 'COINS' : 'UPDATE';
+                    badge.setAttribute('aria-hidden', 'true');
+
+                    var content = document.createElement('div');
+                    content.className = 'notification-entry-content';
+                    var itemTitle = document.createElement('h3');
+                    var description = document.createElement('p');
+                    var timestamp = document.createElement('time');
+                    var date = Number(notif.timestamp) > 0
+                        ? new Date(Number(notif.timestamp))
+                        : (notif.createdAt ? new Date(notif.createdAt) : null);
+                    var dateIsValid = date && !Number.isNaN(date.getTime());
+
+                    if (notif.type === 'coin_received') {
+                        itemTitle.textContent = 'Coins received';
+                        var amount = Number(notif.amount);
+                        description.textContent = 'You received ' +
+                            (Number.isFinite(amount) ? amount.toLocaleString() : '') +
+                            ' CHICHI Coins' +
+                            (notif.from ? ' from ' + notif.from : '') +
+                            (notif.fromUsername ? ' (@' + notif.fromUsername + ')' : '');
+                    } else {
+                        itemTitle.textContent = notif.type === 'access_update' ? 'Account update' : 'New update';
+                        description.textContent = String(notif.message || 'You have a new notification.')
+                            .replace(/^\s*[^\p{L}\p{N}]+/u, '')
+                            .trim();
+                    }
+
+                    timestamp.textContent = dateIsValid
+                        ? date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+                        : (notif.createdAt || 'Just now');
+                    if (dateIsValid) timestamp.dateTime = date.toISOString();
+                    content.append(itemTitle, description, timestamp);
+                    item.append(badge, content);
+                    list.appendChild(item);
                 });
             }
-
-            var list = document.getElementById('notificationsList');
-            if (list) list.innerHTML = html;
+        }, function(error) {
+            console.error('Failed to load notifications:', error);
+            if (!modal.isConnected) return;
+            list.replaceChildren();
+            var errorMessage = document.createElement('p');
+            errorMessage.className = 'notifications-state error';
+            errorMessage.textContent = 'Could not load notifications. Please try again.';
+            list.appendChild(errorMessage);
         });
     },
 
@@ -12873,17 +13201,17 @@ loadMessages: function() {
     refreshFeed: function() {
         var btn = document.getElementById('refreshFeedBtn');
         if (btn) {
-            btn.textContent = '⏳';
+            btn.textContent = '';
             btn.disabled = true;
             btn.style.opacity = '0.7';
         }
 
         this.loadPosts();
-        this.toast('🔄 Feed refreshed!', 'success');
+        this.toast(' Feed refreshed!', 'success');
 
         setTimeout(function() {
             if (btn) {
-                btn.textContent = '↻';
+                btn.textContent = '';
                 btn.disabled = false;
                 btn.style.opacity = '1';
             }
@@ -12939,12 +13267,12 @@ loadMessages: function() {
     },
 
     showGFDayUploadModal: function() {
-        this.toast('📸 Photo upload feature coming August 1st!', 'info');
+        this.toast(' Photo upload feature coming August 1st!', 'info');
         console.log('Campaign: Upload modal requested');
     },
 
     showGFDayGallery: function() {
-        this.toast('👥 Gallery view coming August 1st!', 'info');
+        this.toast(' Gallery view coming August 1st!', 'info');
         console.log('Campaign: Gallery view requested');
     },
 
@@ -12953,7 +13281,7 @@ loadMessages: function() {
         if (refCode) {
             refCode.select();
             document.execCommand('copy');
-            this.toast('✅ Referral code copied! Share to earn!', 'success');
+            this.toast(' Referral code copied! Share to earn!', 'success');
             console.log('Campaign: Referral code copied');
         }
     },
@@ -12976,7 +13304,7 @@ loadMessages: function() {
             });
         }
 
-        console.log(`✅ Campaign: Awarded ${amount} coins for ${reason}`);
+        console.log(` Campaign: Awarded ${amount} coins for ${reason}`);
     }
 };
 
@@ -13117,10 +13445,10 @@ const messagesModule = (() => {
     if (favoriteBtn) {
       if (favorites.has(partnerId)) {
         favoriteBtn.classList.add('favorite-active');
-        favoriteBtn.innerHTML = '❤️';
+        favoriteBtn.innerHTML = '';
       } else {
         favoriteBtn.classList.remove('favorite-active');
-        favoriteBtn.innerHTML = '🤍';
+        favoriteBtn.innerHTML = '';
       }
     }
   };
@@ -13136,7 +13464,7 @@ const messagesModule = (() => {
       <div class="modal-content">
         <div class="modal-header">
           <h2>Unread Messages</h2>
-          <button class="modal-close" data-close-modal>✕</button>
+          <button class="modal-close" data-close-modal></button>
         </div>
         <div class="unread-list">
           ${unreadMessages.length > 0 ? unreadMessages.map(msg => `
@@ -13178,7 +13506,7 @@ const messagesModule = (() => {
       <div class="modal-content">
         <div class="modal-header">
           <h2>Favorites</h2>
-          <button class="modal-close" data-close-modal>✕</button>
+          <button class="modal-close" data-close-modal></button>
         </div>
         <div class="favorites-list">
           ${favoriteChats.length > 0 ? favoriteChats.map(partnerId => `
@@ -13188,7 +13516,7 @@ const messagesModule = (() => {
                 <p class="chat-name">${partnerId}</p>
                 <p class="last-message">Last message...</p>
               </div>
-              <button class="remove-favorite-btn" data-remove-favorite="${partnerId}">✕</button>
+              <button class="remove-favorite-btn" data-remove-favorite="${partnerId}"></button>
             </div>
           `).join('') : '<p class="no-favorites">No favorites yet</p>'}
         </div>
@@ -13320,7 +13648,7 @@ const profileModule = (() => {
     tagsContainer.innerHTML = Array.from(userInterests).map(interest => `
       <div class="interest-tag" data-interest="${interest}">
         <span class="tag-text">${interest}</span>
-        <button class="tag-remove" data-remove-interest="${interest}" type="button">✕</button>
+        <button class="tag-remove" data-remove-interest="${interest}" type="button"></button>
       </div>
     `).join('');
 
@@ -13527,9 +13855,7 @@ app.initiateCall = function() {
         this.toast('No active chat', 'info');
         return;
     }
-    if (typeof voiceCallModule !== 'undefined') {
-        voiceCallModule.initiateCall(this.currentChat.uid);
-    }
+    this.toast('Onchari Group is preparing calls. Coming soon.', 'info');
 };
 
 app.endCall = function() {
@@ -13705,7 +14031,7 @@ const earnModule = (() => {
     const content = modal.querySelector('.trivia-content');
     content.innerHTML = `
       <div style="text-align: center; padding: 40px 20px;">
-        <h2>Quiz Complete! 🎉</h2>
+        <h2>Quiz Complete! </h2>
         <p style="margin: 16px 0;">You've earned coins!</p>
         <p style="font-size: 32px; font-weight: 700; color: #667eea; margin: 20px 0;">+100 Coins</p>
         <button class="btn-primary" onclick="earnModule.closeTrivia()">Play Again</button>
@@ -13721,7 +14047,7 @@ const earnModule = (() => {
       modal.className = 'modal trivia-modal';
       modal.innerHTML = `
         <div class="modal-content">
-          <button class="modal-close" onclick="earnModule.closeTrivia()">✕</button>
+          <button class="modal-close" onclick="earnModule.closeTrivia()"></button>
           <div class="trivia-content"></div>
         </div>
       `;
@@ -13775,21 +14101,21 @@ firebase.auth().onAuthStateChanged(function(user) {
     // Initialize feature modules
     if (typeof messagesModule !== 'undefined') {
       messagesModule.init(db, userId);
-      console.log('✓ Messages module initialized');
+      console.log(' Messages module initialized');
     }
     if (typeof profileModule !== 'undefined') {
       profileModule.init(db, userId);
-      console.log('✓ Profile module initialized');
+      console.log(' Profile module initialized');
     }
     if (typeof voiceCallModule !== 'undefined') {
       voiceCallModule.init(db, userId, app.profile.name || user.email || 'User');
-      console.log('✓ Voice call module initialized');
+      console.log(' Voice call module initialized');
     }
     if (typeof earnModule !== 'undefined') {
       earnModule.init(db, userId);
-      console.log('✓ Earn/Trivia module initialized');
+      console.log(' Earn/Trivia module initialized');
     }
-    console.log('✅ All CHICHI modules initialized!');
+    console.log(' All CHICHI modules initialized!');
   }
 });
 
@@ -13798,7 +14124,7 @@ firebase.auth().onAuthStateChanged(function(user) {
 // PHASE 1: CORE MESSAGING FEATURES
 // ============================================
 
-// PHASE 1.1: Delivery Status (✓ ✓✓ ✓✓✓)
+// PHASE 1.1: Delivery Status (  )
 app.trackDeliveryStatus = function(msgId, status) {
     if (!this.user) return;
     var self = this;
@@ -13809,8 +14135,8 @@ app.trackDeliveryStatus = function(msgId, status) {
 
 app.updateMessageStatus = function(msgId, newStatus) {
     if (!this.user) return;
-    var statusMap = {'sent': '✓', 'delivered': '✓✓', 'read': '✓✓✓'};
-    var indicator = statusMap[newStatus] || '✓';
+    var statusMap = {'sent': '', 'delivered': '', 'read': ''};
+    var indicator = statusMap[newStatus] || '';
     var elem = document.querySelector('[data-msg-id="' + msgId + '"] .delivery-status');
     if (elem) {
         elem.textContent = indicator;
@@ -13936,12 +14262,20 @@ app.listenToAllPresence = function() {
     this.presenceListenerActive = true;
     var self = this;
     db.ref('presence').on('value', function(snapshot) {
-        var data = snapshot.val() || {};
-        for (var uid in data) {
-            self.presenceStatus[uid] = data[uid];
-        }
+        self.presenceStatus = snapshot.val() || {};
         self.updatePresenceDots();
     });
+},
+
+app.getPresenceIndicatorState = function(presence, user) {
+    if (presence && presence.online === true) return 'online';
+
+    var lastSeen = (presence && presence.lastSeen) || (user && user.lastSeen);
+    var lastSeenTime = typeof lastSeen === 'number' ? lastSeen : Number(lastSeen);
+    if (!Number.isFinite(lastSeenTime)) lastSeenTime = Date.parse(lastSeen);
+    var elapsed = Date.now() - lastSeenTime;
+    if (lastSeenTime > 0 && elapsed >= 0 && elapsed <= 5 * 60 * 60 * 1000) return 'recent';
+    return 'offline';
 },
 
 app.updatePresenceDots = function() {
@@ -13955,10 +14289,17 @@ app.updatePresenceDots = function() {
         var presenceLabel = item.querySelector('.msg-item-presence');
         var user = this.users && this.users[uid];
         var lastSeenValue = (presence && presence.lastSeen) || (user && user.lastSeen);
-        if (dot) dot.classList.toggle('active', !!(presence && presence.online));
+        var presenceState = this.getPresenceIndicatorState(presence, user);
+        var statusLabel = presenceState === 'online' ? 'Online' :
+            (lastSeenValue ? 'Last seen ' + this.formatPresenceTime(new Date(lastSeenValue)) : 'Offline');
+        if (dot) {
+            dot.classList.remove('active', 'online', 'recent', 'offline');
+            dot.classList.add(presenceState);
+            dot.title = statusLabel;
+            dot.setAttribute('aria-label', statusLabel);
+        }
         if (presenceLabel) {
-            presenceLabel.textContent = presence && presence.online ? 'Online' :
-                (lastSeenValue ? 'Not online right now 🙂 I was at ' + this.formatPresenceTime(new Date(lastSeenValue)) : 'Not online right now 🙂');
+            presenceLabel.textContent = statusLabel;
         }
     }.bind(this));
 },
@@ -13976,11 +14317,11 @@ app.trackPresence = function() {
         if (!headerStatus) return;
 
         if (presence && presence.online) {
-            headerStatus.innerHTML = '🟢 Online';
+            headerStatus.innerHTML = ' Online';
             headerStatus.style.color = '#10b981';
         } else {
             var lastSeen = presence && presence.lastSeen ? self.formatTimeAgo(new Date(presence.lastSeen)) : 'a long time ago';
-            headerStatus.innerHTML = '⚫ Last seen ' + lastSeen;
+            headerStatus.innerHTML = ' Last seen ' + lastSeen;
             headerStatus.style.color = '#9ca3af';
         }
     });
@@ -14052,18 +14393,18 @@ app.deleteMessage = function(msgId, chatKey) {
     modal.className = 'modal-overlay active';
     modal.innerHTML = `
         <div class="modal" style="max-width: 400px;">
-            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+            <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()"></button></div>
             <h2 style="font-weight: 700; margin: 0 0 12px 0; font-size: 18px;">Delete Message</h2>
             <p style="color: #6b7280; margin: 0 0 20px 0; font-size: 14px;">How would you like to delete this message?</p>
             
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <button onclick="app.confirmDeleteMessage('${msgId}', '${chatKey}', 'me'); this.closest('.modal-overlay').remove();" style="padding: 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-weight: 600; color: #1a202c; font-size: 14px; transition: 0.3s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-                    👤 Delete for Me
+                     Delete for Me
                     <div style="font-size: 11px; color: #6b7280; font-weight: 400; margin-top: 4px;">Only you can see this message will be deleted</div>
                 </button>
                 
                 <button onclick="app.confirmDeleteMessage('${msgId}', '${chatKey}', 'everyone'); this.closest('.modal-overlay').remove();" style="padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; cursor: pointer; font-weight: 600; color: #991b1b; font-size: 14px; transition: 0.3s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='#fef2f2'">
-                    🗑️ Delete for Everyone
+                     Delete for Everyone
                     <div style="font-size: 11px; color: #991b1b; font-weight: 400; margin-top: 4px;">Message will be deleted for all participants</div>
                 </button>
                 
@@ -14116,9 +14457,9 @@ app.confirmDeleteMessage = function(msgId, chatKey, scope) {
         }
         self.displayChatMessages(self.chatMessages[chatKey], chatKey);
         var action = scope === 'me' ? 'Deleted for you' : 'Deleted for everyone';
-        self.toast('✓ ' + action, 'success');
+        self.toast(' ' + action, 'success');
     }).catch(function(err) {
-        self.toast('❌ Error deleting message', 'error');
+        self.toast(' Error deleting message', 'error');
     });
 };
 
@@ -14166,7 +14507,7 @@ app.copyMessageToClipboard = function(text) {
     var self = this;
     if (navigator.clipboard) {
         navigator.clipboard.writeText(text).then(function() {
-            self.toast('✓ Copied to clipboard', 'success');
+            self.toast(' Copied to clipboard', 'success');
         }).catch(function() {
             self.fallbackCopy(text);
         });
@@ -14182,7 +14523,7 @@ app.fallbackCopy = function(text) {
     textarea.select();
     document.execCommand('copy');
     document.body.removeChild(textarea);
-    this.toast('✓ Copied', 'success');
+    this.toast(' Copied', 'success');
 };
 
 // PHASE 1.8: Message Action Menu
@@ -14191,12 +14532,12 @@ app.showMessageActionMenu = function(msgId, event) {
 
     event.stopPropagation();
 
-    var existing = document.querySelector('.message-action-menu');
-    if (existing) existing.remove();
+    this.closeMessageActionMenu();
 
     var menu = document.createElement('div');
     menu.className = 'message-action-menu';
-    menu.style.cssText = 'position:fixed;top:' + event.clientY + 'px;left:' + event.clientX + 'px;background:white;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:9999;min-width:150px;overflow:hidden;';
+    menu.setAttribute('role', 'menu');
+    menu.style.cssText = 'position:fixed;top:0;left:0;background:white;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:9999;width:min(190px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow-y:auto;box-sizing:border-box;';
 
     var msgEl = document.querySelector('[data-msg-id="' + msgId + '"]');
     var msgText = msgEl ? msgEl.querySelector('.message-bubble').textContent : '';
@@ -14205,25 +14546,58 @@ app.showMessageActionMenu = function(msgId, event) {
         return message.id === msgId || message._key === msgId;
     });
     var deleteForEveryoneAction = currentMessage && currentMessage.sender === this.user.uid
-        ? `<div onclick="app.deleteForEveryone('${msgId}','${chatKey}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;color:#991b1b;">🗑️ Delete for Everyone</div>`
+        ? `<div onclick="app.deleteForEveryone('${msgId}','${chatKey}');app.closeMessageActionMenu();" style="padding:10px 16px;cursor:pointer;font-size:14px;color:#991b1b;"> Delete for Everyone</div>`
         : '';
 
     menu.innerHTML = `
         <div style="padding:8px 0;">
-            <div onclick="app.copyMessageToClipboard('${msgText.replace(/'/g, "\\'")}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;hover:background:#f3f4f6;font-size:14px;">📋 Copy</div>
-            <div onclick="app.editMessage('${msgId}','${[this.user.uid, this.currentChat.uid].sort().join('_')}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;">✏️ Edit</div>
-            <div onclick="app.deleteMessage('${msgId}','${[this.user.uid, this.currentChat.uid].sort().join('_')}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;color:#ef4444;">🗑️ Delete</div>
+            <div role="menuitem" onclick="app.copyMessageToClipboard('${msgText.replace(/'/g, "\\'")}');app.closeMessageActionMenu();" style="padding:10px 16px;cursor:pointer;font-size:14px;"> Copy</div>
+            <div role="menuitem" onclick="app.editMessage('${msgId}','${[this.user.uid, this.currentChat.uid].sort().join('_')}');app.closeMessageActionMenu();" style="padding:10px 16px;cursor:pointer;font-size:14px;"> Edit</div>
+            <div role="menuitem" onclick="app.deleteMessage('${msgId}','${[this.user.uid, this.currentChat.uid].sort().join('_')}');app.closeMessageActionMenu();" style="padding:10px 16px;cursor:pointer;font-size:14px;color:#ef4444;"> Delete</div>
             ${deleteForEveryoneAction}
-            <div onclick="app.pinMessage('${msgId}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;">📌 Pin</div>
-            <div onclick="app.forwardMessage('${msgId}');document.querySelector('.message-action-menu').remove();" style="padding:10px 16px;cursor:pointer;font-size:14px;">↪️ Forward</div>
+            <div role="menuitem" onclick="app.pinMessage('${msgId}');app.closeMessageActionMenu();" style="padding:10px 16px;cursor:pointer;font-size:14px;"> Pin</div>
+            <div role="menuitem" onclick="app.forwardMessage('${msgId}');app.closeMessageActionMenu();" style="padding:10px 16px;cursor:pointer;font-size:14px;"> Forward</div>
         </div>
     `;
 
     document.body.appendChild(menu);
 
-    document.addEventListener('click', function() {
-        if (menu.parentNode) menu.remove();
-    }, {once: true});
+    var trigger = event.currentTarget && event.currentTarget.getBoundingClientRect
+        ? event.currentTarget.getBoundingClientRect()
+        : { left: event.clientX, right: event.clientX, top: event.clientY, bottom: event.clientY };
+    var viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+    var viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    var menuWidth = menu.offsetWidth;
+    var menuHeight = menu.offsetHeight;
+    var margin = 12;
+    var left = Math.max(margin, Math.min(trigger.right - menuWidth, viewportWidth - menuWidth - margin));
+    var top = trigger.top - menuHeight - 8;
+    if (top < margin) top = trigger.bottom + 8;
+    top = Math.max(margin, Math.min(top, viewportHeight - menuHeight - margin));
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+
+    this.messageMenuOutsidePointerHandler = function(outsideEvent) {
+        if (!menu.contains(outsideEvent.target)) this.closeMessageActionMenu();
+    }.bind(this);
+    this.messageMenuEscapeHandler = function(keyEvent) {
+        if (keyEvent.key === 'Escape') this.closeMessageActionMenu();
+    }.bind(this);
+    document.addEventListener('pointerdown', this.messageMenuOutsidePointerHandler);
+    document.addEventListener('keydown', this.messageMenuEscapeHandler);
+};
+
+app.closeMessageActionMenu = function() {
+    var menu = document.querySelector('.message-action-menu');
+    if (menu) menu.remove();
+    if (this.messageMenuOutsidePointerHandler) {
+        document.removeEventListener('pointerdown', this.messageMenuOutsidePointerHandler);
+        this.messageMenuOutsidePointerHandler = null;
+    }
+    if (this.messageMenuEscapeHandler) {
+        document.removeEventListener('keydown', this.messageMenuEscapeHandler);
+        this.messageMenuEscapeHandler = null;
+    }
 };
 
 app.longPressMessage = function(msgId, event) {
@@ -14310,14 +14684,34 @@ app.displayReactions = function(msgId, reactions) {
 };
 
 app.showEmojiPicker = function(msgId) {
-    var self = this;
-    var emojis = ['👍', '❤️', '😂', '😢', '🔥', '😍', '🎉', '👏', '🙏', '💯'];
+    var reactions = [
+        { label: 'Like', value: String.fromCodePoint(0x1F44D) },
+        { label: 'Love', value: String.fromCodePoint(0x2764, 0xFE0F) },
+        { label: 'Laugh', value: String.fromCodePoint(0x1F602) },
+        { label: 'Sad', value: String.fromCodePoint(0x1F622) },
+        { label: 'Fire', value: String.fromCodePoint(0x1F525) },
+        { label: 'Heart eyes', value: String.fromCodePoint(0x1F60D) },
+        { label: 'Celebrate', value: String.fromCodePoint(0x1F389) },
+        { label: 'Applause', value: String.fromCodePoint(0x1F44F) },
+        { label: 'Thanks', value: String.fromCodePoint(0x1F64F) },
+        { label: 'Hundred', value: String.fromCodePoint(0x1F4AF) }
+    ];
 
     var modal = document.createElement('div');
     modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:9999;';
-    modal.innerHTML = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">' + emojis.map(function(emoji) {
-        return '<div onclick="app.addReaction(\'' + msgId + '\', \'' + emoji + '\');document.querySelector(\'[data-emoji-modal=true]\').remove();" style="font-size:24px;cursor:pointer;padding:8px;border-radius:8px;text-align:center;hover:background:#f3f4f6;">' + emoji + '</div>';
-    }).join('') + '</div>';
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:8px;';
+    reactions.forEach(function(reaction) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = reaction.label;
+        button.addEventListener('click', function() {
+            app.addReaction(msgId, reaction.value);
+            modal.remove();
+        });
+        grid.appendChild(button);
+    });
+    modal.appendChild(grid);
     modal.setAttribute('data-emoji-modal', 'true');
 
     document.body.appendChild(modal);
@@ -14337,7 +14731,7 @@ app.startVoiceRecording = function() {
     modal.id = 'voiceRecordingModal';
     modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:9999;text-align:center;';
     modal.innerHTML = `
-        <div style="font-size:18px;font-weight:700;margin-bottom:15px;">🎤 Recording...</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:15px;"> Recording...</div>
         <div id="recordingTime" style="font-size:24px;font-weight:700;color:#2e5bff;margin-bottom:15px;">00:00</div>
         <div style="display:flex;gap:10px;justify-content:center;">
             <button onclick="app.stopVoiceRecording();" style="padding:10px 20px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Stop</button>
@@ -14445,7 +14839,7 @@ app.sendVoiceMessage = function(voiceUrl, duration) {
     db.ref('messages/' + key).push().set(voiceMsg).then(function(ref) {
         db.ref('chats/' + key + '/messages/' + ref.key).set(voiceMsg);
         self.displayChatMessages(self.chatMessages[key], key);
-        self.toast('🎤 Voice message sent', 'success');
+        self.toast(' Voice message sent', 'success');
     }).catch(function(err) {
         self.toast('Error sending voice message', 'error');
     });
@@ -14466,7 +14860,7 @@ app.displayVoiceMessage = function(voiceUrl, duration) {
 
     return `<div class="voice-message" style="background:#f3f4f6;border-radius:8px;padding:10px;margin:8px 0;">
         <div style="display:flex;align-items:center;gap:10px;">
-            <button onclick="app.playVoiceMessage('${voiceUrl}',${duration});" style="background:#2e5bff;color:white;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;">▶️</button>
+            <button aria-label="Play voice message" onclick="app.playVoiceMessage('${voiceUrl}',${duration});" style="background:#2e5bff;color:white;border:none;border-radius:16px;min-width:48px;height:32px;padding:0 6px;font-size:11px;font-weight:700;cursor:pointer;">Play</button>
             <div style="flex:1;">
                 <div class="voice-progress" style="background:#e5e7eb;border-radius:4px;height:3px;"></div>
             </div>
@@ -14524,7 +14918,7 @@ app.showScrollLatestButton = function() {
 
     var btn = document.createElement('button');
     btn.className = 'scroll-to-latest-btn';
-    btn.textContent = '↓ New messages';
+    btn.textContent = 'New messages';
     btn.style.cssText = 'position:absolute;bottom:60px;right:20px;background:#2e5bff;color:white;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.1);z-index:100;';
     btn.onclick = function() { app.scrollToLatest(); };
 
@@ -14583,14 +14977,14 @@ app.loadExplorePeople = function() {
             } else if (user.username) {
                 html += '<div style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">@' + user.username + '</div>';
             }
-            html += '<div style="font-size: 11px; color: #9ca3af; margin-bottom: 10px;">👥 ' + (user.followers || 0) + '</div>';
-            html += '<button onclick="event.stopPropagation(); app.toggleFollow(\'' + user.uid + '\');" style="width: 100%; padding: 8px 12px; background: ' + (isFollowing ? '#ef4444' : '#0088cc') + '; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">' + (isFollowing ? '✓ Following' : '+ Follow') + '</button>';
+            html += '<div style="font-size: 11px; color: #9ca3af; margin-bottom: 10px;"> ' + (user.followers || 0) + '</div>';
+            html += '<button onclick="event.stopPropagation(); app.toggleFollow(\'' + user.uid + '\');" style="width: 100%; padding: 8px 12px; background: ' + (isFollowing ? '#ef4444' : '#0088cc') + '; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">' + (isFollowing ? ' Following' : '+ Follow') + '</button>';
             html += '</div>';
         });
 
         if (userArray.length === 0) {
             if (app.isGuest) {
-                html = '<div style="text-align:center;color:#6b7280;padding:24px;">\n                    <div style="font-size:28px;margin-bottom:6px;">👥</div>\n                    <div style="font-weight:700;margin-bottom:6px;">Sign in to discover people</div>\n                    <div style="color:#9ca3af;margin-bottom:10px;">Sign up or log in to follow creators and get recommendations.</div>\n                    <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;">🔐 Sign In / Sign Up</button>\n                </div>';
+                html = '<div style="text-align:center;color:#6b7280;padding:24px;">\n                    <div style="font-size:28px;margin-bottom:6px;"></div>\n                    <div style="font-weight:700;margin-bottom:6px;">Sign in to discover people</div>\n                    <div style="color:#9ca3af;margin-bottom:10px;">Sign up or log in to follow creators and get recommendations.</div>\n                    <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;"> Sign In / Sign Up</button>\n                </div>';
             } else {
                 html = '<div style="text-align: center; padding: 24px; color: #9ca3af; grid-column: 1 / -1;">No people yet</div>';
             }
@@ -14625,7 +15019,7 @@ app.searchExplorePeople = function(query) {
 
         results.style.display = 'block';
         if (matches.length === 0) {
-            container.innerHTML = '<div class="explore-search-empty"><div class="explore-search-empty-icon">🔎</div><div class="explore-search-empty-text">No people found</div></div>';
+            container.innerHTML = '<div class="explore-search-empty"><div class="explore-search-empty-icon"></div><div class="explore-search-empty-text">No people found</div></div>';
             return;
         }
 
@@ -14653,7 +15047,7 @@ app.searchExplorePeople = function(query) {
         renderResults(app.users);
     }).catch(function() {
         results.style.display = 'block';
-        container.innerHTML = '<div class="explore-search-empty"><div class="explore-search-empty-icon">⚠️</div><div class="explore-search-empty-text">Search is unavailable right now</div></div>';
+        container.innerHTML = '<div class="explore-search-empty"><div class="explore-search-empty-icon"></div><div class="explore-search-empty-text">Search is unavailable right now</div></div>';
     });
 };
 
@@ -14769,7 +15163,7 @@ app.loadAdminList = function() {
             html += '<div style="display: flex; align-items: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb; gap: 12px;">';
             html += '<div style="flex: 1;"><div style="font-weight: 600; font-size: 14px;">' + email + '</div>';
             if (isDefault) {
-                html += '<div style="font-size: 11px; color: #0088cc; font-weight: 500;">⭐ Default Admin</div>';
+                html += '<div style="font-size: 11px; color: #0088cc; font-weight: 500;"> Default Admin</div>';
             }
             html += '</div>';
 
@@ -14795,7 +15189,7 @@ app.loadAdminList = function() {
 // Add admin
 app.addAdmin = function() {
     if (!this.isAdmin) {
-        this.toast('❌ You do not have permission to manage admins', 'error');
+        this.toast(' You do not have permission to manage admins', 'error');
         return;
     }
 
@@ -14805,12 +15199,12 @@ app.addAdmin = function() {
     var email = emailInput.value.toLowerCase().trim();
 
     if (!email || !email.includes('@')) {
-        this.toast('❌ Please enter a valid email', 'error');
+        this.toast(' Please enter a valid email', 'error');
         return;
     }
 
     if (email === this.user.email) {
-        this.toast('ℹ️ You are already an admin', 'info');
+        this.toast('You are already an admin', 'info');
         return;
     }
 
@@ -14821,18 +15215,18 @@ app.addAdmin = function() {
 
     // Add to database
     db.ref('adminUsers/' + encodedEmail).set(true).then(function() {
-        self.toast('✅ ' + email + ' is now an admin!', 'success');
+        self.toast(' ' + email + ' is now an admin!', 'success');
         emailInput.value = '';
         self.loadAdminList();
     }).catch(function(err) {
-        self.toast('❌ Error adding admin: ' + err.message, 'error');
+        self.toast(' Error adding admin: ' + err.message, 'error');
     });
 };
 
 // Remove admin
 app.removeAdmin = function(email) {
     if (!this.isAdmin) {
-        this.toast('❌ You do not have permission to manage admins', 'error');
+        this.toast(' You do not have permission to manage admins', 'error');
         return;
     }
 
@@ -14844,10 +15238,10 @@ app.removeAdmin = function(email) {
     var encodedEmail = email.replace(/\./g, '_');
 
     db.ref('adminUsers/' + encodedEmail).remove().then(function() {
-        self.toast('✅ ' + email + ' admin access removed', 'success');
+        self.toast(' ' + email + ' admin access removed', 'success');
         self.loadAdminList();
     }).catch(function(err) {
-        self.toast('❌ Error removing admin: ' + err.message, 'error');
+        self.toast(' Error removing admin: ' + err.message, 'error');
     });
 };
 
@@ -14860,13 +15254,13 @@ app.removeAdmin = function(email) {
 app.showProfileSettings = function() {
     var self = this;
     if (!this.user) {
-        this.toast('❌ Please log in first', 'error');
+        this.toast(' Please log in first', 'error');
         return;
     }
 
     var modal = document.getElementById('editProfileModal');
     if (!modal) {
-        this.toast('❌ Edit modal not found', 'error');
+        this.toast(' Edit modal not found', 'error');
         return;
     }
 
@@ -14912,7 +15306,7 @@ app.showTriviaReadyScreen = function() {
 
     triviaQuestionArea.innerHTML = `
         <div style="text-align: center; padding: 40px 20px;">
-            <div style="font-size: 70px; margin-bottom: 20px; animation: pulse 2s infinite;">🧠</div>
+            <div style="font-size: 70px; margin-bottom: 20px; animation: pulse 2s infinite;"></div>
             <div style="font-size: 24px; font-weight: 700; color: #1a202c; margin-bottom: 12px;">Ready for Trivia?</div>
             <div style="font-size: 15px; color: #6b7280; margin-bottom: 32px;">You have <strong>${remainingQuestions}</strong> questions left today</div>
             <button onclick="app.startTriviaGame();" style="
@@ -14927,7 +15321,7 @@ app.showTriviaReadyScreen = function() {
                 transition: all 0.3s;
                 box-shadow: 0 4px 12px rgba(34,197,94,0.3);
             " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 24px rgba(34,197,94,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(34,197,94,0.3)'">
-                ▶️ Start Trivia
+                 Start Trivia
             </button>
         </div>
     `;
@@ -14945,7 +15339,7 @@ app.handleTriviaTimeUp = function() {
         var correctAnswer = this.currentTrivia.options[this.currentTrivia.correct];
         resultArea.innerHTML = `
             <div style="text-align: center;">
-                <div style="font-size: 18px; font-weight: 700; color: #ef4444; margin-bottom: 8px;">⏰ Time's Up!</div>
+                <div style="font-size: 18px; font-weight: 700; color: #ef4444; margin-bottom: 8px;"> Time's Up!</div>
                 <div style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">The correct answer was: <strong>${correctAnswer}</strong></div>
                 <button onclick="app.loadNextTriviaQuestion();" style="
                     width: 100%;
@@ -14957,7 +15351,7 @@ app.handleTriviaTimeUp = function() {
                     cursor: pointer;
                     font-weight: 600;
                     font-size: 14px;
-                ">📝 Next Question</button>
+                "> Next Question</button>
             </div>
         `;
         resultArea.style.display = 'block';
@@ -15020,8 +15414,8 @@ app.trackDeliveryStatus = function(msgId, status) {
 };
 
 app.updateMessageStatus = function(msgId, newStatus) {
-    var statusMap = {'sent': '✓', 'delivered': '✓✓', 'read': '✓✓✓'};
-    var indicator = statusMap[newStatus] || '✓';
+    var statusMap = {'sent': '', 'delivered': '', 'read': ''};
+    var indicator = statusMap[newStatus] || '';
     var elem = document.querySelector('[data-msg-id="' + msgId + '"] .delivery-status');
     if (elem) {
         elem.textContent = indicator;
@@ -15108,7 +15502,7 @@ app.trackPresence = function() {
             if (statusDot) statusDot.style.background = '#a3e635';
         } else {
             var lastSeen = presence && presence.lastSeen ? self.formatTimeAgo(new Date(presence.lastSeen)) : 'Offline';
-            statusText.textContent = lastSeen === 'Offline' ? 'Not online right now 🙂' : 'Not online right now 🙂 I was ' + lastSeen;
+            statusText.textContent = lastSeen === 'Offline' ? 'Not online right now ' : 'Not online right now  I was ' + lastSeen;
             statusText.style.color = 'rgba(255,255,255,0.78)';
             if (statusDot) statusDot.style.background = '#94a3b8';
         }
@@ -15145,7 +15539,7 @@ app.saveEditMessage = function(msgId, chatKey, newText) {
 app.copyMessageToClipboard = function(text) {
     var self = this;
     if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(function() { self.toast('✓ Copied', 'success'); }).catch(function() { self.fallbackCopy(text); });
+        navigator.clipboard.writeText(text).then(function() { self.toast(' Copied', 'success'); }).catch(function() { self.fallbackCopy(text); });
     } else {
         this.fallbackCopy(text);
     }
@@ -15158,7 +15552,7 @@ app.fallbackCopy = function(text) {
     textarea.select();
     document.execCommand('copy');
     document.body.removeChild(textarea);
-    this.toast('✓ Copied', 'success');
+    this.toast(' Copied', 'success');
 };
 
 // PHASE 2: Emoji Reactions
@@ -15203,7 +15597,7 @@ app.startVoiceRecording = function() {
     var modal = document.createElement('div');
     modal.id = 'voiceRecordingModal';
     modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:12px;padding:20px;z-index:9999;text-align:center;';
-    modal.innerHTML = '<div style="font-size:18px;font-weight:700;margin-bottom:15px;">🎤 Recording...</div><div id="recordingTime" style="font-size:24px;font-weight:700;color:#2e5bff;margin-bottom:15px;">00:00</div><div style="display:flex;gap:10px;"><button onclick="app.stopVoiceRecording();" style="flex:1;padding:10px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;">Stop</button></div>';
+    modal.innerHTML = '<div style="font-size:18px;font-weight:700;margin-bottom:15px;"> Recording...</div><div id="recordingTime" style="font-size:24px;font-weight:700;color:#2e5bff;margin-bottom:15px;">00:00</div><div style="display:flex;gap:10px;"><button onclick="app.stopVoiceRecording();" style="flex:1;padding:10px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;">Stop</button></div>';
     document.body.appendChild(modal);
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream) {
@@ -15261,7 +15655,7 @@ app.sendVoiceMessage = function(voiceUrl, duration) {
     db.ref('messages/' + key).push().set(voiceMsg).then(function(ref) {
         db.ref('chats/' + key + '/messages/' + ref.key).set(voiceMsg);
         self.displayChatMessages(self.chatMessages[key], key);
-        self.toast('🎤 Voice message sent', 'success');
+        self.toast(' Voice message sent', 'success');
     }).catch(function() { self.toast('Error sending voice message', 'error'); });
 };
 
@@ -15302,7 +15696,7 @@ app.endVoiceCall = function() {
 };
 
 app.connectCall = function(callId) {
-    this.toast('📞 Call connected', 'success');
+    this.toast(' Call connected', 'success');
     this.displayCallUI('connected');
     var self = this;
     this.callStartTime = Date.now();
@@ -15321,8 +15715,8 @@ app.displayCallUI = function(state) {
     var callUI = document.createElement('div');
     callUI.id = 'callUI';
     callUI.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0f172a,#1e293b);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;';
-    var statusText = state === 'outgoing' ? '📞 Calling...' : state === 'connected' ? '📞 Connected' : '📞 Incoming Call';
-    callUI.innerHTML = '<div style="text-align:center;color:white;"><div style="font-size:48px;margin-bottom:16px;">👤</div><div style="font-size:20px;font-weight:700;margin-bottom:8px;">' + (this.currentChat ? this.currentChat.name : 'User') + '</div><div style="font-size:14px;color:#cbd5e1;margin-bottom:16px;">' + statusText + '</div>' + (state === 'connected' ? '<div class="call-duration" style="font-size:24px;color:#10b981;font-weight:700;margin-bottom:16px;">00:00</div>' : '') + '<div style="display:flex;gap:16px;justify-content:center;">' + (state === 'outgoing' ? '<button onclick="app.endVoiceCall();" style="width:60px;height:60px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:24px;cursor:pointer;">✕</button>' : state === 'connected' ? '<button onclick="app.endVoiceCall();" style="width:60px;height:60px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:24px;cursor:pointer;">✕</button>' : '<button onclick="app.acceptVoiceCall();" style="width:60px;height:60px;border-radius:50%;background:#10b981;color:white;border:none;font-size:24px;cursor:pointer;">✓</button><button onclick="app.endVoiceCall();" style="width:60px;height:60px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:24px;cursor:pointer;">✕</button>') + '</div></div>';
+    var statusText = state === 'outgoing' ? ' Calling...' : state === 'connected' ? ' Connected' : ' Incoming Call';
+    callUI.innerHTML = '<div style="text-align:center;color:white;"><div style="font-size:20px;font-weight:700;margin-bottom:8px;">' + (this.currentChat ? this.currentChat.name : 'User') + '</div><div style="font-size:14px;color:#cbd5e1;margin-bottom:16px;">' + statusText.trim() + '</div>' + (state === 'connected' ? '<div class="call-duration" style="font-size:24px;color:#10b981;font-weight:700;margin-bottom:16px;">00:00</div>' : '') + '<div style="display:flex;gap:16px;justify-content:center;">' + (state === 'outgoing' ? '<button aria-label="End call" onclick="app.endVoiceCall();" style="width:64px;height:48px;border-radius:24px;background:#ef4444;color:white;border:none;font-size:13px;font-weight:700;cursor:pointer;">End</button>' : state === 'connected' ? '<button aria-label="End call" onclick="app.endVoiceCall();" style="width:64px;height:48px;border-radius:24px;background:#ef4444;color:white;border:none;font-size:13px;font-weight:700;cursor:pointer;">End</button>' : '<button aria-label="Accept call" onclick="app.acceptVoiceCall();" style="width:78px;height:48px;border-radius:24px;background:#10b981;color:white;border:none;font-size:13px;font-weight:700;cursor:pointer;">Accept</button><button aria-label="Decline call" onclick="app.endVoiceCall();" style="width:78px;height:48px;border-radius:24px;background:#ef4444;color:white;border:none;font-size:13px;font-weight:700;cursor:pointer;">Decline</button>') + '</div></div>';
     document.body.appendChild(callUI);
 };
 
@@ -15343,7 +15737,7 @@ app.pinMessage = function(msgId) {
     }
     db.ref('pinned/' + chatKey + '/' + msgId).set({pinnedAt: firebase.database.ServerValue.TIMESTAMP, pinnedBy: this.user.uid, text: msgText}).then(function() {
         db.ref('messages/' + msgId).update({isPinned: true});
-        self.toast('📌 Message pinned', 'success');
+        self.toast(' Message pinned', 'success');
         self.displayPinnedMessages();
     });
 };
@@ -15368,7 +15762,7 @@ app.displayPinnedMessages = function() {
         var existing = document.querySelector('.pinned-section');
         if (existing) existing.remove();
         if (pinned && Object.keys(pinned).length > 0) {
-            var pinnedHtml = '<div class="pinned-section" style="background:#f0fdf4;border-bottom:1px solid #e5e7eb;padding:12px;display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;font-size:12px;color:#059669;">📌 PINNED</div><div style="font-size:13px;color:#1f2937;margin-top:4px;">' + Object.values(pinned)[0].text + '</div></div></div>';
+            var pinnedHtml = '<div class="pinned-section" style="background:#f0fdf4;border-bottom:1px solid #e5e7eb;padding:12px;display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;font-size:12px;color:#059669;"> PINNED</div><div style="font-size:13px;color:#1f2937;margin-top:4px;">' + Object.values(pinned)[0].text + '</div></div></div>';
             if (chatHeader) chatHeader.insertAdjacentHTML('afterend', pinnedHtml);
         }
     });
@@ -15397,23 +15791,42 @@ app.forwardMessage = function(msgId) {
                 }
             });
         }
+        var existingModal = document.getElementById('forwardMessageModal');
+        if (existingModal) existingModal.remove();
         var modal = document.createElement('div');
-        modal.id = 'forwardModal';
+        modal.id = 'forwardMessageModal';
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
-        modal.innerHTML = '<div style="background:white;border-radius:12px;padding:20px;width:90%;max-width:400px;"><div style="font-size:18px;font-weight:700;margin-bottom:15px;">Forward to:</div>' + conversations.map(function(conv) {
-            return '<div onclick="app.sendForwardedMessage(\'' + msgText.replace(/'/g, "\\'") + '\',\'' + conv.chatKey + '\');document.getElementById(\'forwardModal\').remove();" style="padding:12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;cursor:pointer;">' + conv.name + '</div>';
+        modal.innerHTML = '<div style="position:relative;background:white;border-radius:12px;padding:20px;width:90%;max-width:400px;"><button type="button" aria-label="Close forward dialog" onclick="app.closeForwardModal()" style="position:absolute;top:10px;right:10px;width:36px;height:36px;border:0;border-radius:50%;background:#f1f5f9;color:#334155;font-size:22px;line-height:1;cursor:pointer;">&times;</button><div style="font-size:18px;font-weight:700;margin:0 44px 15px 0;">Forward to:</div>' + conversations.map(function(conv) {
+            return '<div onclick="app.sendForwardedMessage(\'' + msgText.replace(/'/g, "\\'") + '\',\'' + conv.chatKey + '\');app.closeForwardModal();" style="padding:12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;cursor:pointer;">' + conv.name + '</div>';
         }).join('') + '</div>';
         document.body.appendChild(modal);
     });
+};
+
+app.closeForwardModal = function() {
+    var modal = document.getElementById('forwardMessageModal');
+    if (modal) modal.remove();
+    var legacyModal = document.getElementById('forwardModal');
+    if (legacyModal) {
+        legacyModal.classList.remove('active');
+        legacyModal.style.display = 'none';
+        legacyModal.setAttribute('aria-hidden', 'true');
+    }
 };
 
 app.sendForwardedMessage = function(text, targetChatKey) {
     if (!this.user) return;
     var self = this;
     var msg = {text: text, sender: this.user.uid, timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'delivered', forward: {fromUserId: this.currentChat.uid, fromUserName: this.currentChat.name}};
-    db.ref('messages/' + targetChatKey).push().set(msg).then(function(ref) {
-        db.ref('chats/' + targetChatKey + '/messages/' + ref.key).set(msg);
-        self.toast('↪️ Message forwarded', 'success');
+    var messageRef = db.ref('messages/' + targetChatKey).push();
+    return Promise.all([
+        messageRef.set(msg),
+        db.ref('chats/' + targetChatKey + '/messages/' + messageRef.key).set(msg)
+    ]).then(function() {
+        self.toast(' Message forwarded', 'success');
+    }).catch(function(error) {
+        console.error('Failed to forward message:', error);
+        self.toast('Message could not be forwarded. Please try again.', 'error');
     });
 };
 
@@ -15452,7 +15865,7 @@ app.muteConversation = function() {
     var self = this;
     var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
     db.ref('muted/' + this.user.uid + '/' + chatKey).set(true).then(function() {
-        self.toast('🔕 Chat muted', 'success');
+        self.toast(' Chat muted', 'success');
         self.displayMuteStatus();
     });
 };
@@ -15462,7 +15875,7 @@ app.unmuteConversation = function() {
     var self = this;
     var chatKey = [this.user.uid, this.currentChat.uid].sort().join('_');
     db.ref('muted/' + this.user.uid + '/' + chatKey).remove().then(function() {
-        self.toast('🔔 Chat unmuted', 'success');
+        self.toast(' Chat unmuted', 'success');
         self.displayMuteStatus();
     });
 };
@@ -15476,10 +15889,10 @@ app.displayMuteStatus = function() {
         var chatHeader = document.querySelector('.chat-header-mute');
         if (chatHeader) {
             if (isMuted) {
-                chatHeader.innerHTML = '🔕 Muted';
+                chatHeader.innerHTML = ' Muted';
                 chatHeader.style.color = '#ef4444';
             } else {
-                chatHeader.innerHTML = '🔔 Unmuted';
+                chatHeader.innerHTML = ' Unmuted';
                 chatHeader.style.color = '#10b981';
             }
         }
@@ -15490,7 +15903,7 @@ app.displayMuteStatus = function() {
 app.showCallNotification = function(callerName) {
     var notification = document.createElement('div');
     notification.style.cssText = 'position:fixed;top:20px;right:20px;background:white;border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.2);z-index:10000;';
-    notification.innerHTML = '<div style="font-weight:700;margin-bottom:8px;">📞 ' + callerName + ' is calling...</div><div style="display:flex;gap:8px;"><button onclick="app.acceptVoiceCall();this.parentElement.parentElement.remove();" style="flex:1;padding:8px 16px;background:#10b981;color:white;border:none;border-radius:8px;cursor:pointer;">Accept</button><button onclick="app.endVoiceCall();this.parentElement.parentElement.remove();" style="flex:1;padding:8px 16px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;">Decline</button></div>';
+    notification.innerHTML = '<div style="font-weight:700;margin-bottom:8px;"> ' + callerName + ' is calling...</div><div style="display:flex;gap:8px;"><button onclick="app.acceptVoiceCall();this.parentElement.parentElement.remove();" style="flex:1;padding:8px 16px;background:#10b981;color:white;border:none;border-radius:8px;cursor:pointer;">Accept</button><button onclick="app.endVoiceCall();this.parentElement.parentElement.remove();" style="flex:1;padding:8px 16px;background:#ef4444;color:white;border:none;border-radius:8px;cursor:pointer;">Decline</button></div>';
     document.body.appendChild(notification);
     this.playRingtone();
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
@@ -15499,7 +15912,7 @@ app.showCallNotification = function(callerName) {
 app.showMissedCallNotification = function(callerName) {
     var notification = document.createElement('div');
     notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#fef2f2;border-radius:12px;padding:16px;z-index:10000;border:1px solid #fee2e2;';
-    notification.innerHTML = '<div style="color:#991b1b;font-weight:600;">📵 Missed call from ' + callerName + '</div>';
+    notification.innerHTML = '<div style="color:#991b1b;font-weight:600;"> Missed call from ' + callerName + '</div>';
     document.body.appendChild(notification);
     setTimeout(function() { notification.remove(); }, 5000);
 };
@@ -15526,7 +15939,7 @@ app.removeHeaderDarkMode = function() {
 app.addSettingsThemeToggle = function() {
     var settings = document.querySelector('.settings-menu');
     if (settings) {
-        settings.innerHTML += '<div style="padding:16px;border-top:1px solid #e5e7eb;"><div style="font-weight:600;margin-bottom:8px;">🌙 Theme</div><label style="display:flex;gap:8px;margin-bottom:8px;"><input type="radio" name="theme" value="light" onchange="app.setTheme(\'light\');" style="cursor:pointer;"/><span>Light</span></label><label style="display:flex;gap:8px;"><input type="radio" name="theme" value="dark" onchange="app.setTheme(\'dark\');" style="cursor:pointer;"/><span>Dark</span></label></div>';
+        settings.innerHTML += '<div style="padding:16px;border-top:1px solid #e5e7eb;"><div style="font-weight:600;margin-bottom:8px;"> Theme</div><label style="display:flex;gap:8px;margin-bottom:8px;"><input type="radio" name="theme" value="light" onchange="app.setTheme(\'light\');" style="cursor:pointer;"/><span>Light</span></label><label style="display:flex;gap:8px;"><input type="radio" name="theme" value="dark" onchange="app.setTheme(\'dark\');" style="cursor:pointer;"/><span>Dark</span></label></div>';
     }
 };
 
@@ -15563,7 +15976,7 @@ app.displayVideoCallUI = function(state) {
     var callUI = document.createElement('div');
     callUI.id = 'videoCallUI';
     callUI.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;';
-    callUI.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;width:100%;"><video id="remoteVideo" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;bottom:100px;right:20px;width:100px;height:133px;background:#1f2937;border-radius:8px;overflow:hidden;"><video id="miniLocalVideo" style="width:100%;height:100%;object-fit:cover;"></video></div></div><div style="background:rgba(0,0,0,0.7);padding:16px;display:flex;gap:12px;justify-content:center;width:100%;"><button style="width:50px;height:50px;border-radius:50%;background:#475569;color:white;border:none;font-size:20px;cursor:pointer;">📹</button><button style="width:50px;height:50px;border-radius:50%;background:#475569;color:white;border:none;font-size:20px;cursor:pointer;">🎤</button><button onclick="app.endVoiceCall();" style="width:50px;height:50px;border-radius:50%;background:#ef4444;color:white;border:none;font-size:20px;cursor:pointer;">✕</button></div>';
+    callUI.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;width:100%;"><video id="remoteVideo" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;bottom:100px;right:20px;width:100px;height:133px;background:#1f2937;border-radius:8px;overflow:hidden;"><video id="miniLocalVideo" style="width:100%;height:100%;object-fit:cover;"></video></div></div><div style="background:rgba(0,0,0,0.7);padding:16px;display:flex;gap:12px;justify-content:center;width:100%;"><button aria-label="Microphone" style="width:64px;height:44px;border-radius:22px;background:#475569;color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;">Mic</button><button aria-label="Camera" style="width:72px;height:44px;border-radius:22px;background:#475569;color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;">Camera</button><button aria-label="End call" onclick="app.endVoiceCall();" style="width:64px;height:44px;border-radius:22px;background:#ef4444;color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;">End</button></div>';
     document.body.appendChild(callUI);
 };
 
@@ -15638,7 +16051,7 @@ app.previewEmail = function() {
         return;
     }
 
-    let emailHTML = '<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;"><div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:30px;text-align:center;border-radius:12px 12px 0 0;"><img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png" style="max-width:100px;height:auto;display:block;margin:0 auto;border-radius:8px;"></div><div style="background:white;padding:30px;border-radius:0 0 12px 12px;color:#1a202c;"><div style="font-size:16px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;">' + content + '</div>' + (ctaText && ctaURL ? '<div style="text-align:center;margin-top:30px;"><a href="' + ctaURL + '" style="background:#2E5BFF;color:white;padding:12px 30px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">' + ctaText + '</a></div>' : '') + '<div style="margin-top:30px;border-top:1px solid #e5e7eb;padding-top:20px;font-size:12px;color:#6b7280;text-align:center;">© 2026 Onchari Group • CHICHI</div></div></div>';
+    let emailHTML = '<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;"><div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:30px;text-align:center;border-radius:12px 12px 0 0;"><img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png" style="max-width:100px;height:auto;display:block;margin:0 auto;border-radius:8px;"></div><div style="background:white;padding:30px;border-radius:0 0 12px 12px;color:#1a202c;"><div style="font-size:16px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;">' + content + '</div>' + (ctaText && ctaURL ? '<div style="text-align:center;margin-top:30px;"><a href="' + ctaURL + '" style="background:#2E5BFF;color:white;padding:12px 30px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">' + ctaText + '</a></div>' : '') + '<div style="margin-top:30px;border-top:1px solid #e5e7eb;padding-top:20px;font-size:12px;color:#6b7280;text-align:center;"> 2026 Onchari Group • CHICHI</div></div></div>';
 
     const modal = document.getElementById('emailPreviewModal');
     const frame = document.getElementById('emailPreviewFrame');
@@ -15681,7 +16094,7 @@ app.sendBulkEmail = function() {
 
     const originalText = btn.innerText;
     btn.disabled = true;
-    btn.innerText = '⏳ Sending...';
+    btn.innerText = ' Sending...';
 
     const db = firebase.database();
 
@@ -15713,7 +16126,7 @@ app.sendBulkEmail = function() {
                     });
 
                     // Show success message
-                    app.toast('✅ Email sent to ' + successCount + '/' + recipients.length + ' users!', 'success');
+                    app.toast(' Email sent to ' + successCount + '/' + recipients.length + ' users!', 'success');
 
                     // Clear form
                     document.getElementById('emailSubject').value = '';
@@ -15736,7 +16149,7 @@ app.sendBulkEmail = function() {
 
                 batch.forEach(function(user) {
                     // Build email body
-                    const emailBody = '<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;"><div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:30px;text-align:center;border-radius:12px 12px 0 0;"><img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png" style="max-width:100px;height:auto;display:block;margin:0 auto;border-radius:8px;"></div><div style="background:white;padding:30px;border-radius:0 0 12px 12px;color:#1a202c;"><div style="font-size:16px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;">' + content.replace(/{{USER_NAME}}/g, user.name) + '</div>' + (ctaText && ctaURL ? '<div style="text-align:center;margin-top:30px;"><a href="' + ctaURL + '" style="background:#2E5BFF;color:white;padding:12px 30px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">' + ctaText + '</a></div>' : '') + '<div style="margin-top:30px;border-top:1px solid #e5e7eb;padding-top:20px;font-size:12px;color:#6b7280;text-align:center;">© 2026 Onchari Group • CHICHI</div></div></div>';
+                    const emailBody = '<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;"><div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:30px;text-align:center;border-radius:12px 12px 0 0;"><img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png" style="max-width:100px;height:auto;display:block;margin:0 auto;border-radius:8px;"></div><div style="background:white;padding:30px;border-radius:0 0 12px 12px;color:#1a202c;"><div style="font-size:16px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;">' + content.replace(/{{USER_NAME}}/g, user.name) + '</div>' + (ctaText && ctaURL ? '<div style="text-align:center;margin-top:30px;"><a href="' + ctaURL + '" style="background:#2E5BFF;color:white;padding:12px 30px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">' + ctaText + '</a></div>' : '') + '<div style="margin-top:30px;border-top:1px solid #e5e7eb;padding-top:20px;font-size:12px;color:#6b7280;text-align:center;"> 2026 Onchari Group • CHICHI</div></div></div>';
 
                     // Send via API
                     fetch('/api/sendEmail', {
@@ -15843,7 +16256,7 @@ const EMAIL_TEMPLATES = {
             <div style="white-space:pre-wrap;color:#4b5563;font-size:15px;">${message}</div>
         </div>
         ${ctaText && ctaURL ? `<div style="text-align:center;margin:30px 0;"><a href="${ctaURL}" style="background:linear-gradient(135deg,#2E5BFF 0%,#1e40af 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;box-shadow:0 4px 15px rgba(46,91,255,0.3);">${ctaText}</a></div>` : ''}
-        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0 0 10px 0;">© 2026 Onchari Group • CHICHI</p></div>
+        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0 0 10px 0;"> 2026 Onchari Group • CHICHI</p></div>
     </div>
 </div>
             `;
@@ -15852,7 +16265,7 @@ const EMAIL_TEMPLATES = {
     incomplete_profile: {
         name: 'Incomplete Profile',
         description: 'Remind users to complete their profile',
-        subject: '⚠️ Complete Your CHICHI Profile',
+        subject: ' Complete Your CHICHI Profile',
         template: function(userName, message) {
             return `
 <div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f8fafc;">
@@ -15862,17 +16275,17 @@ const EMAIL_TEMPLATES = {
     </div>
     <div style="background:white;padding:40px 30px;border-radius:0 0 12px 12px;color:#1a202c;">
         <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:15px;border-radius:6px;margin-bottom:30px;">
-            <div style="font-weight:600;color:#d97706;margin-bottom:8px;">⚠️ Action Required</div>
+            <div style="font-weight:600;color:#d97706;margin-bottom:8px;"> Action Required</div>
             <div style="font-size:14px;color:#92400e;">Your profile is incomplete. Please complete your information to unlock all features.</div>
         </div>
         <p style="font-size:16px;line-height:1.8;color:#374151;margin-bottom:20px;"><strong>Hi ${userName},</strong></p>
         <div style="background:#f0f7ff;padding:20px;border-radius:8px;margin-bottom:30px;border-left:4px solid #2E5BFF;">
-            <div style="color:#1e40af;font-weight:600;margin-bottom:10px;">📝 What's Missing?</div>
+            <div style="color:#1e40af;font-weight:600;margin-bottom:10px;"> What's Missing?</div>
             <ul style="margin:0;padding-left:20px;color:#374151;font-size:14px;"><li style="margin-bottom:8px;">Username</li><li style="margin-bottom:8px;">Profile Photo</li><li>Bio & Interests</li></ul>
         </div>
         <p style="font-size:14px;color:#4b5563;line-height:1.8;margin-bottom:30px;white-space:pre-wrap;">${message}</p>
         <div style="text-align:center;margin:30px 0;"><a href="https://chichi.buzz/settings" style="background:linear-gradient(135deg,#2E5BFF 0%,#1e40af 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;box-shadow:0 4px 15px rgba(46,91,255,0.3);">Complete Profile Now</a></div>
-        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;">© 2026 Onchari Group • CHICHI</p></div>
+        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;"> 2026 Onchari Group • CHICHI</p></div>
     </div>
 </div>
             `;
@@ -15881,12 +16294,12 @@ const EMAIL_TEMPLATES = {
     award: {
         name: 'Award Notification',
         description: 'Congratulate users on achievements',
-        subject: '🎉 Congratulations, {{USER_NAME}}!',
+        subject: ' Congratulations, {{USER_NAME}}!',
         template: function(userName, message) {
             return `
 <div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f8fafc;">
     <div style="background:linear-gradient(135deg,#0A0E1F 0%,#2E5BFF 100%);padding:40px 30px;text-align:center;border-radius:12px 12px 0 0;">
-        <div style="font-size:50px;margin-bottom:15px;">🏆</div>
+        <div style="font-size:50px;margin-bottom:15px;"></div>
         <img src="https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png" style="width:80px;height:80px;border-radius:12px;margin-bottom:15px;">
         <div style="color:white;font-size:24px;font-weight:700;">Achievement Unlocked!</div>
     </div>
@@ -15897,11 +16310,11 @@ const EMAIL_TEMPLATES = {
         </div>
         <div style="font-size:16px;line-height:1.8;color:#374151;margin-bottom:30px;white-space:pre-wrap;">${message}</div>
         <div style="background:#f0fdf4;padding:20px;border-radius:8px;margin-bottom:30px;border-left:4px solid #22c55e;">
-            <div style="color:#166534;font-weight:600;margin-bottom:10px;">✨ Your Achievement</div>
+            <div style="color:#166534;font-weight:600;margin-bottom:10px;"> Your Achievement</div>
             <div style="color:#374151;font-size:14px;">You've shown exceptional engagement and contribution to the CHICHI community!</div>
         </div>
         <div style="text-align:center;margin:30px 0;"><a href="https://chichi.buzz/profile" style="background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;box-shadow:0 4px 15px rgba(34,197,94,0.3);">View Your Achievement</a></div>
-        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;">© 2026 Onchari Group • CHICHI</p></div>
+        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;"> 2026 Onchari Group • CHICHI</p></div>
     </div>
 </div>
             `;
@@ -15910,17 +16323,17 @@ const EMAIL_TEMPLATES = {
     account_issue: {
         name: 'Account Issue Notice',
         description: 'Notify user of account issues that need fixing',
-        subject: '⚠️ Action Needed: Account Issue',
+        subject: ' Action Needed: Account Issue',
         template: function(userName, message) {
             return `
 <div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f8fafc;">
     <div style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%);padding:40px 30px;text-align:center;border-radius:12px 12px 0 0;">
-        <div style="font-size:50px;margin-bottom:15px;">⚠️</div>
+        <div style="font-size:50px;margin-bottom:15px;"></div>
         <div style="color:white;font-size:24px;font-weight:700;">Action Required</div>
     </div>
     <div style="background:white;padding:40px 30px;border-radius:0 0 12px 12px;color:#1a202c;">
         <div style="background:#fee2e2;border-left:4px solid #dc2626;padding:15px;border-radius:6px;margin-bottom:30px;">
-            <div style="font-weight:600;color:#991b1b;margin-bottom:8px;">⚠️ Important Notice</div>
+            <div style="font-weight:600;color:#991b1b;margin-bottom:8px;"> Important Notice</div>
             <div style="font-size:14px;color:#7f1d1d;">We've detected an issue with your account that needs your attention.</div>
         </div>
         <p style="font-size:16px;line-height:1.8;color:#374151;margin-bottom:20px;"><strong>Hi ${userName},</strong></p>
@@ -15930,7 +16343,7 @@ const EMAIL_TEMPLATES = {
         </div>
         <p style="font-size:14px;color:#4b5563;margin-bottom:30px;">Please fix this issue within <strong>48 hours</strong> to avoid account restrictions.</p>
         <div style="text-align:center;margin:30px 0;"><a href="https://chichi.buzz/settings" style="background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;box-shadow:0 4px 15px rgba(220,38,38,0.3);">Fix Issue Now</a></div>
-        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;">© 2026 Onchari Group • CHICHI</p></div>
+        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;"> 2026 Onchari Group • CHICHI</p></div>
     </div>
 </div>
             `;
@@ -15939,22 +16352,22 @@ const EMAIL_TEMPLATES = {
     policy_violation: {
         name: 'Policy Violation Notice',
         description: 'Notify about content violations',
-        subject: '🚫 Content Violation Notice',
+        subject: ' Content Violation Notice',
         template: function(userName, message) {
             return `
 <div style="max-width:600px;margin:0 auto;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f8fafc;">
     <div style="background:linear-gradient(135deg,#ea580c 0%,#c2410c 100%);padding:40px 30px;text-align:center;border-radius:12px 12px 0 0;">
-        <div style="font-size:50px;margin-bottom:15px;">🚫</div>
+        <div style="font-size:50px;margin-bottom:15px;"></div>
         <div style="color:white;font-size:24px;font-weight:700;">Content Violation</div>
     </div>
     <div style="background:white;padding:40px 30px;border-radius:0 0 12px 12px;color:#1a202c;">
         <div style="background:#fed7aa;border-left:4px solid #ea580c;padding:15px;border-radius:6px;margin-bottom:30px;">
-            <div style="font-weight:600;color:#9a3412;margin-bottom:8px;">🚫 Policy Violation</div>
+            <div style="font-weight:600;color:#9a3412;margin-bottom:8px;"> Policy Violation</div>
             <div style="font-size:14px;color:#78350f;">One or more of your posts violate our community guidelines.</div>
         </div>
         <p style="font-size:16px;line-height:1.8;color:#374151;margin-bottom:20px;"><strong>Hi ${userName},</strong></p>
         <div style="background:#f8f8f8;padding:20px;border-radius:8px;margin-bottom:30px;border-left:4px solid #ea580c;">
-            <div style="color:#9a3412;font-weight:600;margin-bottom:10px;">📋 Reason for Removal:</div>
+            <div style="color:#9a3412;font-weight:600;margin-bottom:10px;"> Reason for Removal:</div>
             <div style="color:#374151;font-size:14px;line-height:1.8;white-space:pre-wrap;">${message}</div>
         </div>
         <div style="background:#fef3c7;padding:15px;border-radius:8px;margin-bottom:30px;">
@@ -15962,7 +16375,7 @@ const EMAIL_TEMPLATES = {
             <ul style="margin:0;padding-left:20px;color:#374151;font-size:14px;line-height:1.8;"><li>Review our Community Guidelines</li><li>Remove or edit the offending content</li><li>Resubmit your post if it complies</li></ul>
         </div>
         <div style="text-align:center;margin:30px 0;"><a href="https://chichi.buzz/guidelines" style="background:linear-gradient(135deg,#ea580c 0%,#c2410c 100%);color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;box-shadow:0 4px 15px rgba(234,88,12,0.3);">View Guidelines</a></div>
-        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;">© 2026 Onchari Group • CHICHI</p></div>
+        <div style="margin-top:40px;padding-top:30px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center;"><p style="margin:0;"> 2026 Onchari Group • CHICHI</p></div>
     </div>
 </div>
             `;
@@ -15983,11 +16396,11 @@ app.initTemplateSystem = function() {
             document.getElementById('emailSubject').value = selectedTemplate.subject;
             document.getElementById('emailContent').value = '';
             const templateHint = {
-                'generic': '✍️ Write your announcement or message here...',
-                'incomplete_profile': '✍️ Users with incomplete profiles will receive this.',
-                'award': '✍️ Congratulate the user on their achievement!',
-                'account_issue': '✍️ Describe the account issue that needs fixing.',
-                'policy_violation': '✍️ Explain why the content violates guidelines.'
+                'generic': ' Write your announcement or message here...',
+                'incomplete_profile': ' Users with incomplete profiles will receive this.',
+                'award': ' Congratulate the user on their achievement!',
+                'account_issue': ' Describe the account issue that needs fixing.',
+                'policy_violation': ' Explain why the content violates guidelines.'
             };
             const textarea = document.getElementById('emailContent');
             textarea.placeholder = templateHint[this.value] || 'Write your message...';
@@ -16062,7 +16475,7 @@ app.sendBulkEmail = function() {
 
     const originalText = btn.innerText;
     btn.disabled = true;
-    btn.innerText = '⏳ Sending...';
+    btn.innerText = ' Sending...';
 
     const db = firebase.database();
     const SENDER_EMAIL = 'support@chichi.buzz';
@@ -16091,7 +16504,7 @@ app.sendBulkEmail = function() {
                         sentAt: new Date().toISOString()
                     });
 
-                    app.toast('✅ Email sent to ' + successCount + '/' + recipients.length + ' users!', 'success');
+                    app.toast(' Email sent to ' + successCount + '/' + recipients.length + ' users!', 'success');
 
                     document.getElementById('emailSubject').value = '';
                     document.getElementById('emailContent').value = '';
@@ -16193,7 +16606,7 @@ document.addEventListener('DOMContentLoaded', function() {
     app.initTemplateSystem();
 });
 
-console.log("✅ Email template system loaded with 5 professional templates");
+console.log(" Email template system loaded with 5 professional templates");
 
 // ============================================
 // CHICHI SECURE SHELL - v2.0.1 (with log hiding)
@@ -16235,39 +16648,39 @@ console.log("✅ Email template system loaded with 5 professional templates");
     
     // Your hacker signature function
     function showHackerSignature() {
-        console.log('%c╔══════════════════════════════════════════════════════╗', 'color:#00ff41;');
-        console.log('%c║  ██████╗██╗  ██╗██╗ ██████╗██╗  ██╗██╗          ║', 'color:#00ff41;');
-        console.log('%c║ ██╔════╝██║  ██║██║██╔════╝██║  ██║██║          ║', 'color:#00ff41;');
-        console.log('%c║ ██║     ███████║██║██║     ███████║██║          ║', 'color:#00ff41;');
-        console.log('%c║ ██║     ██╔══██║██║██║     ██╔══██║██║          ║', 'color:#00ff41;');
-        console.log('%c║ ╚██████╗██║  ██║██║╚██████╗██║  ██║██║          ║', 'color:#00ff41;');
-        console.log('%c║  ╚═════╝╚═╝  ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝          ║', 'color:#00ff41;');
-        console.log('%c║                                                  ║', 'color:#00ff41;');
-        console.log('%c║  ╔═══════════════════════════════════════════════╗ ║', 'color:#8B5CF6;');
-        console.log('%c║  ║   DEVELOPER: ANTHONY ONCHARI                 ║ ║', 'color:#8B5CF6;font-weight:bold;');
-        console.log('%c║  ║   USERNAME: M1OO                            ║ ║', 'color:#8B5CF6;font-weight:bold;');
-        console.log('%c║  ║   STATUS: AUTHORIZED                        ║ ║', 'color:#00ff41;');
-        console.log('%c║  ║   DATE: 2026-08-31 | TIME: 12:34:56 UTC    ║ ║', 'color:#8B5CF6;');
-        console.log('%c║  ║   SESSION: 0x7F3A9B2C1D4E5F6A              ║ ║', 'color:#8B5CF6;');
-        console.log('%c║  ╚═══════════════════════════════════════════════╝ ║', 'color:#8B5CF6;');
-        console.log('%c║                                                  ║', 'color:#00ff41;');
-        console.log('%c║  SECURE ENCRYPTED SHELL v2.0.1                  ║', 'color:#00ff41;');
-        console.log('%c║  SESSION: CHI-2026-08-31T12:34:56Z             ║', 'color:#00ff41;');
-        console.log('%c║  NODE: 0x7F8A3B2C1D4E5F6A                      ║', 'color:#00ff41;');
-        console.log('%c║  STATUS: CONNECTED (TLS 1.3)                   ║', 'color:#00ff41;');
-        console.log('%c║  FIREWALL: ACTIVE | IDS: ONLINE                ║', 'color:#00ff41;');
-        console.log('%c║  AUTH: MULTI-FACTOR | ENCRYPTION: AES-256      ║', 'color:#00ff41;');
-        console.log('%c║  BUFFER: 47/128 NODES ACTIVE                   ║', 'color:#00ff41;');
-        console.log('%c║  CACHE: 38MB | LATENCY: 12ms                   ║', 'color:#00ff41;');
-        console.log('%c║  TARGET: [REDACTED]                            ║', 'color:#00ff41;');
-        console.log('%c║  DEVICE: [CLASSIFIED]                          ║', 'color:#00ff41;');
-        console.log('%c║  UPTIME: 00:47:23                             ║', 'color:#00ff41;');
-        console.log('%c║                                                  ║', 'color:#00ff41;');
-        console.log('%c║  ████▓▓▓▓▒▒▒▒░░░░░ INITIALIZING...            ║', 'color:#00ff41;');
-        console.log('%c║  ALL SYSTEMS [CLASSIFIED]                      ║', 'color:#00ff41;');
-        console.log('%c║  ACCESS LEVEL: [REDACTED]                      ║', 'color:#00ff41;');
-        console.log('%c║  DATA ENCRYPTED - 0x3F8A...C4D                ║', 'color:#00ff41;');
-        console.log('%c╚══════════════════════════════════════════════════════╝', 'color:#00ff41;');
+        console.log('%c', 'color:#00ff41;');
+        console.log('%c                 ', 'color:#00ff41;');
+        console.log('%c               ', 'color:#00ff41;');
+        console.log('%c                     ', 'color:#00ff41;');
+        console.log('%c                     ', 'color:#00ff41;');
+        console.log('%c               ', 'color:#00ff41;');
+        console.log('%c                 ', 'color:#00ff41;');
+        console.log('%c                                                  ', 'color:#00ff41;');
+        console.log('%c   ', 'color:#8B5CF6;');
+        console.log('%c     DEVELOPER: ANTHONY ONCHARI                  ', 'color:#8B5CF6;font-weight:bold;');
+        console.log('%c     USERNAME: M1OO                             ', 'color:#8B5CF6;font-weight:bold;');
+        console.log('%c     STATUS: AUTHORIZED                         ', 'color:#00ff41;');
+        console.log('%c     DATE: 2026-08-31 | TIME: 12:34:56 UTC     ', 'color:#8B5CF6;');
+        console.log('%c     SESSION: 0x7F3A9B2C1D4E5F6A               ', 'color:#8B5CF6;');
+        console.log('%c   ', 'color:#8B5CF6;');
+        console.log('%c                                                  ', 'color:#00ff41;');
+        console.log('%c  SECURE ENCRYPTED SHELL v2.0.1                  ', 'color:#00ff41;');
+        console.log('%c  SESSION: CHI-2026-08-31T12:34:56Z             ', 'color:#00ff41;');
+        console.log('%c  NODE: 0x7F8A3B2C1D4E5F6A                      ', 'color:#00ff41;');
+        console.log('%c  STATUS: CONNECTED (TLS 1.3)                   ', 'color:#00ff41;');
+        console.log('%c  FIREWALL: ACTIVE | IDS: ONLINE                ', 'color:#00ff41;');
+        console.log('%c  AUTH: MULTI-FACTOR | ENCRYPTION: AES-256      ', 'color:#00ff41;');
+        console.log('%c  BUFFER: 47/128 NODES ACTIVE                   ', 'color:#00ff41;');
+        console.log('%c  CACHE: 38MB | LATENCY: 12ms                   ', 'color:#00ff41;');
+        console.log('%c  TARGET: [REDACTED]                            ', 'color:#00ff41;');
+        console.log('%c  DEVICE: [CLASSIFIED]                          ', 'color:#00ff41;');
+        console.log('%c  UPTIME: 00:47:23                             ', 'color:#00ff41;');
+        console.log('%c                                                  ', 'color:#00ff41;');
+        console.log('%c   INITIALIZING...            ', 'color:#00ff41;');
+        console.log('%c  ALL SYSTEMS [CLASSIFIED]                      ', 'color:#00ff41;');
+        console.log('%c  ACCESS LEVEL: [REDACTED]                      ', 'color:#00ff41;');
+        console.log('%c  DATA ENCRYPTED - 0x3F8A...C4D                ', 'color:#00ff41;');
+        console.log('%c', 'color:#00ff41;');
         
         console.log('%c  SIGNATURE: M1OO-2026-08-31-12:34:56', 'color:#ff6b6b;font-weight:bold;font-size:14px;');
         console.log('%c  AUTHORIZED BY: ANTHONY ONCHARI [M1OO]', 'color:#00ff41;font-weight:bold;');
@@ -16280,6 +16693,11 @@ console.log("✅ Email template system loaded with 5 professional templates");
 // NEW FUNCTION: app.openNewChat
 // ============================================
 app.openNewChat = function() {
+    if (!app.user || app.isGuest) {
+        app.showLoginPage('login');
+        return;
+    }
+
     // Show a modal with a search bar to find users and start a new chat
     var modal = document.createElement('div');
     modal.className = 'modal-overlay active';
@@ -16290,8 +16708,8 @@ app.openNewChat = function() {
     modal.innerHTML = `
         <div style="background: white; border-radius: 20px; padding: 24px; max-width: 480px; width: 95%; max-height: 80vh; overflow-y: auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h2 style="font-size: 20px; font-weight: 700; margin: 0;">✏️ New Message</h2>
-                <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                <h2 style="font-size: 20px; font-weight: 700; margin: 0;"> New Message</h2>
+                <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;"></button>
             </div>
             <div style="margin-bottom: 16px;">
                 <input type="text" id="newChatSearch" placeholder="Search by name, email or username..." style="width: 100%; padding: 12px; border: 1.5px solid #e5e7eb; border-radius: 12px; font-size: 14px; box-sizing: border-box;">
@@ -16362,7 +16780,7 @@ app.openNewChat = function() {
 // NEW FUNCTION: Change chat wallpaper
 // ============================================
 var DEFAULT_CHAT_WALLPAPER = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1600&q=90';
-var DEFAULT_CHAT_WALLPAPER_BLUR = 5;
+var DEFAULT_CHAT_WALLPAPER_BLUR = 4;
 var DEFAULT_CHAT_WALLPAPER_DIM = 22;
 
 app.getChatWallpaperKey = function(chatKey) {
@@ -16479,7 +16897,7 @@ app.changeChatWallpaper = function() {
         <div style="background: white; border-radius: 20px; padding: 24px; max-width: 400px; width: 95%; max-height: 80vh; overflow-y: auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <h2 style="font-size: 18px; font-weight: 700; margin: 0;">Chat wallpaper</h2>
-                <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">✕</button>
+                <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;"></button>
             </div>
             <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;">${genres.map(function(genre, index) { return '<button type="button" data-genre-tab="' + genre + '" style="padding:6px 9px;border:1px solid ' + (index === 0 ? '#0f766e' : '#dbe5e1') + ';border-radius:999px;background:' + (index === 0 ? '#0f766e' : '#fff') + ';color:' + (index === 0 ? '#fff' : '#52706a') + ';font:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">' + genre + '</button>'; }).join('')}</div>
             <div id="wallpaperChoices" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">${wallpaperCards}</div>
@@ -16633,7 +17051,7 @@ app.deleteForEveryone = function(msgId, chatKey) {
         // Refresh messages
         msg.deletedForEveryone = true;
         self.displayChatMessages(self.chatMessages[chatKey], chatKey);
-        self.toast('✅ Message deleted for everyone', 'success');
+        self.toast(' Message deleted for everyone', 'success');
     }).catch(function(err) {
         self.toast('Error deleting message', 'error');
     });
@@ -16661,32 +17079,32 @@ app.showChatMoreMenu = function() {
     modal.style.justifyContent = 'center';
 
     var html = `
-        <div style="background: white; border-radius: 20px; padding: 20px; max-width: 320px; width: 90%;">
+        <div class="chat-options-panel" style="background: white; border-radius: 20px; padding: 20px; max-width: 320px; width: 90%;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h3 style="margin: 0; font-size: 16px;">Chat Options</h3>
-                <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+                <button type="button" class="chat-options-close" aria-label="Close chat options" onclick="this.closest('.modal-overlay').remove()">&times;</button>
             </div>
             <div style="display: flex; flex-direction: column; gap: 6px;">
                 <button onclick="app.viewUserProfile('${uid}'); document.querySelector('.modal-overlay.active').remove();" style="padding: 12px; background: #f8fafc; border: none; border-radius: 10px; text-align: left; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px;">
-                    <span>👤</span> View Profile
+                    <span></span> View Profile
                 </button>
                 <button onclick="app.searchMessages(); document.querySelector('.modal-overlay.active').remove();" style="padding: 12px; background: #f8fafc; border: none; border-radius: 10px; text-align: left; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px;">
-                    <span>🔍</span> Search Messages
+                    <span></span> Search Messages
                 </button>
                 <button onclick="app.muteConversation(); document.querySelector('.modal-overlay.active').remove();" style="padding: 12px; background: #f8fafc; border: none; border-radius: 10px; text-align: left; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px;">
-                    <span>🔕</span> Mute Chat
+                    <span></span> Mute Chat
                 </button>
                 <button onclick="app.unmuteConversation(); document.querySelector('.modal-overlay.active').remove();" style="padding: 12px; background: #f8fafc; border: none; border-radius: 10px; text-align: left; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px;">
-                    <span>🔔</span> Unmute Chat
+                    <span></span> Unmute Chat
                 </button>
                 <button onclick="app.changeChatWallpaper(); document.querySelector('.modal-overlay.active').remove();" style="padding: 12px; background: #f8fafc; border: none; border-radius: 10px; text-align: left; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px;">
-                    <span>🖼️</span> Change Wallpaper
+                    <span></span> Change Wallpaper
                 </button>
                 <button onclick="app.clearChat('${chatKey}'); document.querySelector('.modal-overlay.active').remove();" style="padding: 12px; background: #fee2e2; border: none; border-radius: 10px; text-align: left; cursor: pointer; font-size: 14px; color: #dc2626; display: flex; align-items: center; gap: 10px;">
-                    <span>🧹</span> Clear Chat
+                    <span></span> Clear Chat
                 </button>
                 <button onclick="app.deleteConversation('${uid}'); document.querySelector('.modal-overlay.active').remove();" style="padding: 12px; background: #fee2e2; border: none; border-radius: 10px; text-align: left; cursor: pointer; font-size: 14px; color: #dc2626; display: flex; align-items: center; gap: 10px;">
-                    <span>🗑️</span> Delete Chat
+                    <span></span> Delete Chat
                 </button>
             </div>
         </div>
@@ -16898,20 +17316,17 @@ app.trackPresence = function() {
         var statusDot = document.querySelector('#chatHeaderStatus .status-dot');
         if (!statusText || !self.currentChat || self.currentChat.uid !== otherUserId) return;
 
-        if (presence && presence.online === true) {
-            statusText.textContent = 'Online';
-            statusText.style.color = '#d9f99d';
-            if (statusDot) statusDot.style.background = '#a3e635';
-            return;
-        }
-
         var user = self.users && self.users[otherUserId];
         var lastSeenValue = (presence && presence.lastSeen) || (user && user.lastSeen);
-        statusText.textContent = lastSeenValue ?
-            'Not online right now 🙂 I was at ' + self.formatPresenceTime(new Date(lastSeenValue)) :
-            'Not online right now 🙂';
-        statusText.style.color = 'rgba(255,255,255,0.78)';
-        if (statusDot) statusDot.style.background = '#94a3b8';
+        var presenceState = self.getPresenceIndicatorState(presence, user);
+        statusText.textContent = presenceState === 'online' ? 'Online' :
+            (lastSeenValue ? 'Last seen ' + self.formatPresenceTime(new Date(lastSeenValue)) : 'Offline');
+        if (statusDot) {
+            statusDot.classList.remove('online', 'recent', 'offline');
+            statusDot.classList.add(presenceState);
+            statusDot.title = statusText.textContent;
+            statusDot.setAttribute('aria-label', statusText.textContent);
+        }
     });
 };
 
@@ -16961,7 +17376,7 @@ app.showAirtimeRedemptionModal = function() {
 
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
-        modal.innerHTML = '<div class="modal airtime-modal"><button class="airtime-modal-close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button>' +
+        modal.innerHTML = '<div class="modal airtime-modal"><button class="airtime-modal-close" onclick="this.closest(\'.modal-overlay\').remove()"></button>' +
             '<p class="eyebrow">Airtime reward</p><h2>Redeem KSh ' + (available.length * Number(window.AIRTIME_REWARD_AMOUNT || 10)) + '</h2>' +
             '<p class="airtime-help">Redeem this reward for someone who has not uploaded a profile photo yet. Tell us where to send it and an administrator will fulfil the request.</p>' +
             '<label class="form-label">Phone number</label><input class="form-input" id="airtimePhone" type="tel" placeholder="07XXXXXXXX" maxlength="15">' +
@@ -17022,7 +17437,7 @@ app.renderEarnDefault = function() {
     if (!earnContainer) return;
 
     if (this.isGuest || !this.user) {
-        earnContainer.innerHTML = '<main class="guest-earn"><div class="guest-earn-mark"><img src="icon-192.png" alt="CHICHI"></div><p class="guest-earn-kicker">CHICHI EARN</p><h1>Earn with CHICHI</h1><p class="guest-earn-copy">Sign in to play trivia, complete daily activities, and collect coins.</p><button class="guest-earn-button" onclick="app.showGuestPostPrompt(\'start earning\')">Sign in to continue</button><p class="guest-earn-note">Your rewards and progress are saved to your account.</p></main>';
+        earnContainer.innerHTML = '<main class="guest-earn guest-earn-showcase"><section class="guest-earn-panel"><div class="guest-earn-visual"><img class="guest-earn-photo" src="Assets/002.jpg" alt="Friends enjoying something together"><span class="guest-earn-photo-badge"><span aria-hidden="true">✦</span> Your next little win</span><span class="guest-earn-photo-coin">+10</span></div><h1>Fun that rewards you.</h1><p class="guest-earn-copy">Play trivia. Earn CHICHI Coins.</p><button class="guest-earn-button" onclick="app.showLoginPage(\'signup\')">Start earning</button><button class="guest-earn-login" onclick="app.showLoginPage(\'login\')">Already a member? Log in</button></section></main>';
         return;
     }
 
@@ -17038,11 +17453,11 @@ app.renderEarnDefault = function() {
                     <div class="wallet-card-chip" aria-hidden="true"><span></span><span></span><span></span></div>
                     <div class="wallet-card-balance-label">Coin balance</div>
                     <strong id="earnBalanceDisplay" class="wallet-card-balance">${balance} Coins</strong>
-                    <div class="wallet-card-footer"><div><span>Card holder</span><strong>${profileName}</strong></div><div><span>Member</span><strong>@${username}</strong></div><div class="wallet-card-mark">✦</div></div>
+                    <div class="wallet-card-footer"><div><span>Card holder</span><strong>${profileName}</strong></div><div><span>Member</span><strong>@${username}</strong></div><div class="wallet-card-mark"></div></div>
                 </header>
 
                 <section style="margin-top:16px;padding:18px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;">
-                    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;"><div><p style="margin:0;color:#0f766e;font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;">Today’s round</p><h2 style="margin:5px 0 5px;font-size:19px;">Choose a subject. Take your time.</h2><p style="margin:0;color:#64748b;font-size:13px;line-height:1.5;">Each correct answer adds ${EARNING_SETTINGS.free.rewardPerQuestion} coins to your wallet.</p></div><span style="font-size:26px;line-height:1;">✦</span></div>
+                    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;"><div><p style="margin:0;color:#0f766e;font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;">Today’s round</p><h2 style="margin:5px 0 5px;font-size:19px;">Choose a subject. Take your time.</h2><p style="margin:0;color:#64748b;font-size:13px;line-height:1.5;">Each correct answer adds ${EARNING_SETTINGS.free.rewardPerQuestion} coins to your wallet.</p></div><span style="font-size:26px;line-height:1;"></span></div>
                     <button onclick="app.chooseTriviaGenre()" style="width:100%;margin-top:16px;padding:13px;border:0;border-radius:10px;background:#0f766e;color:#fff;font:inherit;font-weight:800;font-size:14px;cursor:pointer;">Start quiz</button>
                 </section>
 
@@ -17050,6 +17465,7 @@ app.renderEarnDefault = function() {
                     <button onclick="app.showSendMoneyModal()" style="padding:14px;border:1px solid #99f6e4;border-radius:10px;background:#f0fdfa;color:#115e59;font:inherit;font-size:14px;font-weight:800;cursor:pointer;">Send Coins</button>
                     <button onclick="app.showRedeemRequestModal()" style="padding:14px;border:0;border-radius:10px;background:#0f766e;color:#fff;font:inherit;font-size:14px;font-weight:800;cursor:pointer;">Redeem</button>
                 </section>
+                <button class="referral-entry-card" type="button" onclick="app.showReferralDashboard()"><span class="referral-entry-symbol" aria-hidden="true">R</span><span><strong>Invite friends. Earn KSh 10.</strong><small>Withdraw your rewards from KSh 50 to M-Pesa or airtime.</small></span></button>
 
                 <section style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;">
                     <div style="padding:14px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;"><span style="display:block;color:#64748b;font-size:12px;">Questions answered</span><strong id="triviaCount" style="display:block;margin-top:4px;font-size:24px;">0</strong></div>
@@ -17090,7 +17506,7 @@ app.showRedeemRequestModal = function() {
 
     var modal = document.createElement('div');
     modal.className = 'modal-overlay active';
-    modal.innerHTML = '<div class="modal" style="max-width:390px;"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><h2 style="margin-bottom:8px;">Redeem coins</h2><p style="margin:0 0 16px;color:#6b7280;font-size:13px;">Requests are reviewed by the CHICHI administrators.</p><label class="form-label" for="redeemType">Redeem as</label><select class="form-input" id="redeemType" onchange="app.updateRedeemRequestFields()"><option value="coins">Coins</option><option value="airtime">Airtime</option><option value="donate">Donate</option></select><label class="form-label" for="redeemAmount" style="margin-top:12px;">Coins to redeem</label><input class="form-input" id="redeemAmount" type="number" min="1" max="' + Number(this.balance || 0) + '" placeholder="Available: ' + Number(this.balance || 0).toFixed(2) + '"><div id="redeemContactFields"><label class="form-label" for="redeemProvider" style="margin-top:12px;">Provider</label><select class="form-input" id="redeemProvider"><option value="Safaricom">Safaricom</option><option value="Airtel">Airtel</option><option value="Telkom">Telkom</option></select><label class="form-label" for="redeemPhone" style="margin-top:12px;">Phone number</label><input class="form-input" id="redeemPhone" type="tel" placeholder="07XXXXXXXX"></div><div id="redeemRecipientField"><label class="form-label" for="redeemRecipient" style="margin-top:12px;">Recipient</label><input class="form-input" id="redeemRecipient" type="text" placeholder="Full name"></div><button class="btn-submit" style="margin-top:16px;" onclick="app.submitRedeemRequest()">Submit for review</button></div>';
+    modal.innerHTML = '<div class="modal" style="max-width:390px;"><div class="modal-close"><button onclick="this.closest(\'.modal-overlay\').remove()"></button></div><h2 style="margin-bottom:8px;">Redeem coins</h2><p style="margin:0 0 16px;color:#6b7280;font-size:13px;">Requests are reviewed by the CHICHI administrators.</p><label class="form-label" for="redeemType">Redeem as</label><select class="form-input" id="redeemType" onchange="app.updateRedeemRequestFields()"><option value="coins">Coins</option><option value="airtime">Airtime</option><option value="donate">Donate</option></select><label class="form-label" for="redeemAmount" style="margin-top:12px;">Coins to redeem</label><input class="form-input" id="redeemAmount" type="number" min="1" max="' + Number(this.balance || 0) + '" placeholder="Available: ' + Number(this.balance || 0).toFixed(2) + '"><div id="redeemContactFields"><label class="form-label" for="redeemProvider" style="margin-top:12px;">Provider</label><select class="form-input" id="redeemProvider"><option value="Safaricom">Safaricom</option><option value="Airtel">Airtel</option><option value="Telkom">Telkom</option></select><label class="form-label" for="redeemPhone" style="margin-top:12px;">Phone number</label><input class="form-input" id="redeemPhone" type="tel" placeholder="07XXXXXXXX"></div><div id="redeemRecipientField"><label class="form-label" for="redeemRecipient" style="margin-top:12px;">Recipient</label><input class="form-input" id="redeemRecipient" type="text" placeholder="Full name"></div><button class="btn-submit" style="margin-top:16px;" onclick="app.submitRedeemRequest()">Submit for review</button></div>';
     document.body.appendChild(modal);
 };
 
@@ -17193,5 +17609,414 @@ app.sendRedemptionReviewToAdmins = function(requestId, request) {
             var chatKey = [self.user.uid, adminUid].sort().join('_');
             db.ref('chats/' + chatKey + '/messages').push({ senderId: self.user.uid, senderName: self.profile.name || 'User', senderEmail: self.user.email || '', message: 'Review redemption request: ' + request.type + ' for ' + request.amount + ' coins' + (request.phone ? ' to ' + request.provider + ' ' + request.phone : '') + '.', redemptionRequestId: requestId, isRedemptionRequest: true, timestamp: Date.now(), read: false });
         });
+    });
+};
+
+app.callReferralApi = function(action, payload) {
+    var currentUser = auth && auth.currentUser ? auth.currentUser : this.user;
+    if (!currentUser) return Promise.reject(new Error('Sign in to use referrals.'));
+    if (window.location.protocol !== 'https:' && window.location.protocol !== 'http:') {
+        return Promise.reject(new Error('Referral services are available on the hosted CHICHI website. Open the app at its HTTPS address and try again.'));
+    }
+    return currentUser.getIdToken().then(function(token) {
+        return fetch('/api/referrals', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+        }).catch(function(error) {
+            console.error('Referral service request failed:', error);
+            throw new Error('Could not reach CHICHI referrals. Check your connection and try again.');
+        });
+    }).then(function(response) {
+        return response.json().catch(function() { return {}; }).then(function(data) {
+            if (!response.ok) {
+                var message = data.error || (response.status === 404
+                    ? 'The referral service is not available on this deployment yet. Please contact CHICHI support.'
+                    : 'Referral service is temporarily unavailable. Please try again shortly.');
+                throw new Error(message);
+            }
+            return data;
+        });
+    });
+};
+
+app.maybePromptReferralEnrollment = function() {
+    var uid = this.user && this.user.uid;
+    if (!uid || this.isGuest || this.referralPromptCheckForUid === uid) return;
+    if (document.getElementById('usernameSetupModal')) {
+        var self = this;
+        setTimeout(function() { self.maybePromptReferralEnrollment(); }, 700);
+        return;
+    }
+    this.referralPromptCheckForUid = uid;
+    var self = this;
+    this.callReferralApi('enrollmentStatus').then(function(status) {
+        if (!status.needsConsent || !self.user || self.user.uid !== uid || self.isGuest) return;
+        self.showReferralConsentModal();
+    }).catch(function(error) {
+        console.error('Unable to check referral enrollment:', error);
+        self.referralPromptCheckForUid = null;
+        self.toast('Referral enrollment could not be checked. You can try again from Refer & Earn.', 'error');
+    });
+};
+
+app.showReferralConsentModal = function() {
+    var existing = document.getElementById('referralConsentModal');
+    if (existing) existing.remove();
+    var overlay = document.createElement('div');
+    overlay.id = 'referralConsentModal';
+    overlay.className = 'modal-overlay active referral-overlay';
+    overlay.setAttribute('role', 'presentation');
+    overlay.innerHTML = '<section class="referral-modal referral-consent-card" role="dialog" aria-modal="true" aria-labelledby="referralConsentTitle"><button class="referral-close" type="button" aria-label="Close referral invitation">×</button><div class="referral-modal-content"><div class="referral-consent-art" aria-hidden="true"><span>✦</span></div><div class="referral-eyebrow">A CHICHI WELCOME</div><h2 id="referralConsentTitle">Share CHICHI. Earn together.</h2><p class="referral-intro">Invite a friend with your personal code and earn <strong>KSh 10</strong> when they join. Withdraw from KSh 50 to M-Pesa or airtime.</p><div class="referral-consent-code-note">Your code is based on your username and three digits. It is unique to you and will not change.</div><button class="referral-submit-btn referral-consent-accept" type="button">Yes, create my referral code</button><button class="referral-consent-decline" type="button">Not now</button><p class="referral-consent-feedback" aria-live="polite"></p></div></section>';
+    document.body.appendChild(overlay);
+    var self = this;
+    function close() { overlay.remove(); }
+    overlay.querySelector('.referral-close').addEventListener('click', function() {
+        self.dismissReferralConsent(overlay);
+    });
+    overlay.addEventListener('click', function(event) {
+        if (event.target === overlay) self.dismissReferralConsent(overlay);
+    });
+    overlay.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') self.dismissReferralConsent(overlay);
+    });
+    overlay.querySelector('.referral-consent-decline').addEventListener('click', function() {
+        self.dismissReferralConsent(overlay);
+    });
+    overlay.querySelector('.referral-consent-accept').addEventListener('click', function() {
+        var button = overlay.querySelector('.referral-consent-accept');
+        var feedback = overlay.querySelector('.referral-consent-feedback');
+        button.disabled = true;
+        button.textContent = 'Creating your unique code…';
+        self.callReferralApi('enroll').then(function() {
+            close();
+            self.toast('Your permanent referral code is ready.', 'success');
+            self.showReferralDashboard();
+        }).catch(function(error) {
+            console.error('Unable to enroll in referrals:', error);
+            button.disabled = false;
+            button.textContent = 'Yes, create my referral code';
+            feedback.textContent = error.message;
+        });
+    });
+};
+
+app.dismissReferralConsent = function(overlay) {
+    var self = this;
+    var declineButton = overlay.querySelector('.referral-consent-decline');
+    if (declineButton) {
+        declineButton.disabled = true;
+        declineButton.textContent = 'Saving…';
+    }
+    this.callReferralApi('declineEnrollment').then(function() {
+        overlay.remove();
+    }).catch(function(error) {
+        console.error('Unable to save referral preference:', error);
+        if (declineButton) {
+            declineButton.disabled = false;
+            declineButton.textContent = 'Not now';
+        }
+        self.toast('Your choice could not be saved. Please try again.', 'error');
+    });
+};
+
+app.showReferralDashboard = function() {
+    if (!this.user || this.isGuest) {
+        this.showLoginPage('signup');
+        return;
+    }
+    var existing = document.getElementById('referralDashboardModal');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'referralDashboardModal';
+    overlay.className = 'modal-overlay active referral-overlay';
+    overlay.setAttribute('role', 'presentation');
+    overlay.innerHTML = '<section class="referral-modal" role="dialog" aria-modal="true" aria-labelledby="referralTitle"><button class="referral-close" type="button" aria-label="Close referral dashboard">×</button><div class="referral-modal-content"><div class="referral-loading">Loading your referral account…</div></div></section>';
+    document.body.appendChild(overlay);
+    var self = this;
+    overlay.querySelector('.referral-close').addEventListener('click', function() { overlay.remove(); });
+    overlay.addEventListener('click', function(event) { if (event.target === overlay) overlay.remove(); });
+    overlay.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') overlay.remove();
+    });
+    this.loadReferralDashboard(overlay);
+};
+
+app.loadReferralDashboard = function(overlay) {
+    var self = this;
+    var pendingReferralCode = '';
+    try { pendingReferralCode = localStorage.getItem('chichiPendingReferralCode') || ''; } catch (storageError) { console.error('Unable to read pending referral code:', storageError); }
+    var setup = pendingReferralCode
+        ? this.callReferralApi('register', { referralCode: pendingReferralCode }).then(function(result) {
+            try { localStorage.removeItem('chichiPendingReferralCode'); } catch (storageError) { console.error('Unable to clear pending referral code:', storageError); }
+            if (result.referralAwarded) self.toast('Your friend earned KSh 10 for your referral.', 'success');
+            if (result.referralMessage) self.toast(result.referralMessage, 'info');
+        }).catch(function(error) {
+            if (/referral code (was not found|is not valid)|cannot use your own referral code/i.test(error.message)) {
+                try { localStorage.removeItem('chichiPendingReferralCode'); } catch (storageError) { console.error('Unable to clear invalid referral code:', storageError); }
+                self.toast(error.message, 'error');
+                return;
+            }
+            throw error;
+        })
+        : Promise.resolve();
+    setup.then(function() {
+        return self.callReferralApi('summary');
+    }).then(function(data) {
+        if (overlay.isConnected) self.renderReferralDashboard(overlay, data);
+    }).catch(function(error) {
+        console.error('Unable to load referral account:', error);
+        if (overlay.isConnected) self.renderReferralError(overlay, error);
+    });
+};
+
+app.renderReferralError = function(overlay, error) {
+    var content = overlay.querySelector('.referral-modal-content');
+    if (!content) return;
+    content.innerHTML = '<div class="referral-error"><div class="referral-eyebrow">CHICHI REFERRALS</div><strong>We couldn’t load referrals</strong><p></p><button type="button" class="referral-retry">Try again</button></div>';
+    content.querySelector('p').textContent = error.message || 'Referral service is temporarily unavailable. Please try again.';
+    content.querySelector('.referral-retry').addEventListener('click', function(event) {
+        event.currentTarget.disabled = true;
+        event.currentTarget.textContent = 'Trying again…';
+        content.innerHTML = '<div class="referral-loading">Checking your referral account…</div>';
+        this.loadReferralDashboard(overlay);
+    }.bind(this));
+};
+
+app.renderReferralDashboard = function(overlay, data) {
+    var self = this;
+    var content = overlay.querySelector('.referral-modal-content');
+    if (!content) return;
+    if (!data.enrolled) {
+        content.innerHTML = '<div class="referral-eyebrow">CHICHI REFERRALS</div><h2 id="referralTitle">Invite friends. Earn KSh.</h2><p class="referral-intro">Earn <strong>KSh 10</strong> for each friend who joins with your code. Withdraw from KSh 50 to M-Pesa or airtime.</p><div class="referral-consent-code-note">Your username-based code includes three digits and stays yours permanently.</div><button type="button" class="referral-submit-btn referral-join-btn">Join the referral program</button>';
+        content.querySelector('.referral-join-btn').addEventListener('click', function(event) {
+            var button = event.currentTarget;
+            button.disabled = true;
+            button.textContent = 'Creating your unique code…';
+            self.callReferralApi('enroll').then(function() {
+                self.toast('Your permanent referral code is ready.', 'success');
+                self.callReferralApi('summary').then(function(summary) {
+                    if (overlay.isConnected) self.renderReferralDashboard(overlay, summary);
+                }).catch(function(error) {
+                    console.error('Unable to load enrolled referral account:', error);
+                    if (overlay.isConnected) self.renderReferralError(overlay, error);
+                });
+            }).catch(function(error) {
+                console.error('Unable to enroll in referrals:', error);
+                button.disabled = false;
+                button.textContent = 'Join the referral program';
+                self.toast(error.message, 'error');
+            });
+        });
+        return;
+    }
+    content.innerHTML = '<div class="referral-eyebrow">CHICHI REFERRALS</div><h2 id="referralTitle">Invite friends. Earn KSh.</h2><p class="referral-intro">Your friend joins with your code and you earn <strong>KSh 10</strong>. Withdraw from KSh 50 to M-Pesa or airtime.</p><div class="referral-balance-card"><span>Available to withdraw</span><strong id="referralBalance"></strong><div><span id="referralCount"></span><span class="referral-minimum">Minimum withdrawal KSh 50</span></div></div><label class="referral-label" for="referralCodeValue">Your referral code</label><div class="referral-code-row"><input id="referralCodeValue" readonly><button id="referralCopyCode" type="button">Copy code</button></div><button id="referralCopyLink" class="referral-share-btn" type="button">Copy invite link</button><form class="referral-withdraw-form" id="referralWithdrawForm"><h3>Request a withdrawal</h3><div class="referral-form-grid"><label>Amount (KSh)<input id="referralAmount" type="number" inputmode="numeric" min="50" step="1" placeholder="Minimum 50" required></label><label>Pay out as<select id="referralMethod"><option value="mpesa">M-Pesa</option><option value="airtime">Airtime</option></select></label><label id="referralProviderWrap" class="referral-provider-wrap">Network<select id="referralProvider"><option>Safaricom</option><option>Airtel</option><option>Telkom</option></select></label><label>Phone number<input id="referralPhone" type="tel" autocomplete="tel" placeholder="07XXXXXXXX" maxlength="16" required></label></div><p class="referral-payout-note">Requests are reviewed and paid manually by CHICHI administrators.</p><button class="referral-submit-btn" type="submit">Submit withdrawal request</button></form><div class="referral-history"><h3>Recent referrals</h3><div id="referralRecentReferrals"></div><h3>Withdrawal history</h3><div id="referralWithdrawalHistory"></div></div>';
+    content.querySelector('#referralBalance').textContent = 'KSh ' + Number(data.balance || 0).toLocaleString('en-KE');
+    content.querySelector('#referralCount').textContent = Number(data.referralCount || 0) + ' successful ' + (Number(data.referralCount || 0) === 1 ? 'referral' : 'referrals');
+    content.querySelector('#referralCodeValue').value = data.code || '';
+
+    function fillHistory(container, records, type) {
+        if (!records || !records.length) {
+            var empty = document.createElement('p');
+            empty.className = 'referral-history-empty';
+            empty.textContent = type === 'referral' ? 'No referrals yet. Share your code to get started.' : 'No withdrawal requests yet.';
+            container.appendChild(empty);
+            return;
+        }
+        records.forEach(function(record) {
+            var row = document.createElement('div');
+            row.className = 'referral-history-row';
+            var main = document.createElement('div');
+            var title = document.createElement('strong');
+            title.textContent = type === 'referral' ? (record.name || 'New member') : 'KSh ' + Number(record.amount || 0).toLocaleString('en-KE') + ' · ' + (record.method === 'mpesa' ? 'M-Pesa' : (record.provider || 'Airtime'));
+            var sub = document.createElement('small');
+            sub.textContent = new Date(Number(type === 'referral' ? record.creditedAt : record.createdAt) || Date.now()).toLocaleDateString('en-KE');
+            main.appendChild(title);
+            main.appendChild(sub);
+            row.appendChild(main);
+            if (type === 'referral') {
+                var earned = document.createElement('span');
+                earned.className = 'referral-earned';
+                earned.textContent = '+KSh ' + Number(record.amount || 10);
+                row.appendChild(earned);
+            } else {
+                var status = document.createElement('span');
+                status.className = 'referral-status referral-status-' + String(record.status || 'pending');
+                status.textContent = String(record.status || 'pending').replace(/_/g, ' ');
+                row.appendChild(status);
+            }
+            container.appendChild(row);
+        });
+    }
+
+    fillHistory(content.querySelector('#referralRecentReferrals'), data.referrals || [], 'referral');
+    fillHistory(content.querySelector('#referralWithdrawalHistory'), data.withdrawals || [], 'withdrawal');
+    content.querySelector('#referralMethod').addEventListener('change', function(event) {
+        content.querySelector('#referralProviderWrap').style.display = event.target.value === 'airtime' ? '' : 'none';
+    });
+    content.querySelector('#referralProviderWrap').style.display = 'none';
+    content.querySelector('#referralCopyCode').addEventListener('click', function() { self.copyReferralValue(data.code || ''); });
+    content.querySelector('#referralCopyLink').addEventListener('click', function() {
+        var url = new URL(window.location.href);
+        url.search = '';
+        url.hash = '';
+        url.searchParams.set('ref', data.code || '');
+        self.copyReferralValue(url.href);
+    });
+    content.querySelector('#referralWithdrawForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        self.submitReferralWithdrawal(overlay);
+    });
+};
+
+app.copyReferralValue = function(value) {
+    var self = this;
+    if (!value) {
+        this.toast('Your referral code is not ready yet.', 'error');
+        return;
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(value).then(function() {
+            self.toast('Copied to clipboard.', 'success');
+        }).catch(function(error) {
+            console.error('Unable to copy referral details:', error);
+            self.toast('Copy failed. Please select and copy the referral code.', 'error');
+        });
+        return;
+    }
+    var temporaryInput = document.createElement('textarea');
+    temporaryInput.value = value;
+    temporaryInput.setAttribute('readonly', '');
+    temporaryInput.style.position = 'fixed';
+    temporaryInput.style.opacity = '0';
+    document.body.appendChild(temporaryInput);
+    temporaryInput.select();
+    var copied = document.execCommand('copy');
+    temporaryInput.remove();
+    this.toast(copied ? 'Copied to clipboard.' : 'Copy failed. Please copy the code manually.', copied ? 'success' : 'error');
+};
+
+app.submitReferralWithdrawal = function(overlay) {
+    var content = overlay.querySelector('.referral-modal-content');
+    var submit = content.querySelector('.referral-submit-btn');
+    var method = content.querySelector('#referralMethod').value;
+    var payload = {
+        amount: Number(content.querySelector('#referralAmount').value),
+        method: method,
+        provider: content.querySelector('#referralProvider').value,
+        phone: content.querySelector('#referralPhone').value.trim()
+    };
+    var self = this;
+    submit.disabled = true;
+    submit.textContent = 'Submitting…';
+    this.callReferralApi('requestWithdrawal', payload).then(function() {
+        self.toast('Withdrawal request sent to CHICHI admins.', 'success');
+        self.callReferralApi('summary').then(function(data) { self.renderReferralDashboard(overlay, data); }).catch(function(error) {
+            console.error('Unable to refresh referral account:', error);
+            self.toast('Request was submitted, but the balance view could not refresh.', 'error');
+        });
+    }).catch(function(error) {
+        console.error('Unable to submit referral withdrawal:', error);
+        self.toast(error.message, 'error');
+        submit.disabled = false;
+        submit.textContent = 'Submit withdrawal request';
+    });
+};
+
+app.loadAdminReferralWithdrawals = function() {
+    var container = document.getElementById('adminReferralWithdrawals');
+    var summary = document.getElementById('adminReferralSummary');
+    if (!container || !summary || !this.isAdmin) return;
+    container.innerHTML = '<div class="referral-admin-empty">Loading withdrawal requests…</div>';
+    var self = this;
+    this.callReferralApi('listWithdrawals').then(function(data) {
+        summary.textContent = data.requests.length + ' pending request' + (data.requests.length === 1 ? '' : 's') + ' · KSh ' + Number(data.pendingAmount || 0).toLocaleString('en-KE') + ' awaiting payout';
+        container.innerHTML = '';
+        if (!data.requests.length) {
+            container.innerHTML = '<div class="referral-admin-empty">All caught up. There are no pending referral withdrawals.</div>';
+            return;
+        }
+        data.requests.forEach(function(request) {
+            var card = document.createElement('article');
+            card.className = 'referral-admin-card';
+            card.dataset.userId = request.userId;
+            card.dataset.requestId = request.id;
+            var heading = document.createElement('div');
+            heading.className = 'referral-admin-card-heading';
+            var person = document.createElement('div');
+            var name = document.createElement('strong');
+            name.textContent = request.userName || 'CHICHI member';
+            var email = document.createElement('small');
+            email.textContent = request.userEmail || request.userId;
+            person.appendChild(name);
+            person.appendChild(email);
+            var amount = document.createElement('b');
+            amount.textContent = 'KSh ' + Number(request.amount || 0).toLocaleString('en-KE');
+            heading.appendChild(person);
+            heading.appendChild(amount);
+            card.appendChild(heading);
+            var details = document.createElement('p');
+            details.className = 'referral-admin-details';
+            details.textContent = (request.method === 'mpesa' ? 'M-Pesa' : (request.provider + ' airtime')) + ' · ' + request.phone + ' · ' + new Date(Number(request.createdAt) || Date.now()).toLocaleString('en-KE');
+            card.appendChild(details);
+            var controls = document.createElement('div');
+            controls.className = 'referral-admin-controls';
+            var reference = document.createElement('input');
+            reference.type = 'text';
+            reference.maxLength = 80;
+            reference.placeholder = 'Payment reference (optional)';
+            reference.setAttribute('aria-label', 'Payment reference for ' + (request.userName || 'member'));
+            var reason = document.createElement('input');
+            reason.type = 'text';
+            reason.maxLength = 200;
+            reason.placeholder = 'Reason if rejecting (optional)';
+            reason.setAttribute('aria-label', 'Rejection reason for ' + (request.userName || 'member'));
+            var paid = document.createElement('button');
+            paid.type = 'button';
+            paid.className = 'referral-mark-paid';
+            paid.textContent = 'Mark paid';
+            paid.addEventListener('click', function() {
+                self.updateAdminReferralWithdrawal(request, 'paid', reference.value, '');
+            });
+            var reject = document.createElement('button');
+            reject.type = 'button';
+            reject.className = 'referral-reject';
+            reject.textContent = 'Reject & refund';
+            reject.addEventListener('click', function() {
+                self.updateAdminReferralWithdrawal(request, 'rejected', '', reason.value);
+            });
+            controls.appendChild(reference);
+            controls.appendChild(reason);
+            controls.appendChild(paid);
+            controls.appendChild(reject);
+            card.appendChild(controls);
+            container.appendChild(card);
+        });
+    }).catch(function(error) {
+        console.error('Unable to load referral withdrawals:', error);
+        summary.textContent = '';
+        container.innerHTML = '<div class="referral-admin-empty referral-admin-error"></div>';
+        container.firstChild.textContent = error.message;
+    });
+};
+
+app.updateAdminReferralWithdrawal = function(request, status, paymentReference, reason) {
+    var self = this;
+    this.callReferralApi('updateWithdrawal', {
+        userId: request.userId,
+        requestId: request.id,
+        status: status,
+        paymentReference: paymentReference,
+        reason: reason
+    }).then(function() {
+        self.toast(status === 'paid' ? 'Withdrawal marked as paid.' : 'Request rejected and funds returned.', 'success');
+        self.loadAdminReferralWithdrawals();
+    }).catch(function(error) {
+        console.error('Unable to update referral withdrawal:', error);
+        self.toast(error.message, 'error');
     });
 };
