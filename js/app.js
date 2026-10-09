@@ -4141,6 +4141,7 @@ var app = {
         var self = this;
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
+        modal.classList.add('notifications-overlay');
         modal.style.zIndex = '10050';
         modal.setAttribute('role', 'presentation');
         var panel = document.createElement('section');
@@ -13064,6 +13065,7 @@ loadMessages: function() {
     showNotificationsTab: function() {
         var modal = document.createElement('div');
         modal.className = 'modal-overlay active';
+        modal.classList.add('notifications-overlay');
         modal.style.zIndex = '10050';
         modal.setAttribute('role', 'presentation');
         var panel = document.createElement('section');
