@@ -6448,7 +6448,7 @@ var app = {
                             <span><b>02</b> Share what you’re into</span>
                             <span><b>03</b> Let the hellos find you</span>
                         </div>
-                        <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Make it yours <span aria-hidden="true">↗</span></button>
+                        <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Make it yours</button>
                         <button class="guest-v3-login" onclick="app.showLoginPage('login')">Already on CHICHI? <strong>Log in</strong></button>
                     </div>
                     <div class="guest-v4-profile-stage" aria-label="A glimpse of the people and interests you can share">
@@ -8037,7 +8037,7 @@ loadMessages: function() {
                         </article>
                     </div>
                     <div class="guest-v5-message-actions">
-                        <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Find your first conversation <span aria-hidden="true">↗</span></button>
+                        <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Find your first conversation</button>
                         <button class="guest-v3-login" onclick="app.showLoginPage('login')">Already a member? <strong>Log in</strong></button>
                     </div>
                 </section>
@@ -11074,7 +11074,7 @@ loadMessages: function() {
             banner = document.createElement('section');
             banner.id = 'guestExploreWelcome';
             banner.className = 'guest-v4-people';
-            banner.innerHTML = '<div class="guest-v4-people-intro"><span class="guest-v4-people-kicker">A GOOD CROWD IS A LITTLE BIT OF EVERYTHING</span><h2>Your people are <em>out there.</em></h2><p>Find your kind of curious, your kind of funny, your kind of everything.</p></div><div class="guest-v4-people-grid" aria-label="The kinds of people you could meet"><article class="guest-v4-person-card guest-v4-person-music"><img src="Assets/001.jpg" alt="Friends listening to music together"><span class="guest-v4-person-index">01 / THE SOUNDTRACK</span><strong>Playlist<br>traders</strong></article><article class="guest-v4-person-card guest-v4-person-curious"><img src="Assets/002.jpg" alt="Friends sharing something on a phone"><span class="guest-v4-person-index">02 / THE WHAT-IFS</span><strong>Curious<br>minds</strong></article><article class="guest-v4-person-card guest-v4-person-weekends"><img src="Assets/004.jpg" alt="Friends out together"><span class="guest-v4-person-index">03 / THE OUT-AND-ABOUTS</span><strong>Weekend<br>explorers</strong></article><article class="guest-v4-person-card guest-v4-person-laughs"><img src="Assets/003.jpg" alt="Friends laughing together"><span class="guest-v4-person-index">04 / YOUR KIND OF PEOPLE</span><strong>Laugh-until-<br>it-hurts friends</strong></article></div><div class="guest-v4-people-invite"><span>Come as you are. Find your people.</span><button class="guest-v4-people-join" type="button">Find your people <span aria-hidden="true">↗</span></button><button class="guest-v4-people-login" type="button">Already a member? <strong>Log in</strong></button></div>';
+            banner.innerHTML = '<div class="guest-v4-people-intro"><span class="guest-v4-people-kicker">A GOOD CROWD IS A LITTLE BIT OF EVERYTHING</span><h2>Your people are <em>out there.</em></h2><p>Find your kind of curious, your kind of funny, your kind of everything.</p></div><div class="guest-v4-people-grid" aria-label="The kinds of people you could meet"><article class="guest-v4-person-card guest-v4-person-music"><img src="Assets/001.jpg" alt="Friends listening to music together"><span class="guest-v4-person-index">01 / THE SOUNDTRACK</span><strong>Playlist<br>traders</strong></article><article class="guest-v4-person-card guest-v4-person-curious"><img src="Assets/002.jpg" alt="Friends sharing something on a phone"><span class="guest-v4-person-index">02 / THE WHAT-IFS</span><strong>Curious<br>minds</strong></article><article class="guest-v4-person-card guest-v4-person-weekends"><img src="Assets/004.jpg" alt="Friends out together"><span class="guest-v4-person-index">03 / THE OUT-AND-ABOUTS</span><strong>Weekend<br>explorers</strong></article><article class="guest-v4-person-card guest-v4-person-laughs"><img src="Assets/003.jpg" alt="Friends laughing together"><span class="guest-v4-person-index">04 / YOUR KIND OF PEOPLE</span><strong>Laugh-until-<br>it-hurts friends</strong></article></div><div class="guest-v4-people-invite"><span>Come as you are. Find your people.</span><button class="guest-v4-people-join" type="button">Find your people</button><button class="guest-v4-people-login" type="button">Already a member? <strong>Log in</strong></button></div>';
             banner.querySelector('.guest-v4-people-join').addEventListener('click', function() { app.showLoginPage('signup'); });
             banner.querySelector('.guest-v4-people-login').addEventListener('click', function() { app.showLoginPage('login'); });
             var heading = container.querySelector('.explore-page-heading');
