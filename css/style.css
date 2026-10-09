@@ -9831,6 +9831,9 @@ h1, h2, h3, h4, h5, h6,
     align-self: flex-start;
     width: max-content;
     max-width: calc(100% - 36px);
+    position: relative;
+    z-index: 3;
+    flex: 0 0 auto;
     margin: 0 auto 9px;
     padding: 8px 12px;
     border: 0;

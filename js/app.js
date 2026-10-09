@@ -939,32 +939,53 @@ var app = {
             var key = [self.user.uid, uid].sort().join('_');
             var userName = (this.users[uid] || {}).name || 'User';
             var messagesRef = db.ref('chats/' + key + '/messages');
+            var messageQuery = messagesRef.orderByChild('timestamp');
+            var baselineMessageIds = {};
+            var pendingAddedMessages = [];
+            var notificationBaselineReady = false;
+            var notifyForIncomingMessage = function(childSnap) {
+                var message = childSnap.val();
+                if (!message) return;
+                var messageKey = key + '_' + childSnap.key;
+                if (baselineMessageIds[childSnap.key] || self.notifiedMessages[messageKey]) return;
+                baselineMessageIds[childSnap.key] = true;
+                self.notifiedMessages[messageKey] = true;
 
-            messagesRef.orderByChild('timestamp').once('value', function(s) {
+                if (message.sender !== self.user.uid && (message.text || message.image) && !message.read) {
+                    var senderName = self.users[message.sender] && self.users[message.sender].name || userName;
+                    self.notifyNewMessage(senderName, message.text || ' Image', message.sender);
+                }
+            };
+            var addedMessageListener = function(childSnap) {
+                if (!notificationBaselineReady) {
+                    pendingAddedMessages.push(childSnap);
+                    return;
+                }
+                notifyForIncomingMessage(childSnap);
+            };
+            messageQuery.on('child_added', addedMessageListener, function(error) {
+                console.error('Unable to listen for new messages from ' + userName + ':', error);
+            });
+
+            messageQuery.once('value').then(function(s) {
                 var count = 0;
                 s.forEach(function(c) {
                     var m = c.val();
                     if (m && (m.text || m.image)) {
                         count++;
+                        baselineMessageIds[c.key] = true;
                         self.notifiedMessages[key + '_' + c.key] = true;
                     }
                 });
                 self.messageCountTracker[key] = count;
                 console.log(' ' + userName + ': ' + count + ' messages (baseline)');
-                messagesRef.orderByChild('timestamp').on('child_added', function(childSnap) {
-                    var m = childSnap.val();
-                    if (!m) return;
-
-                    if (m.sender !== self.user.uid && (m.text || m.image) && !m.read) {
-                        var notifyKey = key + '_' + childSnap.key;
-
-                        if (!self.notifiedMessages[notifyKey]) {
-                            console.log(' [REAL-TIME] NEW MESSAGE from ' + userName + ': ' + (m.text || ' Image'));
-                            self.notifiedMessages[notifyKey] = true;
-                            self.notifyNewMessage(userName, m.text || ' Image', m.sender);
-                        }
-                    }
+                notificationBaselineReady = true;
+                pendingAddedMessages.forEach(function(childSnap) {
+                    notifyForIncomingMessage(childSnap);
                 });
+                pendingAddedMessages = [];
+            }).catch(function(error) {
+                console.error('Unable to load message notification baseline for ' + userName + ':', error);
             });
 
             messagesRef.on('value', function(s) {
@@ -6252,11 +6273,34 @@ var app = {
                     var navProfileAvatarFallback = document.getElementById('navProfileAvatarFallback');
                     if (navProfileAvatarImage) {
                         if (profilePhoto) {
-                            if (navProfileAvatarImage.getAttribute('src') !== profilePhoto) {
-                                navProfileAvatarImage.src = profilePhoto;
+                            var navPhotoUrl = profilePhoto;
+                            if (/^https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//i.test(profilePhoto) &&
+                                !/^https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/c_thumb,g_face,w_128,h_128\//i.test(profilePhoto)) {
+                                navPhotoUrl = profilePhoto.replace(
+                                    '/image/upload/',
+                                    '/image/upload/c_thumb,g_face,w_128,h_128/'
+                                );
+                            }
+                            navProfileAvatarImage.onerror = function() {
+                                if (this.src !== profilePhoto) {
+                                    this.src = profilePhoto;
+                                    return;
+                                }
+                                console.error('Unable to load profile avatar image:', profilePhoto);
+                                this.hidden = true;
+                                navProfileAvatar.classList.remove('has-photo');
+                                if (navProfileAvatarFallback) {
+                                    navProfileAvatarFallback.textContent =
+                                        (self.profile.name || self.user.email || 'U').charAt(0).toUpperCase();
+                                    navProfileAvatarFallback.hidden = false;
+                                }
+                            };
+                            if (navProfileAvatarImage.getAttribute('src') !== navPhotoUrl) {
+                                navProfileAvatarImage.src = navPhotoUrl;
                             }
                             navProfileAvatarImage.hidden = false;
                         } else {
+                            navProfileAvatarImage.onerror = null;
                             navProfileAvatarImage.removeAttribute('src');
                             navProfileAvatarImage.hidden = true;
                         }
@@ -8857,6 +8901,10 @@ loadMessages: function() {
             var chatMessagesView = document.getElementById('chatMessages');
             if (chatMessagesView) {
                 chatMessagesView.innerHTML = '<div style="text-align:center;color:#999;padding:40px 16px;font-size:14px;">No messages yet. Say hello! </div>';
+                var typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator && typingIndicator.parentNode !== chatMessagesView) {
+                    chatMessagesView.appendChild(typingIndicator);
+                }
             }
             return;
         }
@@ -8935,6 +8983,8 @@ loadMessages: function() {
         var chatMessagesView = document.getElementById('chatMessages');
         if (chatMessagesView) {
             chatMessagesView.innerHTML = html;
+            var typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) chatMessagesView.appendChild(typingIndicator);
             setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 50);
             setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 150);
         }
@@ -12086,6 +12136,8 @@ loadMessages: function() {
             var chatMessagesView = document.getElementById('chatMessages');
             if (chatMessagesView) {
                 chatMessagesView.innerHTML = '<div style="text-align:center;color:#999;padding:40px 16px;font-size:14px;">No messages yet. Say hello! </div>';
+                var typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) chatMessagesView.appendChild(typingIndicator);
             }
             return;
         }
@@ -12162,6 +12214,8 @@ loadMessages: function() {
         var chatMessagesView = document.getElementById('chatMessages');
         if (chatMessagesView) {
             chatMessagesView.innerHTML = html;
+            var typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) chatMessagesView.appendChild(typingIndicator);
             setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 50);
             setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 150);
         }
