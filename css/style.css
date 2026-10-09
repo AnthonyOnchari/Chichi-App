@@ -17264,10 +17264,8 @@ button:empty[onclick*="remove"]::before {
     min-height: 0;
     padding: 0;
     overflow: hidden;
-    border-radius: 26px;
-    background:
-        radial-gradient(circle at 0 100%, rgba(69, 200, 196, .18), transparent 35%),
-        #dcebe4;
+    border-radius: 0;
+    background: transparent;
 }
 
 .main-app.guest-mode .guest-v5-message-board {
@@ -17499,7 +17497,7 @@ button:empty[onclick*="remove"]::before {
 }
 
 :root.dark-mode .main-app.guest-mode .guest-v5-messages {
-    background: #263f3c;
+    background: transparent;
 }
 
 :root.dark-mode .main-app.guest-mode .guest-v5-message-board {
