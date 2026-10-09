@@ -6086,6 +6086,11 @@ var app = {
         if (!this.navigationHistory) this.navigationHistory = [];
         if (!this.currentView || this.currentView === 'feed' || this.currentView === 'home') this.currentView = 'messages';
 
+        var messageList = document.getElementById('messageList');
+        if (this.user && !this.isGuest && messageList && messageList.querySelector('.guest-messages')) {
+            messageList.innerHTML = '<div class="messages-loading-state" role="status">Loading your conversations…</div>';
+        }
+
         var loading = document.getElementById('loadingScreen');
         if (loading) {
             loading.classList.remove('active');
@@ -8472,7 +8477,12 @@ loadMessages: function() {
         var indicator = document.getElementById('typingIndicator');
         if (indicator) {
             var text = document.getElementById('typingText');
-            if (text) text.textContent = (userName || this.currentChat.name || 'User') + ' is typing';
+            if (text) {
+                text.textContent = (userName || this.currentChat.name || 'User') + ' is typing';
+                text.classList.remove('typing-text-loop');
+                void text.offsetWidth;
+                text.classList.add('typing-text-loop');
+            }
             indicator.style.display = 'flex';
         }
         if (this.typingDisplayTimeout) clearTimeout(this.typingDisplayTimeout);
@@ -8485,6 +8495,8 @@ loadMessages: function() {
         if (indicator) {
             indicator.style.display = 'none';
         }
+        var text = document.getElementById('typingText');
+        if (text) text.classList.remove('typing-text-loop');
         if (this.typingDisplayTimeout) {
             clearTimeout(this.typingDisplayTimeout);
             this.typingDisplayTimeout = null;
@@ -15660,11 +15672,14 @@ app.displayTypingIndicator = function(userName) {
     var indicator = document.getElementById('typingIndicator');
     var text = document.getElementById('typingText');
     if (!indicator || !text) return;
-    if (this.typingDisplayTimeout) {
-        clearTimeout(this.typingDisplayTimeout);
-        this.typingDisplayTimeout = null;
+    var nextText = (userName || this.currentChat && this.currentChat.name || 'User') + ' is typing';
+    var isVisible = indicator.style.display !== 'none';
+    if (!isVisible || text.textContent !== nextText) {
+        text.textContent = nextText;
+        text.classList.remove('typing-text-loop');
+        void text.offsetWidth;
+        text.classList.add('typing-text-loop');
     }
-    text.textContent = (userName || 'User') + ' is typing';
     indicator.style.display = 'flex';
 };
 
