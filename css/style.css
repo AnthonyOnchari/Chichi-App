@@ -18466,3 +18466,87 @@ button:empty[onclick*="remove"]::before {
     font-size: 13px;
     line-height: 1.5;
 }
+
+.referral-open-hosted {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 8px;
+    padding: 0 16px;
+    border-radius: 10px;
+    background: #0f766e;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+@media (max-width: 700px) {
+    .main-app.guest-mode .view {
+        bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .main-app.guest-mode .bottom-nav {
+        right: auto;
+        bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+        left: 50%;
+        width: auto;
+        max-width: calc(100% - 24px);
+        padding: 0;
+        transform: translateX(-50%);
+    }
+
+    .main-app.guest-mode .guest-nav-top {
+        display: none !important;
+    }
+
+    .main-app.guest-mode .bottom-nav .nav-wrapper {
+        display: flex !important;
+        width: 192px;
+        max-width: 100%;
+        justify-content: space-around;
+        gap: 5px;
+        padding: 6px;
+        border: 1px solid rgba(23, 44, 67, .12);
+        border-radius: 999px;
+        background: rgba(255, 254, 250, .97);
+        box-shadow: 0 10px 30px rgba(23, 44, 67, .2);
+    }
+
+    .main-app.guest-mode .bottom-nav .nav-item {
+        display: flex;
+        min-width: 0;
+        min-height: 44px;
+        flex: 1 1 0;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    .main-app.guest-mode .bottom-nav .nav-label {
+        display: none !important;
+    }
+
+    .main-app.guest-mode .bottom-nav .nav-icon,
+    .main-app.guest-mode .bottom-nav .nav-item .nav-profile-avatar {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        min-height: 34px;
+        flex: 0 0 34px;
+        place-items: center;
+        border-radius: 50%;
+    }
+
+    .main-app.guest-mode .bottom-nav .nav-item.active .nav-icon {
+        background: rgba(15, 118, 110, .1);
+    }
+
+    :root.dark-mode .main-app.guest-mode .bottom-nav .nav-wrapper {
+        border-color: rgba(255, 255, 255, .12);
+        background: rgba(22, 34, 37, .97);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+    }
+}

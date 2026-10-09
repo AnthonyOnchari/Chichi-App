@@ -116,6 +116,7 @@ var app = {
                 var referralFromUrl = new URLSearchParams(window.location.search).get('ref');
                 if (referralFromUrl && /^[a-zA-Z0-9]{5,40}$/.test(referralFromUrl)) {
                     referralField.value = referralFromUrl.toUpperCase();
+                    localStorage.setItem('chichiPendingReferralCode', referralFromUrl.toUpperCase());
                 }
             } catch (error) {
                 console.error('Unable to read signup referral link:', error);
@@ -268,6 +269,9 @@ var app = {
                         db.ref('users/' + u.uid).update({
                             email: u.email
                         });
+                    }
+                    if (typeof self.registerPendingReferralForNewUser === 'function') {
+                        self.registerPendingReferralForNewUser(u);
                     }
                     self.loadProfile();
                     self.setupUserNotifications();
@@ -12768,7 +12772,7 @@ loadMessages: function() {
                 return db.ref('users/' + r.user.uid).set(userData).then(function() {
                     return self.callReferralApi('register', { referralCode: referralCode }).then(function(result) {
                         try { localStorage.removeItem('chichiPendingReferralCode'); } catch (storageError) { console.error('Unable to clear pending referral code:', storageError); }
-                        if (referralCode && result.referralAwarded) self.pendingSignupReferralNotice = { message: 'Your friend earned KSh 10 for your referral.', type: 'success' };
+                        if (referralCode && result.referralAwarded) self.pendingSignupReferralNotice = { message: 'Your inviter earned KSh 10 for your signup.', type: 'success' };
                         else if (referralCode && result.referralMessage) self.pendingSignupReferralNotice = { message: result.referralMessage, type: 'info' };
                     }).catch(function(referralError) {
                         console.error('Referral registration failed:', referralError);
@@ -17774,9 +17778,56 @@ app.callReferralApi = function(action, payload) {
     });
 };
 
+app.registerPendingReferralForNewUser = function(user) {
+    if (!user || !user.uid || (window.location.protocol !== 'https:' && window.location.protocol !== 'http:')) return;
+    var providerIds = (user.providerData || []).map(function(provider) { return provider.providerId; });
+    if (providerIds.indexOf('password') !== -1) return;
+
+    var referralCode = '';
+    try {
+        referralCode = localStorage.getItem('chichiPendingReferralCode') || '';
+    } catch (error) {
+        console.error('Unable to read pending signup referral code:', error);
+        return;
+    }
+    if (!referralCode) return;
+
+    var createdAt = Date.parse(user.metadata && user.metadata.creationTime || '');
+    if (!createdAt || Date.now() - createdAt > 24 * 60 * 60 * 1000) {
+        try { localStorage.removeItem('chichiPendingReferralCode'); } catch (error) {
+            console.error('Unable to clear expired signup referral code:', error);
+        }
+        return;
+    }
+    if (this.referralRegistrationForUid === user.uid) return;
+
+    var self = this;
+    this.referralRegistrationForUid = user.uid;
+    this.callReferralApi('register', { referralCode: referralCode }).then(function(result) {
+        try { localStorage.removeItem('chichiPendingReferralCode'); } catch (error) {
+            console.error('Unable to clear registered signup referral code:', error);
+        }
+        if (result.referralAwarded) self.toast('Your inviter earned KSh 10 for your signup.', 'success');
+        else if (result.referralMessage) self.toast(result.referralMessage, 'info');
+    }).catch(function(error) {
+        console.error('Referral registration failed after sign-up:', error);
+        if (/referral code (was not found|is not valid)|cannot use your own referral code/i.test(error.message)) {
+            try { localStorage.removeItem('chichiPendingReferralCode'); } catch (storageError) {
+                console.error('Unable to clear invalid signup referral code:', storageError);
+            }
+        }
+        self.toast('Referral setup could not finish. You can retry from Refer & Earn.', 'error');
+    }).then(function() {
+        if (self.referralRegistrationForUid === user.uid) self.referralRegistrationForUid = null;
+    }, function() {
+        if (self.referralRegistrationForUid === user.uid) self.referralRegistrationForUid = null;
+    });
+};
+
 app.maybePromptReferralEnrollment = function() {
     var uid = this.user && this.user.uid;
     if (!uid || this.isGuest || this.referralPromptCheckForUid === uid) return;
+    if (window.location.protocol !== 'https:' && window.location.protocol !== 'http:') return;
     if (document.getElementById('usernameSetupModal')) {
         var self = this;
         setTimeout(function() { self.maybePromptReferralEnrollment(); }, 700);
@@ -17884,7 +17935,7 @@ app.loadReferralDashboard = function(overlay) {
     var setup = pendingReferralCode
         ? this.callReferralApi('register', { referralCode: pendingReferralCode }).then(function(result) {
             try { localStorage.removeItem('chichiPendingReferralCode'); } catch (storageError) { console.error('Unable to clear pending referral code:', storageError); }
-            if (result.referralAwarded) self.toast('Your friend earned KSh 10 for your referral.', 'success');
+            if (result.referralAwarded) self.toast('Your inviter earned KSh 10 for your signup.', 'success');
             if (result.referralMessage) self.toast(result.referralMessage, 'info');
         }).catch(function(error) {
             if (/referral code (was not found|is not valid)|cannot use your own referral code/i.test(error.message)) {
@@ -17908,6 +17959,10 @@ app.loadReferralDashboard = function(overlay) {
 app.renderReferralError = function(overlay, error) {
     var content = overlay.querySelector('.referral-modal-content');
     if (!content) return;
+    if (window.location.protocol !== 'https:' && window.location.protocol !== 'http:') {
+        content.innerHTML = '<div class="referral-error"><div class="referral-eyebrow">CHICHI REFERRALS</div><strong>Open referrals on CHICHI</strong><p>Referral accounts work on the CHICHI website. Open the secure website and sign in to view your referral balance.</p><a class="referral-open-hosted" href="https://www.chichi.buzz/">Open CHICHI</a></div>';
+        return;
+    }
     content.innerHTML = '<div class="referral-error"><div class="referral-eyebrow">CHICHI REFERRALS</div><strong>We couldn’t load referrals</strong><p></p><button type="button" class="referral-retry">Try again</button></div>';
     content.querySelector('p').textContent = error.message || 'Referral service is temporarily unavailable. Please try again.';
     content.querySelector('.referral-retry').addEventListener('click', function(event) {
@@ -17951,7 +18006,7 @@ app.renderReferralDashboard = function(overlay, data) {
             <h2 id="referralTitle">Invite friends. Earn KSh.</h2>
             <p class="referral-intro">Earn <strong>KSh 10</strong> per friend who joins.</p>
             <div class="referral-balance-card" aria-label="Referral balance overview">
-                <div class="referral-balance-main"><span>AVAILABLE BALANCE</span><strong id="referralBalance"></strong></div>
+                <div class="referral-balance-main"><span>REFERRAL EARNINGS</span><strong id="referralBalance"></strong></div>
                 <div class="referral-balance-stats"><span id="referralCount"></span><span class="referral-minimum">Min. KSh 50 to withdraw</span></div>
                 <div class="referral-balance-progress" role="progressbar" aria-label="Progress toward minimum payout" aria-valuemin="0" aria-valuemax="50" aria-valuenow="0"><span></span></div>
                 <p class="referral-balance-hint" id="referralBalanceHint"></p>
@@ -18033,9 +18088,8 @@ app.renderReferralDashboard = function(overlay, data) {
     content.querySelector('#referralProviderWrap').style.display = 'none';
     content.querySelector('#referralCopyCode').addEventListener('click', function() { self.copyReferralValue(data.code || ''); });
     content.querySelector('#referralCopyLink').addEventListener('click', function() {
-        var url = new URL(window.location.href);
-        url.search = '';
-        url.hash = '';
+        var isChichiDomain = /(^|\.)chichi\.buzz$/i.test(window.location.hostname);
+        var url = new URL('/', isChichiDomain ? window.location.origin : 'https://www.chichi.buzz');
         url.searchParams.set('ref', data.code || '');
         self.copyReferralValue(url.href);
     });
