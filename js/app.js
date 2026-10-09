@@ -8553,7 +8553,13 @@ loadMessages: function() {
         setTimeout(clearChatTransition, 240);
     }
 
-    document.getElementById('chatMessages').innerHTML = '<div class="chat-loading-state" role="status">Loading conversation…</div>';
+    var chatMessagesContainer = document.getElementById('chatMessages');
+    var typingIndicator = chatMessagesContainer && chatMessagesContainer.querySelector('#typingIndicator');
+    if (chatMessagesContainer) {
+        chatMessagesContainer.innerHTML = '<div class="chat-loading-state" role="status">Loading conversation…</div>';
+        typingIndicator = this.ensureTypingIndicator(chatMessagesContainer) || typingIndicator;
+        if (typingIndicator) chatMessagesContainer.appendChild(typingIndicator);
+    }
     document.getElementById('chatMessageInput').value = '';
     document.getElementById('chatMessageInput').placeholder = 'Type a message...';
 
@@ -8954,8 +8960,8 @@ loadMessages: function() {
         if (!messages || messages.length === 0) {
             var chatMessagesView = document.getElementById('chatMessages');
             if (chatMessagesView) {
+                var typingIndicator = this.ensureTypingIndicator(chatMessagesView);
                 chatMessagesView.innerHTML = '<div style="text-align:center;color:#999;padding:40px 16px;font-size:14px;">No messages yet. Say hello! </div>';
-                var typingIndicator = document.getElementById('typingIndicator');
                 if (typingIndicator && typingIndicator.parentNode !== chatMessagesView) {
                     chatMessagesView.appendChild(typingIndicator);
                 }
@@ -9036,8 +9042,8 @@ loadMessages: function() {
 
         var chatMessagesView = document.getElementById('chatMessages');
         if (chatMessagesView) {
+            var typingIndicator = this.ensureTypingIndicator(chatMessagesView);
             chatMessagesView.innerHTML = html;
-            var typingIndicator = document.getElementById('typingIndicator');
             if (typingIndicator) chatMessagesView.appendChild(typingIndicator);
             setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 50);
             setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 150);
@@ -11318,7 +11324,7 @@ loadMessages: function() {
             banner = document.createElement('section');
             banner.id = 'guestExploreWelcome';
             banner.className = 'guest-v4-people';
-            banner.innerHTML = '<div class="guest-v4-people-intro"><span class="guest-v4-people-kicker">A GOOD CROWD IS A LITTLE BIT OF EVERYTHING</span><h2>Your people are <em>out there.</em></h2><p>Find your kind of curious, your kind of funny, your kind of everything.</p></div><div class="guest-v4-people-grid" aria-label="The kinds of people you could meet"><article class="guest-v4-person-card guest-v4-person-music"><img src="Assets/001.jpg" alt="Friends listening to music together"><span class="guest-v4-person-index">01 / THE SOUNDTRACK</span><strong>Playlist<br>traders</strong></article><article class="guest-v4-person-card guest-v4-person-curious"><img src="Assets/002.jpg" alt="Friends sharing something on a phone"><span class="guest-v4-person-index">02 / THE WHAT-IFS</span><strong>Curious<br>minds</strong></article><article class="guest-v4-person-card guest-v4-person-weekends"><img src="Assets/004.jpg" alt="Friends out together"><span class="guest-v4-person-index">03 / THE OUT-AND-ABOUTS</span><strong>Weekend<br>explorers</strong></article><article class="guest-v4-person-card guest-v4-person-laughs"><img src="Assets/003.jpg" alt="Friends laughing together"><span class="guest-v4-person-index">04 / YOUR KIND OF PEOPLE</span><strong>Laugh-until-<br>it-hurts friends</strong></article></div><div class="guest-v4-people-invite"><span>Come as you are. Find your people.</span><button class="guest-v4-people-join" type="button">Find your people</button><button class="guest-v4-people-login" type="button">Already a member? <strong>Log in</strong></button></div>';
+            banner.innerHTML = '<div class="guest-v4-people-intro"><span class="guest-v4-people-kicker">MAKE ROOM FOR NEW CONNECTIONS</span><h2>Meet people who <em>just get you.</em></h2><p>From shared playlists to spontaneous plans, find people who make every hello feel easy.</p></div><div class="guest-v4-people-grid" aria-label="The kinds of people you could meet"><article class="guest-v4-person-card guest-v4-person-music"><img src="Assets/001.jpg" alt="Friends listening to music together"><span class="guest-v4-person-index">01 / THE SOUNDTRACK</span><strong>Playlist<br>traders</strong></article><article class="guest-v4-person-card guest-v4-person-curious"><img src="Assets/002.jpg" alt="Friends sharing something on a phone"><span class="guest-v4-person-index">02 / THE WHAT-IFS</span><strong>Curious<br>minds</strong></article><article class="guest-v4-person-card guest-v4-person-weekends"><img src="Assets/004.jpg" alt="Friends out together"><span class="guest-v4-person-index">03 / THE OUT-AND-ABOUTS</span><strong>Weekend<br>explorers</strong></article><article class="guest-v4-person-card guest-v4-person-laughs"><img src="Assets/003.jpg" alt="Friends laughing together"><span class="guest-v4-person-index">04 / YOUR KIND OF PEOPLE</span><strong>Laugh-until-<br>it-hurts friends</strong></article></div><div class="guest-v4-people-invite"><span>Your next good conversation could start here.</span><button class="guest-v4-people-join" type="button">Find your people</button><button class="guest-v4-people-login" type="button">Already a member? <strong>Log in</strong></button></div>';
             banner.querySelector('.guest-v4-people-join').addEventListener('click', function() { app.showLoginPage('signup'); });
             banner.querySelector('.guest-v4-people-login').addEventListener('click', function() { app.showLoginPage('login'); });
             var heading = container.querySelector('.explore-page-heading');
@@ -12189,8 +12195,8 @@ loadMessages: function() {
         if (!messages || messages.length === 0) {
             var chatMessagesView = document.getElementById('chatMessages');
             if (chatMessagesView) {
+                var typingIndicator = this.ensureTypingIndicator(chatMessagesView);
                 chatMessagesView.innerHTML = '<div style="text-align:center;color:#999;padding:40px 16px;font-size:14px;">No messages yet. Say hello! </div>';
-                var typingIndicator = document.getElementById('typingIndicator');
                 if (typingIndicator) chatMessagesView.appendChild(typingIndicator);
             }
             return;
@@ -12267,8 +12273,8 @@ loadMessages: function() {
 
         var chatMessagesView = document.getElementById('chatMessages');
         if (chatMessagesView) {
+            var typingIndicator = this.ensureTypingIndicator(chatMessagesView);
             chatMessagesView.innerHTML = html;
-            var typingIndicator = document.getElementById('typingIndicator');
             if (typingIndicator) chatMessagesView.appendChild(typingIndicator);
             setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 50);
             setTimeout(function() { chatMessagesView.scrollTop = chatMessagesView.scrollHeight; }, 150);
@@ -15745,7 +15751,7 @@ app.startTypingIndicator = function() {
     var typingPath = 'typing/' + key + '/' + self.user.uid;
     var typingRef = db.ref(typingPath);
     this.typingPath = typingPath;
-    typingRef.set({typing: true, since: Date.now()}).catch(function(error) {
+    typingRef.set({typing: true, since: firebase.database.ServerValue.TIMESTAMP}).catch(function(error) {
         console.error('Unable to update typing status:', error);
     });
     if (this.typingDisconnectPath !== typingPath) {
@@ -15780,8 +15786,32 @@ app.stopTypingIndicator = function() {
     });
 };
 
-app.displayTypingIndicator = function(userName) {
+app.ensureTypingIndicator = function(chatMessagesView) {
+    var container = chatMessagesView || document.getElementById('chatMessages');
+    if (!container) return null;
     var indicator = document.getElementById('typingIndicator');
+    if (indicator) return indicator;
+
+    indicator = document.createElement('div');
+    indicator.id = 'typingIndicator';
+    indicator.className = 'typing-indicator';
+    indicator.style.display = 'none';
+    indicator.setAttribute('role', 'status');
+    indicator.setAttribute('aria-live', 'polite');
+    var text = document.createElement('span');
+    text.id = 'typingText';
+    text.textContent = 'User is typing';
+    var dots = document.createElement('span');
+    dots.className = 'typing-dots';
+    dots.setAttribute('aria-hidden', 'true');
+    for (var i = 0; i < 3; i++) dots.appendChild(document.createElement('span'));
+    indicator.append(text, dots);
+    container.appendChild(indicator);
+    return indicator;
+};
+
+app.displayTypingIndicator = function(userName) {
+    var indicator = this.ensureTypingIndicator();
     var text = document.getElementById('typingText');
     if (!indicator || !text) return;
     var nextText = (userName || this.currentChat && this.currentChat.name || 'User') + ' is typing';
@@ -15809,9 +15839,7 @@ app.trackTyping = function() {
         var typingUsers = [];
         if (typing) {
             Object.keys(typing).forEach(function(uid) {
-                var typingSince = Number(typing[uid] && typing[uid].since);
-                if (uid !== self.user.uid && typing[uid] && typing[uid].typing &&
-                    typingSince > 0 && Date.now() - typingSince < 6000) {
+                if (uid !== self.user.uid && typing[uid] && typing[uid].typing === true) {
                     typingUsers.push(self.users[uid] ? self.users[uid].name : 'User');
                 }
             });
@@ -15821,6 +15849,9 @@ app.trackTyping = function() {
         } else {
             self.hideTypingIndicator();
         }
+    }, function(error) {
+        console.error('Unable to listen for chat typing status:', error);
+        self.hideTypingIndicator();
     });
 };
 
