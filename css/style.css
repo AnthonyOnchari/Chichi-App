@@ -16868,3 +16868,390 @@ button:empty[onclick*="remove"]::before {
         transition: none;
     }
 }
+
+/* Profile gets a personal-story layout, with an image-led moodboard instead of a sample profile card. */
+.main-app.guest-mode .guest-v4-profile {
+    display: grid;
+    grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid rgba(23, 44, 67, .1);
+    border-radius: 26px;
+    background: #f3e9dc;
+}
+
+.main-app.guest-mode .guest-v4-profile-copy {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: clamp(20px, 4vw, 56px);
+    background:
+        radial-gradient(circle at 0 100%, rgba(248, 151, 110, .2), transparent 35%),
+        #f3e9dc;
+}
+
+.main-app.guest-mode .guest-v4-profile-kicker {
+    color: #9a5d43;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .15em;
+}
+
+.main-app.guest-mode .guest-v4-profile-copy h2 {
+    max-width: 500px;
+    margin: 12px 0;
+    color: #253c4a;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(32px, 4.3vw, 56px);
+    font-weight: 700;
+    letter-spacing: -.065em;
+    line-height: .98;
+}
+
+.main-app.guest-mode .guest-v4-profile-copy h2 em {
+    color: #cf6149;
+    font-style: normal;
+}
+
+.main-app.guest-mode .guest-v4-profile-copy > p {
+    max-width: 370px;
+    margin: 0;
+    color: #69747a;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.main-app.guest-mode .guest-v4-profile-points {
+    display: grid;
+    gap: 7px;
+    margin: clamp(14px, 3vh, 25px) 0;
+}
+
+.main-app.guest-mode .guest-v4-profile-points span {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #43545a;
+    font-size: 9px;
+    font-weight: 600;
+}
+
+.main-app.guest-mode .guest-v4-profile-points b {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    place-items: center;
+    border: 1px solid rgba(37, 60, 74, .17);
+    border-radius: 50%;
+    color: #b65d45;
+    font-size: 7px;
+}
+
+.main-app.guest-mode .guest-v4-profile-copy > .guest-v3-button {
+    background: #253c4a;
+}
+
+.main-app.guest-mode .guest-v4-profile-stage {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    place-items: center;
+    overflow: hidden;
+    padding: clamp(18px, 4vw, 48px);
+    background:
+        radial-gradient(ellipse at 55% 54%, rgba(247, 204, 141, .48), transparent 53%),
+        #de9c76;
+}
+
+.main-app.guest-mode .guest-v4-profile-photo {
+    position: relative;
+    width: min(78%, 420px);
+    height: 82%;
+    min-height: 0;
+    overflow: hidden;
+    border: 8px solid #f8f2e6;
+    border-radius: 48% 48% 23px 23px;
+    background: #c2a18b;
+    box-shadow: 0 18px 38px rgba(86, 51, 40, .18);
+    transform: rotate(-3deg);
+}
+
+.main-app.guest-mode .guest-v4-profile-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 44%;
+}
+
+.main-app.guest-mode .guest-v4-profile-photo > span {
+    position: absolute;
+    right: 10px;
+    bottom: 12px;
+    left: 10px;
+    color: white;
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: .11em;
+    text-align: center;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, .55);
+}
+
+.main-app.guest-mode .guest-v4-profile-note {
+    position: absolute;
+    z-index: 1;
+    border: 1px solid rgba(37, 60, 74, .12);
+    background: #fffaf0;
+    box-shadow: 0 10px 26px rgba(67, 43, 35, .14);
+}
+
+.main-app.guest-mode .guest-v4-profile-note-top {
+    top: 17%;
+    right: 6%;
+    padding: 12px 14px;
+    border-radius: 13px;
+    color: #263c48;
+    transform: rotate(4deg);
+}
+
+.main-app.guest-mode .guest-v4-profile-note-top span,
+.main-app.guest-mode .guest-v4-profile-note-top strong {
+    display: block;
+}
+
+.main-app.guest-mode .guest-v4-profile-note-top span {
+    margin-bottom: 5px;
+    color: #9a5d43;
+    font-size: 6px;
+    font-weight: 800;
+    letter-spacing: .1em;
+}
+
+.main-app.guest-mode .guest-v4-profile-note-top strong {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    line-height: 1.12;
+}
+
+.main-app.guest-mode .guest-v4-profile-note-bottom {
+    bottom: 14%;
+    left: 5%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 11px;
+    border-radius: 999px;
+    color: #52624c;
+    font-size: 6px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    transform: rotate(-4deg);
+}
+
+.main-app.guest-mode .guest-v4-profile-note-bottom i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #67ae72;
+}
+
+.main-app.guest-mode .guest-v4-profile-spark {
+    position: absolute;
+    color: #fff2ca;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+}
+
+.main-app.guest-mode .guest-v4-profile-spark-one {
+    top: 16%;
+    left: 12%;
+    font-size: 29px;
+}
+
+.main-app.guest-mode .guest-v4-profile-spark-two {
+    right: 14%;
+    bottom: 19%;
+    font-size: 34px;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v4-profile-copy {
+    background: #263541;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v4-profile-copy h2,
+:root.dark-mode .main-app.guest-mode .guest-v4-profile-points span {
+    color: #f2eee4 !important;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v4-profile-copy > p {
+    color: #c2cbd0;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v4-profile-points b {
+    border-color: rgba(255, 255, 255, .2);
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v4-profile-stage {
+    background:
+        radial-gradient(ellipse at 55% 54%, rgba(190, 133, 95, .36), transparent 53%),
+        #705347;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v4-profile-note {
+    border-color: rgba(255, 255, 255, .15);
+    background: #f3e9dc;
+}
+
+@media (max-width: 700px) {
+    .main-app.guest-mode .guest-v4-profile {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        border-radius: 21px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-copy {
+        grid-row: 1;
+        justify-content: flex-start;
+        padding: 14px 17px 9px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-kicker {
+        font-size: 7px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-copy h2 {
+        max-width: 420px;
+        margin: 6px 0;
+        font-size: clamp(25px, 7.2vw, 34px);
+        line-height: 1;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-copy > p {
+        font-size: 9px;
+        line-height: 1.4;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-points {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+        width: 100%;
+        margin: 8px 0;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-points span {
+        align-items: flex-start;
+        gap: 4px;
+        font-size: 7px;
+        line-height: 1.25;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-points b {
+        width: 17px;
+        height: 17px;
+        flex-basis: 17px;
+        font-size: 6px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-copy > .guest-v3-button {
+        min-height: 35px;
+        margin: 0;
+        padding: 0 12px;
+        font-size: 9px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-copy > .guest-v3-login {
+        padding: 4px 0 0;
+        font-size: 8px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-stage {
+        grid-row: 2;
+        padding: 12px 24px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-photo {
+        width: min(68%, 300px);
+        height: 92%;
+        border-width: 6px;
+        border-radius: 46% 46% 17px 17px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-note-top {
+        top: 10%;
+        right: 5%;
+        padding: 8px 10px;
+        border-radius: 10px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-note-top span {
+        margin-bottom: 3px;
+        font-size: 5px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-note-top strong {
+        font-size: 9px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-note-bottom {
+        bottom: 10%;
+        left: 4%;
+        padding: 7px 9px;
+        font-size: 5px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-spark-one {
+        top: 11%;
+        left: 8%;
+        font-size: 23px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-spark-two {
+        right: 9%;
+        bottom: 15%;
+        font-size: 26px;
+    }
+}
+
+@media (max-width: 360px) {
+    .main-app.guest-mode .guest-v4-profile-copy {
+        padding-right: 12px;
+        padding-left: 12px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-copy h2 {
+        font-size: 24px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-copy > p {
+        font-size: 8px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-points {
+        margin: 6px 0;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-points span {
+        font-size: 6px;
+    }
+}
+
+@media (max-height: 650px) and (max-width: 700px) {
+    .main-app.guest-mode .guest-v4-profile {
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .main-app.guest-mode .guest-v4-profile-copy {
+        padding-top: 9px;
+    }
+
+    .main-app.guest-mode .guest-v4-profile-points {
+        margin: 5px 0;
+    }
+}

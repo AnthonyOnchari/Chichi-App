@@ -6438,24 +6438,28 @@ var app = {
         // ========== 2. GUEST / NOT LOGGED IN ==========
         if (!this.user || this.isGuest) {
             profileContent.innerHTML = `
-                <section class="guest-v3-profile" aria-labelledby="guestProfileTitle">
-                    <div class="guest-v3-profile-copy">
-                        <span class="guest-v3-eyebrow">YOUR SPACE, YOUR STORY</span>
-                        <h2 id="guestProfileTitle">A profile that feels like <em>you.</em></h2>
-                        <p>Share the little things that make you, you. Let the right people find their way to hello.</p>
-                        <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Make your profile <span aria-hidden="true">↗</span></button>
+                <section class="guest-v4-profile" aria-labelledby="guestProfileTitle">
+                    <div class="guest-v4-profile-copy">
+                        <span class="guest-v4-profile-kicker">NO PERFECT BIO REQUIRED</span>
+                        <h2 id="guestProfileTitle">A little corner of CHICHI, <em>all yours.</em></h2>
+                        <p>Show a little of what you love. The right people will have something to say about it.</p>
+                        <div class="guest-v4-profile-points" aria-label="Ways to make your profile yours">
+                            <span><b>01</b> Add your kind of photo</span>
+                            <span><b>02</b> Share what you’re into</span>
+                            <span><b>03</b> Let the hellos find you</span>
+                        </div>
+                        <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Make it yours <span aria-hidden="true">↗</span></button>
                         <button class="guest-v3-login" onclick="app.showLoginPage('login')">Already on CHICHI? <strong>Log in</strong></button>
                     </div>
-                    <div class="guest-v3-profile-scene" aria-label="A preview of your CHICHI profile">
-                        <div class="guest-v3-profile-orbit guest-v3-profile-orbit-one"></div>
-                        <div class="guest-v3-profile-orbit guest-v3-profile-orbit-two"></div>
-                        <article class="guest-v3-profile-card">
-                            <div class="guest-v3-profile-photo"><img src="Assets/003.jpg" alt="Friends smiling together"></div>
-                            <span class="guest-v3-profile-status"><i></i> OPEN TO GOOD CONVERSATIONS</span>
-                            <h3>Your story, right here.</h3>
-                            <p>Music lover · Weekend explorer</p>
-                            <div class="guest-v3-profile-tags"><span>Good energy</span><span>Real connection</span></div>
-                        </article>
+                    <div class="guest-v4-profile-stage" aria-label="A glimpse of the people and interests you can share">
+                        <div class="guest-v4-profile-photo">
+                            <img src="Assets/003.jpg" alt="Friends laughing together">
+                            <span>THE GOOD STUFF IS IN THE DETAILS</span>
+                        </div>
+                        <div class="guest-v4-profile-note guest-v4-profile-note-top"><span>RIGHT NOW, I’M INTO</span><strong>Good music<br>and long lunches</strong></div>
+                        <div class="guest-v4-profile-note guest-v4-profile-note-bottom"><i></i> HERE FOR REAL CONVERSATION</div>
+                        <span class="guest-v4-profile-spark guest-v4-profile-spark-one" aria-hidden="true">✳</span>
+                        <span class="guest-v4-profile-spark guest-v4-profile-spark-two" aria-hidden="true">+</span>
                     </div>
                 </section>
             `;
