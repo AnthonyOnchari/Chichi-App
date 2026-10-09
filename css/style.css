@@ -8624,13 +8624,21 @@ h1, h2, h3, h4, h5, h6,
 .explore-people-username {
     font-size: 11px;
     color: #6b7280;
-    margin-bottom: 8px;
 }
 
 .explore-people-followers {
     font-size: 11px;
     color: #9ca3af;
+}
+
+.explore-people-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
     margin-bottom: 10px;
+    white-space: nowrap;
 }
 
 .explore-search-input {

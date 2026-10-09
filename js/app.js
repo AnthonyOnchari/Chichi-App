@@ -15044,10 +15044,11 @@ app.loadExplorePeople = function() {
             html += '<div class="' + (app.isGuest ? 'guest-explore-name' : '') + '" style="font-weight: 600; font-size: 13px; color: #1a202c; margin-bottom: 4px;">' + displayName + '</div>';
             if (app.isGuest) {
                 html += '<div class="guest-explore-meta">Private member</div>';
-            } else if (user.username) {
-                html += '<div style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">@' + user.username + '</div>';
             }
-            html += '<div style="font-size: 11px; color: #9ca3af; margin-bottom: 10px;"> ' + (user.followers || 0) + '</div>';
+            html += '<div class="explore-people-meta">' +
+                (app.isGuest || !user.username ? '' : '<span class="explore-people-username">@' + user.username + '</span>') +
+                '<span class="explore-people-followers" aria-label="' + (user.followers || 0) + ' followers">' + (user.followers || 0) + '</span>' +
+                '</div>';
             html += '<button onclick="event.stopPropagation(); app.toggleFollow(\'' + user.uid + '\');" style="width: 100%; padding: 8px 12px; background: ' + (isFollowing ? '#ef4444' : '#0088cc') + '; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">' + (isFollowing ? ' Following' : '+ Follow') + '</button>';
             html += '</div>';
         });
