@@ -17255,3 +17255,433 @@ button:empty[onclick*="remove"]::before {
         margin: 5px 0;
     }
 }
+
+/* Messages becomes an inbox preview instead of a second photo-led landing hero. */
+.main-app.guest-mode .guest-v5-messages {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 26px;
+    background:
+        radial-gradient(circle at 0 100%, rgba(69, 200, 196, .18), transparent 35%),
+        #dcebe4;
+}
+
+.main-app.guest-mode .guest-v5-message-board {
+    display: grid;
+    grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 16px 25px;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: clamp(19px, 3vw, 38px);
+    overflow: hidden;
+    border: 1px solid rgba(23, 44, 67, .1);
+    border-radius: inherit;
+    background:
+        radial-gradient(circle at 94% 5%, rgba(255, 255, 255, .62), transparent 28%),
+        #eaf1e9;
+}
+
+.main-app.guest-mode .guest-v5-message-intro {
+    align-self: center;
+    min-width: 0;
+}
+
+.main-app.guest-mode .guest-v5-message-kicker {
+    display: block;
+    max-width: 260px;
+    margin-bottom: 11px;
+    color: #527667;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    line-height: 1.5;
+}
+
+.main-app.guest-mode .guest-v5-message-intro h3 {
+    max-width: 420px;
+    margin: 0 0 11px;
+    color: #17354a;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(32px, 4.1vw, 54px);
+    font-weight: 700;
+    letter-spacing: -.065em;
+    line-height: .99;
+}
+
+.main-app.guest-mode .guest-v5-message-intro h3 em {
+    color: #e56d52;
+    font-style: normal;
+}
+
+.main-app.guest-mode .guest-v5-message-intro p {
+    max-width: 330px;
+    margin: 0;
+    color: #687a79;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.main-app.guest-mode .guest-v5-inbox {
+    display: flex;
+    grid-column: 2;
+    grid-row: 1 / 3;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    align-self: center;
+    justify-content: flex-start;
+    height: fit-content;
+    padding: clamp(13px, 2vw, 22px);
+    border: 1px solid rgba(28, 56, 68, .1);
+    border-radius: 22px;
+    background: #fffefa;
+    box-shadow: 0 18px 45px rgba(33, 65, 61, .12);
+}
+
+.main-app.guest-mode .guest-v5-inbox-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e8ece5;
+}
+
+.main-app.guest-mode .guest-v5-inbox-top > div > span,
+.main-app.guest-mode .guest-v5-inbox-top > div > strong {
+    display: block;
+}
+
+.main-app.guest-mode .guest-v5-inbox-top > div > span {
+    margin-bottom: 4px;
+    color: #71877d;
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: .13em;
+}
+
+.main-app.guest-mode .guest-v5-inbox-top > div > strong {
+    color: #203d4b;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px;
+    letter-spacing: -.04em;
+}
+
+.main-app.guest-mode .guest-v5-inbox-count {
+    padding: 6px 8px;
+    border-radius: 999px;
+    background: #eff4df;
+    color: #56713e;
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: .06em;
+}
+
+.main-app.guest-mode .guest-v5-inbox-tabs {
+    display: flex;
+    gap: 5px;
+    padding: 10px 0 8px;
+    overflow: hidden;
+}
+
+.main-app.guest-mode .guest-v5-inbox-tabs span {
+    padding: 5px 8px;
+    border-radius: 999px;
+    color: #7b8988;
+    font-size: 7px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.main-app.guest-mode .guest-v5-inbox-tabs span.active {
+    background: #e9f1e9;
+    color: #385f50;
+}
+
+.main-app.guest-mode .guest-v5-chat-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-top: 1px solid #edf0eb;
+}
+
+.main-app.guest-mode .guest-v5-chat-avatar {
+    position: relative;
+    width: 43px;
+    height: 43px;
+    flex: 0 0 43px;
+    overflow: hidden;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #f1d7ca;
+    box-shadow: 0 0 0 1px rgba(23, 44, 67, .08);
+}
+
+.main-app.guest-mode .guest-v5-chat-avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.main-app.guest-mode .guest-v5-avatar-coral { background: #f4c8b3; }
+.main-app.guest-mode .guest-v5-avatar-green { background: #c7ddc5; }
+.main-app.guest-mode .guest-v5-avatar-blue { background: #c3dce2; }
+
+.main-app.guest-mode .guest-v5-chat-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.main-app.guest-mode .guest-v5-chat-copy > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.main-app.guest-mode .guest-v5-chat-copy strong {
+    overflow: hidden;
+    color: #27424e;
+    font-size: 10px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.main-app.guest-mode .guest-v5-chat-copy time {
+    flex: 0 0 auto;
+    color: #87938d;
+    font-size: 7px;
+}
+
+.main-app.guest-mode .guest-v5-chat-copy p {
+    overflow: hidden;
+    margin: 4px 0 0;
+    color: #72817f;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.main-app.guest-mode .guest-v5-unread {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: #e8795b;
+}
+
+.main-app.guest-mode .guest-v5-chat-arrow {
+    color: #8ba68d;
+    font-size: 13px;
+}
+
+.main-app.guest-mode .guest-v5-inbox-prompt {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 4px;
+    padding: 9px 10px;
+    border-radius: 11px;
+    background: #f5f2e8;
+    color: #66766b;
+    font-size: 8px;
+}
+
+.main-app.guest-mode .guest-v5-inbox-prompt span {
+    color: #df7957;
+    font-size: 13px;
+}
+
+.main-app.guest-mode .guest-v5-message-actions {
+    display: flex;
+    grid-column: 1;
+    grid-row: 2;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px 12px;
+}
+
+.main-app.guest-mode .guest-v5-message-actions .guest-v3-button {
+    background: #244b50;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v5-messages {
+    background: #263f3c;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v5-message-board {
+    border-color: rgba(255, 255, 255, .1);
+    background: #263a3b;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v5-message-intro h3 {
+    color: #f0f3ed !important;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v5-message-intro p {
+    color: #bdc9c5;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v5-inbox {
+    border-color: rgba(255, 255, 255, .13);
+    background: #f8f7ef;
+}
+
+@media (max-width: 700px) {
+    .main-app.guest-mode .guest-v5-message-board {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto auto;
+        gap: 8px;
+        height: auto;
+        padding: 14px;
+        align-self: center;
+    }
+
+    .main-app.guest-mode .guest-v5-message-intro {
+        grid-column: 1;
+        grid-row: 1;
+        align-self: start;
+    }
+
+    .main-app.guest-mode .guest-v5-message-kicker {
+        margin-bottom: 5px;
+        font-size: 6px;
+    }
+
+    .main-app.guest-mode .guest-v5-message-intro h3 {
+        max-width: 380px;
+        margin: 0 0 5px;
+        font-size: clamp(24px, 7.1vw, 33px);
+        line-height: 1;
+    }
+
+    .main-app.guest-mode .guest-v5-message-intro p {
+        font-size: 8px;
+        line-height: 1.35;
+    }
+
+    .main-app.guest-mode .guest-v5-inbox {
+        grid-column: 1;
+        grid-row: 2;
+        justify-content: flex-start;
+        align-self: start;
+        padding: 9px 11px;
+        border-radius: 15px;
+    }
+
+    .main-app.guest-mode .guest-v5-inbox-top {
+        padding-bottom: 7px;
+    }
+
+    .main-app.guest-mode .guest-v5-inbox-top > div > span {
+        margin-bottom: 2px;
+        font-size: 6px;
+    }
+
+    .main-app.guest-mode .guest-v5-inbox-top > div > strong {
+        font-size: 14px;
+    }
+
+    .main-app.guest-mode .guest-v5-inbox-count {
+        padding: 5px 7px;
+        font-size: 6px;
+    }
+
+    .main-app.guest-mode .guest-v5-inbox-tabs {
+        gap: 2px;
+        padding: 5px 0;
+    }
+
+    .main-app.guest-mode .guest-v5-inbox-tabs span {
+        padding: 4px 6px;
+        font-size: 6px;
+    }
+
+    .main-app.guest-mode .guest-v5-chat-row {
+        gap: 8px;
+        padding: 7px 0;
+    }
+
+    .main-app.guest-mode .guest-v5-chat-avatar {
+        width: 35px;
+        height: 35px;
+        flex-basis: 35px;
+    }
+
+    .main-app.guest-mode .guest-v5-chat-copy strong {
+        font-size: 8px;
+    }
+
+    .main-app.guest-mode .guest-v5-chat-copy time {
+        font-size: 6px;
+    }
+
+    .main-app.guest-mode .guest-v5-chat-copy p {
+        margin-top: 3px;
+        font-size: 7px;
+    }
+
+    .main-app.guest-mode .guest-v5-inbox-prompt {
+        gap: 5px;
+        margin-top: 2px;
+        padding: 6px 8px;
+        font-size: 7px;
+    }
+
+    .main-app.guest-mode .guest-v5-message-actions {
+        grid-column: 1;
+        grid-row: 3;
+        gap: 1px 10px;
+    }
+
+    .main-app.guest-mode .guest-v5-message-actions .guest-v3-button {
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 8px;
+    }
+
+    .main-app.guest-mode .guest-v5-message-actions .guest-v3-login {
+        font-size: 8px;
+    }
+}
+
+@media (max-width: 360px) {
+    .main-app.guest-mode .guest-v5-message-board {
+        gap: 6px;
+        padding: 11px;
+    }
+
+    .main-app.guest-mode .guest-v5-message-intro h3 {
+        font-size: 23px;
+    }
+
+    .main-app.guest-mode .guest-v5-inbox {
+        padding: 7px 9px;
+    }
+}
+
+@media (max-height: 650px) and (max-width: 700px) {
+    .main-app.guest-mode .guest-v5-message-board {
+        gap: 5px;
+        padding-top: 9px;
+        padding-bottom: 9px;
+    }
+
+    .main-app.guest-mode .guest-v5-message-intro p {
+        display: none;
+    }
+
+    .main-app.guest-mode .guest-v5-inbox-prompt {
+        display: none;
+    }
+}

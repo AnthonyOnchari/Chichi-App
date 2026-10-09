@@ -8008,26 +8008,39 @@ loadMessages: function() {
             this.guestMessagesCarouselTimer = null;
         }
         container.innerHTML = `
-            <div class="guest-messages guest-v3-messages">
-                <section class="guest-v3-message-layout" aria-labelledby="guestMessagesTitle">
-                    <div class="guest-v3-message-visual">
-                        <img src="Assets/001.jpg" alt="Friends sharing a moment together">
-                        <span class="guest-v3-photo-note">THE BEST PLANS START WITH “HEY”</span>
-                        <span class="guest-v3-photo-sticker" aria-hidden="true">say<br>hello!</span>
+            <div class="guest-messages guest-v5-messages">
+                <section class="guest-v5-message-board" aria-labelledby="guestMessagesTitle">
+                    <div class="guest-v5-message-intro">
+                        <span class="guest-v5-message-kicker">A GOOD CONVERSATION CAN START ANYWHERE</span>
+                        <h3 id="guestMessagesTitle">Say hey to your <em>next favourite person.</em></h3>
+                        <p>Little check-ins. Big laughs. Chats that make an ordinary day better.</p>
                     </div>
-                    <div class="guest-v3-message-copy">
-                        <span class="guest-v3-eyebrow">A LITTLE LESS SCROLLING. A LOT MORE TALKING.</span>
-                        <h3 id="guestMessagesTitle">Good chats start with <em>hello.</em></h3>
-                        <p>Find someone new. Swap a song. See where a real conversation takes you.</p>
-                        <div class="guest-v3-chat-sample" aria-label="Example conversation">
-                            <span class="guest-v3-chat-label"><i></i> A CONVERSATION, JUST BEGINNING</span>
-                            <div class="guest-v3-chat-bubble">What song are you playing on repeat?</div>
-                            <div class="guest-v3-chat-bubble guest-v3-chat-reply">I’ll send you my current favourite 🎧</div>
+                    <div class="guest-v5-inbox" aria-label="A preview of your CHICHI inbox">
+                        <div class="guest-v5-inbox-top">
+                            <div><span>YOUR INBOX</span><strong>A few good hellos</strong></div>
+                            <span class="guest-v5-inbox-count">3 NEW</span>
                         </div>
-                        <div class="guest-v3-actions">
-                            <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Start a conversation <span aria-hidden="true">↗</span></button>
-                            <button class="guest-v3-login" onclick="app.showLoginPage('login')">Already a member? <strong>Log in</strong></button>
-                        </div>
+                        <div class="guest-v5-inbox-tabs" aria-hidden="true"><span class="active">All chats</span><span>New people</span><span>Friends</span></div>
+                        <article class="guest-v5-chat-row">
+                            <div class="guest-v5-chat-avatar guest-v5-avatar-coral"><img src="Assets/001.jpg" alt=""></div>
+                            <div class="guest-v5-chat-copy"><div><strong>The playlist person</strong><time>now</time></div><p>Okay, this song is SO good 🎧</p></div>
+                            <i class="guest-v5-unread" aria-label="Unread message"></i>
+                        </article>
+                        <article class="guest-v5-chat-row">
+                            <div class="guest-v5-chat-avatar guest-v5-avatar-green"><img src="Assets/004.jpg" alt=""></div>
+                            <div class="guest-v5-chat-copy"><div><strong>Your weekend crew</strong><time>2m</time></div><p>Found a little place you’d love</p></div>
+                            <i class="guest-v5-unread" aria-label="Unread message"></i>
+                        </article>
+                        <article class="guest-v5-chat-row">
+                            <div class="guest-v5-chat-avatar guest-v5-avatar-blue"><img src="Assets/002.jpg" alt=""></div>
+                            <div class="guest-v5-chat-copy"><div><strong>A curious mind</strong><time>5m</time></div><p>Wait, tell me more about that</p></div>
+                            <span class="guest-v5-chat-arrow" aria-hidden="true">↗</span>
+                        </article>
+                        <div class="guest-v5-inbox-prompt"><span>✳</span> Your next chat could start with one hello.</div>
+                    </div>
+                    <div class="guest-v5-message-actions">
+                        <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Find your first conversation <span aria-hidden="true">↗</span></button>
+                        <button class="guest-v3-login" onclick="app.showLoginPage('login')">Already a member? <strong>Log in</strong></button>
                     </div>
                 </section>
             </div>
