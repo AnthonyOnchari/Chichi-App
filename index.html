@@ -101,20 +101,19 @@
         <div class="tab-content active" id="loginTab">
             <form onsubmit="app.handleLogin(event)">
                 <div class="form-group form-animate">
-                    <label class="form-label">Email address</label>
+                    <label class="form-label" for="loginEmail">Email address</label>
                     <div class="form-input-wrapper">
-                        <input type="text" class="form-input" id="loginEmail" placeholder="your@email.com" required>
+                        <input type="email" class="form-input" id="loginEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" autocapitalize="none" required>
                         <div class="input-glow"></div>
                     </div>
                 </div>
                 <div class="form-group form-animate">
-                    <label class="form-label">Password</label>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <label class="form-label" style="margin: 0;"></label>
-                        <a href="#" onclick="app.showForgotPasswordModal(); return false;" class="forgot-link">Forgot?</a>
+                    <div class="auth-password-label">
+                        <label class="form-label" for="loginPassword">Password</label>
+                        <a href="#" onclick="app.showForgotPasswordModal(); return false;" class="forgot-link">Forgot password?</a>
                     </div>
                     <div class="form-input-wrapper">
-                        <input type="password" class="form-input" id="loginPassword" placeholder="••••••••" required>
+                        <input type="password" class="form-input" id="loginPassword" placeholder="Enter your password" autocomplete="current-password" required>
                         <div class="input-glow"></div>
                     </div>
                 </div>
@@ -124,7 +123,7 @@
                     <div class="button-glow"></div>
                 </button>
                 
-                <div style="text-align: center; margin-top: 16px; font-size: 12px; color: #999;">
+                <div class="auth-switch-prompt">
                     Don't have an account? <a href="#" onclick="app.switchTab('signup'); return false;" class="signup-link">Sign up</a>
                 </div>
             </form>
@@ -133,30 +132,30 @@
         <div class="tab-content" id="signupTab">
             <form onsubmit="app.handleSignup(event)">
                 <div class="form-group form-animate">
-                    <label class="form-label">Full Name</label>
+                    <label class="form-label" for="signupName">Full Name</label>
                     <div class="form-input-wrapper">
-                        <input type="text" class="form-input" id="signupName" placeholder="John Doe" required>
+                        <input type="text" class="form-input" id="signupName" placeholder="Your full name" autocomplete="name" required>
                         <div class="input-glow"></div>
                     </div>
                 </div>
                 <div class="form-group form-animate">
-                    <label class="form-label">Username</label>
+                    <label class="form-label" for="signupUsername">Username</label>
                     <div class="form-input-wrapper">
-                        <input type="text" class="form-input" id="signupUsername" placeholder="@username" required>
+                        <input type="text" class="form-input" id="signupUsername" placeholder="@username" autocomplete="username" autocapitalize="none" required>
                         <div class="input-glow"></div>
                     </div>
                 </div>
                 <div class="form-group form-animate">
-                    <label class="form-label">Email Address</label>
+                    <label class="form-label" for="signupEmail">Email Address</label>
                     <div class="form-input-wrapper">
-                        <input type="email" class="form-input" id="signupEmail" placeholder="your@email.com" required>
+                        <input type="email" class="form-input" id="signupEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" autocapitalize="none" required>
                         <div class="input-glow"></div>
                     </div>
                 </div>
                 <div class="form-group form-animate">
-                    <label class="form-label">Password</label>
+                    <label class="form-label" for="signupPassword">Password</label>
                     <div class="form-input-wrapper">
-                        <input type="password" class="form-input" id="signupPassword" placeholder="Min 6 characters" required>
+                        <input type="password" class="form-input" id="signupPassword" placeholder="At least 6 characters" autocomplete="new-password" minlength="6" required>
                         <div class="input-glow"></div>
                     </div>
                 </div>
@@ -186,18 +185,20 @@
 <!-- FORGOT PASSWORD MODAL -->
 <div class="modal-overlay" id="forgotPasswordModal" style="display:none;">
     <div class="modal modal-animate" style="max-width:360px;">
-        <div class="modal-close"><button aria-label="Close" onclick="app.closeForgotPasswordModal()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;"></button></div>
+        <div class="modal-close"><button type="button" aria-label="Close" onclick="app.closeForgotPasswordModal()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;">×</button></div>
         <h2 style="font-weight:700;margin-bottom:12px;color:#fff;">Reset Password</h2>
         <p style="color:#999;margin-bottom:16px;font-size:13px;">Enter your email to receive a password reset link.</p>
-        <div class="form-group">
-            <label class="form-label">Email</label>
-            <div class="form-input-wrapper">
-                <input type="email" class="form-input" id="forgotPasswordEmail" placeholder="your@email.com" required>
-                <div class="input-glow"></div>
+        <form onsubmit="event.preventDefault(); app.sendPasswordReset()">
+            <div class="form-group">
+                <label class="form-label" for="forgotPasswordEmail">Email</label>
+                <div class="form-input-wrapper">
+                    <input type="email" class="form-input" id="forgotPasswordEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" autocapitalize="none" required>
+                    <div class="input-glow"></div>
+                </div>
             </div>
-        </div>
-        <button type="button" class="btn-submit glow-button" onclick="app.sendPasswordReset()">Send Reset Link</button>
-        <button type="button" class="btn-submit" onclick="app.closeForgotPasswordModal()" style="background:#262626;color:#999;margin-top:8px;">Cancel</button>
+            <button type="submit" class="btn-submit glow-button">Send Reset Link</button>
+            <button type="button" class="btn-submit" onclick="app.closeForgotPasswordModal()" style="background:#262626;color:#999;margin-top:8px;">Cancel</button>
+        </form>
     </div>
 </div>
 
@@ -328,37 +329,38 @@
         <div class="guest-nav-top" aria-label="CHICHI navigation and quick actions">
             <div class="guest-nav-brand"><img src="icon-192.png" alt=""><span>CHICHI</span></div>
             <nav class="guest-nav-links" aria-label="Main navigation">
-                <button type="button" class="guest-nav-link" data-guest-view="messages" onclick="app.switchView('messages')">Messages</button>
-                <button type="button" class="guest-nav-link" data-guest-view="explore" onclick="app.switchView('explore')">People</button>
-                <button type="button" class="guest-nav-link" data-guest-view="profile" onclick="app.switchView('profile')">Profile</button>
+                <button type="button" class="guest-nav-link" data-guest-view="messages" aria-label="Messages" onclick="app.switchView('messages')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18.5 3.5 21l4.2-1.1A9 9 0 1 0 5 18.5Z"/><path d="M8 10h8M8 14h5"/></svg><span>Messages</span></button>
+                <button type="button" class="guest-nav-link" data-guest-view="explore" aria-label="People" onclick="app.switchView('explore')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 5.5a3 3 0 0 1 0 5.8M17 14a4.5 4.5 0 0 1 3.5 4.4"/></svg><span>People</span></button>
+                <button type="button" class="guest-nav-link" data-guest-view="profile" aria-label="Profile" onclick="app.switchView('profile')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span>Profile</span></button>
             </nav>
             <div class="guest-nav-actions"></div>
         </div>
         <div class="nav-wrapper">
-            <button class="nav-item active" onclick="app.switchView('messages')" id="messagesNavBtn">
+            <button class="nav-item active" onclick="app.switchView('messages')" id="messagesNavBtn" aria-label="Open chats" aria-current="page">
                 <span class="nav-icon" aria-hidden="true">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M20.5 11.5a7 7 0 0 1-7 7H8l-4 2 1.2-4.1A7 7 0 1 1 20.5 11.5Z"></path>
-                        <path d="M8.5 8.5h7M8.5 12h5"></path>
-                        <path d="M17.2 5.2a7.1 7.1 0 0 1 2.6 2.4"></path>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M12 3a9 9 0 0 0-7.56 13.88L3.5 21l4.28-1.08A9 9 0 1 0 12 3Z" fill="currentColor"></path>
+                        <circle class="chat-nav-dot" cx="8.5" cy="12" r="1"></circle>
+                        <circle class="chat-nav-dot" cx="12" cy="12" r="1"></circle>
+                        <circle class="chat-nav-dot" cx="15.5" cy="12" r="1"></circle>
                     </svg>
                 </span>
-                <span class="nav-label">Messages</span>
+                <span class="nav-label">Chats</span>
                 <span class="nav-badge" id="messagesBadge" style="display:none;">0</span>
             </button>
-            <button class="nav-item" onclick="app.switchView('explore')">
+            <button class="nav-item" onclick="app.switchView('explore')" aria-label="Explore people">
                 <span class="nav-icon" aria-label="Explore">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="9" cy="8" r="3"></circle>
-                        <path d="M3.5 19c.7-3 2.5-4.5 5.5-4.5s4.8 1.5 5.5 4.5"></path>
-                        <path d="M15.5 5.5a2.8 2.8 0 0 1 0 5.5"></path>
-                        <path d="M17 14.5c1.9.5 3.1 2 3.5 4.5"></path>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="9" cy="8" r="2.8"></circle>
+                        <circle cx="17" cy="9" r="2.2"></circle>
+                        <path d="M3.5 19c.45-3.1 2.25-4.7 5.5-4.7s5.05 1.6 5.5 4.7"></path>
+                        <path d="M15 15c2.9-.55 4.75.8 5.5 4"></path>
                     </svg>
                 </span>
                 <span class="nav-label">People</span>
             </button>
-            <button class="nav-item" onclick="app.switchView('profile')">
-                <span class="nav-icon nav-profile-avatar" id="navProfileAvatar" aria-label="Profile">
+            <button class="nav-item nav-profile-item" onclick="app.switchView('profile')" aria-label="Open profile">
+                <span class="nav-icon nav-profile-avatar" id="navProfileAvatar" aria-hidden="true">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="12" cy="8" r="4"></circle>
                         <path d="M4 21a8 8 0 0 1 16 0"></path>
@@ -1079,42 +1081,52 @@
 
 <!-- EDIT PROFILE MODAL -->
 <div class="modal-overlay" id="editProfileModal" style="display: none;">
-    <div class="modal" style="max-width: 500px;">
-        <div class="modal-close"><button aria-label="Close" onclick="app.closeProfileSettings()"></button></div>
-        <h2 style="font-weight: 700; margin-bottom: 20px;">Edit Profile</h2>
-
-        <div class="profile-image-set">
-            <div class="profile-image-set-preview" id="editProfilePhotoPreview" style="background-image: url('');"></div>
-            <div class="profile-image-set-copy"><strong>Profile images</strong><span>Set your profile photo and cover background.</span></div>
-            <div class="profile-image-set-actions">
-                <button type="button" onclick="app.changeProfilePhoto()">Profile photo</button>
-                <button type="button" onclick="app.showCoverImageModal()">Cover image</button>
-            </div>
-        </div>
-        
-        <div class="profile-name-row">
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Full Name *</label>
-                <input type="text" id="editProfileName" placeholder="Your full name" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
-            </div>
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Username</label>
-                <input type="text" id="editProfileUsername" placeholder="Your username" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
-            </div>
+    <div class="modal profile-edit-modal" style="max-width: 500px;">
+        <div class="profile-form-header">
+            <h2 id="editProfileTitle">Edit Profile</h2>
+            <button class="profile-form-close" type="button" aria-label="Close edit profile" onclick="app.closeProfileSettings()">×</button>
         </div>
 
-        <div style="margin-bottom: 20px;">
-            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Bio</label>
-            <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
+        <div class="profile-form-content">
+            <div class="profile-image-set">
+                <div class="profile-image-set-preview" id="editProfilePhotoPreview" style="background-image: url('');"></div>
+                <div class="profile-image-set-copy"><strong>Profile images</strong><span>Set your profile photo and cover background.</span></div>
+                <div class="profile-image-set-actions">
+                    <button type="button" onclick="app.changeProfilePhoto()">Profile photo</button>
+                    <button type="button" onclick="app.showCoverImageModal()">Cover image</button>
+                </div>
+            </div>
+
+            <div class="profile-name-row">
+                <div>
+                    <label for="editProfileName" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Full Name *</label>
+                    <input type="text" id="editProfileName" placeholder="Your full name" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="editProfileUsername" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Username</label>
+                    <input type="text" id="editProfileUsername" placeholder="Your username" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div class="profile-form-bio">
+                <label for="editProfileBio" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Bio</label>
+                <textarea id="editProfileBio" placeholder="Tell us about yourself..." style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
+            </div>
+
+            <label class="profile-public-access" for="editPublicAccessStatus">
+                <input type="checkbox" id="editPublicAccessStatus">
+                <span>Show my subscription in public marketing</span>
+            </label>
+
+            <div class="profile-phone-field">
+                <label for="editProfilePhone" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Phone number</label>
+                <input type="tel" id="editProfilePhone" placeholder="07XXXXXXXX" maxlength="15" autocomplete="tel" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+            </div>
         </div>
 
-        <div class="profile-phone-actions">
-            <div>
-                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1a202c;">Phone number</label>
-                <input type="tel" id="editProfilePhone" placeholder="07XXXXXXXX" maxlength="15" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
-            </div>
-            <button class="profile-form-cancel" onclick="app.closeProfileSettings()">Cancel</button>
-            <button class="profile-form-save" onclick="app.saveProfileChanges()">Save changes</button>
+        <div class="profile-form-actions">
+            <button type="button" class="profile-form-cancel" onclick="app.closeProfileSettings()">Cancel</button>
+            <button type="button" class="profile-form-save" onclick="app.saveProfileChanges()">Save changes</button>
         </div>
     </div>
 </div>

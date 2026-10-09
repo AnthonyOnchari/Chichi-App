@@ -6438,18 +6438,26 @@ var app = {
         // ========== 2. GUEST / NOT LOGGED IN ==========
         if (!this.user || this.isGuest) {
             profileContent.innerHTML = `
-                <div class="guest-profile">
-                    <div class="guest-profile-panel">
-                        <div class="guest-profile-art" aria-hidden="true">
-                            <img class="guest-profile-photo" src="Assets/003.jpg" alt="">
-                            <span class="guest-profile-photo-caption">So glad you're here</span>
-                        </div>
-                        <p class="guest-earn-kicker">WELCOME TO CHICHI</p>
-                        <h2>There’s room for you here.</h2>
-                        <button onclick="app.showLoginPage('signup')">Join the community</button>
-                        <button class="guest-profile-secondary" onclick="app.showLoginPage('login')">Already a member? Log in</button>
+                <section class="guest-v3-profile" aria-labelledby="guestProfileTitle">
+                    <div class="guest-v3-profile-copy">
+                        <span class="guest-v3-eyebrow">YOUR SPACE, YOUR STORY</span>
+                        <h2 id="guestProfileTitle">A profile that feels like <em>you.</em></h2>
+                        <p>Share the little things that make you, you. Let the right people find their way to hello.</p>
+                        <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Make your profile <span aria-hidden="true">↗</span></button>
+                        <button class="guest-v3-login" onclick="app.showLoginPage('login')">Already on CHICHI? <strong>Log in</strong></button>
                     </div>
-                </div>
+                    <div class="guest-v3-profile-scene" aria-label="A preview of your CHICHI profile">
+                        <div class="guest-v3-profile-orbit guest-v3-profile-orbit-one"></div>
+                        <div class="guest-v3-profile-orbit guest-v3-profile-orbit-two"></div>
+                        <article class="guest-v3-profile-card">
+                            <div class="guest-v3-profile-photo"><img src="Assets/003.jpg" alt="Friends smiling together"></div>
+                            <span class="guest-v3-profile-status"><i></i> OPEN TO GOOD CONVERSATIONS</span>
+                            <h3>Your story, right here.</h3>
+                            <p>Music lover · Weekend explorer</p>
+                            <div class="guest-v3-profile-tags"><span>Good energy</span><span>Real connection</span></div>
+                        </article>
+                    </div>
+                </section>
             `;
             return;
         }
@@ -7969,6 +7977,10 @@ loadMessages: function() {
 
     if (!container) return;
     if (newChatButton) newChatButton.style.display = isGuestView ? 'none' : 'inline-flex';
+    if (!isGuestView && this.preloadChatWallpaper) {
+        var profileWallpaper = localStorage.getItem('chat_wallpaper_profile_' + this.user.uid) || DEFAULT_CHAT_WALLPAPER;
+        this.preloadChatWallpaper(profileWallpaper);
+    }
 
     // Hide/show controls based on guest status
     var messagesControls = document.getElementById('messagesControls');
@@ -7992,66 +8004,30 @@ loadMessages: function() {
             this.guestMessagesCarouselTimer = null;
         }
         container.innerHTML = `
-            <div class="guest-messages">
-                <section class="guest-messages-hero">
-                    <div class="guest-messages-copy">
-                        <span class="guest-messages-kicker">A LITTLE MORE CONNECTED</span>
-                        <h3>Good conversations<br><em>start somewhere.</em></h3>
-                        <p>Meet people, share a thought, and keep the people you like close. Your next chat is one hello away.</p>
-                        <div class="guest-messages-actions">
-                            <button class="guest-messages-primary" onclick="app.showLoginPage('signup')">Create your free account</button>
-                            <button class="guest-messages-login" onclick="app.showLoginPage('login')">I already have an account</button>
-                        </div>
+            <div class="guest-messages guest-v3-messages">
+                <section class="guest-v3-message-layout" aria-labelledby="guestMessagesTitle">
+                    <div class="guest-v3-message-visual">
+                        <img src="Assets/001.jpg" alt="Friends sharing a moment together">
+                        <span class="guest-v3-photo-note">THE BEST PLANS START WITH “HEY”</span>
+                        <span class="guest-v3-photo-sticker" aria-hidden="true">say<br>hello!</span>
                     </div>
-                    <div class="guest-preview-carousel" aria-label="A glimpse of conversations on CHICHI">
-                        <div class="guest-preview-track">
-                            <article class="guest-preview-slide">
-                                <div class="guest-conversation-photo"><img src="Assets/001.jpg" alt="Friends sharing a moment together"><span>GOOD THINGS START WITH HELLO</span></div>
-                                <div class="guest-preview-top"><div class="guest-preview-avatar">C</div><div><strong>Your next connection</strong><small>Conversation preview</small></div></div>
-                                <div class="guest-preview-date">A GOOD PLACE TO BEGIN</div>
-                                <div class="guest-preview-bubble guest-preview-incoming">Hey, what have you been listening to lately?</div>
-                                <div class="guest-preview-bubble guest-preview-outgoing">A bit of everything. Send me a recommendation.</div>
-                                <div class="guest-preview-bubble guest-preview-incoming guest-preview-short">I’ve got just the one.</div>
-                            </article>
-                            <article class="guest-preview-slide">
-                                <div class="guest-conversation-photo"><img src="Assets/002.jpg" alt="Two friends sharing something on a phone"><span>YOUR NEXT FAVOURITE PERSON</span></div>
-                                <div class="guest-preview-top"><div class="guest-preview-avatar guest-preview-avatar-gold">M</div><div><strong>A new friend</strong><small>Conversation preview</small></div></div>
-                                <div class="guest-preview-date">A LITTLE HELLO GOES A LONG WAY</div>
-                                <div class="guest-preview-bubble guest-preview-incoming">I’m always looking for new music.</div>
-                                <div class="guest-preview-bubble guest-preview-outgoing">Then I’ve got a whole playlist for you.</div>
-                                <div class="guest-preview-bubble guest-preview-incoming guest-preview-short">You’re already my kind of person.</div>
-                            </article>
-                            <article class="guest-preview-slide">
-                                <div class="guest-conversation-photo"><img src="Assets/003.jpg" alt="Friends smiling together"><span>MAKE ROOM FOR GOOD PEOPLE</span></div>
-                                <div class="guest-preview-top"><div class="guest-preview-avatar guest-preview-avatar-blue">A</div><div><strong>People who get you</strong><small>Conversation preview</small></div></div>
-                                <div class="guest-preview-date">YOUR PEOPLE ARE OUT THERE</div>
-                                <div class="guest-preview-bubble guest-preview-incoming">What do you like doing on weekends?</div>
-                                <div class="guest-preview-bubble guest-preview-outgoing">Finding good food and better company.</div>
-                                <div class="guest-preview-bubble guest-preview-incoming guest-preview-short">Sounds like we’ll get along.</div>
-                            </article>
+                    <div class="guest-v3-message-copy">
+                        <span class="guest-v3-eyebrow">A LITTLE LESS SCROLLING. A LOT MORE TALKING.</span>
+                        <h3 id="guestMessagesTitle">Good chats start with <em>hello.</em></h3>
+                        <p>Find someone new. Swap a song. See where a real conversation takes you.</p>
+                        <div class="guest-v3-chat-sample" aria-label="Example conversation">
+                            <span class="guest-v3-chat-label"><i></i> A CONVERSATION, JUST BEGINNING</span>
+                            <div class="guest-v3-chat-bubble">What song are you playing on repeat?</div>
+                            <div class="guest-v3-chat-bubble guest-v3-chat-reply">I’ll send you my current favourite 🎧</div>
                         </div>
-                        <div class="guest-preview-indicators" aria-hidden="true"><span class="active"></span><span></span><span></span></div>
+                        <div class="guest-v3-actions">
+                            <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Start a conversation <span aria-hidden="true">↗</span></button>
+                            <button class="guest-v3-login" onclick="app.showLoginPage('login')">Already a member? <strong>Log in</strong></button>
+                        </div>
                     </div>
                 </section>
             </div>
         `;
-        var carouselTrack = container.querySelector('.guest-preview-track');
-        var carouselIndicators = container.querySelectorAll('.guest-preview-indicators span');
-        var activeSlide = 0;
-        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-            this.guestMessagesCarouselTimer = setInterval(function() {
-                if (!carouselTrack || !carouselTrack.isConnected) {
-                    clearInterval(self.guestMessagesCarouselTimer);
-                    self.guestMessagesCarouselTimer = null;
-                    return;
-                }
-                activeSlide = (activeSlide + 1) % 3;
-                carouselTrack.style.setProperty('--guest-slide-index', activeSlide);
-                carouselIndicators.forEach(function(indicator, index) {
-                    indicator.classList.toggle('active', index === activeSlide);
-                });
-            }, 3000);
-        }
         return;
     }
     if (this.guestMessagesCarouselTimer) {
@@ -8235,27 +8211,15 @@ loadMessages: function() {
         if (openedUnreadBadge) openedUnreadBadge.remove();
     }
 
+    var chatView = document.getElementById('chatView');
+    if (chatView) {
+        chatView.classList.remove('active');
+        chatView.style.display = 'none';
+    }
+
     document.querySelectorAll('.view').forEach(function(view) {
         view.classList.remove('active');
     });
-
-    var chatView = document.getElementById('chatView');
-    if (chatView) {
-        chatView.classList.add('active');
-        chatView.style.display = 'flex';
-        chatView.style.zIndex = '2000';
-        chatView.style.position = 'fixed';
-        this.chatViewportWasAtBottom = true;
-        this.syncChatViewport();
-        chatView.classList.remove('chat-enter');
-        void chatView.offsetWidth;
-        chatView.classList.add('chat-enter');
-        var clearChatTransition = function() {
-            chatView.classList.remove('chat-enter');
-        };
-        chatView.addEventListener('animationend', clearChatTransition, { once: true });
-        setTimeout(clearChatTransition, 240);
-    }
 
     this.currentChat = { uid: uid, name: name };
     this.trackTyping();
@@ -8320,6 +8284,7 @@ loadMessages: function() {
     var chatKey = [this.user.uid, uid].sort().join('_');
     var wallpaperKey = this.getChatWallpaperKey(chatKey);
     var savedWallpaper = localStorage.getItem(wallpaperKey) || DEFAULT_CHAT_WALLPAPER;
+    this.preloadChatWallpaper(savedWallpaper);
     var savedWallpaperBlur = localStorage.getItem(wallpaperKey + '_blur');
     var savedWallpaperDim = localStorage.getItem(wallpaperKey + '_dim');
     var wallpaperDefaultsMigrationKey = wallpaperKey + '_soft_defaults_v1';
@@ -8337,6 +8302,23 @@ loadMessages: function() {
         savedWallpaperBlur === null ? DEFAULT_CHAT_WALLPAPER_BLUR : savedWallpaperBlur,
         savedWallpaperDim === null ? DEFAULT_CHAT_WALLPAPER_DIM : savedWallpaperDim
     );
+
+    if (chatView) {
+        chatView.classList.add('active');
+        chatView.style.display = 'flex';
+        chatView.style.zIndex = '2000';
+        chatView.style.position = 'fixed';
+        this.chatViewportWasAtBottom = true;
+        this.syncChatViewport();
+        chatView.classList.remove('chat-enter');
+        void chatView.offsetWidth;
+        chatView.classList.add('chat-enter');
+        var clearChatTransition = function() {
+            chatView.classList.remove('chat-enter');
+        };
+        chatView.addEventListener('animationend', clearChatTransition, { once: true });
+        setTimeout(clearChatTransition, 240);
+    }
 
     document.getElementById('chatMessages').innerHTML = '<div class="chat-loading-state" role="status">Loading conversation…</div>';
     document.getElementById('chatMessageInput').value = '';
@@ -9634,7 +9616,10 @@ loadMessages: function() {
         var username = document.getElementById('editProfileUsername').value.trim();
         var phone = document.getElementById('editProfilePhone').value.trim();
         var bio = document.getElementById('editProfileBio').value.trim();
-        var publicAccessStatus = document.getElementById('editPublicAccessStatus').checked;
+        var publicAccessToggle = document.getElementById('editPublicAccessStatus');
+        var publicAccessStatus = publicAccessToggle
+            ? publicAccessToggle.checked
+            : this.profile.publicAccessStatus === true;
         var self = this;
 
         if (!name) {
@@ -10166,7 +10151,7 @@ loadMessages: function() {
                 viewElement.classList.remove('view-enter');
             };
             viewElement.addEventListener('animationend', clearViewTransition, { once: true });
-            setTimeout(clearViewTransition, 240);
+            setTimeout(clearViewTransition, 300);
         } else {
             view = 'messages';
             this.currentView = view;
@@ -10199,9 +10184,13 @@ loadMessages: function() {
         }
 
         var navItems = document.querySelectorAll('.nav-wrapper > .nav-item');
-        if (view === 'messages' && navItems[0]) navItems[0].classList.add('active');
-        else if (view === 'explore' && navItems[1]) navItems[1].classList.add('active');
-        else if (view === 'profile' && navItems[2]) navItems[2].classList.add('active');
+        var navViews = ['messages', 'explore', 'profile'];
+        navItems.forEach(function(navItem, index) {
+            var isActive = navViews[index] === view;
+            navItem.classList.toggle('active', isActive);
+            if (isActive) navItem.setAttribute('aria-current', 'page');
+            else navItem.removeAttribute('aria-current');
+        });
         document.querySelectorAll('.guest-nav-link').forEach(function(link) {
             var active = link.getAttribute('data-guest-view') === view;
             link.classList.toggle('active', active);
@@ -11069,9 +11058,10 @@ loadMessages: function() {
         if (!banner) {
             banner = document.createElement('section');
             banner.id = 'guestExploreWelcome';
-            banner.className = 'guest-explore-welcome';
-            banner.innerHTML = '<div class="guest-explore-welcome-copy"><h2>Find your people.</h2><button type="button">Join CHICHI</button></div><div class="guest-explore-welcome-art"><img src="Assets/004.jpg" alt="Friends spending time together"><span class="guest-explore-image-tag">CHICHI COMMUNITY</span></div>';
+            banner.className = 'guest-v3-people';
+            banner.innerHTML = '<div class="guest-v3-people-photo"><img src="Assets/004.jpg" alt="Friends spending time together"><span class="guest-v3-photo-note">YOUR PEOPLE ARE OUT THERE</span><span class="guest-v3-photo-sticker" aria-hidden="true">more<br>good vibes</span></div><div class="guest-v3-people-copy"><span class="guest-v3-eyebrow">FIND YOUR KIND OF PEOPLE</span><h2>Different stories.<br><em>Same good energy.</em></h2><p>Meet people to laugh with, learn from, and turn a passing hello into something real.</p><div class="guest-v3-interest-list" aria-label="Things to connect over"><span>Music</span><span>Good food</span><span>Big ideas</span></div><button class="guest-v3-button" type="button">Meet your people <span aria-hidden="true">↗</span></button><button class="guest-v3-login" type="button">Already know us? <strong>Log in</strong></button></div>';
             banner.querySelector('button').addEventListener('click', function() { app.showLoginPage('signup'); });
+            banner.querySelector('.guest-v3-login').addEventListener('click', function() { app.showLoginPage('login'); });
             var heading = container.querySelector('.explore-page-heading');
             if (heading && heading.nextSibling) container.insertBefore(banner, heading.nextSibling);
             else container.prepend(banner);
@@ -15269,11 +15259,13 @@ app.showProfileSettings = function() {
     var usernameField = document.getElementById('editProfileUsername');
     var phoneField = document.getElementById('editProfilePhone');
     var bioField = document.getElementById('editProfileBio');
+    var publicAccessToggle = document.getElementById('editPublicAccessStatus');
 
     if (nameField) nameField.value = this.profile.name || '';
     if (usernameField) usernameField.value = this.profile.username || '';
     if (phoneField) phoneField.value = this.profile.phone || '';
     if (bioField) bioField.value = this.profile.bio || '';
+    if (publicAccessToggle) publicAccessToggle.checked = this.profile.publicAccessStatus === true;
     var photoPreview = document.getElementById('editProfilePhotoPreview');
     if (photoPreview) photoPreview.style.backgroundImage = this.profile.profilePhoto ? 'url("' + this.profile.profilePhoto + '")' : 'none';
 
@@ -16783,6 +16775,27 @@ var DEFAULT_CHAT_WALLPAPER = 'https://images.unsplash.com/photo-1506744038136-46
 var DEFAULT_CHAT_WALLPAPER_BLUR = 4;
 var DEFAULT_CHAT_WALLPAPER_DIM = 22;
 
+app.preloadChatWallpaper = function(url) {
+    if (!url || url === 'small-bubbles') return Promise.resolve(false);
+    if (!this.chatWallpaperPreloads) this.chatWallpaperPreloads = {};
+    if (this.chatWallpaperPreloads[url]) return this.chatWallpaperPreloads[url];
+
+    var image = new Image();
+    var appInstance = this;
+    image.decoding = 'async';
+    this.chatWallpaperPreloads[url] = new Promise(function(resolve) {
+        image.onload = function() { resolve(true); };
+        image.onerror = function() {
+            delete appInstance.chatWallpaperPreloads[url];
+            console.warn('Unable to preload chat wallpaper.');
+            resolve(false);
+        };
+        image.src = url;
+        if (image.complete) resolve(image.naturalWidth > 0);
+    });
+    return this.chatWallpaperPreloads[url];
+};
+
 app.getChatWallpaperKey = function(chatKey) {
     var profileKey = 'chat_wallpaper_profile_' + this.user.uid;
     var previousChatKey = 'chat_wallpaper_' + this.user.uid + '_' + chatKey;
@@ -17472,7 +17485,6 @@ app.renderEarnDefault = function() {
                     <div style="padding:14px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;"><span style="display:block;color:#64748b;font-size:12px;">Current streak</span><strong style="display:block;margin-top:4px;font-size:24px;"><span id="streakCount">0</span> days</strong></div>
                 </section>
 
-                <section class="airtime-reward-card"><div><span class="eyebrow">Airtime rewards</span><h2>Earn KSh 10 airtime</h2><p>Upload a profile photo and follow an admin to unlock one reward for each action. Redeem it for someone without a profile photo.</p></div><button onclick="app.showAirtimeRedemptionModal()">Redeem airtime</button></section>
             </section>
         </main>
     `;
@@ -17792,7 +17804,7 @@ app.renderReferralDashboard = function(overlay, data) {
     var content = overlay.querySelector('.referral-modal-content');
     if (!content) return;
     if (!data.enrolled) {
-        content.innerHTML = '<div class="referral-eyebrow">CHICHI REFERRALS</div><h2 id="referralTitle">Invite friends. Earn KSh.</h2><p class="referral-intro">Earn <strong>KSh 10</strong> for each friend who joins with your code. Withdraw from KSh 50 to M-Pesa or airtime.</p><div class="referral-consent-code-note">Your username-based code includes three digits and stays yours permanently.</div><button type="button" class="referral-submit-btn referral-join-btn">Join the referral program</button>';
+        content.innerHTML = '<div class="referral-eyebrow">CHICHI REFERRALS</div><h2 id="referralTitle">Invite friends. Earn KSh.</h2><p class="referral-intro">Get <strong>KSh 10</strong> for each friend who joins.</p><button type="button" class="referral-submit-btn referral-join-btn">Join referrals</button>';
         content.querySelector('.referral-join-btn').addEventListener('click', function(event) {
             var button = event.currentTarget;
             button.disabled = true;
@@ -17814,16 +17826,16 @@ app.renderReferralDashboard = function(overlay, data) {
         });
         return;
     }
-    content.innerHTML = '<div class="referral-eyebrow">CHICHI REFERRALS</div><h2 id="referralTitle">Invite friends. Earn KSh.</h2><p class="referral-intro">Your friend joins with your code and you earn <strong>KSh 10</strong>. Withdraw from KSh 50 to M-Pesa or airtime.</p><div class="referral-balance-card"><span>Available to withdraw</span><strong id="referralBalance"></strong><div><span id="referralCount"></span><span class="referral-minimum">Minimum withdrawal KSh 50</span></div></div><label class="referral-label" for="referralCodeValue">Your referral code</label><div class="referral-code-row"><input id="referralCodeValue" readonly><button id="referralCopyCode" type="button">Copy code</button></div><button id="referralCopyLink" class="referral-share-btn" type="button">Copy invite link</button><form class="referral-withdraw-form" id="referralWithdrawForm"><h3>Request a withdrawal</h3><div class="referral-form-grid"><label>Amount (KSh)<input id="referralAmount" type="number" inputmode="numeric" min="50" step="1" placeholder="Minimum 50" required></label><label>Pay out as<select id="referralMethod"><option value="mpesa">M-Pesa</option><option value="airtime">Airtime</option></select></label><label id="referralProviderWrap" class="referral-provider-wrap">Network<select id="referralProvider"><option>Safaricom</option><option>Airtel</option><option>Telkom</option></select></label><label>Phone number<input id="referralPhone" type="tel" autocomplete="tel" placeholder="07XXXXXXXX" maxlength="16" required></label></div><p class="referral-payout-note">Requests are reviewed and paid manually by CHICHI administrators.</p><button class="referral-submit-btn" type="submit">Submit withdrawal request</button></form><div class="referral-history"><h3>Recent referrals</h3><div id="referralRecentReferrals"></div><h3>Withdrawal history</h3><div id="referralWithdrawalHistory"></div></div>';
+    content.innerHTML = '<div class="referral-eyebrow">REFERRALS</div><h2 id="referralTitle">Invite friends. Earn KSh.</h2><p class="referral-intro">Earn <strong>KSh 10</strong> per friend who joins.</p><div class="referral-balance-card"><span>Balance</span><strong id="referralBalance"></strong><div><span id="referralCount"></span><span class="referral-minimum">Min. KSh 50</span></div></div><label class="referral-label" for="referralCodeValue">Your code</label><div class="referral-code-row"><input id="referralCodeValue" readonly><button id="referralCopyCode" type="button">Copy code</button></div><button id="referralCopyLink" class="referral-share-btn" type="button">Copy invite link</button><form class="referral-withdraw-form" id="referralWithdrawForm"><h3>Withdraw</h3><div class="referral-form-grid"><label>Amount (KSh)<input id="referralAmount" type="number" inputmode="numeric" min="50" step="1" placeholder="Min. 50" required></label><label>Method<select id="referralMethod"><option value="mpesa">M-Pesa</option><option value="airtime">Airtime</option></select></label><label id="referralProviderWrap" class="referral-provider-wrap">Network<select id="referralProvider"><option>Safaricom</option><option>Airtel</option><option>Telkom</option></select></label><label>Phone<input id="referralPhone" type="tel" autocomplete="tel" placeholder="07XXXXXXXX" maxlength="16" required></label></div><p class="referral-payout-note">Paid manually by CHICHI.</p><button class="referral-submit-btn" type="submit">Request payout</button></form><div class="referral-history"><h3>Referrals</h3><div id="referralRecentReferrals"></div><h3>Withdrawals</h3><div id="referralWithdrawalHistory"></div></div>';
     content.querySelector('#referralBalance').textContent = 'KSh ' + Number(data.balance || 0).toLocaleString('en-KE');
-    content.querySelector('#referralCount').textContent = Number(data.referralCount || 0) + ' successful ' + (Number(data.referralCount || 0) === 1 ? 'referral' : 'referrals');
+    content.querySelector('#referralCount').textContent = Number(data.referralCount || 0) + ' referrals';
     content.querySelector('#referralCodeValue').value = data.code || '';
 
     function fillHistory(container, records, type) {
         if (!records || !records.length) {
             var empty = document.createElement('p');
             empty.className = 'referral-history-empty';
-            empty.textContent = type === 'referral' ? 'No referrals yet. Share your code to get started.' : 'No withdrawal requests yet.';
+            empty.textContent = type === 'referral' ? 'Share your code to get started.' : 'No withdrawals yet.';
             container.appendChild(empty);
             return;
         }
