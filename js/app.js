@@ -8003,6 +8003,10 @@ loadMessages: function() {
 
     // Guest View
     if (isGuestView) {
+        if (this.guestMessagesTypingTimer) {
+            clearTimeout(this.guestMessagesTypingTimer);
+            this.guestMessagesTypingTimer = null;
+        }
         if (this.guestMessagesCarouselTimer) {
             clearInterval(this.guestMessagesCarouselTimer);
             this.guestMessagesCarouselTimer = null;
@@ -8012,7 +8016,10 @@ loadMessages: function() {
                 <section class="guest-v5-message-board" aria-labelledby="guestMessagesTitle">
                     <div class="guest-v5-message-intro">
                         <span class="guest-v5-message-kicker">A GOOD CONVERSATION CAN START ANYWHERE</span>
-                        <h3 id="guestMessagesTitle">Say hey to your <em>next favourite person.</em></h3>
+                        <h3 id="guestMessagesTitle" aria-label="Say hey to your next favourite person.">
+                            <span class="guest-v5-message-title-reserve" aria-hidden="true">Say hey to your <em>next favourite person.</em></span>
+                            <span class="guest-v5-message-title-typed" aria-hidden="true"><span class="guest-v5-message-title-plain"></span><em><span class="guest-v5-message-title-highlight"></span><span class="guest-v5-message-caret"></span></em></span>
+                        </h3>
                         <p>Little check-ins. Big laughs. Chats that make an ordinary day better.</p>
                     </div>
                     <div class="guest-v5-inbox" aria-label="A preview of your CHICHI inbox">
@@ -8043,6 +8050,42 @@ loadMessages: function() {
                 </section>
             </div>
         `;
+        var title = container.querySelector('#guestMessagesTitle');
+        var plainTitle = title && title.querySelector('.guest-v5-message-title-plain');
+        var highlightedTitle = title && title.querySelector('.guest-v5-message-title-highlight');
+        var fullPlainTitle = 'Say hey to your ';
+        var fullHighlightedTitle = 'next favourite person.';
+        if (title && plainTitle && highlightedTitle) {
+            var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (reducedMotion) {
+                plainTitle.textContent = fullPlainTitle;
+                highlightedTitle.textContent = fullHighlightedTitle;
+                title.classList.add('is-typed');
+            } else {
+                title.classList.add('is-typing');
+                var typedIndex = 0;
+                var typedCharacters = Array.from(fullPlainTitle + fullHighlightedTitle);
+                var typeNextCharacter = function() {
+                    if (!title.isConnected) return;
+                    if (typedIndex >= typedCharacters.length) {
+                        title.classList.remove('is-typing');
+                        title.classList.add('is-typed');
+                        app.guestMessagesTypingTimer = null;
+                        return;
+                    }
+                    var character = typedCharacters[typedIndex];
+                    if (typedIndex < Array.from(fullPlainTitle).length) {
+                        plainTitle.textContent += character;
+                    } else {
+                        highlightedTitle.textContent += character;
+                    }
+                    typedIndex += 1;
+                    var pause = character === '.' ? 240 : 38;
+                    app.guestMessagesTypingTimer = setTimeout(typeNextCharacter, pause);
+                };
+                app.guestMessagesTypingTimer = setTimeout(typeNextCharacter, 180);
+            }
+        }
         return;
     }
     if (this.guestMessagesCarouselTimer) {

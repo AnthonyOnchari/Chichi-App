@@ -17302,6 +17302,7 @@ button:empty[onclick*="remove"]::before {
 }
 
 .main-app.guest-mode .guest-v5-message-intro h3 {
+    position: relative;
     max-width: 420px;
     margin: 0 0 11px;
     color: #17354a;
@@ -17310,6 +17311,35 @@ button:empty[onclick*="remove"]::before {
     font-weight: 700;
     letter-spacing: -.065em;
     line-height: .99;
+}
+
+.main-app.guest-mode .guest-v5-message-title-reserve {
+    visibility: hidden;
+}
+
+.main-app.guest-mode .guest-v5-message-title-typed {
+    position: absolute;
+    inset: 0;
+    display: block;
+}
+
+.main-app.guest-mode .guest-v5-message-caret {
+    display: inline-block;
+    width: .065em;
+    height: .78em;
+    margin-left: .08em;
+    vertical-align: -.02em;
+    background: currentColor;
+    animation: guestMessageCaretBlink 850ms steps(2, start) infinite;
+}
+
+.main-app.guest-mode .guest-v5-message-title-typed.is-typed .guest-v5-message-caret,
+.main-app.guest-mode #guestMessagesTitle.is-typed .guest-v5-message-caret {
+    display: none;
+}
+
+@keyframes guestMessageCaretBlink {
+    to { visibility: hidden; }
 }
 
 .main-app.guest-mode .guest-v5-message-intro h3 em {
@@ -17493,6 +17523,12 @@ button:empty[onclick*="remove"]::before {
 
 .main-app.guest-mode .view.view-enter {
     animation: guestViewEnter 380ms cubic-bezier(.2, .75, .25, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .main-app.guest-mode .guest-v5-message-caret {
+        animation: none;
+    }
 }
 
 @keyframes guestViewEnter {
