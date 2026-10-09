@@ -8034,7 +8034,6 @@ loadMessages: function() {
                         <article class="guest-v5-chat-row">
                             <div class="guest-v5-chat-avatar guest-v5-avatar-blue"><img src="Assets/002.jpg" alt=""></div>
                             <div class="guest-v5-chat-copy"><div><strong>A curious mind</strong><time>5m</time></div><p>Wait, tell me more about that</p></div>
-                            <span class="guest-v5-chat-arrow" aria-hidden="true">↗</span>
                         </article>
                     </div>
                     <div class="guest-v5-message-actions">
