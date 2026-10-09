@@ -18333,3 +18333,136 @@ button:empty[onclick*="remove"]::before {
         max-height: 34px;
     }
 }
+
+/* Keep the guest inbox preview floating on the page instead of inside a tinted frame. */
+.main-app.guest-mode .guest-v5-message-board {
+    border: 0;
+    background: transparent;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-v5-message-board {
+    border-color: transparent;
+    background: transparent;
+}
+
+#referralDashboardModal .referral-balance-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 11px 13px;
+}
+
+#referralDashboardModal .referral-balance-main {
+    display: grid;
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    gap: 3px;
+    align-items: start;
+}
+
+#referralDashboardModal .referral-balance-main > span {
+    color: rgba(255, 255, 255, .78);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .1em;
+}
+
+#referralDashboardModal .referral-balance-main > strong {
+    overflow: hidden;
+    font-size: 23px;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#referralDashboardModal .referral-balance-stats {
+    display: grid;
+    grid-column: 2;
+    grid-row: 1;
+    gap: 4px;
+    color: rgba(255, 255, 255, .92);
+    font-size: 10px;
+    text-align: right;
+    align-items: end;
+}
+
+#referralDashboardModal .referral-balance-stats .referral-minimum {
+    color: rgba(255, 255, 255, .72);
+    font-size: 9px;
+}
+
+#referralDashboardModal .referral-balance-progress {
+    display: block;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    height: 5px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .24);
+}
+
+#referralDashboardModal .referral-balance-progress > span {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: #fff;
+    transition: width .35s ease;
+}
+
+#referralDashboardModal .referral-balance-hint {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin: -4px 0 0;
+    color: rgba(255, 255, 255, .82);
+    font-size: 9px;
+    line-height: 1.2;
+}
+
+#referralDashboardModal .referral-balance-card > .referral-balance-main {
+    grid-column: 1;
+    grid-row: 1;
+    align-items: start;
+    justify-content: initial;
+}
+
+#referralDashboardModal .referral-balance-card > .referral-balance-stats {
+    grid-column: 2;
+    grid-row: 1;
+    align-items: end;
+    justify-content: initial;
+}
+
+#referralDashboardModal .referral-balance-card > .referral-balance-progress {
+    grid-column: 1 / -1;
+    grid-row: 2;
+}
+
+#editProfileModal.profile-setup-required .profile-form-close,
+#editProfileModal.profile-setup-required .profile-form-cancel {
+    display: none !important;
+}
+
+#editProfileModal.profile-setup-required .profile-image-set,
+#editProfileModal.profile-setup-required .profile-form-bio,
+#editProfileModal.profile-setup-required .profile-public-access,
+#editProfileModal.profile-setup-required .profile-phone-field {
+    display: none !important;
+}
+
+#editProfileModal.profile-setup-required .profile-form-actions {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+#editProfileModal.profile-setup-required .profile-form-save {
+    grid-column: 1;
+}
+
+#editProfileModal .profile-setup-required-note {
+    margin: 0 0 14px;
+    color: #50646f;
+    font-size: 13px;
+    line-height: 1.5;
+}

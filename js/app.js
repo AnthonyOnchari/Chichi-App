@@ -208,6 +208,7 @@ var app = {
                 self.user = u;
                 self.isGuest = false;
                 self.isAdmin = u.email === 'support@chichi.buzz';
+                self.profileSetupRequired = false;
 
                 db.ref('bannedUsers/' + u.uid).once('value', function(snapshot) {
                     if (snapshot.exists()) {
@@ -228,6 +229,9 @@ var app = {
                 db.ref('users/' + u.uid).once('value', function(s) {
                     if (s.exists()) {
                         self.profile = s.val();
+                        var profileName = self.profile && typeof self.profile.name === 'string' ? self.profile.name.trim() : '';
+                        var profileUsername = self.profile && typeof self.profile.username === 'string' ? self.profile.username.trim() : '';
+                        self.profileSetupRequired = !profileName || profileName.toLowerCase() === 'user' || !profileUsername;
                         self.balance = self.profile.balance || 0;
                         self.trackLogin();
 
@@ -237,10 +241,11 @@ var app = {
                             self.profile.email = u.email;  // Update local copy too
                         }
                     } else {
+                        self.profileSetupRequired = true;
                         self.profile = {
-                            name: u.displayName || 'User',
+                            name: u.displayName || '',
                             email: u.email || '',
-                            username: (u.email || 'user').split('@')[0] || 'user',
+                            username: '',
                             bio: '',
                             profilePhoto: u.photoURL || '',
                             coverImage: '',
@@ -268,9 +273,9 @@ var app = {
                     self.setupUserNotifications();
                     self.checkAndShowUsernameSetup();
                     self.showApp();
-                    setTimeout(function() {
-                        if (typeof self.maybePromptReferralEnrollment === 'function') self.maybePromptReferralEnrollment();
-                    }, 800);
+                    if (!self.profileSetupRequired && typeof self.maybePromptReferralEnrollment === 'function') {
+                        setTimeout(function() { self.maybePromptReferralEnrollment(); }, 800);
+                    }
                     // CRITICAL: Always show feed as default view on login
                     setTimeout(function() {
                         self.switchView('messages');
@@ -300,6 +305,11 @@ var app = {
                 self.user = null;
                 self.isGuest = true;
                 self.isAdmin = false;
+                self.profileSetupRequired = false;
+                var requiredProfileModal = document.getElementById('editProfileModal');
+                if (requiredProfileModal && requiredProfileModal.classList.contains('profile-setup-required')) {
+                    self.closeProfileSettings();
+                }
                 self.profile = { name: 'Guest', balance: 0, triviaAnswered: [], tier: 'free' };
                 self.updateHeaderMenu(); // <-- NEW: Update menu for guest
                 self.showApp(); // <-- CHANGED: Show app instead of login page
@@ -1092,8 +1102,10 @@ var app = {
     checkAndShowUsernameSetup: function() {
         if (!this.user) return;
 
-        var hasUsername = this.profile && typeof this.profile.username === 'string' && this.profile.username.trim() !== '';
-        if (!hasUsername) this.showUsernameSetupModal();
+        var name = this.profile && typeof this.profile.name === 'string' ? this.profile.name.trim() : '';
+        var username = this.profile && typeof this.profile.username === 'string' ? this.profile.username.trim() : '';
+        this.profileSetupRequired = this.profileSetupRequired || !name || name.toLowerCase() === 'user' || !username;
+        if (this.profileSetupRequired) this.showProfileSettings();
     },
 
     showUsernameSetupModal: function() {
@@ -9674,14 +9686,15 @@ loadMessages: function() {
         var username = document.getElementById('editProfileUsername').value.trim();
         var phone = document.getElementById('editProfilePhone').value.trim();
         var bio = document.getElementById('editProfileBio').value.trim();
+        if (this.profileSetupRequired) username = username.toLowerCase();
         var publicAccessToggle = document.getElementById('editPublicAccessStatus');
         var publicAccessStatus = publicAccessToggle
             ? publicAccessToggle.checked
             : this.profile.publicAccessStatus === true;
         var self = this;
 
-        if (!name) {
-            this.toast('Name cannot be empty', 'error');
+        if (!name || (this.profileSetupRequired && name.toLowerCase() === 'user')) {
+            this.toast(this.profileSetupRequired ? 'Enter your name to finish setting up your profile' : 'Name cannot be empty', 'error');
             return;
         }
 
@@ -9705,8 +9718,8 @@ loadMessages: function() {
 
         this.toast(' Saving profile...', 'info');
 
-        if (username !== this.profile.username) {
-            db.ref('users').orderByChild('username').equalTo(username).once('value', function(snapshot) {
+        if (username !== this.profile.username || this.profileSetupRequired) {
+            db.ref('users').orderByChild('username').equalTo(username).once('value').then(function(snapshot) {
                 if (snapshot.exists()) {
                     var existingUid = Object.keys(snapshot.val())[0];
                     if (existingUid !== self.user.uid) {
@@ -9715,6 +9728,9 @@ loadMessages: function() {
                     }
                 }
                 self._saveProfileData(name, username, phone, bio, interests, publicAccessStatus);
+            }).catch(function(error) {
+                console.error('Unable to check username availability:', error);
+                self.toast('Unable to check username availability. Please try again.', 'error');
             });
         } else {
             this._saveProfileData(name, username, phone, bio, interests, publicAccessStatus);
@@ -9761,7 +9777,9 @@ loadMessages: function() {
             if (err) {
                 self.toast(' Error updating profile', 'error');
             } else {
+                var completedRequiredSetup = self.profileSetupRequired === true;
                 self.profile = { ...self.profile, ...updateData };
+                self.profileSetupRequired = false;
                 if (updateData.profilePhoto) {
                     self.claimAirtimeReward('profilePhoto');
                     self.claimProfilePhotoReward();
@@ -9770,13 +9788,13 @@ loadMessages: function() {
                 self.editProfilePhoto = null;
 
                 // Close edit profile modal
-                var editModal = document.getElementById('editProfileModal');
-                if (editModal) {
-                    editModal.style.display = 'none';
-                }
+                self.closeProfileSettings();
 
                 self.renderProfile();
                 self.logUserActivity('update_profile', 'Updated profile: ' + updateData.name);
+                if (completedRequiredSetup && typeof self.maybePromptReferralEnrollment === 'function') {
+                    setTimeout(function() { self.maybePromptReferralEnrollment(); }, 800);
+                }
             }
         });
     },
@@ -10287,7 +10305,7 @@ loadMessages: function() {
     // ============================================
 
     goBack: function() {
-        if (document.getElementById('usernameSetupModal')) return;
+        if (document.getElementById('usernameSetupModal') || this.profileSetupRequired) return;
         if (!this.backPressCount) {
             this.backPressCount = 0;
         }
@@ -15327,15 +15345,58 @@ app.showProfileSettings = function() {
     var photoPreview = document.getElementById('editProfilePhotoPreview');
     if (photoPreview) photoPreview.style.backgroundImage = this.profile.profilePhoto ? 'url("' + this.profile.profilePhoto + '")' : 'none';
 
+    var requiredSetup = this.profileSetupRequired === true;
+    modal.classList.toggle('profile-setup-required', requiredSetup);
+    var title = document.getElementById('editProfileTitle');
+    if (title) title.textContent = requiredSetup ? 'Complete your profile' : 'Edit Profile';
+    var usernameLabel = modal.querySelector('label[for="editProfileUsername"]');
+    if (usernameLabel) usernameLabel.textContent = requiredSetup ? 'Username *' : 'Username';
+    [nameField, usernameField].forEach(function(field) {
+        if (!field) return;
+        if (requiredSetup) {
+            field.setAttribute('required', 'required');
+            field.setAttribute('aria-required', 'true');
+        } else {
+            field.removeAttribute('required');
+            field.removeAttribute('aria-required');
+        }
+    });
+    var saveButton = modal.querySelector('.profile-form-save');
+    if (saveButton) saveButton.textContent = requiredSetup ? 'Continue to CHICHI' : 'Save changes';
+    var setupNote = modal.querySelector('.profile-setup-required-note');
+    if (requiredSetup && !setupNote) {
+        setupNote = document.createElement('p');
+        setupNote.className = 'profile-setup-required-note';
+        setupNote.textContent = 'Add your name and a unique username to finish setting up your account.';
+        var content = modal.querySelector('.profile-form-content');
+        if (content) content.insertBefore(setupNote, content.firstChild);
+    } else if (!requiredSetup && setupNote) {
+        setupNote.remove();
+    }
+
     // Show modal
     modal.style.display = 'flex';
 };
 
 // Close profile settings modal
 app.closeProfileSettings = function() {
+    if (this.profileSetupRequired) return;
     var modal = document.getElementById('editProfileModal');
     if (modal) {
         modal.style.display = 'none';
+        modal.classList.remove('profile-setup-required');
+        var title = document.getElementById('editProfileTitle');
+        if (title) title.textContent = 'Edit Profile';
+        var usernameLabel = modal.querySelector('label[for="editProfileUsername"]');
+        if (usernameLabel) usernameLabel.textContent = 'Username';
+        modal.querySelectorAll('#editProfileName, #editProfileUsername').forEach(function(field) {
+            field.removeAttribute('required');
+            field.removeAttribute('aria-required');
+        });
+        var saveButton = modal.querySelector('.profile-form-save');
+        if (saveButton) saveButton.textContent = 'Save changes';
+        var setupNote = modal.querySelector('.profile-setup-required-note');
+        if (setupNote) setupNote.remove();
     }
 };
 
@@ -17889,7 +17950,12 @@ app.renderReferralDashboard = function(overlay, data) {
             <div class="referral-eyebrow">REFERRALS</div>
             <h2 id="referralTitle">Invite friends. Earn KSh.</h2>
             <p class="referral-intro">Earn <strong>KSh 10</strong> per friend who joins.</p>
-            <div class="referral-balance-card"><span>Balance</span><strong id="referralBalance"></strong><div><span id="referralCount"></span><span class="referral-minimum">Min. KSh 50</span></div></div>
+            <div class="referral-balance-card" aria-label="Referral balance overview">
+                <div class="referral-balance-main"><span>AVAILABLE BALANCE</span><strong id="referralBalance"></strong></div>
+                <div class="referral-balance-stats"><span id="referralCount"></span><span class="referral-minimum">Min. KSh 50 to withdraw</span></div>
+                <div class="referral-balance-progress" role="progressbar" aria-label="Progress toward minimum payout" aria-valuemin="0" aria-valuemax="50" aria-valuenow="0"><span></span></div>
+                <p class="referral-balance-hint" id="referralBalanceHint"></p>
+            </div>
             <div class="referral-code-block">
                 <label class="referral-label" for="referralCodeValue">Your code</label>
                 <div class="referral-code-row"><input id="referralCodeValue" readonly><button id="referralCopyCode" type="button">Copy code</button></div>
@@ -17913,8 +17979,16 @@ app.renderReferralDashboard = function(overlay, data) {
                 <section class="referral-history-section"><h3>Withdrawals</h3><div id="referralWithdrawalHistory"></div></section>
             </div>
         </div>`;
-    content.querySelector('#referralBalance').textContent = 'KSh ' + Number(data.balance || 0).toLocaleString('en-KE');
+    var balance = Number(data.balance || 0);
+    if (!Number.isFinite(balance) || balance < 0) balance = 0;
+    var balanceProgress = Math.min(100, balance / 50 * 100);
+    content.querySelector('#referralBalance').textContent = 'KSh ' + balance.toLocaleString('en-KE');
     content.querySelector('#referralCount').textContent = Number(data.referralCount || 0) + ' referrals';
+    content.querySelector('.referral-balance-progress > span').style.width = balanceProgress + '%';
+    content.querySelector('.referral-balance-progress').setAttribute('aria-valuenow', String(Math.min(50, balance)));
+    content.querySelector('#referralBalanceHint').textContent = balance >= 50
+        ? 'You’re ready to request a payout.'
+        : 'KSh ' + (50 - balance).toLocaleString('en-KE') + ' to your first payout.';
     content.querySelector('#referralCodeValue').value = data.code || '';
 
     function fillHistory(container, records, type) {
