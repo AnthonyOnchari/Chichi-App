@@ -17884,7 +17884,35 @@ app.renderReferralDashboard = function(overlay, data) {
         });
         return;
     }
-    content.innerHTML = '<div class="referral-eyebrow">REFERRALS</div><h2 id="referralTitle">Invite friends. Earn KSh.</h2><p class="referral-intro">Earn <strong>KSh 10</strong> per friend who joins.</p><div class="referral-balance-card"><span>Balance</span><strong id="referralBalance"></strong><div><span id="referralCount"></span><span class="referral-minimum">Min. KSh 50</span></div></div><label class="referral-label" for="referralCodeValue">Your code</label><div class="referral-code-row"><input id="referralCodeValue" readonly><button id="referralCopyCode" type="button">Copy code</button></div><button id="referralCopyLink" class="referral-share-btn" type="button">Copy invite link</button><form class="referral-withdraw-form" id="referralWithdrawForm"><h3>Withdraw</h3><div class="referral-form-grid"><label>Amount (KSh)<input id="referralAmount" type="number" inputmode="numeric" min="50" step="1" placeholder="Min. 50" required></label><label>Method<select id="referralMethod"><option value="mpesa">M-Pesa</option><option value="airtime">Airtime</option></select></label><label id="referralProviderWrap" class="referral-provider-wrap">Network<select id="referralProvider"><option>Safaricom</option><option>Airtel</option><option>Telkom</option></select></label><label>Phone<input id="referralPhone" type="tel" autocomplete="tel" placeholder="07XXXXXXXX" maxlength="16" required></label></div><p class="referral-payout-note">Paid manually by CHICHI.</p><button class="referral-submit-btn" type="submit">Request payout</button></form><div class="referral-history"><h3>Referrals</h3><div id="referralRecentReferrals"></div><h3>Withdrawals</h3><div id="referralWithdrawalHistory"></div></div>';
+    content.innerHTML = `
+        <div class="referral-primary">
+            <div class="referral-eyebrow">REFERRALS</div>
+            <h2 id="referralTitle">Invite friends. Earn KSh.</h2>
+            <p class="referral-intro">Earn <strong>KSh 10</strong> per friend who joins.</p>
+            <div class="referral-balance-card"><span>Balance</span><strong id="referralBalance"></strong><div><span id="referralCount"></span><span class="referral-minimum">Min. KSh 50</span></div></div>
+            <div class="referral-code-block">
+                <label class="referral-label" for="referralCodeValue">Your code</label>
+                <div class="referral-code-row"><input id="referralCodeValue" readonly><button id="referralCopyCode" type="button">Copy code</button></div>
+                <button id="referralCopyLink" class="referral-share-btn" type="button">Copy invite link</button>
+            </div>
+        </div>
+        <div class="referral-secondary">
+            <form class="referral-withdraw-form" id="referralWithdrawForm">
+                <h3>Withdraw</h3>
+                <div class="referral-form-grid">
+                    <label>Amount (KSh)<input id="referralAmount" type="number" inputmode="numeric" min="50" step="1" placeholder="Min. 50" required></label>
+                    <label>Method<select id="referralMethod"><option value="mpesa">M-Pesa</option><option value="airtime">Airtime</option></select></label>
+                    <label id="referralProviderWrap" class="referral-provider-wrap">Network<select id="referralProvider"><option>Safaricom</option><option>Airtel</option><option>Telkom</option></select></label>
+                    <label>Phone<input id="referralPhone" type="tel" autocomplete="tel" placeholder="07XXXXXXXX" maxlength="16" required></label>
+                </div>
+                <p class="referral-payout-note">Paid manually by CHICHI.</p>
+                <button class="referral-submit-btn" type="submit">Request payout</button>
+            </form>
+            <div class="referral-history">
+                <section class="referral-history-section"><h3>Referrals</h3><div id="referralRecentReferrals"></div></section>
+                <section class="referral-history-section"><h3>Withdrawals</h3><div id="referralWithdrawalHistory"></div></section>
+            </div>
+        </div>`;
     content.querySelector('#referralBalance').textContent = 'KSh ' + Number(data.balance || 0).toLocaleString('en-KE');
     content.querySelector('#referralCount').textContent = Number(data.referralCount || 0) + ' referrals';
     content.querySelector('#referralCodeValue').value = data.code || '';
