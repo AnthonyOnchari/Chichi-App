@@ -10166,7 +10166,7 @@ loadMessages: function() {
                 viewElement.classList.remove('view-enter');
             };
             viewElement.addEventListener('animationend', clearViewTransition, { once: true });
-            setTimeout(clearViewTransition, 300);
+            setTimeout(clearViewTransition, this.isGuest ? 460 : 300);
         } else {
             view = 'messages';
             this.currentView = view;
