@@ -17485,23 +17485,6 @@ button:empty[onclick*="remove"]::before {
     font-size: 13px;
 }
 
-.main-app.guest-mode .guest-v5-inbox-prompt {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    margin-top: 4px;
-    padding: 9px 10px;
-    border-radius: 11px;
-    background: #f5f2e8;
-    color: #66766b;
-    font-size: 8px;
-}
-
-.main-app.guest-mode .guest-v5-inbox-prompt span {
-    color: #df7957;
-    font-size: 13px;
-}
-
 .main-app.guest-mode .guest-v5-message-actions {
     display: flex;
     grid-column: 1;
@@ -17631,13 +17614,6 @@ button:empty[onclick*="remove"]::before {
         font-size: 7px;
     }
 
-    .main-app.guest-mode .guest-v5-inbox-prompt {
-        gap: 5px;
-        margin-top: 2px;
-        padding: 6px 8px;
-        font-size: 7px;
-    }
-
     .main-app.guest-mode .guest-v5-message-actions {
         grid-column: 1;
         grid-row: 3;
@@ -17681,9 +17657,6 @@ button:empty[onclick*="remove"]::before {
         display: none;
     }
 
-    .main-app.guest-mode .guest-v5-inbox-prompt {
-        display: none;
-    }
 }
 
 /* Auth uses a focused dialog rather than a full-page-looking sheet. */

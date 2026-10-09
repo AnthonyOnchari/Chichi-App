@@ -8036,7 +8036,6 @@ loadMessages: function() {
                             <div class="guest-v5-chat-copy"><div><strong>A curious mind</strong><time>5m</time></div><p>Wait, tell me more about that</p></div>
                             <span class="guest-v5-chat-arrow" aria-hidden="true">↗</span>
                         </article>
-                        <div class="guest-v5-inbox-prompt"><span>✳</span> Your next chat could start with one hello.</div>
                     </div>
                     <div class="guest-v5-message-actions">
                         <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Find your first conversation <span aria-hidden="true">↗</span></button>
