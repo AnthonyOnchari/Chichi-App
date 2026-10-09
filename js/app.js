@@ -4265,6 +4265,10 @@ var app = {
             });
 
             notifications.reverse();
+            self.markAccountUpdateNotificationsRead(notifications);
+            notifications.forEach(function(notif) {
+                if (notif.type === 'access_update' && notif.read !== true) notif.read = true;
+            });
             list.replaceChildren();
             if (notifications.length === 0) {
                 var empty = document.createElement('p');
@@ -6394,6 +6398,24 @@ var app = {
         });
     },
 
+    markAccountUpdateNotificationsRead: function(notifications) {
+        if (!this.user || this.isGuest || !db) return;
+        var updates = {};
+        (notifications || []).forEach(function(notification) {
+            if (notification && notification.id && notification.type === 'access_update' && notification.read !== true) {
+                updates[notification.id + '/read'] = true;
+            }
+        });
+        if (Object.keys(updates).length === 0) return;
+
+        var userId = this.user.uid;
+        db.ref('notifications/' + userId).update(updates).then(function() {
+            app.refreshClientNotificationBadge();
+        }).catch(function(error) {
+            console.error('Failed to mark account update notifications as read:', error);
+        });
+    },
+
     showAccessUpdateNotice: function(notification) {
         var existing = document.getElementById('accessUpdateNotice');
         if (existing) existing.remove();
@@ -8186,25 +8208,57 @@ loadMessages: function() {
                 title.classList.add('is-typing');
                 var typedIndex = 0;
                 var typedCharacters = Array.from(fullPlainTitle + fullHighlightedTitle);
-                var typeNextCharacter = function() {
-                    if (!title.isConnected) return;
-                    if (typedIndex >= typedCharacters.length) {
-                        title.classList.remove('is-typing');
-                        title.classList.add('is-typed');
-                        app.guestMessagesTypingTimer = null;
-                        return;
-                    }
-                    var character = typedCharacters[typedIndex];
-                    if (typedIndex < Array.from(fullPlainTitle).length) {
-                        plainTitle.textContent += character;
-                    } else {
-                        highlightedTitle.textContent += character;
-                    }
-                    typedIndex += 1;
-                    var pause = character === '.' ? 240 : 38;
-                    app.guestMessagesTypingTimer = setTimeout(typeNextCharacter, pause);
+                var plainCharacters;
+                var highlightedCharacters;
+                var beginTypingLoop = function() {
+                    plainCharacters = Array.from(fullPlainTitle);
+                    highlightedCharacters = Array.from(fullHighlightedTitle);
+                    plainTitle.textContent = '';
+                    highlightedTitle.textContent = '';
+                    title.classList.remove('is-typed');
+                    title.classList.add('is-typing');
+                    typedIndex = 0;
+                    var typeNextCharacter = function() {
+                        if (!title.isConnected) return;
+                        if (typedIndex >= typedCharacters.length) {
+                            title.classList.remove('is-typing');
+                            title.classList.add('is-typed');
+                            app.guestMessagesTypingTimer = setTimeout(function() {
+                                if (!title.isConnected) return;
+                                title.classList.remove('is-typed');
+                                title.classList.add('is-typing');
+                                var deleteNextCharacter = function() {
+                                    if (!title.isConnected) return;
+                                    if (highlightedCharacters.length) {
+                                        highlightedCharacters.pop();
+                                        highlightedTitle.textContent = highlightedCharacters.join('');
+                                    } else if (plainCharacters.length) {
+                                        plainCharacters.pop();
+                                        plainTitle.textContent = plainCharacters.join('');
+                                    }
+                                    if (highlightedCharacters.length || plainCharacters.length) {
+                                        app.guestMessagesTypingTimer = setTimeout(deleteNextCharacter, 24);
+                                    } else {
+                                        app.guestMessagesTypingTimer = setTimeout(beginTypingLoop, 180);
+                                    }
+                                };
+                                deleteNextCharacter();
+                            }, 2000);
+                            return;
+                        }
+                        var character = typedCharacters[typedIndex];
+                        if (typedIndex < Array.from(fullPlainTitle).length) {
+                            plainTitle.textContent += character;
+                        } else {
+                            highlightedTitle.textContent += character;
+                        }
+                        typedIndex += 1;
+                        var pause = character === '.' ? 240 : 38;
+                        app.guestMessagesTypingTimer = setTimeout(typeNextCharacter, pause);
+                    };
+                    app.guestMessagesTypingTimer = setTimeout(typeNextCharacter, 180);
                 };
-                app.guestMessagesTypingTimer = setTimeout(typeNextCharacter, 180);
+                beginTypingLoop();
             }
         }
         return;
@@ -13264,6 +13318,10 @@ loadMessages: function() {
             });
 
             notifications.reverse();
+            self.markAccountUpdateNotificationsRead(notifications);
+            notifications.forEach(function(notif) {
+                if (notif.type === 'access_update' && notif.read !== true) notif.read = true;
+            });
             list.replaceChildren();
             if (notifications.length === 0) {
                 var empty = document.createElement('p');
