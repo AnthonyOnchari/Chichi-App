@@ -87,6 +87,12 @@ var app = {
     chatMessagesListener: null,
     chatMessagesChangedListener: null,
     messageStoreListener: null,
+    inboxMessagesRef: null,
+    inboxMessagesListener: null,
+    inboxMessagesUserId: null,
+    inboxRefreshTimer: null,
+    typingPath: null,
+    typingDisconnectPath: null,
     currentFeedTab: 'forYou',
     homeOfferSettings: null,
     homeOfferSettingsLoaded: false,
@@ -220,13 +226,6 @@ var app = {
                     }
                 });
 
-                var authPage = document.getElementById('authPage');
-                if (authPage) {
-                    authPage.style.display = 'none';
-                    authPage.classList.remove('show');
-                    authPage.classList.add('hidden');
-                }
-
                 db.ref('users/' + u.uid).once('value', function(s) {
                     if (s.exists()) {
                         self.profile = s.val();
@@ -306,6 +305,7 @@ var app = {
                     }, 100);
                 });
             } else {
+                self.stopInboxMessagesListener();
                 self.user = null;
                 self.isGuest = true;
                 self.isAdmin = false;
@@ -997,7 +997,6 @@ var app = {
                 }
 
                 self.updateUnreadBadge();
-                self.loadMessages();
             });
         }
     }.bind(this));
@@ -3773,6 +3772,44 @@ var app = {
         });
     },
 
+    setupInboxMessagesListener: function() {
+        if (!this.user || this.isGuest || !db) return;
+        if (this.inboxMessagesListener && this.inboxMessagesUserId === this.user.uid) return;
+        this.stopInboxMessagesListener();
+
+        var self = this;
+        var userId = this.user.uid;
+        var messagesRef = db.ref('messages');
+        var refreshInbox = function(snapshot) {
+            if (!self.user || self.user.uid !== userId || !snapshot.key || snapshot.key.indexOf(userId) === -1) return;
+            if (self.inboxRefreshTimer) clearTimeout(self.inboxRefreshTimer);
+            self.inboxRefreshTimer = setTimeout(function() {
+                self.inboxRefreshTimer = null;
+                if (self.user && self.user.uid === userId) self.loadMessages();
+            }, 100);
+        };
+
+        this.inboxMessagesRef = messagesRef;
+        this.inboxMessagesListener = refreshInbox;
+        this.inboxMessagesUserId = userId;
+        messagesRef.on('child_added', refreshInbox);
+        messagesRef.on('child_changed', refreshInbox);
+    },
+
+    stopInboxMessagesListener: function() {
+        if (this.inboxMessagesRef && this.inboxMessagesListener) {
+            this.inboxMessagesRef.off('child_added', this.inboxMessagesListener);
+            this.inboxMessagesRef.off('child_changed', this.inboxMessagesListener);
+        }
+        if (this.inboxRefreshTimer) {
+            clearTimeout(this.inboxRefreshTimer);
+            this.inboxRefreshTimer = null;
+        }
+        this.inboxMessagesRef = null;
+        this.inboxMessagesListener = null;
+        this.inboxMessagesUserId = null;
+    },
+
     // ============================================
     // LOAD USERS
     // ============================================
@@ -3794,6 +3831,7 @@ var app = {
                 }
             }
             console.log(' Users loaded: ' + Object.keys(self.users).length);
+            self.setupInboxMessagesListener();
             if (!self.usersLoaded && self.currentView === 'messages' && self.user) {
                 self.loadMessages();
             }
@@ -6205,9 +6243,26 @@ var app = {
                 var navProfileAvatar = document.getElementById('navProfileAvatar');
                 if (navProfileAvatar) {
                     var profilePhoto = self.profile.profilePhoto || '';
-                    navProfileAvatar.style.backgroundImage = profilePhoto ? 'url(' + profilePhoto + ')' : 'none';
+                    var navProfileAvatarImage = document.getElementById('navProfileAvatarImage');
+                    var navProfileAvatarFallback = document.getElementById('navProfileAvatarFallback');
+                    if (navProfileAvatarImage) {
+                        if (profilePhoto) {
+                            if (navProfileAvatarImage.getAttribute('src') !== profilePhoto) {
+                                navProfileAvatarImage.src = profilePhoto;
+                            }
+                            navProfileAvatarImage.hidden = false;
+                        } else {
+                            navProfileAvatarImage.removeAttribute('src');
+                            navProfileAvatarImage.hidden = true;
+                        }
+                    }
                     navProfileAvatar.classList.toggle('has-photo', Boolean(profilePhoto));
-                    navProfileAvatar.textContent = profilePhoto ? '' : (self.profile.name || self.user.email || 'U').charAt(0).toUpperCase();
+                    if (navProfileAvatarFallback) {
+                        navProfileAvatarFallback.textContent = profilePhoto
+                            ? ''
+                            : (self.profile.name || self.user.email || 'U').charAt(0).toUpperCase();
+                        navProfileAvatarFallback.hidden = Boolean(profilePhoto);
+                    }
                 }
 
                 self.renderProfile();
@@ -8590,6 +8645,12 @@ loadMessages: function() {
             chatView.style.bottom = '';
         }
         this.stopTypingIndicator();
+        if (this.typingListenerKey) {
+            db.ref('typing/' + this.typingListenerKey).off('value', this.typingListener);
+            this.typingListener = null;
+            this.typingListenerKey = null;
+        }
+        this.hideTypingIndicator();
         if (this.activePlanSupport && this.currentChat) this.setPlanSupportPresence(this.currentChat.uid, false);
         this.stopPlanSupportPresenceListener();
         if (this.currentChat) {
@@ -9307,6 +9368,7 @@ loadMessages: function() {
         this.chatMessages[key].push(tempMessage);
         this.displayChatMessages(this.chatMessages[key], key);
         if (input) input.value = '';
+        this.stopTypingIndicator();
         if (input) input.focus();
 
         messageRef.set({
@@ -11901,6 +11963,12 @@ loadMessages: function() {
             chatView.style.display = 'none';
         }
         this.stopTypingIndicator();
+        if (this.typingListenerKey) {
+            db.ref('typing/' + this.typingListenerKey).off('value', this.typingListener);
+            this.typingListener = null;
+            this.typingListenerKey = null;
+        }
+        this.hideTypingIndicator();
         if (this.activePlanSupport && this.currentChat) this.setPlanSupportPresence(this.currentChat.uid, false);
         this.stopPlanSupportPresenceListener();
         if (this.currentChat) {
@@ -15018,16 +15086,20 @@ app.loadExplorePeople = function() {
         var userArray = [];
 
         var currentUid = (app.user && app.user.uid) ? app.user.uid : null;
-
         for (var uid in users) {
             if (!currentUid || uid !== currentUid) {
                 var user = users[uid];
-                userArray.push({ uid: uid, name: user.name, followers: user.followers || 0, username: user.username, profilePhoto: user.profilePhoto });
+                userArray.push({
+                    uid: uid,
+                    name: user.name,
+                    followers: user.followers || 0,
+                    username: user.username,
+                    profilePhoto: user.profilePhoto
+                });
             }
         }
 
-        userArray.sort(function(a, b) { return (b.followers || 0) - (a.followers || 0); });
-
+        userArray.sort(function(a, b) { return Number(b.followers || 0) - Number(a.followers || 0); });
         userArray.slice(0, 6).forEach(function(user, index) {
             var isFollowing = app.following[user.uid] || false;
             var profilePhoto = user.profilePhoto || '';
@@ -15546,15 +15618,42 @@ app.startTypingIndicator = function() {
     if (!this.currentChat || !this.user) return;
     var self = this;
     var key = [self.user.uid, self.currentChat.uid].sort().join('_');
-    db.ref('typing/' + key + '/' + self.user.uid).set({typing: true, since: Date.now()});
+    var typingPath = 'typing/' + key + '/' + self.user.uid;
+    var typingRef = db.ref(typingPath);
+    this.typingPath = typingPath;
+    typingRef.set({typing: true, since: Date.now()}).catch(function(error) {
+        console.error('Unable to update typing status:', error);
+    });
+    if (this.typingDisconnectPath !== typingPath) {
+        this.typingDisconnectPath = typingPath;
+        typingRef.onDisconnect().remove().catch(function(error) {
+            console.error('Unable to register typing-status cleanup:', error);
+        });
+    }
     if (this.typingTimeout) clearTimeout(this.typingTimeout);
-    this.typingTimeout = setTimeout(function() { self.stopTypingIndicator(); }, 3000);
+    this.typingTimeout = setTimeout(function() {
+        if (self.typingPath !== typingPath) return;
+        self.typingTimeout = null;
+        self.typingPath = null;
+        self.typingDisconnectPath = null;
+        typingRef.remove().catch(function(error) {
+            console.error('Unable to clear typing status:', error);
+        });
+    }, 3000);
 };
 
 app.stopTypingIndicator = function() {
-    if (!this.currentChat || !this.user) return;
-    var key = [this.user.uid, this.currentChat.uid].sort().join('_');
-    db.ref('typing/' + key + '/' + this.user.uid).remove();
+    if (this.typingTimeout) {
+        clearTimeout(this.typingTimeout);
+        this.typingTimeout = null;
+    }
+    if (!this.typingPath) return;
+    var typingPath = this.typingPath;
+    this.typingPath = null;
+    this.typingDisconnectPath = null;
+    db.ref(typingPath).remove().catch(function(error) {
+        console.error('Unable to clear typing status:', error);
+    });
 };
 
 app.displayTypingIndicator = function(userName) {
@@ -15570,10 +15669,12 @@ app.displayTypingIndicator = function(userName) {
 };
 
 app.trackTyping = function() {
-    if (!this.currentChat) return;
+    if (!this.currentChat || !this.user || !db) return;
     var self = this;
     var key = [self.user.uid, self.currentChat.uid].sort().join('_');
-    if (this.typingListenerKey) db.ref('typing/' + this.typingListenerKey).off();
+    if (this.typingListenerKey) {
+        db.ref('typing/' + this.typingListenerKey).off('value', this.typingListener);
+    }
     this.typingListenerKey = key;
     this.typingListener = db.ref('typing/' + key).on('value', function(snapshot) {
         if (!self.currentChat || [self.user.uid, self.currentChat.uid].sort().join('_') !== key) return;
@@ -15581,7 +15682,9 @@ app.trackTyping = function() {
         var typingUsers = [];
         if (typing) {
             Object.keys(typing).forEach(function(uid) {
-                if (uid !== self.user.uid && typing[uid].typing) {
+                var typingSince = Number(typing[uid] && typing[uid].since);
+                if (uid !== self.user.uid && typing[uid] && typing[uid].typing &&
+                    typingSince > 0 && Date.now() - typingSince < 6000) {
                     typingUsers.push(self.users[uid] ? self.users[uid].name : 'User');
                 }
             });

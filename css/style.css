@@ -8807,6 +8807,26 @@ h1, h2, h3, h4, h5, h6,
     font-size: 0;
 }
 
+.nav-profile-avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+}
+
+.nav-profile-avatar img[hidden],
+.nav-profile-avatar-fallback[hidden] {
+    display: none;
+}
+
+.nav-profile-avatar-fallback {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+}
+
 .nav-profile-avatar:not(.has-photo) {
     font-size: 20px;
 }
@@ -17990,9 +18010,24 @@ button:empty[onclick*="remove"]::before {
     justify-content: center;
     overflow-y: auto;
     padding: max(14px, env(safe-area-inset-top, 0px)) 16px max(14px, env(safe-area-inset-bottom, 0px));
-    background: rgba(13, 31, 29, .62);
-    backdrop-filter: blur(9px);
-    -webkit-backdrop-filter: blur(9px);
+    background: rgba(15, 23, 42, .48);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.auth-page.auth-modal-open .auth-overlay {
+    display: none;
+}
+
+.auth-page .auth-bg-image {
+    display: none !important;
+    background-image: none !important;
+}
+
+.auth-page.auth-modal-open {
+    background: rgba(15, 23, 42, .84);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .auth-page.auth-modal-open .auth-card {
@@ -18763,7 +18798,209 @@ button:empty[onclick*="remove"]::before {
     text-decoration: none;
 }
 
+@media (min-width: 1000px) {
+    .main-app.guest-mode .app-content {
+        padding-left: 0;
+    }
+
+    .main-app.guest-mode .view,
+    .main-app.guest-mode #messagesView,
+    .main-app.guest-mode #exploreView,
+    .main-app.guest-mode #profileView {
+        left: 0;
+        width: 100%;
+    }
+
+    .main-app.guest-mode .bottom-nav {
+        top: auto;
+        right: auto;
+        bottom: 14px;
+        left: 50%;
+        width: auto;
+        max-width: calc(100% - 40px);
+        padding: 0;
+        transform: translateX(-50%);
+    }
+
+    .main-app.guest-mode .guest-nav-top {
+        display: flex;
+        width: max-content;
+        min-height: 58px;
+        align-items: center;
+        gap: 16px;
+        padding: 7px 10px 7px 14px;
+        border: 1px solid rgba(148, 163, 184, .24);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, .96);
+        box-shadow: 0 10px 34px rgba(15, 38, 50, .16);
+        -webkit-backdrop-filter: blur(16px) saturate(1.15);
+        backdrop-filter: blur(16px) saturate(1.15);
+    }
+
+    .main-app.guest-mode .guest-nav-brand {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+        color: #17483e;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: .08em;
+    }
+
+    .main-app.guest-mode .guest-nav-brand img {
+        display: block;
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        object-fit: cover;
+    }
+
+    .main-app.guest-mode .guest-nav-links {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+    }
+
+    .main-app.guest-mode .guest-nav-link {
+        display: inline-flex;
+        min-height: 40px;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 13px;
+        background: transparent;
+        color: #718088;
+        font: inherit;
+        font-size: 11px;
+        font-weight: 750;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background .18s ease, color .18s ease;
+    }
+
+    .main-app.guest-mode .guest-nav-link svg {
+        width: 17px;
+        height: 17px;
+        flex: 0 0 17px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+    }
+
+    .main-app.guest-mode .guest-nav-link:hover {
+        background: #f1f7f5;
+        color: #28675e;
+    }
+
+    .main-app.guest-mode .guest-nav-link.active {
+        background: #e8f5f1;
+        color: #0f766e;
+    }
+
+    .main-app.guest-mode .guest-nav-actions,
+    .main-app.guest-mode .bottom-nav .nav-wrapper {
+        display: none !important;
+    }
+
+    :root.dark-mode .main-app.guest-mode .guest-nav-top {
+        border-color: rgba(148, 163, 184, .2);
+        background: rgba(22, 34, 37, .96);
+        box-shadow: 0 10px 34px rgba(0, 0, 0, .34);
+    }
+
+    :root.dark-mode .main-app.guest-mode .guest-nav-brand {
+        color: #d6eee6;
+    }
+
+    :root.dark-mode .main-app.guest-mode .guest-nav-link {
+        color: #a2b1b5;
+    }
+
+    :root.dark-mode .main-app.guest-mode .guest-nav-link:hover {
+        background: #203230;
+        color: #b9e5d9;
+    }
+
+    :root.dark-mode .main-app.guest-mode .guest-nav-link.active {
+        background: #203c37;
+        color: #a8e1d2;
+    }
+}
+
+@media (min-width: 601px) and (max-width: 999.99px) {
+    .main-app.guest-mode .view,
+    .main-app.guest-mode #messagesView,
+    .main-app.guest-mode #exploreView,
+    .main-app.guest-mode #profileView {
+        left: 0;
+        width: 100%;
+    }
+}
+
 @media (max-width: 700px) {
+    .main-app:not(.guest-mode) .bottom-nav {
+        width: min(calc(100% - 32px), 156px);
+    }
+
+    .main-app:not(.guest-mode) .bottom-nav .nav-wrapper {
+        gap: 2px;
+        padding: 3px;
+    }
+
+    .main-app:not(.guest-mode) .bottom-nav .nav-item {
+        flex-basis: 32px;
+        width: 32px;
+        height: 32px;
+        min-height: 32px;
+    }
+
+    .main-app:not(.guest-mode) .bottom-nav .nav-icon {
+        flex-basis: 28px;
+        width: 28px;
+        height: 28px;
+        min-height: 28px;
+    }
+
+    .main-app:not(.guest-mode) .bottom-nav .nav-item.active:not(.nav-profile-item) {
+        padding-right: 7px;
+        padding-left: 2px;
+    }
+
+    .main-app:not(.guest-mode) .bottom-nav .nav-item.nav-profile-item.active {
+        flex-basis: 32px;
+        width: 32px;
+        height: 32px;
+        min-height: 32px;
+    }
+
+    .main-app:not(.guest-mode) .bottom-nav .nav-item.active:not(.nav-profile-item) .nav-label {
+        font-size: 10px;
+    }
+
+    .main-app:not(.guest-mode) .bottom-nav:has(#messagesNavBtn.active) {
+        width: 116px;
+    }
+
+    .main-app:not(.guest-mode) .bottom-nav #messagesNavBtn.active {
+        flex: 0 0 32px;
+        width: 32px;
+        justify-content: center;
+        padding: 0;
+    }
+
+    .main-app:not(.guest-mode) .bottom-nav #messagesNavBtn.active .nav-label {
+        display: none;
+    }
+
     .main-app.guest-mode .view {
         bottom: calc(82px + env(safe-area-inset-bottom, 0px));
     }
