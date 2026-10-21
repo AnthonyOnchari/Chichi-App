@@ -13,12 +13,13 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- CSS -->
-    <link rel="stylesheet" href="css/style.css?v=auth-transition-20261009-1">
+    <link rel="stylesheet" href="css/style.css?v=notification-permission-help-20261021-1">
     
     <!-- Firebase SDKs -->
     <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
     
     <!-- ========== PWA META TAGS ========== -->
     <link rel="manifest" href="/manifest.json">
@@ -238,6 +239,10 @@
                 <button class="header-menu-item" id="menuReferrals" role="menuitem" onclick="app.closeHeaderMenu(); app.showReferralDashboard();">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="16" r="3"></circle><path d="M10.5 10.5 14.5 13.5M17 5v4M15 7h4M5 17v4M3 19h4"></path></svg>
                     <span>Refer &amp; earn</span>
+                </button>
+                <button class="header-menu-item" id="menuNotificationSettings" role="menuitem" onclick="app.closeHeaderMenu(); app.showNotificationPreferences();" style="display:none;">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg>
+                    <span>Phone notifications</span>
                 </button>
                 <button class="header-menu-item" id="menuDeveloper" role="menuitem" onclick="app.showDeveloperInfo(); app.closeHeaderMenu();">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.2 9a2.9 2.9 0 1 1 4.9 2.1c-1.3 1.1-2.1 1.6-2.1 3.1M12 17.5v.1"></path></svg>
@@ -866,6 +871,10 @@
         </div>
         <!-- Dashboard -->
         <div class="admin-tab-content active" id="adminDashboard">
+            <div class="admin-dashboard-heading">
+                <div><span class="admin-kicker">WORKSPACE OVERVIEW</span><h3>Good to see you, Admin</h3><p>Here’s what’s happening across CHICHI today.</p></div>
+                <span class="admin-dashboard-live"><span></span> Live overview</span>
+            </div>
             <div class="admin-stat-grid">
                 <div class="admin-stat"><div class="admin-stat-value" id="adminUserCount">0</div><div class="admin-stat-label">Users</div></div>
                 <div class="admin-stat"><div class="admin-stat-value" id="adminPostCount">0</div><div class="admin-stat-label">Posts</div></div>
@@ -1201,7 +1210,7 @@
 <div id="toastContainer"></div>
 
 <!-- APP JS -->
-<script defer src="js/app.js?v=auth-transition-20261009-1"></script>
+<script defer src="js/app.js?v=notification-permission-help-20261021-2"></script>
 
 <!-- ============================================================ -->
 <!-- ============ COMPLETE SCRIPT WITH PWA + NOTIFICATIONS ======== -->
@@ -1264,64 +1273,7 @@
           .catch((err) => console.log(' ChiChi Service Worker error:', err));
     }
 
-    // ============================================
-    // 3. PUSH NOTIFICATIONS (FIREBASE FCM)
-    // ============================================
-    function getChichiFcmToken() {
-        var registrationPromise = window.chichiServiceWorkerRegistration
-            ? Promise.resolve(window.chichiServiceWorkerRegistration)
-            : navigator.serviceWorker.ready;
-
-        return registrationPromise.then(function(registration) {
-            return firebase.messaging().getToken({ serviceWorkerRegistration: registration });
-        });
-    }
-
-    if ('Notification' in window) {
-        // Check if permission is already granted
-        if (Notification.permission === 'granted') {
-            console.log(' Notification permission already granted for ChiChi');
-            
-            // Get FCM token if Firebase messaging is available
-            if (typeof firebase !== 'undefined' && firebase.messaging) {
-                getChichiFcmToken()
-                    .then(token => {
-                        console.log(' FCM Token:', token);
-                        // You can send this token to your server here
-                        // Example: fetch('/api/save-token', { method: 'POST', body: JSON.stringify({ token: token }) });
-                    })
-                    .catch(err => {
-                        console.log(' Error getting FCM token:', err);
-                    });
-            }
-        } else if (Notification.permission !== 'denied') {
-            // Request permission if not granted or denied
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    console.log(' Notification permission granted for ChiChi');
-                    
-                    // Get FCM token if Firebase messaging is available
-                    if (typeof firebase !== 'undefined' && firebase.messaging) {
-                        getChichiFcmToken()
-                            .then(token => {
-                                console.log(' FCM Token:', token);
-                                // You can send this token to your server here
-                                // Example: fetch('/api/save-token', { method: 'POST', body: JSON.stringify({ token: token }) });
-                            })
-                            .catch(err => {
-                                console.log(' Error getting FCM token:', err);
-                            });
-                    }
-                } else {
-                    console.log(' Notification permission denied for ChiChi');
-                }
-            });
-        } else {
-            console.log(' Notification permission previously denied');
-        }
-    } else {
-        console.log(' Notification API not supported in this browser');
-    }
+    // Notifications are enabled from the user's notification settings, after a direct tap.
 </script>
 
 </body>

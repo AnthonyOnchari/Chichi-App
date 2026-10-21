@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 
 public class LauncherActivity extends AppCompatActivity {
 
+    private static volatile LauncherActivity activeActivity;
     private WebView webView;
     private ProgressBar progressBar;
     private boolean pageLoaded = false;
@@ -77,12 +78,46 @@ public class LauncherActivity extends AppCompatActivity {
         public void verifyPhoneOtp(String code) {
             runOnUiThread(() -> verifyPhoneCode(code));
         }
+
+        @android.webkit.JavascriptInterface
+        public void enableNotifications() {
+            runOnUiThread(() -> {
+                if (android.os.Build.VERSION.SDK_INT >= 33
+                        && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 7001);
+                    return;
+                }
+                registerPushToken();
+                notifyWebNotificationPermission(true);
+            });
+        }
+
+        @android.webkit.JavascriptInterface
+        public boolean areNotificationsEnabled() {
+            return androidx.core.app.NotificationManagerCompat.from(LauncherActivity.this).areNotificationsEnabled();
+        }
+
+        @android.webkit.JavascriptInterface
+        public void openNotificationSettings() {
+            runOnUiThread(() -> {
+                Intent settingsIntent;
+                if (android.os.Build.VERSION.SDK_INT >= 26) {
+                    settingsIntent = new Intent("android.settings.APP_NOTIFICATION_SETTINGS")
+                            .putExtra("android.provider.extra.APP_PACKAGE", getPackageName());
+                } else {
+                    settingsIntent = new Intent("android.settings.APPLICATION_DETAILS_SETTINGS",
+                            Uri.parse("package:" + getPackageName()));
+                }
+                startActivity(settingsIntent);
+            });
+        }
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
+        activeActivity = this;
         setContentView(R.layout.activity_main);
 
         webView = findViewById(R.id.webView);
@@ -117,10 +152,6 @@ public class LauncherActivity extends AppCompatActivity {
                 mVerificationId = verificationId;
             }
         };
-        if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 7001);
-        }
-
         // Configure Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id)) // from google-services.json
@@ -166,6 +197,7 @@ public class LauncherActivity extends AppCompatActivity {
 
                 // If user is already signed in, pass user to WebView
                 FirebaseUser currentUser = mAuth.getCurrentUser();
+                registerPushToken();
                 if (currentUser != null) {
                     sendUserToWebView(currentUser);
                 }
@@ -296,12 +328,41 @@ public class LauncherActivity extends AppCompatActivity {
                 com.google.firebase.database.FirebaseDatabase.getInstance()
                         .getReference("users").child(user.getUid()).child("fcmTokens").child(token).setValue(true);
             }
+            sendPushTokenToWebView(token);
         });
+    }
+
+    static void refreshWebPushToken(String token) {
+        LauncherActivity activity = activeActivity;
+        if (activity != null) activity.sendPushTokenToWebView(token);
+    }
+
+    private void sendPushTokenToWebView(String token) {
+        if (!pageLoaded || webView == null || token == null || token.isEmpty()) return;
+        String safeToken = JSONObject.quote(token);
+        runOnUiThread(() -> webView.evaluateJavascript(
+                "if(window.app&&typeof app.registerNativePushToken==='function'){app.registerNativePushToken(" + safeToken + ");}",
+                null
+        ));
+    }
+
+    private void notifyWebNotificationPermission(boolean granted) {
+        if (webView == null) return;
+        runOnUiThread(() -> webView.evaluateJavascript(
+                "if(window.app&&typeof app.onNativeNotificationsPermission==='function'){app.onNativeNotificationsPermission(" + granted + ");}",
+                null
+        ));
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 7001) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (granted) registerPushToken();
+            notifyWebNotificationPermission(granted);
+            return;
+        }
         if (requestCode == 7002 && pendingWebPermissionRequest != null) {
             boolean granted = grantResults.length > 0;
             for (int result : grantResults) granted &= result == PackageManager.PERMISSION_GRANTED;
@@ -425,5 +486,6 @@ public class LauncherActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         timeoutHandler.removeCallbacks(timeoutRunnable);
+        if (activeActivity == this) activeActivity = null;
     }
 }

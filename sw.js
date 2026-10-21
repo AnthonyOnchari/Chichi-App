@@ -29,20 +29,22 @@ messaging.onBackgroundMessage(payload => {
   if (payload.data?.type === 'coin_received' || payload.notification?.title === 'Coins received') {
     return;
   }
-    
-    const notificationTitle = payload.notification.title || 'CHICHI';
+
+    const notification = payload.notification || {};
+    const data = payload.data || {};
+    const notificationTitle = notification.title || data.title || 'CHICHI';
     const notificationOptions = {
-        body: payload.notification.body || 'New message',
-        icon: '/icon-192.png',
-        badge: '/badge.png',
-        tag: 'chichi-notification',
+        body: notification.body || data.body || 'You have a new update.',
+        icon: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png',
+        badge: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png',
+        tag: data.tag || 'chichi-notification',
         requireInteraction: false,
         data: {
-            url: payload.data?.click_action || '/'
+            url: data.url || data.click_action || '/'
         }
     };
     
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
 // Handle notification click
@@ -53,14 +55,15 @@ self.addEventListener('notificationclick', event => {
     
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+            const targetUrl = new URL(urlToOpen, self.location.origin);
             for (let i = 0; i < clientList.length; i++) {
                 const client = clientList[i];
-                if (client.url === urlToOpen && 'focus' in client) {
-                    return client.focus();
+                if (new URL(client.url).origin === targetUrl.origin && 'focus' in client) {
+                    return client.focus().then(() => client.navigate(targetUrl.href));
                 }
             }
             if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
+                return clients.openWindow(targetUrl.href);
             }
         })
     );

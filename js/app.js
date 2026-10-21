@@ -5,12 +5,23 @@
 // Get Firebase instances
 var auth = null;
 var db = null;
+var authPersistenceReady = null;
 
 // Wait for Firebase to be ready
 function initFirebase() {
     if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
         auth = firebase.auth();
         db = firebase.database();
+        if (!authPersistenceReady) {
+            authPersistenceReady = auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                .then(function() {
+                    return true;
+                })
+                .catch(function(error) {
+                    console.error('Unable to enable persistent sign-in:', error);
+                    return false;
+                });
+        }
         console.log(' Firebase ready in app.js');
         return true;
     }
@@ -51,6 +62,7 @@ var app = {
     unreadTrackingStarted: false,
     unreadTrackingActive: false,
     chatMessages: {},
+    chatMessageLoadStartedAt: {},
     notifiedMessages: {},
     currentView: 'messages',
     planSupportPresenceListener: null,
@@ -64,6 +76,7 @@ var app = {
     triviaInterval: null,
     currentTrivia: null,
     triviaAnswered: false,
+    triviaLoadingNext: false,
     triviaTimeout: null,
     triviaTimer: null,
     suspiciousActivityDetected: false,
@@ -173,6 +186,20 @@ var app = {
             return;
         }
 
+        if (authPersistenceReady && !this.authPersistenceInitialized) {
+            if (this.authPersistenceInitializing) return;
+            this.authPersistenceInitializing = true;
+            authPersistenceReady.then(function(persistent) {
+                self.authPersistenceInitializing = false;
+                self.authPersistenceInitialized = true;
+                if (!persistent) {
+                    self.toast('Persistent sign-in could not be enabled in this browser.', 'error');
+                }
+                self.init();
+            });
+            return;
+        }
+
         this.chatMessages = {};
         this.unreadMessages = {};
         this.notifiedMessages = {};
@@ -267,6 +294,16 @@ var app = {
                     if (u.email && (!self.profile.email || self.profile.email.trim() === '')) {
                         db.ref('users/' + u.uid).update({
                             email: u.email
+                        });
+                    }
+                    if (self.pendingNativePushToken) {
+                        self.registerNativePushToken(self.pendingNativePushToken).then(function(saved) {
+                            if (saved) self.pendingNativePushToken = null;
+                        });
+                    }
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        self.registerWebPushToken().catch(function(error) {
+                            console.error('Unable to register web push notifications:', error);
                         });
                     }
                     if (typeof self.registerPendingReferralForNewUser === 'function') {
@@ -560,18 +597,6 @@ var app = {
     // ============================================
 
     initNotifications: function() {
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission().then(function(permission) {
-                if (permission === 'granted') {
-                    console.log(' Notification permission granted');
-                } else {
-                    console.log(' Notification permission denied by user');
-                }
-            });
-        } else if ('Notification' in window && Notification.permission === 'granted') {
-            console.log(' Notifications already have permission');
-        }
-
         var self = this;
         setTimeout(function() {
             self.trackUnreadMessages();
@@ -580,46 +605,170 @@ var app = {
     },
 
     requestNotificationPermission: function() {
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission().then(function(permission) {
-                if (permission === 'granted') {
-                    console.log(' Notifications enabled!');
-                    this.toast('Notifications enabled! ', 'success');
-                }
-            }.bind(this));
+        if (window.Android && typeof window.Android.enableNotifications === 'function') {
+            window.Android.enableNotifications();
+            this.toast('Allow CHICHI notifications in your phone settings prompt.', 'info');
+            return Promise.resolve(true);
         }
+        if (!('Notification' in window) || !navigator.serviceWorker || !window.isSecureContext) {
+            this.toast('Phone notifications are not supported in this browser. Install CHICHI or open it over HTTPS.', 'error');
+            return Promise.resolve(false);
+        }
+
+        var self = this;
+        var permissionPromise = Notification.permission === 'default'
+            ? Notification.requestPermission()
+            : Promise.resolve(Notification.permission);
+        return permissionPromise.then(function(permission) {
+            if (permission !== 'granted') {
+                self.toast(permission === 'denied'
+                    ? 'Notifications are blocked for CHICHI. Follow the browser settings steps shown here to allow them.'
+                    : 'Notification permission was not granted.', 'error');
+                return false;
+            }
+            return self.registerWebPushToken().then(function() {
+                self.toast('Phone notifications are enabled.', 'success');
+                return true;
+            });
+        }).catch(function(error) {
+            console.error('Unable to enable phone notifications:', error);
+            self.toast('Could not enable notifications: ' + error.message, 'error');
+            return false;
+        });
+    },
+
+    registerWebPushToken: function() {
+        if (!this.user || !this.user.uid || !('Notification' in window) || Notification.permission !== 'granted') {
+            return Promise.resolve(false);
+        }
+        if (!navigator.serviceWorker || !firebase.messaging) {
+            return Promise.reject(new Error('Push messaging is not supported in this browser.'));
+        }
+
+        var self = this;
+        return navigator.serviceWorker.ready.then(function(registration) {
+            window.chichiServiceWorkerRegistration = registration;
+            var messaging = firebase.messaging();
+            return messaging.getToken({ serviceWorkerRegistration: registration }).then(function(token) {
+                if (!token) throw new Error('Firebase did not return a notification token.');
+                return db.ref('users/' + self.user.uid + '/fcmTokens/' + token).set(true)
+                    .then(function() {
+                        if (!self.pushForegroundListenerBound && typeof messaging.onMessage === 'function') {
+                            self.pushForegroundListenerBound = true;
+                            messaging.onMessage(function(payload) {
+                                var notification = payload.notification || {};
+                                var data = payload.data || {};
+                                return registration.showNotification(notification.title || data.title || 'CHICHI', {
+                                    body: notification.body || data.body || 'You have a new update.',
+                                    icon: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png',
+                                    badge: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1785150967/53168_pz8kju.png',
+                                    tag: data.tag || ('chichi-' + Date.now()),
+                                    data: { url: data.url || '/' }
+                                });
+                            });
+                        }
+                        return true;
+                    });
+            });
+        });
+    },
+
+    registerNativePushToken: function(token) {
+        if (!token) return Promise.resolve(false);
+        this.pendingNativePushToken = token;
+        if (!this.user || !this.user.uid || !db) return Promise.resolve(false);
+        var self = this;
+        return db.ref('users/' + this.user.uid + '/fcmTokens/' + token).set(true).then(function() {
+            if (self.pendingNativePushToken === token) self.pendingNativePushToken = null;
+            return true;
+        }).catch(function(error) {
+            console.error('Unable to save native push token:', error);
+            return false;
+        });
+    },
+
+    onNativeNotificationsPermission: function(granted) {
+        var status = document.querySelector('.notification-permission-status');
+        var settingsButton = document.querySelector('.notification-settings-button');
+        if (status) {
+            status.textContent = granted
+                ? 'System notifications are enabled for the CHICHI app.'
+                : 'Notifications are turned off for CHICHI. Open app notification settings below and switch them on.';
+        }
+        if (settingsButton) settingsButton.style.display = granted ? 'none' : '';
+        if (!granted) {
+            this.toast('Notifications are off for CHICHI. Use “Open app notification settings” here to allow them.', 'error');
+            return;
+        }
+        this.toast('Phone notifications are enabled.', 'success');
     },
 
     showNotificationPreferences: function() {
         var modal = document.createElement('div');
-        modal.className = 'modal-overlay active';
+        modal.className = 'modal-overlay active notification-preferences-overlay';
         var notifSettings = localStorage.getItem('notificationSettings') ? JSON.parse(localStorage.getItem('notificationSettings')) : {
             messages: true,
             followers: true
         };
+        var isNativeApp = window.Android && typeof window.Android.enableNotifications === 'function';
+        var nativeNotificationsEnabled = isNativeApp && typeof window.Android.areNotificationsEnabled === 'function'
+            ? window.Android.areNotificationsEnabled()
+            : null;
+        var notificationBlocked = !isNativeApp && 'Notification' in window && Notification.permission === 'denied';
+        var notificationStatus = isNativeApp
+            ? (nativeNotificationsEnabled
+                ? 'System notifications are enabled for the CHICHI app.'
+                : 'Notifications are turned off for CHICHI. Open app notification settings below and switch them on.')
+            : ('Notification' in window
+                ? (Notification.permission === 'granted'
+                    ? 'System notifications are enabled for this website.'
+                    : notificationBlocked
+                        ? 'Your browser is blocking CHICHI notifications. Follow the steps below to allow them.'
+                        : 'Enable system notifications to receive alerts when CHICHI is in the background.')
+                : 'System notifications are not supported by this browser.');
+        var blockedHelp = notificationBlocked
+            ? '<div class="notification-permission-help"><strong>Allow notifications in your browser</strong><ol><li>Open this site’s permissions from the browser address bar or site menu.</li><li>Set Notifications to Allow.</li><li>Return to CHICHI and reload this page.</li></ol>Your browser controls this permission, so CHICHI cannot turn it on while it is blocked.</div>'
+            : '';
+        var enableButton = notificationBlocked
+            ? ''
+            : '<button class="btn-submit" style="width:100%;margin-bottom:10px;" onclick="app.requestNotificationPermission()">Enable phone notifications</button>';
+        var nativeSettingsButton = isNativeApp && !nativeNotificationsEnabled
+            ? '<button class="btn-submit notification-settings-button" type="button" onclick="app.openNativeNotificationSettings()">Open app notification settings</button>'
+            : '';
 
-        modal.innerHTML = `<div class="modal" style="max-width:400px;">
+        modal.innerHTML = `<div class="modal notification-preferences-modal" style="max-width:400px;">
             <div class="modal-close"><button onclick="this.closest('.modal-overlay').remove()"></button></div>
             <h2 style="margin-bottom:16px;font-weight:700;"> Notification Preferences</h2>
 
-            <div style="margin-bottom:16px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <div style="font-weight:600;"> New Messages</div>
+            <div class="notification-preference-list">
+                <label class="notification-preference-row" for="notif-messages">
+                    <span>New Messages</span>
                     <input type="checkbox" id="notif-messages" ${notifSettings.messages ? 'checked' : ''} onchange="app.updateNotificationSettings()">
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <div style="font-weight:600;"> New Followers</div>
+                </label>
+                <label class="notification-preference-row" for="notif-followers">
+                    <span>New Followers</span>
                     <input type="checkbox" id="notif-followers" ${notifSettings.followers ? 'checked' : ''} onchange="app.updateNotificationSettings()">
-                </div>
+                </label>
             </div>
 
-            <div style="background:rgba(0,212,170,0.05);padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.85rem;color:var(--text-light);">
-                 Notifications enabled! You will receive updates for your selected preferences.
+            <div class="notification-permission-status">
+                ${notificationStatus}
             </div>
+            ${blockedHelp}
 
+            ${enableButton}
+            ${nativeSettingsButton}
             <button class="btn-submit" style="width:100%;" onclick="this.closest('.modal-overlay').remove()">Close</button>
         </div>`;
         document.body.appendChild(modal);
+    },
+
+    openNativeNotificationSettings: function() {
+        if (window.Android && typeof window.Android.openNotificationSettings === 'function') {
+            window.Android.openNotificationSettings();
+            return;
+        }
+        this.toast('Open this site’s permissions from your browser menu and set Notifications to Allow.', 'info');
     },
 
     updateNotificationSettings: function() {
@@ -641,18 +790,6 @@ var app = {
     }
 
     var cleanMessage = messageText ? messageText.substring(0, 150) : ' Image';
-
-    // System notification (for background)
-    if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(' ' + senderName.toUpperCase(), {
-            body: cleanMessage,
-            icon: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png',
-            tag: 'chichi-message-' + senderName,
-            badge: 'https://res.cloudinary.com/u1uilb6f/image/upload/v1783926233/logo_ohie6r.png',
-            requireInteraction: false,
-            vibrate: [200, 100, 200]
-        });
-    }
 
     // In‑app custom notification
     this.showCustomNotification(senderName, cleanMessage);
@@ -1441,6 +1578,62 @@ var app = {
     },
     // ============================================
 
+    getAdminRevenueSummary: function() {
+        return Promise.all([
+            db.ref('analytics/revenue').once('value'),
+            db.ref('transactions').once('value')
+        ]).then(function(snapshots) {
+            var summary = {
+                totalEarned: 0,
+                totalSpent: 0,
+                transactions: 0,
+                earnedByType: {},
+                spentByType: {}
+            };
+            var revenueSnapshot = snapshots[0];
+            var transactionSnapshot = snapshots[1];
+
+            revenueSnapshot.forEach(function(child) {
+                var data = child.val() || {};
+                var amount = Number(data.amount);
+                var item = data.item || (data.type === 'earned' ? 'trivia' : 'gift');
+
+                if (data.type === 'earned') {
+                    if (Number.isFinite(amount)) {
+                        summary.totalEarned += amount;
+                        summary.earnedByType[item] = (summary.earnedByType[item] || 0) + amount;
+                    }
+                    summary.transactions++;
+                } else if (data.type === 'spent' && !String(data.item || '').startsWith('send_to_')) {
+                    if (Number.isFinite(amount)) {
+                        summary.totalSpent += amount;
+                        summary.spentByType[item] = (summary.spentByType[item] || 0) + amount;
+                    }
+                    summary.transactions++;
+                } else if (data.type !== 'spent') {
+                    summary.transactions++;
+                }
+            });
+
+            transactionSnapshot.forEach(function(child) {
+                var data = child.val() || {};
+                if (data.type !== 'transfer') return;
+
+                var amount = Number(data.amount);
+                var recipient = data.recipientUsername || data.recipientName || 'unknown';
+                var item = 'send_to_' + recipient;
+
+                if (Number.isFinite(amount)) {
+                    summary.totalSpent += amount;
+                    summary.spentByType[item] = (summary.spentByType[item] || 0) + amount;
+                }
+                summary.transactions++;
+            });
+
+            return summary;
+        });
+    },
+
     loadAdminDashboard: function() {
         var self = this;
 
@@ -1462,23 +1655,12 @@ var app = {
         document.getElementById('adminPostCount').textContent = postCount;
         document.getElementById('adminSignupCount').textContent = todaySignups;
 
-        db.ref('analytics/revenue').once('value', function(snap) {
-            var totalEarned = 0;
-            var totalSpent = 0;
-            var transactions = 0;
-
-            snap.forEach(function(child) {
-                var data = child.val();
-                if (data.type === 'earned') {
-                    totalEarned += data.amount || 0;
-                } else if (data.type === 'spent') {
-                    totalSpent += data.amount || 0;
-                }
-                transactions++;
-            });
-
-            document.getElementById('adminTotalEarned').textContent = totalEarned.toFixed(2);
-            document.getElementById('adminTotalSpent').textContent = totalSpent.toFixed(2);
+        this.getAdminRevenueSummary().then(function(summary) {
+            document.getElementById('adminTotalEarned').textContent = summary.totalEarned.toFixed(2);
+            document.getElementById('adminTotalSpent').textContent = summary.totalSpent.toFixed(2);
+        }).catch(function(error) {
+            console.error('Unable to load admin revenue totals:', error);
+            self.toast('Unable to load revenue totals', 'error');
         });
 
         db.ref('bannedUsers').once('value', function(snap) {
@@ -1567,10 +1749,11 @@ var app = {
 
             // Convert to array
             for (var uid in usersData) {
-                userArray.push({ uid: uid, user: usersData[uid] });
-
                 var user = usersData[uid];
-                if (!user.username || user.username.trim() === '') {
+                if (!user || typeof user !== 'object') continue;
+                userArray.push({ uid: uid, user: user });
+
+                if (!String(user.username || '').trim()) {
                     usersWithoutUsername.push({
                         uid: uid,
                         name: user.name || 'Unnamed User',
@@ -1586,12 +1769,7 @@ var app = {
                             <div style="font-size: 24px;"></div>
                             <div>
                                 <div style="font-weight: 700; color: #92400e; margin-bottom: 8px;">${usersWithoutUsername.length} User${usersWithoutUsername.length > 1 ? 's' : ''} Without Username</div>
-                            <div id="wallpaperAppearanceSettings" style="display:${savedWallpaper && savedWallpaper !== 'small-bubbles' ? 'block' : 'none'};margin-top:16px;padding:12px;background:#f1f7f5;border-radius:10px;">
-                                <div id="wallpaperLivePreview" style="height:94px;margin-bottom:14px;border-radius:8px;overflow:hidden;background:#dbe8e3;position:relative;">
-                                    <div id="wallpaperPreviewImage" style="position:absolute;inset:-16px;background-size:cover;background-position:center;"></div>
-                                    <div id="wallpaperPreviewDim" style="position:absolute;inset:0;background:#08201c;"></div>
-                                    <span style="position:absolute;left:10px;bottom:9px;z-index:1;padding:4px 7px;border-radius:6px;background:rgba(255,255,255,.88);color:#19302b;font-size:10px;font-weight:700;">Live preview</span>
-                                </div>
+                                <div style="display:grid;gap:8px;">
                                     ${usersWithoutUsername.map(u => `
                                         <div style="background: white; border-radius: 8px; padding: 8px 12px; font-size: 12px;">
                                             <span style="font-weight: 600; color: #1e293b;">${u.name || 'Unnamed'}</span>
@@ -1660,6 +1838,8 @@ var app = {
 
                     html += '</div>';
                     document.getElementById('adminUsersList').innerHTML = html;
+                    var searchInput = document.getElementById('userSearchInput');
+                    self.searchAdminUsers(searchInput ? searchInput.value : '');
                 });
             }
         });
@@ -1967,9 +2147,13 @@ var app = {
                 }).join('');
                 var latestText = chat.latest.text || (chat.latest.image ? 'Photo message' : 'Voice message');
                 var latestSender = chat.latest.senderName || (users[chat.latest.sender] && (users[chat.latest.sender].name || users[chat.latest.sender].username)) || 'Unknown user';
-                var searchText = (chat.names.join(' ') + ' ' + latestText).replace(/"/g, '&quot;').toLowerCase();
+                var searchText = (chat.names.join(' ') + ' ' + chat.rows.map(function(message) {
+                    return message.text || (message.image ? 'Photo message' : 'Voice message');
+                }).join(' ')).replace(/"/g, '&quot;').toLowerCase();
                 return '<section class="admin-chat-card" data-chat-search="' + searchText + '"><header><div class="admin-chat-identity"><span class="admin-chat-avatar">' + chat.names.join('').charAt(0).toUpperCase() + '</span><div><strong>' + chat.names.join('  <>  ') + '</strong><small>Conversation · Last activity ' + (chat.latest.createdAt || 'recently') + '</small></div></div><span class="admin-readonly-badge">READ ONLY</span></header><div class="admin-chat-latest"><span class="admin-chat-label">LATEST MESSAGE · SENT BY ' + latestSender.toUpperCase() + '</span><p>' + latestText + '</p></div><details><summary>View recent messages <span>' + chat.rows.length + '</span></summary><div class="admin-chat-transcript">' + messagesHtml + '</div></details></section>';
             }).join('');
+            var searchInput = document.getElementById('adminChatSearch');
+            app.filterAdminChats(searchInput ? searchInput.value : '');
         }).catch(function(err) {
             container.innerHTML = '<div class="admin-empty-state">Could not load conversations: ' + err.message + '</div>';
         });
@@ -1977,9 +2161,24 @@ var app = {
 
     filterAdminChats: function(query) {
         var normalized = String(query || '').trim().toLowerCase();
-        document.querySelectorAll('#adminChatsList .admin-chat-card').forEach(function(card) {
-            card.style.display = !normalized || (card.getAttribute('data-chat-search') || '').indexOf(normalized) !== -1 ? '' : 'none';
+        var cards = document.querySelectorAll('#adminChatsList .admin-chat-card');
+        var visible = 0;
+        cards.forEach(function(card) {
+            var matches = !normalized || (card.getAttribute('data-chat-search') || '').indexOf(normalized) !== -1;
+            card.style.display = matches ? '' : 'none';
+            if (matches) visible++;
         });
+        var empty = document.getElementById('adminChatsSearchEmpty');
+        if (!empty && cards.length) {
+            empty = document.createElement('div');
+            empty.id = 'adminChatsSearchEmpty';
+            empty.className = 'admin-empty-state';
+            document.getElementById('adminChatsList').appendChild(empty);
+        }
+        if (empty) {
+            empty.textContent = visible ? '' : 'No conversations match your search.';
+            empty.style.display = visible ? 'none' : 'block';
+        }
     },
 
     getDefaultHomeOfferSettings: function() {
@@ -2694,28 +2893,12 @@ var app = {
 
     loadAdminAnalytics: function() {
         var self = this;
-        var html = '';
-
-        db.ref('analytics/revenue').once('value', function(snap) {
-            var earnedByType = {};
-            var spentByType = {};
-            var totalEarned = 0;
-            var totalSpent = 0;
-            var transactions = [];
-
-            snap.forEach(function(child) {
-                var data = child.val();
-                if (data.type === 'earned') {
-                    totalEarned += data.amount || 0;
-                    var item = data.item || 'trivia';
-                    earnedByType[item] = (earnedByType[item] || 0) + data.amount;
-                } else if (data.type === 'spent') {
-                    totalSpent += data.amount || 0;
-                    var item = data.item || 'gift';
-                    spentByType[item] = (spentByType[item] || 0) + data.amount;
-                }
-                transactions.push(data);
-            });
+        this.getAdminRevenueSummary().then(function(summary) {
+            var html = '';
+            var earnedByType = summary.earnedByType;
+            var spentByType = summary.spentByType;
+            var totalEarned = summary.totalEarned;
+            var totalSpent = summary.totalSpent;
 
             html += `
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px;">
@@ -2731,7 +2914,7 @@ var app = {
                     </div>
                     <div style="background: white; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                         <div style="font-size: 11px; color: #6b7280; text-transform: uppercase;">Transactions</div>
-                        <div style="font-size: 28px; font-weight: 700; color: #3b82f6;">${transactions.length}</div>
+                        <div style="font-size: 28px; font-weight: 700; color: #3b82f6;">${summary.transactions}</div>
                         <div style="font-size: 11px; color: #6b7280;">Total</div>
                     </div>
                 </div>
@@ -2764,6 +2947,9 @@ var app = {
             `;
 
             document.getElementById('adminAnalytics').innerHTML = html;
+        }).catch(function(error) {
+            console.error('Unable to load admin analytics:', error);
+            self.toast('Unable to load admin analytics', 'error');
         });
     },
 
@@ -5505,6 +5691,8 @@ var app = {
 
     loadNextTriviaQuestion: function(continueQuiz) {
         var self = this;
+        if (this.triviaLoadingNext) return;
+        this.triviaLoadingNext = true;
         console.log(' Loading next trivia question...');
 
         this.triviaAnswered = false;
@@ -5513,22 +5701,42 @@ var app = {
             clearInterval(this.triviaTimer);
             this.triviaTimer = null;
         }
+        var nextButton = document.querySelector('#triviaQuizModal #quizNextBtn');
+        if (nextButton) {
+            nextButton.disabled = true;
+            nextButton.textContent = 'Loading next question...';
+        }
 
-        this.generateTriviaQuestion(function() {
-            self.renderEarn();
-            if (continueQuiz) self.showTriviaQuestion();
+        this.generateTriviaQuestion(function(error) {
+            self.triviaLoadingNext = false;
+            if (error) {
+                if (nextButton) {
+                    nextButton.disabled = false;
+                    nextButton.textContent = 'Try again';
+                }
+                return;
+            }
+            if (continueQuiz) {
+                self.showTriviaQuestion();
+                return;
+            }
+
+            self.renderEarnDefault();
+            if (self.currentTrivia) self.displayTriviaInEarn(self.currentTrivia);
         });
     },
 
     generateTriviaQuestion: function(callback) {
         if (!this.user || this.isGuest) {
             this.toast(' Please log in to answer trivia', 'error');
+            if (callback) callback(new Error('Please log in to answer trivia.'));
             return;
         }
 
         var remaining = this.getQuestionsRemaining();
         if (remaining <= 0) {
             this.toast(' All questions answered for today! Come back tomorrow.', 'info');
+            if (callback) callback(new Error('No trivia questions remaining.'));
             return;
         }
 
@@ -5538,7 +5746,7 @@ var app = {
         db.ref('users/' + userId + '/pendingTrivia').once('value', function(snap) {
             var pending = snap.val();
             if (pending && pending.question) {
-                self.displayTriviaInEarn(pending);
+                self.currentTrivia = pending;
                 if (callback) callback();
                 return;
             }
@@ -5547,9 +5755,16 @@ var app = {
                 var answered = snapshot.val() || [];
 
                 var triviaPool = self.getTriviaQuestionsForGenre(self.triviaGenre || 'general');
+                if (!triviaPool.length) {
+                    var questionError = new Error('No questions are available in this category.');
+                    console.error(questionError.message);
+                    self.toast(questionError.message, 'error');
+                    if (callback) callback(questionError);
+                    return;
+                }
                 var unanswered = triviaPool.filter(function(q, index) {
                     for (var j = 0; j < answered.length; j++) {
-                        if (answered[j].questionIndex === index) {
+                        if ((answered[j].genre || 'general') === (self.triviaGenre || 'general') && answered[j].questionIndex === index) {
                             return false;
                         }
                     }
@@ -5582,18 +5797,64 @@ var app = {
                     if (err) {
                         console.error(' Error saving trivia:', err);
                         self.toast('Error loading question. Try again.', 'error');
+                        if (callback) callback(err);
                     } else {
-                        self.displayTriviaInEarn(pendingData);
+                        self.currentTrivia = pendingData;
                         if (callback) callback();
                     }
                 });
             }, function(err) {
                 console.error(' Error reading answered questions:', err);
                 self.toast('Error loading trivia. Try again.', 'error');
+                if (callback) callback(err);
             });
         }, function(err) {
             console.error(' Error reading pending trivia:', err);
             self.toast('Error loading trivia. Try again.', 'error');
+            if (callback) callback(err);
+        });
+    },
+
+    recordTriviaAnswer: function(questionData, correct, callback) {
+        var self = this;
+        var userId = this.user.uid;
+        var answeredRef = db.ref('users/' + userId + '/triviaAnswered');
+        var pendingRef = db.ref('users/' + userId + '/pendingTrivia');
+        var entry = {
+            questionIndex: questionData.questionIndex,
+            genre: this.triviaGenre || 'general',
+            correct: correct,
+            date: new Date().toDateString(),
+            timestamp: Date.now()
+        };
+
+        answeredRef.once('value', function(snapshot) {
+            var answered = snapshot.val();
+            if (!Array.isArray(answered)) answered = [];
+            answered.push(entry);
+            answeredRef.set(answered, function(saveError) {
+                if (saveError) {
+                    console.error(' Error saving trivia answer:', saveError);
+                    self.toast('Could not save your answer. Please try again.', 'error');
+                    if (callback) callback(saveError);
+                    return;
+                }
+
+                pendingRef.remove(function(removeError) {
+                    if (removeError) {
+                        console.error(' Error clearing pending trivia:', removeError);
+                        self.toast('Could not finish saving your answer. Please try again.', 'error');
+                        if (callback) callback(removeError);
+                        return;
+                    }
+                    self.updateEarnStats();
+                    if (callback) callback();
+                });
+            });
+        }, function(error) {
+            console.error(' Error reading trivia answers:', error);
+            self.toast('Could not save your answer. Please try again.', 'error');
+            if (callback) callback(error);
         });
     },
 
@@ -5634,7 +5895,7 @@ var app = {
         }
 
         this.pendingTrivia = null;
-        this.showTriviaQuestionModal(questionData);
+        this.showTriviaQuestion();
     },
 
     showTriviaQuestionModal: function(questionData) {
@@ -5667,11 +5928,16 @@ var app = {
         modal.querySelector('button[aria-label="Close"]').onclick = function() { modal.remove(); };
         modal.querySelectorAll('[data-genre]').forEach(function(button) {
             button.onclick = function() {
+                if (modal.dataset.selectionStarted === 'true') return;
+                modal.dataset.selectionStarted = 'true';
                 self.triviaGenre = this.dataset.genre;
                 modal.remove();
                 self.currentTrivia = null;
                 db.ref('users/' + self.user.uid + '/pendingTrivia').remove().then(function() {
                     self.generateTriviaQuestion(function() { self.showTriviaQuestion(); });
+                }).catch(function(error) {
+                    console.error(' Error clearing previous trivia:', error);
+                    self.toast('Could not start the quiz. Please try again.', 'error');
                 });
             };
         });
@@ -5683,10 +5949,11 @@ var app = {
             clearInterval(this.triviaTimer);
             this.triviaTimer = null;
         }
+        this.triviaLoadingNext = false;
 
-        var quizModal = document.getElementById('triviaQuizModal');
+        var quizModals = document.querySelectorAll('#triviaQuizModal');
         var genreModal = document.getElementById('triviaGenreModal');
-        if (quizModal) quizModal.remove();
+        quizModals.forEach(function(modal) { modal.remove(); });
         if (genreModal) genreModal.remove();
 
         this.currentTrivia = null;
@@ -5703,6 +5970,13 @@ var app = {
         if (!this.currentTrivia) {
             this.toast(' No question loaded', 'error');
             return;
+        }
+
+        var existingModal = document.getElementById('triviaQuizModal');
+        if (existingModal) {
+            if (this.triviaTimer) clearInterval(this.triviaTimer);
+            this.triviaTimer = null;
+            existingModal.remove();
         }
 
         var self = this;
@@ -5790,7 +6064,7 @@ var app = {
                 <div style="margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <div style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Quick Quiz</div>
-                        <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;"> ${tierData.timerSeconds}s</div>
+                        <div id="triviaTimerBadge" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;"> ${tierData.timerSeconds}s</div>
                     </div>
                     <p style="font-size: 18px; font-weight: 700; color: #1a202c; margin: 0; line-height: 1.6; margin-bottom: 16px;">${questionData.question}</p>
                     <div style="height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden;">
@@ -5910,44 +6184,28 @@ var app = {
 
                 resultArea.style.display = 'block';
 
-                // Save answer to Firebase
-                var userId = self.user.uid;
-                var today = new Date().toDateString();
-                var answeredEntry = {
-                    questionIndex: questionData.questionIndex,
-                    correct: isCorrect,
-                    date: today,
-                    timestamp: Date.now()
-                };
-
-                // Add to answered questions list
-                db.ref('users/' + userId + '/triviaAnswered').once('value', function(snap) {
-                    var answered = snap.val() || [];
-                    answered.push(answeredEntry);
-                    db.ref('users/' + userId + '/triviaAnswered').set(answered);
-                });
-
-                // Update balance if correct
                 if (isCorrect) {
-                    db.ref('users/' + userId + '/balance').set(self.balance).catch(function(err) {
+                    db.ref('users/' + self.user.uid + '/balance').set(self.balance).catch(function(err) {
                         console.error(' Error saving balance:', err);
                     });
                 }
 
-                // Clear pending trivia
-                db.ref('users/' + userId + '/pendingTrivia').set(null);
-
-                // Show next button after 2 seconds
-                setTimeout(function() {
-                    var nextBtn = overlay.querySelector('#quizNextBtn');
-                    if (nextBtn) {
-                        nextBtn.style.display = 'block';
-                        nextBtn.style.animation = 'slideUp 0.4s ease';
-                    }
-                }, 2000);
+                self.recordTriviaAnswer(questionData, isCorrect, function(error) {
+                    if (error) return;
+                    setTimeout(function() {
+                        var nextBtn = overlay.querySelector('#quizNextBtn');
+                        if (nextBtn) {
+                            nextBtn.style.display = 'block';
+                            nextBtn.style.animation = 'slideUp 0.4s ease';
+                        }
+                    }, 1500);
+                });
 
                 // Handle timer
-                if (self.triviaTimer) clearInterval(self.triviaTimer);
+                if (self.triviaTimer) {
+                    clearInterval(self.triviaTimer);
+                    self.triviaTimer = null;
+                }
             });
         });
 
@@ -5956,7 +6214,7 @@ var app = {
         if (self.triviaTimer) clearInterval(self.triviaTimer);
         self.triviaTimer = setInterval(function() {
             timeLeft--;
-            var timerBadge = overlay.querySelector('[style*=""]');
+            var timerBadge = overlay.querySelector('#triviaTimerBadge');
             if (timerBadge) {
                 timerBadge.textContent = ' ' + timeLeft + 's';
                 if (timeLeft <= 3) {
@@ -5966,6 +6224,7 @@ var app = {
 
             if (timeLeft <= 0) {
                 clearInterval(self.triviaTimer);
+                self.triviaTimer = null;
                 if (!self.triviaAnswered) {
                     self.triviaAnswered = true;
                     optionButtons.forEach(function(b) {
@@ -5981,10 +6240,13 @@ var app = {
                     resultArea.style.background = '#fef3c7';
                     resultArea.style.color = '#92400e';
                     resultArea.style.display = 'block';
-                    setTimeout(function() {
-                        var nextBtn = overlay.querySelector('#quizNextBtn');
-                        if (nextBtn) nextBtn.style.display = 'block';
-                    }, 1500);
+                    self.recordTriviaAnswer(questionData, false, function(error) {
+                        if (error) return;
+                        setTimeout(function() {
+                            var nextBtn = overlay.querySelector('#quizNextBtn');
+                            if (nextBtn) nextBtn.style.display = 'block';
+                        }, 1500);
+                    });
                 }
             }
         }, 1000);
@@ -6045,6 +6307,11 @@ var app = {
         var menuLogin = document.getElementById('menuLogin');
         if (menuLogin) {
             menuLogin.style.display = this.isGuest ? 'block' : 'none';
+        }
+
+        var menuNotificationSettings = document.getElementById('menuNotificationSettings');
+        if (menuNotificationSettings) {
+            menuNotificationSettings.style.display = this.isGuest ? 'none' : 'flex';
         }
 
         // Control Logout button
@@ -6211,10 +6478,6 @@ var app = {
         if (nav) nav.style.display = 'flex';
 
         var self = this;
-        setTimeout(function() {
-            self.requestNotificationPermission();
-        }, 1500);
-
         self.loadUsers();
         self.loadFollowing();
         self.loadGroups();
@@ -8881,6 +9144,13 @@ loadMessages: function() {
         if (!this.chatMessages) this.chatMessages = {};
         if (this.chatMessageListenerKey) this.stopActiveChatMessageListeners(this.chatMessageListenerKey);
 
+        var loadStartedAt = Date.now();
+        this.chatMessageLoadStartedAt[key] = loadStartedAt;
+        this.chatMessageListenerKey = key;
+        this.messageStoreListener = db.ref('messages/' + key).on('child_added', function(snap) {
+            self.appendIncomingChatMessage(snap, key);
+        });
+
         db.ref('chats/' + key + '/messages').once('value').then(function(snapshot) {
             if (loadToken !== self.chatMessageLoadId || !self.currentChat || [self.user.uid, self.currentChat.uid].sort().join('_') !== key) return;
             var messages = [];
@@ -8891,9 +9161,22 @@ loadMessages: function() {
                     if (m.text || m.image) messages.push(m);
                 }
             });
+            var messageById = {};
+            messages.forEach(function(message) { messageById[message.id] = message; });
+            (self.chatMessages[key] || []).forEach(function(message) {
+                if (!message || !message.id) return;
+                if (message.pending || (message.timestamp && message.timestamp >= loadStartedAt - 60000)) {
+                    if (messageById[message.id]) {
+                        Object.keys(message).forEach(function(property) {
+                            messageById[message.id][property] = message[property];
+                        });
+                    } else {
+                        messages.push(message);
+                    }
+                }
+            });
             messages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
             self.chatMessages[key] = messages;
-            self.chatMessageListenerKey = key;
             self.displayChatMessages(messages, key);
 
             self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
@@ -8945,9 +9228,10 @@ loadMessages: function() {
                     readStatus.setAttribute('aria-label', status.charAt(0).toUpperCase() + status.slice(1));
                 }
             });
-            self.messageStoreListener = db.ref('messages/' + key).on('child_added', function(snap) {
-                self.appendIncomingChatMessage(snap, key);
-            });
+        }).catch(function(error) {
+            if (loadToken !== self.chatMessageLoadId) return;
+            console.error('Unable to load chat history:', error);
+            self.toast('Could not load chat history. New incoming messages will still appear.', 'error');
         });
     },
 
@@ -12116,6 +12400,13 @@ loadMessages: function() {
         if (!this.chatMessages) this.chatMessages = {};
         if (this.chatMessageListenerKey) this.stopActiveChatMessageListeners(this.chatMessageListenerKey);
 
+        var loadStartedAt = Date.now();
+        this.chatMessageLoadStartedAt[key] = loadStartedAt;
+        this.chatMessageListenerKey = key;
+        this.messageStoreListener = db.ref('messages/' + key).on('child_added', function(snap) {
+            self.appendIncomingChatMessage(snap, key);
+        });
+
         db.ref('chats/' + key + '/messages').once('value').then(function(snapshot) {
             if (loadToken !== self.chatMessageLoadId || !self.currentChat || [self.user.uid, self.currentChat.uid].sort().join('_') !== key) return;
             var messages = [];
@@ -12126,9 +12417,22 @@ loadMessages: function() {
                     if (m.text || m.image) messages.push(m);
                 }
             });
+            var messageById = {};
+            messages.forEach(function(message) { messageById[message.id] = message; });
+            (self.chatMessages[key] || []).forEach(function(message) {
+                if (!message || !message.id) return;
+                if (message.pending || (message.timestamp && message.timestamp >= loadStartedAt - 60000)) {
+                    if (messageById[message.id]) {
+                        Object.keys(message).forEach(function(property) {
+                            messageById[message.id][property] = message[property];
+                        });
+                    } else {
+                        messages.push(message);
+                    }
+                }
+            });
             messages.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
             self.chatMessages[key] = messages;
-            self.chatMessageListenerKey = key;
             self.displayChatMessages(messages, key);
 
             self.chatMessagesListener = db.ref('chats/' + key + '/messages').on('child_added', function(snap) {
@@ -12180,9 +12484,10 @@ loadMessages: function() {
                     readStatus.setAttribute('aria-label', status.charAt(0).toUpperCase() + status.slice(1));
                 }
             });
-            self.messageStoreListener = db.ref('messages/' + key).on('child_added', function(snap) {
-                self.appendIncomingChatMessage(snap, key);
-            });
+        }).catch(function(error) {
+            if (loadToken !== self.chatMessageLoadId) return;
+            console.error('Unable to load chat history:', error);
+            self.toast('Could not load chat history. New incoming messages will still appear.', 'error');
         });
     },
 
@@ -14453,6 +14758,8 @@ app.appendIncomingChatMessage = function(snapshot, chatKey) {
     if ([this.user.uid, this.currentChat.uid].sort().join('_') !== chatKey) return;
     var message = snapshot.val();
     if (!message || message.sender === this.user.uid || (!message.text && !message.image)) return;
+    var loadStartedAt = this.chatMessageLoadStartedAt[chatKey];
+    if (loadStartedAt && message.timestamp && message.timestamp < loadStartedAt - 60000) return;
 
     message.id = snapshot.key;
     var messages = this.chatMessages[chatKey] || [];
@@ -16374,31 +16681,27 @@ app.updateEmailRecipients = function() {
 
 
 app.searchUsersForEmail = function(query) {
-    if (!query.trim()) {
-        document.getElementById('emailUserResults').style.display = 'none';
+    const normalized = String(query || '').trim().toLowerCase();
+    const results = document.getElementById('emailUserResults');
+    if (!normalized) {
+        results.style.display = 'none';
         return;
     }
 
-    const db = firebase.database();
-    db.ref('users').once('value', function(snap) {
+    firebase.database().ref('users').once('value').then(function(snap) {
+        if (String(document.getElementById('emailUserSearch').value || '').trim().toLowerCase() !== normalized) return;
         const users = snap.val() || {};
-        const results = document.getElementById('emailUserResults');
-        const searchQuery = query.toLowerCase();
-
         let html = '';
         Object.entries(users).forEach(function(entry) {
             const uid = entry[0];
             const user = entry[1];
 
-            // Add null checks to prevent errors
-            if (!user || !user.name || !user.email) {
-                return; // Skip this user if missing data
-            }
+            if (!user) return;
+            const userName = String(user.name || '');
+            const userEmail = String(user.email || '');
+            const username = String(user.username || '');
 
-            const userName = user.name || '';
-            const userEmail = user.email || '';
-
-            if (userName.toLowerCase().includes(searchQuery) || userEmail.toLowerCase().includes(searchQuery)) {
+            if ((userName + ' ' + userEmail + ' ' + username).toLowerCase().includes(normalized)) {
                 html += '<div style="padding:10px;border-bottom:1px solid #e5e7eb;cursor:pointer;background:white;" onclick="app.selectEmailUser(\'' + uid + '\', \'' + userName.replace(/'/g, "\\'") + '\', \'' + userEmail + '\')" onmouseover="this.style.background=\'#f3f4f6\'" onmouseout="this.style.background=\'white\'"><div style="font-weight:600;font-size:14px;color:#1a202c;">' + userName + '</div><div style="font-size:12px;color:#6b7280;">' + userEmail + '</div></div>';
             }
         });
@@ -16410,6 +16713,10 @@ app.searchUsersForEmail = function(query) {
             results.innerHTML = '<div style="padding:10px;color:#6b7280;font-size:14px;">No users found</div>';
             results.style.display = 'block';
         }
+    }).catch(function(error) {
+        console.error('Unable to search users for email:', error);
+        results.textContent = 'Unable to search users right now.';
+        results.style.display = 'block';
     });
 };
 
@@ -17158,7 +17465,7 @@ app.openNewChat = function() {
 // ============================================
 // NEW FUNCTION: Change chat wallpaper
 // ============================================
-var DEFAULT_CHAT_WALLPAPER = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1600&q=90';
+var DEFAULT_CHAT_WALLPAPER = new URL('Assets/Wallpaper.jpg', document.baseURI).href;
 var DEFAULT_CHAT_WALLPAPER_BLUR = 4;
 var DEFAULT_CHAT_WALLPAPER_DIM = 22;
 
@@ -17845,8 +18152,14 @@ app.renderEarnDefault = function() {
     var username = this.profile.username || 'member';
     var balance = Number(this.balance || 0).toFixed(2);
     earnContainer.innerHTML = `
-        <main style="min-height:100vh;padding:20px 16px 132px;background:#f8fafc;color:#0f172a;">
-            <section style="max-width:680px;margin:0 auto;">
+        <main class="earn-dashboard">
+            <section class="earn-dashboard-inner">
+                <header class="earn-page-heading">
+                    <p class="earn-page-eyebrow">CHICHI REWARDS</p>
+                    <h1>Your rewards</h1>
+                    <p>Earn coins, share them, and keep track of your progress.</p>
+                </header>
+
                 <header class="wallet-credit-card" style="--wallet-user-image: url('${this.profile.profilePhoto || 'icon-192.png'}');">
                     <div class="wallet-card-top"><span class="wallet-card-brand">CHICHI</span><span class="wallet-card-type">REWARDS CARD</span></div>
                     <div class="wallet-card-avatar" style="background-image: ${this.profile.profilePhoto ? 'url("' + this.profile.profilePhoto + '")' : 'none'};">${this.profile.profilePhoto ? '' : (this.profile.name || 'U').charAt(0).toUpperCase()}</div>
@@ -17856,22 +18169,52 @@ app.renderEarnDefault = function() {
                     <div class="wallet-card-footer"><div><span>Card holder</span><strong>${profileName}</strong></div><div><span>Member</span><strong>@${username}</strong></div><div class="wallet-card-mark"></div></div>
                 </header>
 
-                <section style="margin-top:16px;padding:18px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;">
-                    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;"><div><p style="margin:0;color:#0f766e;font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;">Today’s round</p><h2 style="margin:5px 0 5px;font-size:19px;">Choose a subject. Take your time.</h2><p style="margin:0;color:#64748b;font-size:13px;line-height:1.5;">Each correct answer adds ${EARNING_SETTINGS.free.rewardPerQuestion} coins to your wallet.</p></div><span style="font-size:26px;line-height:1;"></span></div>
-                    <button onclick="app.chooseTriviaGenre()" style="width:100%;margin-top:16px;padding:13px;border:0;border-radius:10px;background:#0f766e;color:#fff;font:inherit;font-weight:800;font-size:14px;cursor:pointer;">Start quiz</button>
+                <section class="earn-wallet-actions" aria-label="Wallet actions">
+                    <button class="earn-action-button earn-action-secondary" onclick="app.showSendMoneyModal()">Send Coins<span>Share with a friend</span></button>
+                    <button class="earn-action-button earn-action-primary" onclick="app.showRedeemRequestModal()">Redeem<span>Use your rewards</span></button>
                 </section>
 
-                <section style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;">
-                    <button onclick="app.showSendMoneyModal()" style="padding:14px;border:1px solid #99f6e4;border-radius:10px;background:#f0fdfa;color:#115e59;font:inherit;font-size:14px;font-weight:800;cursor:pointer;">Send Coins</button>
-                    <button onclick="app.showRedeemRequestModal()" style="padding:14px;border:0;border-radius:10px;background:#0f766e;color:#fff;font:inherit;font-size:14px;font-weight:800;cursor:pointer;">Redeem</button>
+                <section class="earn-section" aria-labelledby="earnWaysHeading">
+                    <div class="earn-section-heading">
+                        <div>
+                            <h2 id="earnWaysHeading">Ways to earn</h2>
+                            <p>Small wins add up. Pick a way to get started.</p>
+                        </div>
+                    </div>
+                    <article class="earn-quiz-card">
+                        <div class="earn-quiz-card-copy">
+                            <span class="earn-card-kicker">DAILY TRIVIA</span>
+                            <span class="earn-reward-pill">+${EARNING_SETTINGS.free.rewardPerQuestion} coins per correct answer</span>
+                            <h3>Put your knowledge to the test</h3>
+                            <p>Choose a subject, take your time, and earn coins for every correct answer.</p>
+                        </div>
+                        <button class="earn-quiz-button" onclick="app.chooseTriviaGenre()">Start a quiz</button>
+                    </article>
+                    <button class="referral-entry-card earn-referral-card" type="button" onclick="app.showReferralDashboard()">
+                        <span class="referral-entry-symbol" aria-hidden="true">R</span>
+                        <span><strong>Invite friends. Earn KSh 10.</strong><small>Withdraw your rewards from KSh 50 to M-Pesa or airtime.</small></span>
+                        <span class="earn-referral-arrow" aria-hidden="true">›</span>
+                    </button>
                 </section>
-                <button class="referral-entry-card" type="button" onclick="app.showReferralDashboard()"><span class="referral-entry-symbol" aria-hidden="true">R</span><span><strong>Invite friends. Earn KSh 10.</strong><small>Withdraw your rewards from KSh 50 to M-Pesa or airtime.</small></span></button>
 
-                <section style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;">
-                    <div style="padding:14px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;"><span style="display:block;color:#64748b;font-size:12px;">Questions answered</span><strong id="triviaCount" style="display:block;margin-top:4px;font-size:24px;">0</strong></div>
-                    <div style="padding:14px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;"><span style="display:block;color:#64748b;font-size:12px;">Current streak</span><strong style="display:block;margin-top:4px;font-size:24px;"><span id="streakCount">0</span> days</strong></div>
+                <section class="earn-section earn-activity-section" aria-labelledby="earnActivityHeading">
+                    <div class="earn-section-heading">
+                        <div>
+                            <h2 id="earnActivityHeading">Your activity</h2>
+                            <p>Keep showing up and watch your progress grow.</p>
+                        </div>
+                    </div>
+                    <div class="earn-stats">
+                        <div class="earn-stat-card">
+                            <span class="earn-stat-icon" aria-hidden="true">Q</span>
+                            <div><span class="earn-stat-label">Questions answered</span><strong id="triviaCount">0</strong></div>
+                        </div>
+                        <div class="earn-stat-card">
+                            <span class="earn-stat-icon earn-streak-icon" aria-hidden="true">S</span>
+                            <div><span class="earn-stat-label">Current streak</span><strong><span id="streakCount">0</span> days</strong></div>
+                        </div>
+                    </div>
                 </section>
-
             </section>
         </main>
     `;
