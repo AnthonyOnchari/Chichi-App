@@ -13511,68 +13511,27 @@ loadMessages: function() {
             return;
         }
 
-        if (!window.google || !google.accounts || !google.accounts.id) {
-            this.toast('Google account selection is unavailable. Please try again shortly.', 'error');
-            return;
-        }
-        if (typeof GOOGLE_WEB_CLIENT_ID === 'undefined' || !GOOGLE_WEB_CLIENT_ID) {
-            this.toast('Google sign-in is not configured for this website.', 'error');
-            return;
-        }
-
-        var self = this;
-        if (!this.googleIdentityInitialized) {
-            google.accounts.id.initialize({
-                client_id: GOOGLE_WEB_CLIENT_ID,
-                callback: function(response) {
-                    if (!response || !response.credential) {
-                        self.googleSignInFailed('Google did not return an account credential.');
-                        return;
-                    }
-                    self.completeWebGoogleSignIn(response.credential);
-                },
-                auto_select: false,
-                use_fedcm_for_prompt: true
-            });
-            this.googleIdentityInitialized = true;
-        }
-
-        google.accounts.id.prompt(function(notification) {
-            if (notification.isNotDisplayed()) {
-                console.warn('Google account chooser was not displayed:', notification.getNotDisplayedReason());
-                self.toast('Google account selection could not be displayed in this browser.', 'error');
-            }
-        });
-    },
-
-    completeWebGoogleSignIn: function(idToken) {
-        this.completeGoogleCredentialSignIn(idToken, 'website');
-    },
-
-    completeGoogleCredentialSignIn: function(idToken, source) {
-        var self = this;
         if (!auth && typeof initFirebase === 'function') {
             initFirebase();
         }
         if (!auth) {
-            this.googleSignInFailed('Firebase is not ready to finish Google sign-in. Please try again.');
+            this.googleSignInFailed('Firebase is not ready. Please try again.');
             return;
         }
 
-        var persistenceReady = authPersistenceReady || Promise.resolve(false);
-        persistenceReady.then(function(persistent) {
-            if (!persistent) {
-                console.warn('Firebase persistence is unavailable; continuing sign-in with the configured default.');
-            }
-            return auth.signInWithCredential(
-                firebase.auth.GoogleAuthProvider.credential(idToken)
-            );
-        }).catch(function(error) {
-            console.error('Unable to complete Google sign-in from ' + source + ':', error);
-            self.googleSignInFailed(error && error.message
-                ? error.message
-                : 'Unable to complete Google sign-in.');
-        });
+        var provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope('email');
+        provider.addScope('profile');
+        provider.setCustomParameters({ prompt: 'select_account' });
+        auth.signInWithPopup(provider).catch(function(error) {
+            console.error('Google popup sign-in failed:', error);
+            var message = error && error.code === 'auth/popup-blocked'
+                ? 'Your browser blocked the Google sign-in popup. Allow pop-ups for this site and try again.'
+                : error && error.message
+                    ? error.message
+                    : 'Unable to complete Google sign-in.';
+            this.googleSignInFailed(message);
+        }.bind(this));
     },
 
     supportsWebGoogleSignIn: function() {
