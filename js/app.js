@@ -10764,10 +10764,19 @@ loadMessages: function() {
     // ============================================
 
     switchTab: function(tab) {
+        if (tab !== 'login' && tab !== 'signup') return;
         document.querySelectorAll('.tab').forEach(function(t) { if (t && t.classList) t.classList.remove('active'); });
         document.querySelectorAll('.tab-content').forEach(function(c) { if (c && c.classList) c.classList.remove('active'); });
-        document.querySelector('[onclick="app.switchTab(\'' + tab + '\')"]').classList.add('active');
+        var activeTab = document.querySelector('[onclick="app.switchTab(\'' + tab + '\')"]');
+        if (activeTab) activeTab.classList.add('active');
         document.getElementById(tab + 'Tab').classList.add('active');
+        var googleButton = document.querySelector('.auth-google-signin .social-btn-google');
+        if (googleButton) {
+            var actionLabel = tab === 'signup' ? 'Sign up with Google' : 'Sign in with Google';
+            var label = googleButton.querySelector('span');
+            if (label) label.textContent = actionLabel;
+            googleButton.setAttribute('aria-label', actionLabel);
+        }
     },
 
     // ============================================
@@ -13537,17 +13546,29 @@ loadMessages: function() {
     },
 
     completeWebGoogleSignIn: function(idToken) {
+        this.completeGoogleCredentialSignIn(idToken, 'website');
+    },
+
+    completeGoogleCredentialSignIn: function(idToken, source) {
         var self = this;
+        if (!auth && typeof initFirebase === 'function') {
+            initFirebase();
+        }
+        if (!auth) {
+            this.googleSignInFailed('Firebase is not ready to finish Google sign-in. Please try again.');
+            return;
+        }
+
         var persistenceReady = authPersistenceReady || Promise.resolve(false);
         persistenceReady.then(function(persistent) {
             if (!persistent) {
-                throw new Error('Persistent sign-in could not be enabled. Please reload the app and try again.');
+                console.warn('Firebase persistence is unavailable; continuing sign-in with the configured default.');
             }
             return auth.signInWithCredential(
                 firebase.auth.GoogleAuthProvider.credential(idToken)
             );
         }).catch(function(error) {
-            console.error('Unable to complete Google sign-in:', error);
+            console.error('Unable to complete Google sign-in from ' + source + ':', error);
             self.googleSignInFailed(error && error.message
                 ? error.message
                 : 'Unable to complete Google sign-in.');
@@ -13562,23 +13583,8 @@ loadMessages: function() {
     onNativeSignIn: function(userData) {
         console.log(' Native sign-in success:', userData);
         if (userData && userData.uid) {
-            if (userData.googleIdToken && auth) {
-                var self = this;
-                var persistenceReady = authPersistenceReady || Promise.resolve(true);
-                persistenceReady.then(function(persistent) {
-                    if (!persistent) {
-                        throw new Error('Persistent sign-in could not be enabled. Please reload the app and try again.');
-                    }
-                    return auth.signInWithCredential(
-                        firebase.auth.GoogleAuthProvider.credential(userData.googleIdToken)
-                    );
-                })
-                    .catch(function(error) {
-                        console.error('Unable to complete Google sign-in in the app:', error);
-                        self.googleSignInFailed(error && error.message
-                            ? error.message
-                            : 'Unable to complete Google sign-in in the app.');
-                    });
+            if (userData.googleIdToken) {
+                this.completeGoogleCredentialSignIn(userData.googleIdToken, 'Android app');
                 return;
             }
 

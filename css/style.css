@@ -7433,8 +7433,8 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .auth-google-signin {
-    margin: 0 0 18px;
-    animation: slideInAuth 0.6s ease-out 0.8s both;
+    margin: 18px 0 0;
+    animation: slideInAuth 0.6s ease-out 0.5s both;
 }
 
 .auth-google-signin .social-btn-google {
@@ -7453,6 +7453,25 @@ h1, h2, h3, h4, h5, h6,
     color: #aaa;
     font-size: 12px;
     text-align: center;
+}
+
+.auth-email-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 8px;
+    color: #999;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.auth-email-divider::before,
+.auth-email-divider::after {
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,.14);
+    content: '';
 }
 
 .social-btn-google {
