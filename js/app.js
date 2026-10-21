@@ -8602,20 +8602,61 @@ loadMessages: function() {
                 title.classList.add('is-typed');
             } else {
                 var messageIndex = 0;
-                setTitleMessage(titleMessages[messageIndex]);
-                title.classList.add('is-typed');
-                var rotateTitle = function() {
+                var typeMessage = function() {
                     if (!title.isConnected) return;
-                    title.classList.add('is-changing');
-                    app.guestMessagesTypingTimer = setTimeout(function() {
+                    var message = titleMessages[messageIndex];
+                    var plainCharacters = Array.from(message.plain);
+                    var highlightedCharacters = Array.from(message.highlighted);
+                    var characters = plainCharacters.concat(highlightedCharacters);
+                    var typedIndex = 0;
+                    plainTitle.textContent = '';
+                    highlightedTitle.textContent = '';
+                    title.setAttribute('aria-label', message.plain + message.highlighted);
+                    title.classList.remove('is-typed');
+                    title.classList.add('is-typing');
+
+                    var typeNextCharacter = function() {
                         if (!title.isConnected) return;
-                        messageIndex = (messageIndex + 1) % titleMessages.length;
-                        setTitleMessage(titleMessages[messageIndex]);
-                        title.classList.remove('is-changing');
-                        app.guestMessagesTypingTimer = setTimeout(rotateTitle, 2800);
-                    }, 250);
+                        if (typedIndex >= characters.length) {
+                            title.classList.remove('is-typing');
+                            title.classList.add('is-typed');
+                            app.guestMessagesTypingTimer = setTimeout(function() {
+                                if (!title.isConnected) return;
+                                title.classList.remove('is-typed');
+                                title.classList.add('is-typing');
+                                var eraseNextCharacter = function() {
+                                    if (!title.isConnected) return;
+                                    if (highlightedCharacters.length) {
+                                        highlightedCharacters.pop();
+                                        highlightedTitle.textContent = highlightedCharacters.join('');
+                                    } else if (plainCharacters.length) {
+                                        plainCharacters.pop();
+                                        plainTitle.textContent = plainCharacters.join('');
+                                    }
+                                    if (highlightedCharacters.length || plainCharacters.length) {
+                                        app.guestMessagesTypingTimer = setTimeout(eraseNextCharacter, 22);
+                                    } else {
+                                        messageIndex = (messageIndex + 1) % titleMessages.length;
+                                        app.guestMessagesTypingTimer = setTimeout(typeMessage, 180);
+                                    }
+                                };
+                                eraseNextCharacter();
+                            }, 1600);
+                            return;
+                        }
+
+                        var character = characters[typedIndex];
+                        if (typedIndex < plainCharacters.length) {
+                            plainTitle.textContent += character;
+                        } else {
+                            highlightedTitle.textContent += character;
+                        }
+                        typedIndex += 1;
+                        app.guestMessagesTypingTimer = setTimeout(typeNextCharacter, character === '.' ? 180 : 34);
+                    };
+                    app.guestMessagesTypingTimer = setTimeout(typeNextCharacter, 120);
                 };
-                app.guestMessagesTypingTimer = setTimeout(rotateTitle, 2800);
+                typeMessage();
             }
         }
         return;

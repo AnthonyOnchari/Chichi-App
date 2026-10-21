@@ -17956,14 +17956,6 @@ button:empty[onclick*="remove"]::before {
     position: absolute;
     inset: 0;
     display: block;
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity .22s ease, transform .22s ease;
-}
-
-.main-app.guest-mode #guestMessagesTitle.is-changing .guest-v5-message-title-typed {
-    opacity: 0;
-    transform: translateY(6px);
 }
 
 .main-app.guest-mode .guest-v5-message-caret {
@@ -19888,7 +19880,7 @@ button:empty[onclick*="remove"]::before {
 @media (max-width: 700px) {
     .main-app.guest-mode .guest-v5-message-board {
         padding-top: 58px;
-        transform: translateY(-32px);
+        transform: translateY(-48px);
     }
     color: #29443f;
     font-size: 13px;
