@@ -202,6 +202,8 @@ var app = {
             return;
         }
 
+        if (this._appInitStarted) return;
+        this._appInitStarted = true;
         this.chatMessages = {};
         this.unreadMessages = {};
         this.notifiedMessages = {};
@@ -13534,13 +13536,39 @@ loadMessages: function() {
         }.bind(this));
     },
 
+    completeGoogleCredentialSignIn: function(idToken, source) {
+        var self = this;
+        if (!auth && typeof initFirebase === 'function') {
+            initFirebase();
+        }
+        if (!auth) {
+            this.googleSignInFailed('Firebase is not ready to finish Google sign-in. Please try again.');
+            return;
+        }
+
+        var persistenceReady = authPersistenceReady || Promise.resolve(true);
+        persistenceReady.then(function(persistent) {
+            if (!persistent) {
+                console.warn('Firebase persistence is unavailable; continuing sign-in with the configured default.');
+            }
+            return auth.signInWithCredential(
+                firebase.auth.GoogleAuthProvider.credential(idToken)
+            );
+        }).catch(function(error) {
+            console.error('Unable to complete Google sign-in from ' + source + ':', error);
+            self.googleSignInFailed(error && error.message
+                ? error.message
+                : 'Unable to complete Google sign-in.');
+        });
+    },
+
     supportsWebGoogleSignIn: function() {
         return ['http:', 'https:', 'chrome-extension:'].indexOf(window.location.protocol) !== -1;
     },
 
     // ============== NEW: Called from native Android after successful sign-in ==============
     onNativeSignIn: function(userData) {
-        console.log(' Native sign-in success:', userData);
+        console.log(' Native sign-in success:', Boolean(userData && userData.uid));
         if (userData && userData.uid) {
             if (userData.googleIdToken) {
                 this.completeGoogleCredentialSignIn(userData.googleIdToken, 'Android app');

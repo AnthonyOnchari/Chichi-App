@@ -1225,7 +1225,7 @@
 <div id="toastContainer"></div>
 
 <!-- APP JS -->
-<script defer src="js/app.js?v=google-signin-popup-20261021-2"></script>
+<script defer src="js/app.js?v=google-signin-popup-20261021-3"></script>
 
 <!-- ============================================================ -->
 <!-- ============ COMPLETE SCRIPT WITH PWA + NOTIFICATIONS ======== -->
@@ -1234,7 +1234,7 @@
     // ============================================
     // 1. AUTO-INIT WHEN FIREBASE IS READY
     // ============================================
-    var hideSplash = function() { 
+    var hideSplash = function() {
         var splash = document.getElementById("splashScreen"); 
         if (splash) { 
             splash.style.opacity = "0"; 
@@ -1245,32 +1245,34 @@
     };
     
     document.addEventListener('DOMContentLoaded', function() {
+        var appStartupHandled = false;
+        var firebaseCheck = null;
+        var firebaseTimeout = null;
+
+        var startAppOnce = function() {
+            if (appStartupHandled) return;
+            appStartupHandled = true;
+            if (firebaseCheck) clearInterval(firebaseCheck);
+            if (firebaseTimeout) clearTimeout(firebaseTimeout);
+            if (typeof app !== 'undefined' && app.init) app.init();
+            hideSplash();
+        };
+
         if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
             console.log(' Firebase ready, starting app...');
-            if (typeof app !== 'undefined' && app.init) {
-                app.init(); 
-                hideSplash();
-            }
+            startAppOnce();
         } else {
             console.log(' Waiting for Firebase...');
-            var checkFirebase = setInterval(function() {
+            firebaseCheck = setInterval(function() {
                 if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
-                    clearInterval(checkFirebase);
                     console.log(' Firebase loaded, starting app...');
-                    if (typeof app !== 'undefined' && app.init) {
-                        app.init(); 
-                        hideSplash();
-                    }
+                    startAppOnce();
                 }
             }, 500);
             
-            setTimeout(function() {
-                clearInterval(checkFirebase);
+            firebaseTimeout = setTimeout(function() {
                 console.warn(' Firebase timeout, trying anyway...');
-                if (typeof app !== 'undefined' && app.init) {
-                    app.init(); 
-                    hideSplash();
-                }
+                startAppOnce();
             }, 10000);
         }
     });
