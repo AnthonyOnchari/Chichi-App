@@ -13502,18 +13502,56 @@ loadMessages: function() {
             return;
         }
 
-        console.log(' Using Google redirect fallback');
-        var provider = new firebase.auth.GoogleAuthProvider();
-        provider.addScope('email');
-        provider.addScope('profile');
-        provider.setCustomParameters({
-            'prompt': 'select_account',
-            'include_granted_scopes': 'true'
+        if (!window.google || !google.accounts || !google.accounts.id) {
+            this.toast('Google account selection is unavailable. Please try again shortly.', 'error');
+            return;
+        }
+        if (typeof GOOGLE_WEB_CLIENT_ID === 'undefined' || !GOOGLE_WEB_CLIENT_ID) {
+            this.toast('Google sign-in is not configured for this website.', 'error');
+            return;
+        }
+
+        var self = this;
+        if (!this.googleIdentityInitialized) {
+            google.accounts.id.initialize({
+                client_id: GOOGLE_WEB_CLIENT_ID,
+                callback: function(response) {
+                    if (!response || !response.credential) {
+                        self.googleSignInFailed('Google did not return an account credential.');
+                        return;
+                    }
+                    self.completeWebGoogleSignIn(response.credential);
+                },
+                auto_select: false,
+                use_fedcm_for_prompt: true
+            });
+            this.googleIdentityInitialized = true;
+        }
+
+        google.accounts.id.prompt(function(notification) {
+            if (notification.isNotDisplayed()) {
+                console.warn('Google account chooser was not displayed:', notification.getNotDisplayedReason());
+                self.toast('Google account selection could not be displayed in this browser.', 'error');
+            }
         });
-        auth.signInWithRedirect(provider).catch(function(error) {
-            console.error(' Google redirect sign-in error:', error);
-            this.toast('Google sign-in failed: ' + error.message, 'error');
-        }.bind(this));
+    },
+
+    completeWebGoogleSignIn: function(idToken) {
+        var self = this;
+        var persistenceReady = authPersistenceReady || Promise.resolve(false);
+        persistenceReady.then(function(persistent) {
+            if (!persistent) {
+                throw new Error('Persistent sign-in could not be enabled. Please reload the app and try again.');
+            }
+            return auth.signInWithCredential(
+                firebase.auth.GoogleAuthProvider.credential(idToken)
+            );
+        }).catch(function(error) {
+            console.error('Unable to complete Google sign-in:', error);
+            self.googleSignInFailed(error && error.message
+                ? error.message
+                : 'Unable to complete Google sign-in.');
+        });
     },
 
     supportsWebGoogleSignIn: function() {
@@ -13526,10 +13564,20 @@ loadMessages: function() {
         if (userData && userData.uid) {
             if (userData.googleIdToken && auth) {
                 var self = this;
-                auth.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(userData.googleIdToken))
+                var persistenceReady = authPersistenceReady || Promise.resolve(true);
+                persistenceReady.then(function(persistent) {
+                    if (!persistent) {
+                        throw new Error('Persistent sign-in could not be enabled. Please reload the app and try again.');
+                    }
+                    return auth.signInWithCredential(
+                        firebase.auth.GoogleAuthProvider.credential(userData.googleIdToken)
+                    );
+                })
                     .catch(function(error) {
                         console.error('Unable to complete Google sign-in in the app:', error);
-                        self.googleSignInFailed(error.message);
+                        self.googleSignInFailed(error && error.message
+                            ? error.message
+                            : 'Unable to complete Google sign-in in the app.');
                     });
                 return;
             }

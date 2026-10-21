@@ -16,6 +16,8 @@ const FIREBASE_CONFIG = {
     databaseURL: "https://chichi-001-default-rtdb.firebaseio.com"
 };
 
+const GOOGLE_WEB_CLIENT_ID = "219736252899-o0392olrvfnelp9t8kub6t7a6k6oh8i0.apps.googleusercontent.com";
+
 // ============================================
 // CLOUDINARY CONFIGURATION
 // ============================================

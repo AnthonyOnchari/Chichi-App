@@ -213,8 +213,10 @@ public class LauncherActivity extends AppCompatActivity {
                         hasGoogleProvider |= "google.com".equals(provider.getProviderId());
                     }
                     if (hasGoogleProvider) {
-                        mGoogleSignInClient.silentSignIn().addOnSuccessListener(account ->
-                                sendUserToWebView(currentUser, account.getIdToken()));
+                        mGoogleSignInClient.silentSignIn()
+                                .addOnSuccessListener(account -> sendUserToWebView(currentUser, account.getIdToken()))
+                                .addOnFailureListener(error ->
+                                        android.util.Log.e("CHICHI_AUTH", "Could not restore Google sign-in in WebView", error));
                     } else {
                         sendUserToWebView(currentUser);
                     }
@@ -511,8 +513,17 @@ public class LauncherActivity extends AppCompatActivity {
                         sendUserToWebView(user, idToken);
                         Toast.makeText(this, "Signed in successfully", Toast.LENGTH_SHORT).show();
                     } else {
-                        Toast.makeText(this, "Firebase sign-in failed", Toast.LENGTH_LONG).show();
-                        webView.evaluateJavascript("app.googleSignInFailed('Firebase auth failed')", null);
+                        String message = task.getException() != null
+                                ? task.getException().getMessage()
+                                : null;
+                        if (message == null || message.isEmpty()) {
+                            message = "Firebase could not sign in with the selected Google account.";
+                        }
+                        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                        webView.evaluateJavascript(
+                                "if(window.app){app.googleSignInFailed(" + JSONObject.quote(message) + ");}",
+                                null
+                        );
                     }
                 });
     }
@@ -522,21 +533,24 @@ public class LauncherActivity extends AppCompatActivity {
     }
 
     private void sendUserToWebView(FirebaseUser user, String googleIdToken) {
+        if (user == null || webView == null) {
+            android.util.Log.e("CHICHI_AUTH", "Cannot hand off sign-in: Firebase user or WebView is unavailable");
+            return;
+        }
         try {
             JSONObject userJson = new JSONObject();
             userJson.put("uid", user.getUid());
             userJson.put("email", user.getEmail());
             userJson.put("displayName", user.getDisplayName());
             userJson.put("photoURL", user.getPhotoUrl() != null ? user.getPhotoUrl().toString() : "");
-            userJson.put("idToken", user.getIdToken(false).getResult().getToken());
             if (googleIdToken != null && !googleIdToken.isEmpty()) {
                 userJson.put("googleIdToken", googleIdToken);
             }
 
-            String script = "app.onNativeSignIn(" + userJson.toString() + ");";
+            String script = "if(window.app){app.onNativeSignIn(" + userJson.toString() + ");}";
             webView.evaluateJavascript(script, null);
         } catch (Exception e) {
-            e.printStackTrace();
+            android.util.Log.e("CHICHI_AUTH", "Could not hand off native sign-in to WebView", e);
         }
     }
 
