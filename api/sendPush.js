@@ -35,6 +35,14 @@ export default async function handler(req, res) {
         var result = await firebaseAdmin.messaging().sendEachForMulticast({
             tokens: tokens,
             notification: { title: String(body.title).slice(0, 80), body: String(body.message).slice(0, 240) },
+            android: {
+                priority: 'high',
+                notification: {
+                    channelId: 'chichi_messages',
+                    priority: 'high',
+                    sound: 'default'
+                }
+            },
             data: { url: body.url || '/' }
         });
 

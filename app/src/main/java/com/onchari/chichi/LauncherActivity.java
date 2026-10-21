@@ -120,6 +120,7 @@ public class LauncherActivity extends AppCompatActivity {
         activeActivity = this;
         setContentView(R.layout.activity_main);
 
+        ChichiMessagingService.ensureNotificationChannel(this);
         webView = findViewById(R.id.webView);
         progressBar = findViewById(R.id.progressBar);
 

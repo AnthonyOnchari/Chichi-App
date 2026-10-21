@@ -19799,15 +19799,11 @@ button:empty[onclick*="remove"]::before {
 }
 
 @media (max-width: 700px) {
-    #mainApp:has(#messagesView.active) .bottom-nav {
-        display: none !important;
-    }
-
     #messagesView.active {
         padding-bottom: 0;
     }
 
     #messagesView.active #messageList {
-        padding-bottom: 4px;
+        padding-bottom: 48px;
     }
 }

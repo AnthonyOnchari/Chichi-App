@@ -12615,39 +12615,62 @@ loadMessages: function() {
         if (input) input.value = '';
         if (input) input.focus();
 
-        messageRef.set({
+        var messageData = {
+            id: messageRef.key,
             text: text,
             sender: self.user.uid,
+            senderName: self.profile.name || self.user.displayName || 'User',
             timestamp: firebase.database.ServerValue.TIMESTAMP,
             read: false
-        }).then(function() {
-            return db.ref('chats/' + key + '/messages/' + messageRef.key).set({
-                text: text,
-                sender: self.user.uid,
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                read: false
-            });
-        }).then(function() {
+        };
+        db.ref('chats/' + key + '/messages/' + messageRef.key).set(messageData).then(function() {
             tempMessage.pending = false;
+            tempMessage.timestamp = now;
             if (self.currentChat && [self.user.uid, self.currentChat.uid].sort().join('_') === key) {
                 self.displayChatMessages(self.chatMessages[key], key);
             }
             self.loadMessages();
+            self.sendPushNotification(
+                recipientId,
+                'New message from ' + messageData.senderName,
+                text
+            ).then(function(result) {
+                if (!result.sent) {
+                    throw new Error('No notification device is registered for this account. Enable notifications on the recipient’s device.');
+                }
+            }).catch(function(error) {
+                console.error('Message sent, but its push notification could not be delivered:', error);
+                self.toast('Message sent, but notification could not be delivered: ' + error.message, 'error');
+            });
+
+            return messageRef.set(messageData).catch(function(error) {
+                console.error('Chat message was sent, but the inbox mirror could not be saved:', error);
+                self.toast('Message sent, but your inbox may take a moment to update.', 'error');
+            });
+        }).then(function() {
             return self.sendPlanAssistantWelcomeIfNeeded(key, self.planSupportAdminId || recipientId).catch(function(error) {
                 console.error('Plan assistant welcome failed:', error);
                 self.toast('Your message was sent, but the assistant could not reply just now.', 'error');
                 return false;
             });
         }).then(function() {
-            return self.capturePlanPaymentReceiptIfNeeded(key, text);
+            return self.capturePlanPaymentReceiptIfNeeded(key, text).catch(function(error) {
+                console.error('Message sent, but payment receipt processing failed:', error);
+                self.toast('Your message was sent, but payment confirmation could not be processed.', 'error');
+            });
         }).catch(function(err) {
-            self.toast('Error sending message', 'error');
+            console.error('Unable to send chat message:', err);
+            self.toast('Message was not sent: ' + (err.message || 'Please check your connection and try again.'), 'error');
             var idx = self.chatMessages[key].indexOf(tempMessage);
             if (idx > -1) {
                 self.chatMessages[key].splice(idx, 1);
                 if (self.currentChat && [self.user.uid, self.currentChat.uid].sort().join('_') === key) {
                     self.displayChatMessages(self.chatMessages[key], key);
                 }
+            }
+            if (input && !input.value) {
+                input.value = text;
+                input.focus();
             }
         });
     },
@@ -15634,8 +15657,10 @@ app.searchExplorePeople = function(query) {
 };
 
 app.sendPushNotification = function(recipientUid, title, message) {
-    if (!recipientUid || !this.user || !this.user.uid) return;
-    this.user.getIdToken().then(function(idToken) {
+    if (!recipientUid || !this.user || !this.user.uid) {
+        return Promise.reject(new Error('Sign in is required to send a notification.'));
+    }
+    return this.user.getIdToken().then(function(idToken) {
         return fetch('/api/sendPush', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
@@ -15647,8 +15672,16 @@ app.sendPushNotification = function(recipientUid, title, message) {
                 url: '/'
             })
         });
-    }.bind(this)).catch(function(error) {
-        console.error('Push notification request failed:', error);
+    }.bind(this)).then(function(response) {
+        return response.json().catch(function() {
+            return {};
+        }).then(function(result) {
+            if (!response.ok) {
+                throw new Error(result.error || 'Push service returned HTTP ' + response.status + '.');
+            }
+            if (!result.success) throw new Error(result.error || 'Push service could not send the notification.');
+            return result;
+        });
     });
 };
 

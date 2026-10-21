@@ -3,6 +3,7 @@ package com.onchari.chichi;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 
@@ -16,7 +17,18 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 public class ChichiMessagingService extends FirebaseMessagingService {
-    private static final String CHANNEL_ID = "chichi_updates";
+    static final String CHANNEL_ID = "chichi_messages";
+
+    static void ensureNotificationChannel(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        if (manager == null || manager.getNotificationChannel(CHANNEL_ID) != null) return;
+        manager.createNotificationChannel(new NotificationChannel(
+                CHANNEL_ID,
+                context.getString(R.string.notification_channel_updates),
+                NotificationManager.IMPORTANCE_HIGH
+        ));
+    }
 
     @Override
     public void onNewToken(@NonNull String token) {
@@ -36,10 +48,7 @@ public class ChichiMessagingService extends FirebaseMessagingService {
                 ? message.getNotification().getBody() : message.getData().get("body");
         if (body == null || body.isEmpty()) body = "You have a new update.";
 
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(new NotificationChannel(CHANNEL_ID, "CHICHI updates", NotificationManager.IMPORTANCE_DEFAULT));
-        }
+        ensureNotificationChannel(this);
         Intent intent = new Intent(this, LauncherActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Builder notification = new NotificationCompat.Builder(this, CHANNEL_ID)
@@ -48,7 +57,7 @@ public class ChichiMessagingService extends FirebaseMessagingService {
                 .setContentText(body)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+                .setPriority(NotificationCompat.PRIORITY_HIGH);
         if (Build.VERSION.SDK_INT < 33 || checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
             NotificationManagerCompat.from(this).notify((int) System.currentTimeMillis(), notification.build());
         }
