@@ -87,6 +87,11 @@ public class LauncherActivity extends AppCompatActivity {
                     requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 7001);
                     return;
                 }
+                if (!areSystemNotificationsEnabled()) {
+                    openNotificationSettings();
+                    notifyWebNotificationPermission(false);
+                    return;
+                }
                 registerPushToken();
                 notifyWebNotificationPermission(true);
             });
@@ -94,7 +99,7 @@ public class LauncherActivity extends AppCompatActivity {
 
         @android.webkit.JavascriptInterface
         public boolean areNotificationsEnabled() {
-            return androidx.core.app.NotificationManagerCompat.from(LauncherActivity.this).areNotificationsEnabled();
+            return areSystemNotificationsEnabled();
         }
 
         @android.webkit.JavascriptInterface
@@ -200,7 +205,16 @@ public class LauncherActivity extends AppCompatActivity {
                 FirebaseUser currentUser = mAuth.getCurrentUser();
                 registerPushToken();
                 if (currentUser != null) {
-                    sendUserToWebView(currentUser);
+                    boolean hasGoogleProvider = false;
+                    for (com.google.firebase.auth.UserInfo provider : currentUser.getProviderData()) {
+                        hasGoogleProvider |= "google.com".equals(provider.getProviderId());
+                    }
+                    if (hasGoogleProvider) {
+                        mGoogleSignInClient.silentSignIn().addOnSuccessListener(account ->
+                                sendUserToWebView(currentUser, account.getIdToken()));
+                    } else {
+                        sendUserToWebView(currentUser);
+                    }
                 }
             }
 
@@ -280,8 +294,21 @@ public class LauncherActivity extends AppCompatActivity {
     }
 
     private void startGoogleSignIn() {
-        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-        startActivityForResult(signInIntent, RC_SIGN_IN);
+        mGoogleSignInClient.signOut().addOnCompleteListener(this, task -> {
+            if (!task.isSuccessful()) {
+                String reason = task.getException() != null
+                        ? task.getException().getMessage()
+                        : "Could not open Google account selection";
+                Toast.makeText(this, reason, Toast.LENGTH_LONG).show();
+                webView.evaluateJavascript(
+                        "if(window.app){app.googleSignInFailed(" + JSONObject.quote(reason) + ");}",
+                        null
+                );
+                return;
+            }
+            Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+            startActivityForResult(signInIntent, RC_SIGN_IN);
+        });
     }
 
     private void startPhoneVerification(String phoneNumber) {
@@ -327,10 +354,11 @@ public class LauncherActivity extends AppCompatActivity {
             FirebaseUser user = mAuth.getCurrentUser();
             if (user != null) {
                 com.google.firebase.database.FirebaseDatabase.getInstance()
-                        .getReference("users").child(user.getUid()).child("fcmTokens").child(token).setValue(true);
+                        .getReference("users").child(user.getUid()).child("fcmTokens").child(token).setValue(true)
+                        .addOnFailureListener(error -> android.util.Log.e("CHICHI_PUSH", "Could not save native push token", error));
             }
             sendPushTokenToWebView(token);
-        });
+        }).addOnFailureListener(error -> notifyWebPushTokenRegistration(false, error.getMessage()));
     }
 
     static void refreshWebPushToken(String token) {
@@ -342,24 +370,60 @@ public class LauncherActivity extends AppCompatActivity {
         if (!pageLoaded || webView == null || token == null || token.isEmpty()) return;
         String safeToken = JSONObject.quote(token);
         runOnUiThread(() -> webView.evaluateJavascript(
-                "if(window.app&&typeof app.registerNativePushToken==='function'){app.registerNativePushToken(" + safeToken + ");}",
+                "if(window.app&&typeof app.registerNativePushToken==='function'){app.registerNativePushToken(" + safeToken + ").then(function(saved){if(app.onNativePushTokenRegistration){app.onNativePushTokenRegistration(saved,null);}}).catch(function(error){if(app.onNativePushTokenRegistration){app.onNativePushTokenRegistration(false,error.message);}});}",
                 null
         ));
+    }
+
+    private void notifyWebPushTokenRegistration(boolean saved, String errorMessage) {
+        if (webView == null) return;
+        String safeError = JSONObject.quote(errorMessage == null ? "Unable to retrieve Firebase notification token." : errorMessage);
+        runOnUiThread(() -> webView.evaluateJavascript(
+                "if(window.app&&app.onNativePushTokenRegistration){app.onNativePushTokenRegistration(" + saved + "," + safeError + ");}",
+                null
+        ));
+    }
+
+    private boolean areSystemNotificationsEnabled() {
+        if (android.os.Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            return false;
+        }
+        if (!androidx.core.app.NotificationManagerCompat.from(this).areNotificationsEnabled()) return false;
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            android.app.NotificationChannel channel = getSystemService(android.app.NotificationManager.class)
+                    .getNotificationChannel(ChichiMessagingService.CHANNEL_ID);
+            return channel != null && channel.getImportance() != android.app.NotificationManager.IMPORTANCE_NONE;
+        }
+        return true;
     }
 
     private void notifyWebNotificationPermission(boolean granted) {
         if (webView == null) return;
         runOnUiThread(() -> webView.evaluateJavascript(
-                "if(window.app&&typeof app.onNativeNotificationsPermission==='function'){app.onNativeNotificationsPermission(" + granted + ");}",
+                "if(window.app&&typeof app.onNativeNotificationsPermission==='function'){app.onNativeNotificationsPermission(" + (granted && areSystemNotificationsEnabled()) + ");}",
                 null
         ));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (webView != null && pageLoaded) {
+            boolean enabled = areSystemNotificationsEnabled();
+            runOnUiThread(() -> webView.evaluateJavascript(
+                    "if(window.app&&app.onNativeNotificationAvailabilityChanged){app.onNativeNotificationAvailabilityChanged(" + enabled + ");}",
+                    null
+            ));
+        }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 7001) {
-            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                    && areSystemNotificationsEnabled();
             if (granted) registerPushToken();
             notifyWebNotificationPermission(granted);
             return;
@@ -407,7 +471,7 @@ public class LauncherActivity extends AppCompatActivity {
                     if (task.isSuccessful()) {
                         FirebaseUser user = mAuth.getCurrentUser();
                         registerPushToken();
-                        sendUserToWebView(user);
+                        sendUserToWebView(user, idToken);
                         Toast.makeText(this, "Signed in successfully", Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(this, "Firebase sign-in failed", Toast.LENGTH_LONG).show();
@@ -417,6 +481,10 @@ public class LauncherActivity extends AppCompatActivity {
     }
 
     private void sendUserToWebView(FirebaseUser user) {
+        sendUserToWebView(user, null);
+    }
+
+    private void sendUserToWebView(FirebaseUser user, String googleIdToken) {
         try {
             JSONObject userJson = new JSONObject();
             userJson.put("uid", user.getUid());
@@ -424,6 +492,9 @@ public class LauncherActivity extends AppCompatActivity {
             userJson.put("displayName", user.getDisplayName());
             userJson.put("photoURL", user.getPhotoUrl() != null ? user.getPhotoUrl().toString() : "");
             userJson.put("idToken", user.getIdToken(false).getResult().getToken());
+            if (googleIdToken != null && !googleIdToken.isEmpty()) {
+                userJson.put("googleIdToken", googleIdToken);
+            }
 
             String script = "app.onNativeSignIn(" + userJson.toString() + ");";
             webView.evaluateJavascript(script, null);

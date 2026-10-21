@@ -7432,6 +7432,29 @@ h1, h2, h3, h4, h5, h6,
     animation: slideInAuth 0.6s ease-out 0.8s both;
 }
 
+.auth-google-signin {
+    margin: 0 0 18px;
+    animation: slideInAuth 0.6s ease-out 0.8s both;
+}
+
+.auth-google-signin .social-btn-google {
+    width: 100%;
+    min-height: 48px;
+    font-size: 14px;
+}
+
+.auth-google-signin .social-btn-google svg {
+    flex: 0 0 18px;
+    filter: none;
+}
+
+.auth-google-signin p {
+    margin: 8px 0 0;
+    color: #aaa;
+    font-size: 12px;
+    text-align: center;
+}
+
 .social-btn-google {
     flex: 1;
     padding: 11px 12px;

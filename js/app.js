@@ -102,6 +102,8 @@ var app = {
     messageStoreListener: null,
     inboxMessagesRef: null,
     inboxMessagesListener: null,
+    inboxChatsRef: null,
+    inboxChatsListener: null,
     inboxMessagesUserId: null,
     inboxRefreshTimer: null,
     typingPath: null,
@@ -607,11 +609,19 @@ var app = {
     requestNotificationPermission: function() {
         if (window.Android && typeof window.Android.enableNotifications === 'function') {
             window.Android.enableNotifications();
-            this.toast('Allow CHICHI notifications in your phone settings prompt.', 'info');
+            this.toast('Allow notifications in the Android permission prompt. If you previously blocked them, switch them on in app settings.', 'info');
             return Promise.resolve(true);
         }
-        if (!('Notification' in window) || !navigator.serviceWorker || !window.isSecureContext) {
-            this.toast('Phone notifications are not supported in this browser. Install CHICHI or open it over HTTPS.', 'error');
+        if (!('Notification' in window)) {
+            this.toast('This browser does not support push notifications. Open CHICHI in a supported browser or use the Android app.', 'error');
+            return Promise.resolve(false);
+        }
+        if (!window.isSecureContext) {
+            this.toast('Push notifications require a secure HTTPS page. Open CHICHI at https://www.chichi.buzz or use the Android app.', 'error');
+            return Promise.resolve(false);
+        }
+        if (!navigator.serviceWorker) {
+            this.toast('This browser cannot run push notifications. Open CHICHI at https://www.chichi.buzz in a supported browser.', 'error');
             return Promise.resolve(false);
         }
 
@@ -687,6 +697,29 @@ var app = {
         });
     },
 
+    onNativePushTokenRegistration: function(saved, errorMessage) {
+        var status = document.querySelector('.notification-permission-status');
+        if (saved) {
+            if (status) status.textContent = 'Phone notifications are enabled on this device.';
+            return;
+        }
+        if (errorMessage) {
+            console.error('Native push token registration failed:', errorMessage);
+            if (status) status.textContent = 'Device permission is on, but CHICHI could not register this phone for push notifications. Check your connection and try again.';
+        }
+    },
+
+    onNativeNotificationAvailabilityChanged: function(enabled) {
+        var status = document.querySelector('.notification-permission-status');
+        var settingsButton = document.querySelector('.notification-settings-button');
+        if (status) {
+            status.textContent = enabled
+                ? 'System notifications are enabled for the CHICHI app.'
+                : 'Notifications are turned off for CHICHI. Open app notification settings below and switch them on.';
+        }
+        if (settingsButton) settingsButton.style.display = enabled ? 'none' : '';
+    },
+
     onNativeNotificationsPermission: function(granted) {
         var status = document.querySelector('.notification-permission-status');
         var settingsButton = document.querySelector('.notification-settings-button');
@@ -715,25 +748,35 @@ var app = {
             ? window.Android.areNotificationsEnabled()
             : null;
         var notificationBlocked = !isNativeApp && 'Notification' in window && Notification.permission === 'denied';
+        var webPushUnavailable = !isNativeApp && (
+            !('Notification' in window) || !navigator.serviceWorker || !window.isSecureContext
+        );
         var notificationStatus = isNativeApp
             ? (nativeNotificationsEnabled
                 ? 'System notifications are enabled for the CHICHI app.'
                 : 'Notifications are turned off for CHICHI. Open app notification settings below and switch them on.')
             : ('Notification' in window
-                ? (Notification.permission === 'granted'
+                ? (!window.isSecureContext
+                    ? 'Push notifications need a secure HTTPS connection. This page is running from a download or an insecure address.'
+                    : !navigator.serviceWorker
+                        ? 'This browser cannot run background push notifications. Open CHICHI in a supported browser.'
+                        : (Notification.permission === 'granted'
                     ? 'System notifications are enabled for this website.'
                     : notificationBlocked
                         ? 'Your browser is blocking CHICHI notifications. Follow the steps below to allow them.'
-                        : 'Enable system notifications to receive alerts when CHICHI is in the background.')
+                        : 'Enable system notifications to receive alerts when CHICHI is in the background.'))
                 : 'System notifications are not supported by this browser.');
         var blockedHelp = notificationBlocked
             ? '<div class="notification-permission-help"><strong>Allow notifications in your browser</strong><ol><li>Open this site’s permissions from the browser address bar or site menu.</li><li>Set Notifications to Allow.</li><li>Return to CHICHI and reload this page.</li></ol>Your browser controls this permission, so CHICHI cannot turn it on while it is blocked.</div>'
             : '';
-        var enableButton = notificationBlocked
+        var unsupportedHelp = webPushUnavailable
+            ? '<div class="notification-permission-help"><strong>Open CHICHI securely</strong><p>Push notifications cannot be enabled from a downloaded file or an insecure page. Open CHICHI over HTTPS in a supported browser, or use the installed Android app.</p><a href="https://www.chichi.buzz/" target="_blank" rel="noopener">Open CHICHI website</a></div>'
+            : '';
+        var enableButton = notificationBlocked || webPushUnavailable
             ? ''
             : '<button class="btn-submit" style="width:100%;margin-bottom:10px;" onclick="app.requestNotificationPermission()">Enable phone notifications</button>';
-        var nativeSettingsButton = isNativeApp && !nativeNotificationsEnabled
-            ? '<button class="btn-submit notification-settings-button" type="button" onclick="app.openNativeNotificationSettings()">Open app notification settings</button>'
+        var nativeSettingsButton = isNativeApp
+            ? '<button class="btn-submit notification-settings-button" type="button" style="' + (nativeNotificationsEnabled ? 'display:none;' : '') + '" onclick="app.openNativeNotificationSettings()">Open app notification settings</button>'
             : '';
 
         modal.innerHTML = `<div class="modal notification-preferences-modal" style="max-width:400px;">
@@ -755,6 +798,7 @@ var app = {
                 ${notificationStatus}
             </div>
             ${blockedHelp}
+            ${unsupportedHelp}
 
             ${enableButton}
             ${nativeSettingsButton}
@@ -2019,6 +2063,7 @@ var app = {
 
         db.ref('chats/' + chatKey + '/messages').push(messageData).then(function() {
             self.toast(' Message sent to ' + toName, 'success');
+            self.notifyChatRecipient(toUid, 'CHICHI Support', message);
         }).catch(function(err) {
             self.toast(' Error sending message: ' + err.message, 'error');
         });
@@ -2112,50 +2157,113 @@ var app = {
         var container = document.getElementById('adminChatsList');
         if (!container) return;
         container.innerHTML = '<div class="admin-empty-state">Loading conversations...</div>';
-        var users = this.users || {};
-        db.ref('messages').once('value').then(function(snapshot) {
-            var chats = [];
-            snapshot.forEach(function(chatSnapshot) {
-                var chatKey = chatSnapshot.key;
-                var messages = chatSnapshot.val() || {};
-                var rows = [];
-                chatSnapshot.forEach(function(messageSnapshot) {
+        var self = this;
+        Promise.all([
+            db.ref('messages').once('value'),
+            db.ref('chats').once('value'),
+            db.ref('users').once('value')
+        ]).then(function(snapshots) {
+            var messagesSnapshot = snapshots[0];
+            var chatsSnapshot = snapshots[1];
+            var users = snapshots[2].val() || self.users || {};
+            var messagesByChat = {};
+
+            var collectMessages = function(chatKey, messageListSnapshot) {
+                if (!messagesByChat[chatKey]) messagesByChat[chatKey] = {};
+                messageListSnapshot.forEach(function(messageSnapshot) {
                     var message = messageSnapshot.val() || {};
-                    if (message.deleted || (!message.text && !message.image && !message.voiceUrl)) return;
-                    rows.push(message);
+                    var text = message.text || message.message || '';
+                    if (message.deleted || message.deletedForEveryone ||
+                        (!text && !message.image && !message.voiceUrl)) return;
+                    var id = String(message.id || messageSnapshot.key);
+                    var existing = messagesByChat[chatKey][id] || {};
+                    Object.keys(message).forEach(function(property) {
+                        existing[property] = message[property];
+                    });
+                    existing.id = id;
+                    if (!existing.text && existing.message) existing.text = existing.message;
+                    messagesByChat[chatKey][id] = existing;
                 });
-                if (!rows.length) return;
+            };
+
+            messagesSnapshot.forEach(function(chatSnapshot) {
+                collectMessages(chatSnapshot.key, chatSnapshot);
+            });
+            chatsSnapshot.forEach(function(chatSnapshot) {
+                var messageList = chatSnapshot.child('messages');
+                if (messageList.exists()) collectMessages(chatSnapshot.key, messageList);
+            });
+
+            var escapeHtml = function(value) {
+                return self.escapeAdminPaymentHtml(value);
+            };
+            var displayNameFor = function(uid, rows) {
+                var profile = users[uid] || {};
+                if (profile.name || profile.username) return profile.name || profile.username;
+                var sentMessage = rows.find(function(message) {
+                    return (message.sender || message.senderId) === uid && message.senderName;
+                });
+                if (sentMessage) return sentMessage.senderName;
+                var receivedMessage = rows.find(function(message) {
+                    return message.recipientId === uid && message.recipientName;
+                });
+                return receivedMessage ? receivedMessage.recipientName : uid;
+            };
+
+            var chats = Object.keys(messagesByChat).map(function(chatKey) {
+                var rows = Object.keys(messagesByChat[chatKey]).map(function(id) {
+                    return messagesByChat[chatKey][id];
+                });
                 rows.sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
                 var ids = chatKey.split('_');
-                var names = ids.map(function(id) { return (users[id] && (users[id].name || users[id].username)) || id; });
-                chats.push({ key: chatKey, names: names, rows: rows.slice(-8), latest: rows[rows.length - 1] });
+                var names = ids.map(function(id) { return displayNameFor(id, rows); });
+                var searchTerms = ids.reduce(function(terms, id) {
+                    var profile = users[id] || {};
+                    return terms.concat([profile.name, profile.username, profile.email, id]);
+                }, names.slice());
+                return {
+                    key: chatKey,
+                    names: names,
+                    searchTerms: searchTerms,
+                    rows: rows.slice(-8),
+                    latest: rows[rows.length - 1]
+                };
+            }).filter(function(chat) {
+                return chat.rows.length > 0;
             });
             chats.sort(function(a, b) { return (b.latest.timestamp || 0) - (a.latest.timestamp || 0); });
+            var count = document.getElementById('adminChatCount');
+            if (count) count.textContent = chats.length;
             if (!chats.length) {
                 container.innerHTML = '<div class="admin-empty-state">No conversations available.</div>';
                 return;
             }
-            var count = document.getElementById('adminChatCount');
-            if (count) count.textContent = chats.length;
             container.innerHTML = chats.map(function(chat) {
                 var messagesHtml = chat.rows.map(function(message) {
-                    var text = message.text || (message.image ? 'Photo message' : 'Voice message');
-                    var senderName = message.senderName || (users[message.sender] && (users[message.sender].name || users[message.sender].username)) || 'Unknown user';
-                    var recipientNames = chat.names.filter(function(name) { return name !== senderName; });
+                    var text = message.text || message.message || (message.image ? 'Photo message' : 'Voice message');
+                    var senderId = message.sender || message.senderId;
+                    var senderName = message.senderName || (users[senderId] && (users[senderId].name || users[senderId].username)) || 'Unknown user';
+                    var recipientNames = chat.names.filter(function(name, index) {
+                        return chat.key.split('_')[index] !== senderId;
+                    });
                     var verifiedMark = message.isAutoReply || senderName === 'CHICHI Admin' ? '<span class="verified-tick" title="Verified CHICHI admin"></span>' : '';
-                    return '<div class="admin-chat-message"><div class="admin-chat-message-person"><span class="admin-chat-message-avatar">' + senderName.charAt(0).toUpperCase() + '</span><div><strong>Sent by ' + senderName + verifiedMark + '</strong><small>To ' + (recipientNames.join(', ') || 'conversation participant') + '</small></div></div><span class="admin-chat-message-text">' + text + '</span><time>' + (message.createdAt || '') + '</time></div>';
+                    var messageText = text || (message.voiceUrl ? 'Voice message' : 'Message');
+                    var createdAt = message.createdAt || (message.timestamp ? new Date(message.timestamp).toLocaleString() : '');
+                    return '<div class="admin-chat-message"><div class="admin-chat-message-person"><span class="admin-chat-message-avatar">' + escapeHtml(senderName.charAt(0).toUpperCase()) + '</span><div><strong>Sent by ' + escapeHtml(senderName) + verifiedMark + '</strong><small>To ' + escapeHtml(recipientNames.join(', ') || 'conversation participant') + '</small></div></div><span class="admin-chat-message-text">' + escapeHtml(messageText) + '</span><time>' + escapeHtml(createdAt) + '</time></div>';
                 }).join('');
-                var latestText = chat.latest.text || (chat.latest.image ? 'Photo message' : 'Voice message');
-                var latestSender = chat.latest.senderName || (users[chat.latest.sender] && (users[chat.latest.sender].name || users[chat.latest.sender].username)) || 'Unknown user';
-                var searchText = (chat.names.join(' ') + ' ' + chat.rows.map(function(message) {
-                    return message.text || (message.image ? 'Photo message' : 'Voice message');
-                }).join(' ')).replace(/"/g, '&quot;').toLowerCase();
-                return '<section class="admin-chat-card" data-chat-search="' + searchText + '"><header><div class="admin-chat-identity"><span class="admin-chat-avatar">' + chat.names.join('').charAt(0).toUpperCase() + '</span><div><strong>' + chat.names.join('  <>  ') + '</strong><small>Conversation · Last activity ' + (chat.latest.createdAt || 'recently') + '</small></div></div><span class="admin-readonly-badge">READ ONLY</span></header><div class="admin-chat-latest"><span class="admin-chat-label">LATEST MESSAGE · SENT BY ' + latestSender.toUpperCase() + '</span><p>' + latestText + '</p></div><details><summary>View recent messages <span>' + chat.rows.length + '</span></summary><div class="admin-chat-transcript">' + messagesHtml + '</div></details></section>';
+                var latestText = chat.latest.text || chat.latest.message || (chat.latest.image ? 'Photo message' : 'Voice message');
+                var latestSenderId = chat.latest.sender || chat.latest.senderId;
+                var latestSender = chat.latest.senderName || (users[latestSenderId] && (users[latestSenderId].name || users[latestSenderId].username)) || 'Unknown user';
+                var searchText = chat.searchTerms.concat(chat.rows.map(function(message) {
+                    return message.text || message.message || (message.image ? 'Photo message' : 'Voice message');
+                })).join(' ').toLowerCase();
+                var lastActivity = chat.latest.createdAt || (chat.latest.timestamp ? new Date(chat.latest.timestamp).toLocaleString() : 'recently');
+                return '<section class="admin-chat-card" data-chat-search="' + escapeHtml(searchText) + '"><header><div class="admin-chat-identity"><span class="admin-chat-avatar">' + escapeHtml(chat.names.join('').charAt(0).toUpperCase()) + '</span><div><strong>' + escapeHtml(chat.names.join('  <>  ')) + '</strong><small>Conversation · Last activity ' + escapeHtml(lastActivity) + '</small></div></div><span class="admin-readonly-badge">READ ONLY</span></header><div class="admin-chat-latest"><span class="admin-chat-label">LATEST MESSAGE · SENT BY ' + escapeHtml(latestSender.toUpperCase()) + '</span><p>' + escapeHtml(latestText || (chat.latest.voiceUrl ? 'Voice message' : 'Message')) + '</p></div><details><summary>View recent messages <span>' + chat.rows.length + '</span></summary><div class="admin-chat-transcript">' + messagesHtml + '</div></details></section>';
             }).join('');
             var searchInput = document.getElementById('adminChatSearch');
             app.filterAdminChats(searchInput ? searchInput.value : '');
         }).catch(function(err) {
-            container.innerHTML = '<div class="admin-empty-state">Could not load conversations: ' + err.message + '</div>';
+            container.innerHTML = '<div class="admin-empty-state">Could not load conversations: ' + self.escapeAdminPaymentHtml(err.message) + '</div>';
         });
     },
 
@@ -3639,6 +3747,7 @@ var app = {
                 timestamp: Date.now(),
                 read: false
             });
+            self.notifyChatRecipient(adminUid, self.profile.name || 'CHICHI user', 'Withdrawal request: ' + gift.name + ' for ' + gift.cost + ' Chichi Coins.');
 
             self.trackRevenue('spent', gift.cost, 'gift_' + gift.name);
             self.updateBalanceDisplays();
@@ -3927,6 +4036,7 @@ var app = {
                     amount: amount
                 };
                 db.ref('chats/' + chatKey + '/messages').push(chatMessage);
+                self.notifyChatRecipient(recipientUid, self.profile.name || 'CHICHI user', chatMessage.text);
 
                 self.updateBalanceDisplays();
                 self.toast(' Sent ' + amount + ' Coins to @' + username + '!', 'success');
@@ -3987,6 +4097,7 @@ var app = {
         var self = this;
         var userId = this.user.uid;
         var messagesRef = db.ref('messages');
+        var chatsRef = db.ref('chats');
         var refreshInbox = function(snapshot) {
             if (!self.user || self.user.uid !== userId || !snapshot.key || snapshot.key.indexOf(userId) === -1) return;
             if (self.inboxRefreshTimer) clearTimeout(self.inboxRefreshTimer);
@@ -3998,9 +4109,13 @@ var app = {
 
         this.inboxMessagesRef = messagesRef;
         this.inboxMessagesListener = refreshInbox;
+        this.inboxChatsRef = chatsRef;
+        this.inboxChatsListener = refreshInbox;
         this.inboxMessagesUserId = userId;
         messagesRef.on('child_added', refreshInbox);
         messagesRef.on('child_changed', refreshInbox);
+        chatsRef.on('child_added', refreshInbox);
+        chatsRef.on('child_changed', refreshInbox);
     },
 
     stopInboxMessagesListener: function() {
@@ -4008,12 +4123,18 @@ var app = {
             this.inboxMessagesRef.off('child_added', this.inboxMessagesListener);
             this.inboxMessagesRef.off('child_changed', this.inboxMessagesListener);
         }
+        if (this.inboxChatsRef && this.inboxChatsListener) {
+            this.inboxChatsRef.off('child_added', this.inboxChatsListener);
+            this.inboxChatsRef.off('child_changed', this.inboxChatsListener);
+        }
         if (this.inboxRefreshTimer) {
             clearTimeout(this.inboxRefreshTimer);
             this.inboxRefreshTimer = null;
         }
         this.inboxMessagesRef = null;
         this.inboxMessagesListener = null;
+        this.inboxChatsRef = null;
+        this.inboxChatsListener = null;
         this.inboxMessagesUserId = null;
     },
 
@@ -8535,9 +8656,42 @@ loadMessages: function() {
     var html = '';
     var conversations = [];
 
-    db.ref('messages').once('value', function(snapshot) {
-        if (snapshot.val()) {
-            Object.keys(snapshot.val()).forEach(function(chatKey) {
+    Promise.all([
+        db.ref('messages').once('value'),
+        db.ref('chats').once('value')
+    ]).then(function(snapshots) {
+        var messagesSnapshot = snapshots[0];
+        var chatsSnapshot = snapshots[1];
+        var messagesByChat = {};
+        var mergeMessageList = function(chatKey, messageListSnapshot) {
+            if (!messagesByChat[chatKey]) messagesByChat[chatKey] = {};
+            messageListSnapshot.forEach(function(messageSnapshot) {
+                var message = messageSnapshot.val() || {};
+                var messageId = String(message.id || messageSnapshot.key);
+                var existingMessage = messagesByChat[chatKey][messageId] || {};
+                Object.keys(message).forEach(function(property) {
+                    existingMessage[property] = message[property];
+                });
+                existingMessage.id = messageId;
+                if (!existingMessage.text && existingMessage.message) {
+                    existingMessage.text = existingMessage.message;
+                }
+                if (!existingMessage.sender && existingMessage.senderId) {
+                    existingMessage.sender = existingMessage.senderId;
+                }
+                messagesByChat[chatKey][messageId] = existingMessage;
+            });
+        };
+
+        messagesSnapshot.forEach(function(chatSnapshot) {
+            mergeMessageList(chatSnapshot.key, chatSnapshot);
+        });
+        chatsSnapshot.forEach(function(chatSnapshot) {
+            var messageList = chatSnapshot.child('messages');
+            if (messageList.exists()) mergeMessageList(chatSnapshot.key, messageList);
+        });
+
+        Object.keys(messagesByChat).forEach(function(chatKey) {
                 if (chatKey.includes(self.user.uid)) {
                     var parts = chatKey.split('_');
                     var otherUserId = parts[0] === self.user.uid ? parts[1] : parts[0];
@@ -8545,16 +8699,19 @@ loadMessages: function() {
                     if (self.blockedUsers && self.blockedUsers[otherUserId]) return;
                     if (!self.users[otherUserId]) return;
 
-                    var messages = snapshot.val()[chatKey];
+                    var messages = messagesByChat[chatKey];
                     var hasTextMessages = false;
                     var lastMessage = 'Tap to message';
                     var lastTimestamp = 0;
                     var unreadCount = 0;
                     
                     if (messages && typeof messages === 'object') {
-                        Object.keys(messages).forEach(function(msgId) {
-                            var msg = messages[msgId];
-                            if (msg && !msg.deleted && (msg.text || msg.image || msg.voiceUrl)) {
+                        Object.keys(messages).map(function(msgId) {
+                            return messages[msgId];
+                        }).sort(function(a, b) {
+                            return (a.timestamp || 0) - (b.timestamp || 0);
+                        }).forEach(function(msg) {
+                            if (msg && !msg.deleted && !msg.deletedForEveryone && (msg.text || msg.image || msg.voiceUrl)) {
                                 hasTextMessages = true;
                                 
                                 // SMART PREVIEW - Check message type
@@ -8564,9 +8721,10 @@ loadMessages: function() {
                                     lastMessage = 'Photo';
                                 } else if (msg.isCoinTransfer) {
                                     lastMessage = 'Sent ' + (msg.amount || '') + ' Coins';
-                                } else if (msg.text) {
+                                } else if (msg.text || msg.message) {
                                     // Truncate long messages to 35 characters
-                                    var preview = msg.text.length > 35 ? msg.text.substring(0, 35) + '...' : msg.text;
+                                    var messageText = msg.text || msg.message;
+                                    var preview = messageText.length > 35 ? messageText.substring(0, 35) + '...' : messageText;
                                     // Mark reply previews without adding decorative symbols.
                                     if (msg.replyTo) {
                                         preview = 'Reply: ' + preview;
@@ -8577,7 +8735,7 @@ loadMessages: function() {
                                 }
                                 
                                 lastTimestamp = msg.timestamp || 0;
-                                if (msg.sender !== self.user.uid && !msg.read) { unreadCount++; }
+                                if ((msg.sender || msg.senderId) !== self.user.uid && !msg.read) { unreadCount++; }
                             }
                         });
                         
@@ -8594,7 +8752,6 @@ loadMessages: function() {
                     }
                 }
             });
-        }
         
         // Sort conversations by latest message
         conversations.sort(function(a, b) { return b.lastTimestamp - a.lastTimestamp; });
@@ -8661,6 +8818,10 @@ loadMessages: function() {
         
         // Initialize swipe listeners
         self.initSwipeListeners();
+    }).catch(function(error) {
+        console.error('Unable to load conversations:', error);
+        container.innerHTML = '<div class="msg-empty-state"><h3>Could not load conversations</h3><p>' +
+            self.escapeAdminPaymentHtml(error.message || 'Please check your connection and try again.') + '</p></div>';
     });
 },
     // ============================================
@@ -9403,7 +9564,14 @@ loadMessages: function() {
         var messageRef = db.ref('messages/' + chatKey).push();
         message.id = messageRef.key;
         var chatRef = db.ref('chats/' + chatKey + '/messages/' + messageRef.key);
-        return Promise.all([messageRef.set(message), chatRef.set(message)]);
+        var self = this;
+        return Promise.all([messageRef.set(message), chatRef.set(message)]).then(function() {
+            var participants = chatKey.split('_');
+            var recipientUid = participants[0] === message.sender ? participants[1] : participants[0];
+            if (recipientUid) {
+                self.notifyChatRecipient(recipientUid, message.senderName || 'CHICHI Support', message.text || 'Sent you a message.');
+            }
+        });
     },
 
     writePlanAssistantReply: function(chatKey, adminId, text, quickReplies) {
@@ -9783,14 +9951,14 @@ loadMessages: function() {
             timestamp: firebase.database.ServerValue.TIMESTAMP,
             read: false
         }).then(function() {
-            self.sendPushNotification(self.currentChat.uid, 'New message from ' + (self.profile.name || 'CHICHI user'), text);
+            self.notifyChatRecipient(self.currentChat.uid, self.profile.name || 'CHICHI user', text);
             db.ref('chats/' + key + '/messages/' + messageRef.key).set({
                 text: text,
                 sender: self.user.uid,
                 timestamp: firebase.database.ServerValue.TIMESTAMP,
-                read: false
-            });
-            tempMessage.pending = false;
+                    read: false
+                });
+                tempMessage.pending = false;
             self.displayChatMessages(self.chatMessages[key], key);
         }).catch(function(err) {
             self.toast('Error sending message', 'error');
@@ -12630,18 +12798,7 @@ loadMessages: function() {
                 self.displayChatMessages(self.chatMessages[key], key);
             }
             self.loadMessages();
-            self.sendPushNotification(
-                recipientId,
-                'New message from ' + messageData.senderName,
-                text
-            ).then(function(result) {
-                if (!result.sent) {
-                    throw new Error('No notification device is registered for this account. Enable notifications on the recipient’s device.');
-                }
-            }).catch(function(error) {
-                console.error('Message sent, but its push notification could not be delivered:', error);
-                self.toast('Message sent, but notification could not be delivered: ' + error.message, 'error');
-            });
+            self.notifyChatRecipient(recipientId, messageData.senderName, text);
 
             return messageRef.set(messageData).catch(function(error) {
                 console.error('Chat message was sent, but the inbox mirror could not be saved:', error);
@@ -13366,14 +13523,17 @@ loadMessages: function() {
     // ============== NEW: Called from native Android after successful sign-in ==============
     onNativeSignIn: function(userData) {
         console.log(' Native sign-in success:', userData);
-        // The userData is a JSON object with uid, email, displayName, photoURL, idToken, etc.
-        // The Firebase auth state listener will already be triggered because the native sign-in
-        // also signs in to Firebase. However, we can manually update the app state if needed.
-        // Since the onAuthStateChanged listener handles everything, we can leave it as is.
-        // But if the listener doesn't fire immediately, we can force a reload or call our own logic.
-        // For safety, reload the user data from Firebase.
         if (userData && userData.uid) {
-            // The onAuthStateChanged will catch this, but we can also manually trigger the profile load.
+            if (userData.googleIdToken && auth) {
+                var self = this;
+                auth.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(userData.googleIdToken))
+                    .catch(function(error) {
+                        console.error('Unable to complete Google sign-in in the app:', error);
+                        self.googleSignInFailed(error.message);
+                    });
+                return;
+            }
+
             this.user = userData;
             this.isGuest = false;
             if (auth && auth.currentUser && auth.currentUser.phoneNumber) {
@@ -13381,7 +13541,6 @@ loadMessages: function() {
                     console.error('Native phone profile sync error:', err);
                 });
             }
-            // Optionally reload profile
             this.loadProfile();
         }
     },
@@ -15436,9 +15595,13 @@ app.sendVoiceMessage = function(voiceUrl, duration) {
         status: 'delivered'
     };
 
-    db.ref('messages/' + key).push().set(voiceMsg).then(function(ref) {
-        db.ref('chats/' + key + '/messages/' + ref.key).set(voiceMsg);
+    var messageRef = db.ref('messages/' + key).push();
+    voiceMsg.id = messageRef.key;
+    messageRef.set(voiceMsg).then(function() {
+        return db.ref('chats/' + key + '/messages/' + messageRef.key).set(voiceMsg);
+    }).then(function() {
         self.displayChatMessages(self.chatMessages[key], key);
+        self.notifyChatRecipient(self.currentChat.uid, self.profile.name || 'CHICHI user', 'Sent you a voice message.');
         self.toast(' Voice message sent', 'success');
     }).catch(function(err) {
         self.toast('Error sending voice message', 'error');
@@ -15682,6 +15845,33 @@ app.sendPushNotification = function(recipientUid, title, message) {
             if (!result.success) throw new Error(result.error || 'Push service could not send the notification.');
             return result;
         });
+    });
+};
+
+app.notifyChatRecipient = function(recipientUid, senderName, message) {
+    if (!recipientUid) return Promise.resolve(null);
+    var self = this;
+    var cleanMessage = String(message || 'Sent you a message.').slice(0, 240);
+    return this.sendPushNotification(
+        recipientUid,
+        'New message from ' + String(senderName || 'CHICHI').slice(0, 60),
+        cleanMessage
+    ).then(function(result) {
+        if (!result.sent) {
+            if (result.errors && result.errors.length) {
+                var deliveryError = result.errors.join(', ');
+                console.error('Message saved, but FCM rejected the recipient device:', recipientUid, deliveryError);
+                self.toast('Message sent, but the recipient device rejected its notification: ' + deliveryError, 'error');
+            } else {
+                console.info('Message saved, but the recipient has no registered push device:', recipientUid);
+                self.toast('Message sent. The recipient has not enabled phone notifications on a device yet.', 'info');
+            }
+        }
+        return result;
+    }).catch(function(error) {
+        console.error('Message saved, but its phone notification could not be delivered:', error);
+        self.toast('Message sent, but its phone notification could not be delivered: ' + error.message, 'error');
+        return null;
     });
 };
 
@@ -16371,9 +16561,13 @@ app.sendVoiceMessage = function(voiceUrl, duration) {
     var self = this;
     var key = [self.user.uid, self.currentChat.uid].sort().join('_');
     var voiceMsg = {sender: self.user.uid, voiceUrl: voiceUrl, duration: duration, timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'delivered'};
-    db.ref('messages/' + key).push().set(voiceMsg).then(function(ref) {
-        db.ref('chats/' + key + '/messages/' + ref.key).set(voiceMsg);
+    var messageRef = db.ref('messages/' + key).push();
+    voiceMsg.id = messageRef.key;
+    messageRef.set(voiceMsg).then(function() {
+        return db.ref('chats/' + key + '/messages/' + messageRef.key).set(voiceMsg);
+    }).then(function() {
         self.displayChatMessages(self.chatMessages[key], key);
+        self.notifyChatRecipient(self.currentChat.uid, self.profile.name || 'CHICHI user', 'Sent you a voice message.');
         self.toast(' Voice message sent', 'success');
     }).catch(function() { self.toast('Error sending voice message', 'error'); });
 };
@@ -16542,6 +16736,9 @@ app.sendForwardedMessage = function(text, targetChatKey) {
         messageRef.set(msg),
         db.ref('chats/' + targetChatKey + '/messages/' + messageRef.key).set(msg)
     ]).then(function() {
+        var participants = targetChatKey.split('_');
+        var recipientUid = participants[0] === self.user.uid ? participants[1] : participants[0];
+        self.notifyChatRecipient(recipientUid, self.profile.name || 'CHICHI user', 'Forwarded you a message: ' + text);
         self.toast(' Message forwarded', 'success');
     }).catch(function(error) {
         console.error('Failed to forward message:', error);
@@ -17582,6 +17779,7 @@ app.attachImageToChat = function() {
                 return db.ref('chats/' + chatKey + '/messages/' + messageRef.key).set(imageMessage);
             });
         }).then(function() {
+            self.notifyChatRecipient(self.currentChat.uid, self.profile.name || 'CHICHI user', 'Sent you a photo.');
             self.toast('Image sent', 'success');
         }).catch(function(err) {
             console.error('Chat image upload failed:', err);
@@ -18382,7 +18580,9 @@ app.sendRedemptionReviewToAdmins = function(requestId, request) {
             return users[uid].email && adminEmails.indexOf(users[uid].email.toLowerCase()) !== -1;
         }).forEach(function(adminUid) {
             var chatKey = [self.user.uid, adminUid].sort().join('_');
-            db.ref('chats/' + chatKey + '/messages').push({ senderId: self.user.uid, senderName: self.profile.name || 'User', senderEmail: self.user.email || '', message: 'Review redemption request: ' + request.type + ' for ' + request.amount + ' coins' + (request.phone ? ' to ' + request.provider + ' ' + request.phone : '') + '.', redemptionRequestId: requestId, isRedemptionRequest: true, timestamp: Date.now(), read: false });
+            var message = 'Review redemption request: ' + request.type + ' for ' + request.amount + ' coins' + (request.phone ? ' to ' + request.provider + ' ' + request.phone : '') + '.';
+            db.ref('chats/' + chatKey + '/messages').push({ senderId: self.user.uid, senderName: self.profile.name || 'User', senderEmail: self.user.email || '', message: message, redemptionRequestId: requestId, isRedemptionRequest: true, timestamp: Date.now(), read: false });
+            self.notifyChatRecipient(adminUid, self.profile.name || 'User', message);
         });
     });
 };

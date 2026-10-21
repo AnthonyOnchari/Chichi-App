@@ -47,16 +47,25 @@ export default async function handler(req, res) {
         });
 
         var staleUpdates = {};
+        var deliveryErrors = [];
         result.responses.forEach(function(response, index) {
-            if (!response.success && response.error && ['messaging/registration-token-not-registered', 'messaging/invalid-registration-token'].indexOf(response.error.code) !== -1) {
-                staleUpdates[tokens[index]] = null;
+            if (!response.success && response.error) {
+                if (deliveryErrors.length < 3) deliveryErrors.push(response.error.code || 'messaging/unknown-error');
+                if (['messaging/registration-token-not-registered', 'messaging/invalid-registration-token'].indexOf(response.error.code) !== -1) {
+                    staleUpdates[tokens[index]] = null;
+                }
             }
         });
         if (Object.keys(staleUpdates).length) {
             await firebaseAdmin.database().ref('users/' + body.recipientUid + '/fcmTokens').update(staleUpdates);
         }
 
-        return res.status(200).json({ success: true, sent: result.successCount, failed: result.failureCount });
+        return res.status(200).json({
+            success: true,
+            sent: result.successCount,
+            failed: result.failureCount,
+            errors: deliveryErrors
+        });
     } catch (error) {
         return res.status(500).json({ error: error.message || 'Push service unavailable' });
     }
