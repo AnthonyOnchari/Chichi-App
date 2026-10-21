@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- CSS -->
-    <link rel="stylesheet" href="css/style.css?v=google-signin-popup-20261021-2">
+    <link rel="stylesheet" href="css/style.css?v=guest-nav-cleanup-20261021-1">
     
     <!-- Firebase SDKs -->
     <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -350,8 +350,6 @@
             <div class="guest-nav-brand"><img src="icon-192.png" alt=""><span>CHICHI</span></div>
             <nav class="guest-nav-links" aria-label="Main navigation">
                 <button type="button" class="guest-nav-link" data-guest-view="messages" aria-label="Messages" onclick="app.switchView('messages')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18.5 3.5 21l4.2-1.1A9 9 0 1 0 5 18.5Z"/><path d="M8 10h8M8 14h5"/></svg><span>Messages</span></button>
-                <button type="button" class="guest-nav-link" data-guest-view="explore" aria-label="People" onclick="app.switchView('explore')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 5.5a3 3 0 0 1 0 5.8M17 14a4.5 4.5 0 0 1 3.5 4.4"/></svg><span>People</span></button>
-                <button type="button" class="guest-nav-link" data-guest-view="profile" aria-label="Profile" onclick="app.switchView('profile')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span>Profile</span></button>
             </nav>
             <div class="guest-nav-actions"></div>
         </div>
@@ -368,7 +366,7 @@
                 <span class="nav-label">Chats</span>
                 <span class="nav-badge" id="messagesBadge" style="display:none;">0</span>
             </button>
-            <button class="nav-item" onclick="app.switchView('explore')" aria-label="Explore people">
+            <button class="nav-item nav-explore-item" onclick="app.switchView('explore')" aria-label="Explore people">
                 <span class="nav-icon" aria-label="Explore">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="9" cy="8" r="2.8"></circle>

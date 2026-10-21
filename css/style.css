@@ -11219,6 +11219,17 @@ button:empty[onclick*="remove"]::before {
     padding: 0 10px calc(9px + env(safe-area-inset-bottom, 0px));
 }
 
+.main-app.guest-mode .guest-nav-links .guest-nav-link[data-guest-view="explore"],
+.main-app.guest-mode .guest-nav-links .guest-nav-link[data-guest-view="profile"],
+.main-app.guest-mode .bottom-nav .nav-explore-item,
+.main-app.guest-mode .bottom-nav .nav-profile-item {
+    display: none !important;
+}
+
+.main-app.guest-mode .bottom-nav .nav-wrapper {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .main-app.guest-mode .guest-nav-top {
     display: flex;
     align-items: center;
@@ -19714,7 +19725,7 @@ button:empty[onclick*="remove"]::before {
 
     .main-app.guest-mode .bottom-nav .nav-wrapper {
         display: flex !important;
-        width: 192px;
+        width: 64px;
         max-width: 100%;
         justify-content: space-around;
         gap: 5px;
