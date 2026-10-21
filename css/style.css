@@ -17956,6 +17956,14 @@ button:empty[onclick*="remove"]::before {
     position: absolute;
     inset: 0;
     display: block;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity .22s ease, transform .22s ease;
+}
+
+.main-app.guest-mode #guestMessagesTitle.is-changing .guest-v5-message-title-typed {
+    opacity: 0;
+    transform: translateY(6px);
 }
 
 .main-app.guest-mode .guest-v5-message-caret {
@@ -19828,6 +19836,57 @@ button:empty[onclick*="remove"]::before {
     border: 1px solid #d7e6e2;
     border-radius: 10px;
     background: #f7faf9;
+}
+
+.main-app.guest-mode .guest-v5-message-board {
+    position: relative;
+}
+
+.main-app.guest-mode .guest-container-brand {
+    position: absolute;
+    z-index: 1;
+    top: clamp(14px, 2vw, 24px);
+    left: clamp(18px, 3vw, 38px);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #17483e;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: .08em;
+}
+
+.main-app.guest-mode .guest-container-brand img {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    object-fit: cover;
+}
+
+.main-app.guest-mode #messagesView > .guest-nav-actions {
+    position: absolute;
+    z-index: 2;
+    top: 8px;
+    right: 12px;
+}
+
+.main-app.guest-mode .bottom-nav {
+    display: none !important;
+}
+
+.main-app.guest-mode .view {
+    top: 68px !important;
+    bottom: 12px !important;
+}
+
+:root.dark-mode .main-app.guest-mode .guest-container-brand {
+    color: #d6eee6;
+}
+
+@media (max-width: 700px) {
+    .main-app.guest-mode .guest-v5-message-board {
+        padding-top: 58px;
+    }
     color: #29443f;
     font-size: 13px;
     line-height: 1.5;

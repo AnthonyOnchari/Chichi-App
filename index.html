@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- CSS -->
-    <link rel="stylesheet" href="css/style.css?v=guest-nav-cleanup-20261021-1">
+    <link rel="stylesheet" href="css/style.css?v=guest-headline-loop-20261021-3">
     
     <!-- Firebase SDKs -->
     <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -315,6 +315,7 @@
 
         <!-- MESSAGES VIEW -->
         <div class="view" id="messagesView">
+            <div class="guest-nav-actions"></div>
             <div class="messages-toolbar">
                 <button type="button" id="messagesNewChatButton" onclick="app.openNewChat()">New message</button>
                 <div id="messageSearchBar">
@@ -346,13 +347,6 @@
 
     <!-- BOTTOM NAVIGATION -->
     <div class="bottom-nav">
-        <div class="guest-nav-top" aria-label="CHICHI navigation and quick actions">
-            <div class="guest-nav-brand"><img src="icon-192.png" alt=""><span>CHICHI</span></div>
-            <nav class="guest-nav-links" aria-label="Main navigation">
-                <button type="button" class="guest-nav-link" data-guest-view="messages" aria-label="Messages" onclick="app.switchView('messages')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18.5 3.5 21l4.2-1.1A9 9 0 1 0 5 18.5Z"/><path d="M8 10h8M8 14h5"/></svg><span>Messages</span></button>
-            </nav>
-            <div class="guest-nav-actions"></div>
-        </div>
         <div class="nav-wrapper">
             <button class="nav-item active" onclick="app.switchView('messages')" id="messagesNavBtn" aria-label="Open chats" aria-current="page">
                 <span class="nav-icon" aria-hidden="true">
@@ -1223,7 +1217,7 @@
 <div id="toastContainer"></div>
 
 <!-- APP JS -->
-<script defer src="js/app.js?v=google-signin-popup-20261021-3"></script>
+<script defer src="js/app.js?v=guest-headline-loop-20261021-3"></script>
 
 <!-- ============================================================ -->
 <!-- ============ COMPLETE SCRIPT WITH PWA + NOTIFICATIONS ======== -->

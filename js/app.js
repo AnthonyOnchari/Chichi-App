@@ -8543,6 +8543,7 @@ loadMessages: function() {
         container.innerHTML = `
             <div class="guest-messages guest-v5-messages">
                 <section class="guest-v5-message-board" aria-labelledby="guestMessagesTitle">
+                    <div class="guest-container-brand"><img src="icon-192.png" alt=""><span>CHICHI</span></div>
                     <div class="guest-v5-message-intro">
                         <span class="guest-v5-message-kicker">A GOOD CONVERSATION CAN START ANYWHERE</span>
                         <h3 id="guestMessagesTitle" aria-label="Say hey to your next favourite person.">
@@ -8573,7 +8574,7 @@ loadMessages: function() {
                         </article>
                     </div>
                     <div class="guest-v5-message-actions">
-                        <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Find your first conversation</button>
+                        <button class="guest-v3-button" onclick="app.showLoginPage('signup')">Tap here to find your first conversation.</button>
                         <button class="guest-v3-login" onclick="app.showLoginPage('login')">Already a member? <strong>Log in</strong></button>
                     </div>
                 </section>
@@ -8582,69 +8583,39 @@ loadMessages: function() {
         var title = container.querySelector('#guestMessagesTitle');
         var plainTitle = title && title.querySelector('.guest-v5-message-title-plain');
         var highlightedTitle = title && title.querySelector('.guest-v5-message-title-highlight');
-        var fullPlainTitle = 'Say hey to your ';
-        var fullHighlightedTitle = 'next favourite person.';
+        var titleMessages = [
+            { plain: 'Say hey to your ', highlighted: 'next favourite person.' },
+            { plain: 'Meet people who ', highlighted: 'get your vibe.' },
+            { plain: 'Find your people ', highlighted: 'and start chatting.' },
+            { plain: 'Sign up and find ', highlighted: 'your next hello.' },
+            { plain: 'Already a member? ', highlighted: 'Sign in and say hey.' }
+        ];
         if (title && plainTitle && highlightedTitle) {
             var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var setTitleMessage = function(message) {
+                plainTitle.textContent = message.plain;
+                highlightedTitle.textContent = message.highlighted;
+                title.setAttribute('aria-label', message.plain + message.highlighted);
+            };
             if (reducedMotion) {
-                plainTitle.textContent = fullPlainTitle;
-                highlightedTitle.textContent = fullHighlightedTitle;
+                setTitleMessage(titleMessages[0]);
                 title.classList.add('is-typed');
             } else {
-                title.classList.add('is-typing');
-                var typedIndex = 0;
-                var typedCharacters = Array.from(fullPlainTitle + fullHighlightedTitle);
-                var plainCharacters;
-                var highlightedCharacters;
-                var beginTypingLoop = function() {
-                    plainCharacters = Array.from(fullPlainTitle);
-                    highlightedCharacters = Array.from(fullHighlightedTitle);
-                    plainTitle.textContent = '';
-                    highlightedTitle.textContent = '';
-                    title.classList.remove('is-typed');
-                    title.classList.add('is-typing');
-                    typedIndex = 0;
-                    var typeNextCharacter = function() {
+                var messageIndex = 0;
+                setTitleMessage(titleMessages[messageIndex]);
+                title.classList.add('is-typed');
+                var rotateTitle = function() {
+                    if (!title.isConnected) return;
+                    title.classList.add('is-changing');
+                    app.guestMessagesTypingTimer = setTimeout(function() {
                         if (!title.isConnected) return;
-                        if (typedIndex >= typedCharacters.length) {
-                            title.classList.remove('is-typing');
-                            title.classList.add('is-typed');
-                            app.guestMessagesTypingTimer = setTimeout(function() {
-                                if (!title.isConnected) return;
-                                title.classList.remove('is-typed');
-                                title.classList.add('is-typing');
-                                var deleteNextCharacter = function() {
-                                    if (!title.isConnected) return;
-                                    if (highlightedCharacters.length) {
-                                        highlightedCharacters.pop();
-                                        highlightedTitle.textContent = highlightedCharacters.join('');
-                                    } else if (plainCharacters.length) {
-                                        plainCharacters.pop();
-                                        plainTitle.textContent = plainCharacters.join('');
-                                    }
-                                    if (highlightedCharacters.length || plainCharacters.length) {
-                                        app.guestMessagesTypingTimer = setTimeout(deleteNextCharacter, 24);
-                                    } else {
-                                        app.guestMessagesTypingTimer = setTimeout(beginTypingLoop, 180);
-                                    }
-                                };
-                                deleteNextCharacter();
-                            }, 2000);
-                            return;
-                        }
-                        var character = typedCharacters[typedIndex];
-                        if (typedIndex < Array.from(fullPlainTitle).length) {
-                            plainTitle.textContent += character;
-                        } else {
-                            highlightedTitle.textContent += character;
-                        }
-                        typedIndex += 1;
-                        var pause = character === '.' ? 240 : 38;
-                        app.guestMessagesTypingTimer = setTimeout(typeNextCharacter, pause);
-                    };
-                    app.guestMessagesTypingTimer = setTimeout(typeNextCharacter, 180);
+                        messageIndex = (messageIndex + 1) % titleMessages.length;
+                        setTitleMessage(titleMessages[messageIndex]);
+                        title.classList.remove('is-changing');
+                        app.guestMessagesTypingTimer = setTimeout(rotateTitle, 2800);
+                    }, 250);
                 };
-                beginTypingLoop();
+                app.guestMessagesTypingTimer = setTimeout(rotateTitle, 2800);
             }
         }
         return;
