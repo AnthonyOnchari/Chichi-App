@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.content.pm.PackageInfo;
+import android.content.pm.Signature;
 import android.view.View;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -41,6 +43,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 
 import org.json.JSONObject;
 
+import java.security.MessageDigest;
 import java.util.concurrent.TimeUnit;
 
 public class LauncherActivity extends AppCompatActivity {
@@ -447,20 +450,54 @@ public class LauncherActivity extends AppCompatActivity {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 firebaseAuthWithGoogle(account.getIdToken());
             } catch (ApiException e) {
-                String message = e.getStatusCode() == 10
-                        ? "Google sign-in is not configured for this app. Please update the app or contact support."
-                        : "Google sign-in failed: " + e.getMessage();
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-                // Inform WebView about failure and force web fallback for this session.
+                String message;
                 if (e.getStatusCode() == 10) {
-                    webView.evaluateJavascript(
-                            "if (window.app) { app.googleSignInFailed('Google sign-in configuration error (code 10)'); if (typeof app.signInWithGoogle === 'function') { app.signInWithGoogle(true); } }",
-                            null
-                    );
+                    String fingerprint = getSigningCertificateSha1();
+                    message = "Google sign-in is not configured for this installed app build (error 10). "
+                            + "In Firebase Console, add this app's SHA-1 under Project settings > Your apps "
+                            + "for package com.onchari.chichi, then download google-services.json and rebuild. "
+                            + "Installed app SHA-1: " + fingerprint;
                 } else {
-                    webView.evaluateJavascript("app.googleSignInFailed('Google sign-in failed: " + e.getStatusCode() + "')", null);
+                    message = "Google sign-in failed: " + e.getMessage();
                 }
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                webView.evaluateJavascript(
+                        "if(window.app){app.googleSignInFailed(" + JSONObject.quote(message) + ");}",
+                        null
+                );
             }
+        }
+    }
+
+    private String getSigningCertificateSha1() {
+        try {
+            Signature[] signatures;
+            if (android.os.Build.VERSION.SDK_INT >= 28) {
+                PackageInfo packageInfo = getPackageManager().getPackageInfo(
+                        getPackageName(),
+                        PackageManager.GET_SIGNING_CERTIFICATES
+                );
+                if (packageInfo.signingInfo == null) return "unavailable";
+                signatures = packageInfo.signingInfo.getApkContentsSigners();
+            } else {
+                PackageInfo packageInfo = getPackageManager().getPackageInfo(
+                        getPackageName(),
+                        PackageManager.GET_SIGNATURES
+                );
+                signatures = packageInfo.signatures;
+            }
+            if (signatures == null || signatures.length == 0) return "unavailable";
+
+            byte[] digest = MessageDigest.getInstance("SHA-1").digest(signatures[0].toByteArray());
+            StringBuilder fingerprint = new StringBuilder();
+            for (byte value : digest) {
+                if (fingerprint.length() > 0) fingerprint.append(':');
+                fingerprint.append(String.format(java.util.Locale.US, "%02X", value & 0xff));
+            }
+            return fingerprint.toString();
+        } catch (Exception error) {
+            android.util.Log.e("CHICHI_AUTH", "Could not read app signing certificate", error);
+            return "unavailable";
         }
     }
 
