@@ -8854,7 +8854,7 @@ loadMessages: function() {
         if (this.chatMessageListenerKey === key) this.chatMessageListenerKey = null;
     },
 
-    openChat: function(uid, name) {
+    openChat: function(uid, name, prefilledDraft) {
     if (!this.user || this.isGuest) {
         this.toast(' Sign up to message users', 'info');
         this.showLoginPage();
@@ -8998,8 +8998,11 @@ loadMessages: function() {
         typingIndicator = this.ensureTypingIndicator(chatMessagesContainer) || typingIndicator;
         if (typingIndicator) chatMessagesContainer.appendChild(typingIndicator);
     }
-    document.getElementById('chatMessageInput').value = '';
-    document.getElementById('chatMessageInput').placeholder = 'Type a message...';
+    var chatMessageInput = document.getElementById('chatMessageInput');
+    if (chatMessageInput) {
+        chatMessageInput.value = prefilledDraft || '';
+        chatMessageInput.placeholder = 'Type a message...';
+    }
 
     var self = this;
     setTimeout(function() {
@@ -15751,69 +15754,117 @@ app.scrollToLatest = function() {
     }
 };
 
+app.getPublicAdminIds = function(users, adminAccounts) {
+    var adminEmails = { 'support@chichi.buzz': true };
+    (this.DEFAULT_ADMINS || []).forEach(function(email) {
+        adminEmails[String(email).toLowerCase()] = true;
+    });
+    Object.keys(adminAccounts || {}).forEach(function(encodedEmail) {
+        if (adminAccounts[encodedEmail]) adminEmails[encodedEmail.replace(/_/g, '.').toLowerCase()] = true;
+    });
+
+    var adminIds = {};
+    Object.keys(users || {}).forEach(function(uid) {
+        var email = String(users[uid] && users[uid].email || '').toLowerCase();
+        if (adminEmails[email]) adminIds[uid] = true;
+    });
+    return adminIds;
+};
+
+app.openAdminSnippetInquiry = function(uid, name) {
+    var inquiry = 'Hi, I am interested in buying code snippets. Could you share what is available and the pricing?';
+    this.openChat(uid, name || 'Admin', inquiry);
+};
+
+app.bindAdminContactButtons = function(container) {
+    if (!container) return;
+    container.querySelectorAll('.public-admin-badge').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            event.stopPropagation();
+            app.openAdminSnippetInquiry(button.dataset.adminUid, button.dataset.adminName);
+        });
+    });
+};
+
 app.loadExplorePeople = function() {
     var container = document.getElementById('explorePeopleContainer');
     if (!container) return;
 
-    var html = '';
+    var renderPeople = function(users, adminAccounts) {
+        app.users = users;
+        app.publicAdminIds = app.getPublicAdminIds(users, adminAccounts);
 
-    db.ref('users').orderByChild('followers').limitToLast(12).once('value').then(function(snapshot) {
-        var users = snapshot.val() || {};
-        var userArray = [];
+        var currentUid = app.user && app.user.uid ? app.user.uid : null;
+        var userArray = Object.keys(users).filter(function(uid) {
+            return !currentUid || uid !== currentUid;
+        }).map(function(uid) {
+            var user = users[uid] || {};
+            return {
+                uid: uid,
+                name: user.name || 'Unknown',
+                followers: user.followers || 0,
+                username: user.username,
+                profilePhoto: user.profilePhoto,
+                isAdmin: !!app.publicAdminIds[uid]
+            };
+        });
+        var adminUsers = userArray.filter(function(user) { return user.isAdmin; });
+        var communityUsers = userArray.filter(function(user) { return !user.isAdmin; });
+        adminUsers.sort(function(a, b) { return String(a.name).localeCompare(String(b.name)); });
+        communityUsers.sort(function(a, b) { return Number(b.followers || 0) - Number(a.followers || 0); });
 
-        var currentUid = (app.user && app.user.uid) ? app.user.uid : null;
-        for (var uid in users) {
-            if (!currentUid || uid !== currentUid) {
-                var user = users[uid];
-                userArray.push({
-                    uid: uid,
-                    name: user.name,
-                    followers: user.followers || 0,
-                    username: user.username,
-                    profilePhoto: user.profilePhoto
-                });
-            }
-        }
-
-        userArray.sort(function(a, b) { return Number(b.followers || 0) - Number(a.followers || 0); });
-        userArray.slice(0, 6).forEach(function(user, index) {
+        var displayUsers = adminUsers.concat(communityUsers.slice(0, 6));
+        var html = displayUsers.map(function(user, index) {
             var isFollowing = app.following[user.uid] || false;
             var profilePhoto = user.profilePhoto || '';
             var initials = user.name ? user.name.charAt(0).toUpperCase() : '?';
-            var displayName = app.isGuest ? 'Member ' + String(index + 1).padStart(2, '0') : (user.name || 'Unknown');
+            var displayName = app.isGuest ? 'Member ' + String(index + 1).padStart(2, '0') : user.name;
+            var escapedName = app.escapeChatMessageText(displayName);
             var identityClass = user.username && user.username.toLowerCase() === 'chichi_support' ? 'support-identity' : '';
+            var badge = user.isAdmin
+                ? '<button type="button" class="public-admin-badge" aria-label="Message admin about code snippets" data-admin-uid="' + app.escapeChatMessageText(user.uid) + '" data-admin-name="' + app.escapeChatMessageText(user.name) + '">Admin</button>'
+                : '';
 
-            html += '<div class="' + identityClass + '" style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 14px; text-align: center; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow=\'0 4px 12px rgba(0, 136, 204, 0.15)\'; this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.boxShadow=\'none\'; this.style.transform=\'translateY(0)\'" onclick="app.viewUserProfile(\'' + user.uid + '\')">';
-
+            var card = '<div class="' + identityClass + '" style="background:white;border-radius:12px;border:1px solid #e5e7eb;padding:14px;text-align:center;cursor:pointer;transition:0.3s;" onmouseover="this.style.boxShadow=\'0 4px 12px rgba(0, 136, 204, 0.15)\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.boxShadow=\'none\';this.style.transform=\'translateY(0)\'" onclick="app.viewUserProfile(\'' + user.uid + '\')">';
             if (profilePhoto) {
-                html += '<img src="' + profilePhoto + '" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; margin: 0 auto 10px; display: block;">';
+                card += '<img src="' + app.escapeChatMessageText(profilePhoto) + '" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin:0 auto 10px;display:block;">';
             } else {
-                html += '<div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #0088cc, #006fa3); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; margin: 0 auto 10px;">' + initials + '</div>';
+                card += '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006fa3);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;margin:0 auto 10px;">' + app.escapeChatMessageText(initials) + '</div>';
             }
-
-            html += '<div class="' + (app.isGuest ? 'guest-explore-name' : '') + '" style="font-weight: 600; font-size: 13px; color: #1a202c; margin-bottom: 4px;">' + displayName + '</div>';
-            if (app.isGuest) {
-                html += '<div class="guest-explore-meta">Private member</div>';
-            }
-            html += '<div class="explore-people-meta">' +
-                (app.isGuest || !user.username ? '' : '<span class="explore-people-username">@' + user.username + '</span>') +
-                '<span class="explore-people-followers" aria-label="' + (user.followers || 0) + ' followers">' + (user.followers || 0) + '</span>' +
+            card += '<div class="' + (app.isGuest ? 'guest-explore-name' : '') + '" style="font-weight:600;font-size:13px;color:#1a202c;margin-bottom:4px;">' + escapedName + badge + '</div>';
+            if (app.isGuest) card += '<div class="guest-explore-meta">Private member</div>';
+            card += '<div class="explore-people-meta">' +
+                (app.isGuest || !user.username ? '' : '<span class="explore-people-username">@' + app.escapeChatMessageText(user.username) + '</span>') +
+                '<span class="explore-people-followers" aria-label="' + Number(user.followers || 0) + ' followers">' + Number(user.followers || 0) + '</span>' +
                 '</div>';
-            html += '<button onclick="event.stopPropagation(); app.toggleFollow(\'' + user.uid + '\');" style="width: 100%; padding: 8px 12px; background: ' + (isFollowing ? '#ef4444' : '#0088cc') + '; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">' + (isFollowing ? ' Following' : '+ Follow') + '</button>';
-            html += '</div>';
-        });
+            card += '<button onclick="event.stopPropagation();app.toggleFollow(\'' + user.uid + '\');" style="width:100%;padding:8px 12px;background:' + (isFollowing ? '#ef4444' : '#0088cc') + ';color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;">' + (isFollowing ? 'Following' : '+ Follow') + '</button>';
+            return card + '</div>';
+        }).join('');
 
-        if (userArray.length === 0) {
+        if (!displayUsers.length) {
             if (app.isGuest) {
-                html = '<div style="text-align:center;color:#6b7280;padding:24px;">\n                    <div style="font-size:28px;margin-bottom:6px;"></div>\n                    <div style="font-weight:700;margin-bottom:6px;">Sign in to discover people</div>\n                    <div style="color:#9ca3af;margin-bottom:10px;">Sign up or log in to follow creators and get recommendations.</div>\n                    <button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;"> Sign In / Sign Up</button>\n                </div>';
+                html = '<div style="text-align:center;color:#6b7280;padding:24px;"><div style="font-weight:700;margin-bottom:6px;">Sign in to discover people</div><div style="color:#9ca3af;margin-bottom:10px;">Sign up or log in to follow members and start chats.</div><button onclick="app.showLoginPage()" style="background:var(--primary);color:white;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;">Sign In / Sign Up</button></div>';
             } else {
-                html = '<div style="text-align: center; padding: 24px; color: #9ca3af; grid-column: 1 / -1;">No people yet</div>';
+                html = '<div style="text-align:center;padding:24px;color:#64748b;grid-column:1/-1;">No people yet</div>';
             }
         }
 
         container.innerHTML = html;
+        app.bindAdminContactButtons(container);
+    };
+
+    db.ref('users').once('value').then(function(snapshot) {
+        var users = snapshot.val() || {};
+        return db.ref('adminUsers').once('value').then(function(adminSnapshot) {
+            renderPeople(users, adminSnapshot.val() || {});
+        }).catch(function(error) {
+            console.error('Load explore admin accounts error:', error);
+            app.toast('Unable to verify all admin labels. Showing known admin accounts only.', 'error');
+            renderPeople(users, {});
+        });
     }).catch(function(err) {
         console.error('Load explore people error:', err);
+        container.innerHTML = '<div style="text-align:center;padding:24px;color:#64748b;grid-column:1/-1;">People could not be loaded. Please check your connection and try again.</div>';
     });
 };
 
@@ -15850,11 +15901,16 @@ app.searchExplorePeople = function(query) {
             var displayName = app.isGuest ? 'Member ' + String(resultIndex + 1).padStart(2, '0') : name;
             var displayMeta = app.isGuest ? 'Private member' : '@' + (user.username || 'user');
             var avatar = user.profilePhoto ? '<img src="' + user.profilePhoto + '" alt="">' : '<span>' + name.charAt(0).toUpperCase() + '</span>';
-            return '<button type="button" class="explore-search-user" onclick="app.viewUserProfile(\'' + uid + '\')">' +
+            var adminBadge = app.publicAdminIds && app.publicAdminIds[uid]
+                ? '<button type="button" class="public-admin-badge" aria-label="Message admin about code snippets" data-admin-uid="' + app.escapeChatMessageText(uid) + '" data-admin-name="' + app.escapeChatMessageText(name) + '">Admin</button>'
+                : '';
+            return '<div class="explore-search-user">' +
+                '<button type="button" class="explore-search-user-profile" onclick="app.viewUserProfile(\'' + uid + '\')">' +
                 '<div class="explore-search-avatar">' + avatar + '</div>' +
                 '<div class="explore-search-user-copy"><strong class="' + (app.isGuest ? 'guest-explore-name' : '') + '">' + displayName + '</strong><span class="' + (app.isGuest ? 'guest-explore-meta' : '') + '">' + displayMeta + '</span></div>' +
-                '<span class="explore-search-arrow">View</span></button>';
+                '<span class="explore-search-arrow">View</span></button>' + adminBadge + '</div>';
         }).join('');
+        app.bindAdminContactButtons(container);
     };
 
     if (app.users && Object.keys(app.users).length > 0) {
