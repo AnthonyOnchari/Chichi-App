@@ -19851,9 +19851,11 @@ button:empty[onclick*="remove"]::before {
     align-items: center;
     gap: 9px;
     color: #17483e;
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 13px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: .08em;
+    -webkit-text-stroke: .3px currentColor;
 }
 
 .main-app.guest-mode .guest-container-brand img {
@@ -19886,6 +19888,7 @@ button:empty[onclick*="remove"]::before {
 @media (max-width: 700px) {
     .main-app.guest-mode .guest-v5-message-board {
         padding-top: 58px;
+        transform: translateY(-32px);
     }
     color: #29443f;
     font-size: 13px;
